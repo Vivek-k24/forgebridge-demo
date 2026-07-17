@@ -1,0 +1,10 @@
+import {createContext,useContext,useEffect,useReducer,type ReactNode} from 'react'; import {seed} from '../data/seed'; import type {AppState,Quote,RFQ,Order,ContactSubmission} from '../types/domain';
+type Action={type:'PATCH';patch:Partial<AppState>}|{type:'RESET'}|{type:'ADD_RFQ';rfq:RFQ}|{type:'ADD_QUOTE';quote:Quote}|{type:'ADD_ORDER';order:Order}|{type:'CONTACT';contact:ContactSubmission};
+const KEY='forgebridge.state';
+const cloneSeed=()=>structuredClone(seed);
+function init():AppState{try{const x=JSON.parse(localStorage.getItem(KEY)||'');return x?.version===1?{...cloneSeed(),...x.data}:cloneSeed();}catch{return cloneSeed();}}
+function reducer(s:AppState,a:Action):AppState{if(a.type==='RESET')return cloneSeed();if(a.type==='PATCH')return{...s,...a.patch};if(a.type==='ADD_RFQ'){const opp={id:`OPP-${Date.now().toString().slice(-5)}`,rfqId:a.rfq.id,buyer:a.rfq.company||a.rfq.buyer,country:a.rfq.country,product:a.rfq.product,quantity:a.rfq.quantity,value:a.rfq.quantity*a.rfq.targetPrice,delivery:a.rfq.requiredDate,score:88,status:'New' as const,risk:'Low',certifications:a.rfq.certifications,saved:false};return{...s,rfqs:[a.rfq,...s.rfqs],opportunities:[opp,...s.opportunities]};}if(a.type==='ADD_QUOTE')return{...s,quotes:[a.quote,...s.quotes]};if(a.type==='ADD_ORDER')return{...s,orders:[a.order,...s.orders]};return{...s,contacts:[a.contact,...s.contacts]};}
+const C=createContext<{state:AppState;dispatch:React.Dispatch<Action>}>({state:seed,dispatch:()=>undefined});
+export function AppProvider({children}:{children:ReactNode}){const[state,dispatch]=useReducer(reducer,undefined,init);useEffect(()=>localStorage.setItem(KEY,JSON.stringify({version:1,data:state})),[state]);return <C.Provider value={{state,dispatch}}>{children}</C.Provider>}
+export const useApp=()=>useContext(C);
+export const downloadState=(state:AppState)=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({version:1,data:state},null,2)],{type:'application/json'}));a.download='forgebridge-demo.json';a.click();URL.revokeObjectURL(a.href)};
