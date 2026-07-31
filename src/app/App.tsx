@@ -1,15 +1,32 @@
 import {Navigate,Route,Routes} from 'react-router-dom';
-import {AppShell,PublicLayout} from '../components/layout/Shells';
-import {About,Buyers,Contact,Home,HowItWorks,Industries,Manufacturers,WhatWeManage} from '../pages/marketing/Marketing';
-import {Wizard} from '../pages/Wizards';
-import {Analytics,FactoryProfile,Messages,OrderDetail,Orders,OpportunityDetail,Opportunities,Overview,QuoteBuilder,QuoteDetail,Quotes,Settings} from '../pages/manufacturer/Manufacturer';
-import {BuyerMessages,BuyerOrder,BuyerOrders,BuyerOverview,BuyerRfqDetail,BuyerRfqs,Compare} from '../pages/buyer/Buyer';
-import {DemoEntry,GuidedDemo} from '../pages/demo/Demo';
-import {LeadsBuyers,OperationalList,Payments,ProductCatalog,Quality} from '../pages/manufacturer/Operations';
-const NotFound=()=> <main className="publicpage"><span className="shippinglabel">404 · ROUTE NOT FOUND</span><h1>This shipment went to the wrong route.</h1><p className="lead">The page does not exist. Return to the public website or open the guided demo.</p><a className="btn" href="/">Return home</a></main>;
+import {PublicLayout} from '../components/layout/Shells';
+import {AI,Contact,Home,Network,Problem,Product} from '../pages/v3/V3Marketing';
+import {UnifiedDemo} from '../pages/v3/V3Demo';
+
+const NotFound=()=> <main className="v3page"><span className="v3eyebrow">404 · ROUTE NOT FOUND</span><h1>This transaction route does not exist.</h1><p className="lead">Return to the public website or open the guided transaction.</p><a className="btn" href="#/">Return home</a></main>;
+
 export default function App(){return <Routes>
- <Route element={<PublicLayout/>}><Route path="/" element={<Home/>}/><Route path="/how-it-works" element={<HowItWorks/>}/><Route path="/manufacturers" element={<Manufacturers/>}/><Route path="/buyers" element={<Buyers/>}/><Route path="/what-we-manage" element={<WhatWeManage/>}/><Route path="/about" element={<About/>}/><Route path="/industries" element={<Industries/>}/><Route path="/contact" element={<Contact/>}/><Route path="/demo" element={<DemoEntry/>}/><Route path="/submit-rfq" element={<Wizard buyer/>}/></Route>
- <Route path="/demo/factory" element={<GuidedDemo/>}/><Route path="/demo/buyer" element={<GuidedDemo buyer/>}/><Route path="/demo/manufacturer" element={<Navigate to="/demo/factory" replace/>}/><Route path="/start-exporting" element={<Navigate to="/demo/factory" replace/>}/>
- <Route path="/manufacturer" element={<AppShell/>}><Route index element={<Overview/>}/><Route path="profile" element={<FactoryProfile/>}/><Route path="products" element={<ProductCatalog/>}/><Route path="leads" element={<LeadsBuyers/>}/><Route path="opportunities" element={<Opportunities/>}/><Route path="opportunities/:id" element={<OpportunityDetail/>}/><Route path="quote-builder/:id" element={<QuoteBuilder/>}/><Route path="quotes" element={<Quotes/>}/><Route path="quotes/:id" element={<QuoteDetail/>}/><Route path="orders" element={<Orders/>}/><Route path="orders/:id" element={<OrderDetail/>}/><Route path="production" element={<OperationalList kind="Production"/>}/><Route path="quality" element={<Quality/>}/><Route path="documents" element={<OperationalList kind="Documents"/>}/><Route path="shipments" element={<OperationalList kind="Shipments"/>}/><Route path="payments" element={<Payments/>}/><Route path="compliance" element={<Navigate to="/manufacturer/documents" replace/>}/><Route path="buyers" element={<Navigate to="/manufacturer/leads" replace/>}/><Route path="messages" element={<Messages/>}/><Route path="analytics" element={<Analytics/>}/><Route path="settings" element={<Settings/>}/></Route>
- <Route path="/buyer" element={<AppShell buyer/>}><Route index element={<BuyerOverview/>}/><Route path="rfqs" element={<BuyerRfqs/>}/><Route path="rfqs/:id" element={<BuyerRfqDetail/>}/><Route path="compare/:id" element={<Compare/>}/><Route path="orders" element={<BuyerOrders/>}/><Route path="orders/:id" element={<BuyerOrder/>}/><Route path="messages" element={<BuyerMessages/>}/></Route><Route path="*" element={<NotFound/>}/>
- </Routes>}
+  <Route element={<PublicLayout/>}>
+    <Route path="/" element={<Home/>}/>
+    <Route path="/problem" element={<Problem/>}/>
+    <Route path="/product" element={<Product/>}/>
+    <Route path="/ai" element={<AI/>}/>
+    <Route path="/network" element={<Network/>}/>
+    <Route path="/contact" element={<Contact/>}/>
+  </Route>
+  <Route path="/demo" element={<UnifiedDemo/>}/>
+  <Route path="/how-it-works" element={<Navigate to="/product" replace/>}/>
+  <Route path="/manufacturers" element={<Navigate to="/product" replace/>}/>
+  <Route path="/buyers" element={<Navigate to="/network" replace/>}/>
+  <Route path="/what-we-manage" element={<Navigate to="/product" replace/>}/>
+  <Route path="/industries" element={<Navigate to="/network" replace/>}/>
+  <Route path="/about" element={<Navigate to="/problem" replace/>}/>
+  <Route path="/demo/factory" element={<Navigate to="/demo" replace/>}/>
+  <Route path="/demo/buyer" element={<Navigate to="/demo" replace/>}/>
+  <Route path="/demo/manufacturer" element={<Navigate to="/demo" replace/>}/>
+  <Route path="/start-exporting" element={<Navigate to="/demo" replace/>}/>
+  <Route path="/submit-rfq" element={<Navigate to="/demo" replace/>}/>
+  <Route path="/manufacturer/*" element={<Navigate to="/demo" replace/>}/>
+  <Route path="/buyer/*" element={<Navigate to="/demo" replace/>}/>
+  <Route path="*" element={<NotFound/>}/>
+</Routes>}
