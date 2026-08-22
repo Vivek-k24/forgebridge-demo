@@ -1,37 +1,76 @@
-# ForgeBridge
+# PartGraph — Honda MVP
 
-ForgeBridge is a static, frontend-only prototype of an AI-native export operating system for mid-market manufacturers. It connects manufacturer onboarding, matched RFQs, landed-cost quotes, compliance, orders, messages, and a buyer sourcing portal in one persisted demo.
+PartGraph is a Honda-first repair-completion prototype. Instead of stopping at “this radiator fits your car,” it models the assembly around a repair target so the user can determine what they need, what they already have, what should be inspected, and what must be verified before purchase.
 
-## Stack and setup
+The current branch focuses on one deliberately narrow example: a **2009 Honda Civic 4-door MX Hybrid, US market, KA CVT, front cooling / radiator area**. Part identities marked verified are backed by exact-configuration OEM/dealer catalog pages. Service-manual facts such as torque, coolant capacity, bleed procedure, refrigerant work and hybrid/high-voltage procedures remain locked until authoritative service information is verified.
 
-React, TypeScript, Vite, React Router, Tailwind CSS, Lucide, Recharts, React Hook Form and Zod are installed. The interactive prototype uses a typed React Context/reducer state layer and seeded data.
+## Product flow
+
+```text
+Vehicle
+→ block
+→ sub-block
+→ target part
+→ connected-part checklist
+→ repair packet
+→ verified OEM/interchange identity
+→ five seller links
+→ logical exploded view
+```
+
+## What V0 now proves
+
+- deterministic vehicle/assembly/part relationship graph
+- exact-configuration catalog source ledger with provenance
+- source-backed OEM identities for the radiator, mounts, cushions, hoses, fan/shroud components, sensor, drain hardware and adjacent condenser components
+- radiator OEM `19010-RRH-901` with five researched purchase/catalog paths
+- exact-OEM-number seller searches for other verified parts until provider APIs/adapters are implemented
+- `need / have / inspect / not sure` repair-state workflow
+- local guest persistence through `localStorage`
+- local-only camera preview shell for future constrained part recognition
+- logical SVG exploded view driven by the same graph
+- graph invariants that reject missing provenance, duplicate IDs/relations and verified records without OEM/source identity
+
+## Architecture
+
+- React + TypeScript + Vite frontend
+- deterministic typed part graph
+- deterministic repair-state engine
+- static/relational graph data; no graph database required
+- SVG logical exploded view
+- camera-input shell for future constrained visual identification
+- commerce adapters only after OEM identity is verified
+- runtime language-model usage disabled by design
+
+## Token / compute policy
+
+Normal repair sessions use **zero LLM tokens**. Mechanical truth is precomputed, versioned and cached. Future camera recognition should use constrained local/browser inference where practical. LLMs are reserved for the internal source-ingestion pipeline when deterministic parsing is insufficient, and their output must be human-verified before entering the production graph.
+
+`AGENTS.md` keeps Codex context intentionally small: it directs code tasks to the few files relevant to that subsystem rather than rereading the legacy repository.
+
+## Run locally
 
 ```bash
 npm install
 npm run dev
-npm run build
 npm run lint
+npm run build
 ```
 
-## Routes
+GitHub Pages remains configured for the existing `/forgebridge-demo/` repository path.
 
-Public: `/`, `/how-it-works`, `/manufacturers`, `/buyers`, `/industries`, `/about`, `/contact`, `/start-exporting`, `/submit-rfq`, `/demo/manufacturer`, `/demo/buyer`.
+## Current limitations
 
-Manufacturer: `/manufacturer`, `/manufacturer/profile`, `/manufacturer/opportunities`, opportunity details, quote builder, quotes and details, orders and details, compliance, buyers, messages, analytics, and settings.
+- no live Honda/OEM feed; V0 uses curated source-backed catalog records
+- no live seller APIs or inventory/price synchronization
+- only the main radiator currently has five researched direct purchase/catalog paths
+- no repair-manual replacement
+- no verified torque, coolant-capacity, bleed, refrigerant or high-voltage procedures yet
+- no live computer-vision inference
+- exploded view is logically arranged, not dimensional CAD
+- catalog-backed part identity does not by itself prove service sequence, reuse policy or torque
+- data/licensing rights still need production review before large-scale ingestion
 
-Buyer: `/buyer`, `/buyer/rfqs`, RFQ details and comparison, `/buyer/orders`, order details, and messages.
+## Next engineering milestone
 
-## Demo flows
-
-- Complete or save/resume the six-step manufacturer onboarding.
-- Submit a five-step buyer RFQ; it is added to buyer RFQs and creates a matched manufacturer opportunity.
-- Filter and act on opportunities, build a live landed-cost quote, and transition its status.
-- Advance eligible order milestones and progress compliance documents.
-- Compare three suppliers and select one to automatically create an order.
-- Reply to shared messages, edit the factory profile, change settings, export JSON, or reset seeded data.
-
-State is stored as a versioned wrapper under `forgebridge.state`. Invalid or outdated data safely falls back to version 1 seed data. Reset Demo Data restores the complete seed story.
-
-## Limitations and future integration
-
-This prototype intentionally has no authentication, backend, real file transfer, APIs, payments, document generation, email, freight carrier connection, or multi-user concurrency. Production work would replace localStorage with authenticated services, durable relational storage, object storage, job queues, audit logs, payment rails, customs/document APIs, carrier webhooks, and role-based access control.
+Build the service-spec source layer for this same radiator workflow and verify the remaining repair semantics before widening vehicle coverage. After that, implement provider adapters/caching, then constrained camera recognition. Do not expand to “all Honda” until this one repair packet survives real-world validation.

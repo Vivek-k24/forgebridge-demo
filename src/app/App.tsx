@@ -1,6 +1,6 @@
 import {Route,Routes} from 'react-router-dom';
-import {ChangeGraphPrototype} from '../pages/changegraph/ChangeGraphPrototype';
+import {PartGraphPrototype} from '../pages/partgraph/PartGraphPrototype';
 
 export default function App(){
-  return <Routes><Route path="*" element={<ChangeGraphPrototype/>}/></Routes>;
+  return <Routes><Route path="*" element={<PartGraphPrototype/>}/></Routes>;
 }

@@ -1,4 +1,4 @@
-name: Validate ForgeBridge
+name: Validate PartGraph
 
 on:
   pull_request:
