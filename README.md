@@ -1,37 +1,57 @@
-# ForgeBridge
+# PartGraph — Honda MVP
 
-ForgeBridge is a static, frontend-only prototype of an AI-native export operating system for mid-market manufacturers. It connects manufacturer onboarding, matched RFQs, landed-cost quotes, compliance, orders, messages, and a buyer sourcing portal in one persisted demo.
+PartGraph is a Honda-first repair-completion prototype. Instead of stopping at “this radiator fits your car,” it models the assembly around a repair target so the user can determine what they need, what they already have, what should be inspected, and what must be verified before purchase.
 
-## Stack and setup
+The current branch intentionally focuses on one static example: a **2009 Honda Civic Hybrid US-market front cooling / radiator area**. Mechanical relationships are prototype data unless explicitly marked verified. OEM numbers, torque specifications, fluid quantities and other safety-critical facts stay locked until an authoritative source ledger confirms them.
 
-React, TypeScript, Vite, React Router, Tailwind CSS, Lucide, Recharts, React Hook Form and Zod are installed. The interactive prototype uses a typed React Context/reducer state layer and seeded data.
+## Product flow
+
+```text
+Vehicle
+→ block
+→ sub-block
+→ target part
+→ connected-part checklist
+→ repair packet
+→ verified OEM/interchange identity
+→ five seller links
+→ logical exploded view
+```
+
+## Architecture
+
+- React + TypeScript + Vite frontend
+- deterministic typed part graph
+- deterministic repair-state engine
+- static/relational graph data; no graph database required
+- SVG logical exploded view
+- camera-input shell for future constrained visual identification
+- commerce adapters only after OEM identity is verified
+- runtime language-model usage disabled by design
+
+## Token / compute policy
+
+Normal repair sessions should use **zero LLM tokens**. Mechanical truth is precomputed, versioned and cached. Future camera recognition should use constrained local/browser inference where practical. LLMs are reserved for the internal source-ingestion pipeline when deterministic parsing is insufficient, and their output must be human-verified before entering the production graph.
+
+## Run locally
 
 ```bash
 npm install
 npm run dev
-npm run build
 npm run lint
+npm run build
 ```
 
-## Routes
+GitHub Pages remains configured for the existing `/forgebridge-demo/` repository path.
 
-Public: `/`, `/how-it-works`, `/manufacturers`, `/buyers`, `/industries`, `/about`, `/contact`, `/start-exporting`, `/submit-rfq`, `/demo/manufacturer`, `/demo/buyer`.
+## Current limitations
 
-Manufacturer: `/manufacturer`, `/manufacturer/profile`, `/manufacturer/opportunities`, opportunity details, quote builder, quotes and details, orders and details, compliance, buyers, messages, analytics, and settings.
+- no live Honda/OEM data feed
+- no verified OEM numbers in the demo dataset yet
+- no live seller APIs
+- no repair-manual replacement
+- no torque/fluid/refrigerant/high-voltage claims
+- no live computer-vision inference
+- exploded view is logically arranged, not dimensional CAD
 
-Buyer: `/buyer`, `/buyer/rfqs`, RFQ details and comparison, `/buyer/orders`, order details, and messages.
-
-## Demo flows
-
-- Complete or save/resume the six-step manufacturer onboarding.
-- Submit a five-step buyer RFQ; it is added to buyer RFQs and creates a matched manufacturer opportunity.
-- Filter and act on opportunities, build a live landed-cost quote, and transition its status.
-- Advance eligible order milestones and progress compliance documents.
-- Compare three suppliers and select one to automatically create an order.
-- Reply to shared messages, edit the factory profile, change settings, export JSON, or reset seeded data.
-
-State is stored as a versioned wrapper under `forgebridge.state`. Invalid or outdated data safely falls back to version 1 seed data. Reset Demo Data restores the complete seed story.
-
-## Limitations and future integration
-
-This prototype intentionally has no authentication, backend, real file transfer, APIs, payments, document generation, email, freight carrier connection, or multi-user concurrency. Production work would replace localStorage with authenticated services, durable relational storage, object storage, job queues, audit logs, payment rails, customs/document APIs, carrier webhooks, and role-based access control.
+The next engineering milestone is to build a source ledger for one radiator workflow and replace prototype relationships with source-backed, versioned records before enabling exact commerce links.
