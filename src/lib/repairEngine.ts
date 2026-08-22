@@ -46,17 +46,28 @@ export function completenessScore(lines: RepairLine[]): number {
 
 export function validateGraph(parts: PartNode[], relations: PartRelation[]): string[] {
   const errors: string[] = [];
-  const partIds = new Set(parts.map((part) => part.id));
+  const partIds = new Set<string>();
 
   for (const part of parts) {
+    if (partIds.has(part.id)) errors.push(`Duplicate part id: ${part.id}`);
+    partIds.add(part.id);
     if (part.quantity < 1) errors.push(`${part.id}: quantity must be at least 1`);
     if (!part.source) errors.push(`${part.id}: source provenance is required`);
+    if (part.source?.status === 'verified' && !part.oemNumber) errors.push(`${part.id}: verified catalog part requires an OEM number`);
+    if (part.source?.status === 'verified' && !part.source.url) errors.push(`${part.id}: verified source requires a source URL`);
   }
 
+  const relationKeys = new Set<string>();
   for (const relation of relations) {
     if (!partIds.has(relation.from)) errors.push(`Unknown relation source: ${relation.from}`);
     if (!partIds.has(relation.to)) errors.push(`Unknown relation target: ${relation.to}`);
     if (relation.from === relation.to) errors.push(`Self relation is not allowed: ${relation.from}`);
+    if (!relation.source) errors.push(`Relation ${relation.from} → ${relation.to}: source provenance is required`);
+    if (relation.source?.status === 'verified' && !relation.source.url) errors.push(`Relation ${relation.from} → ${relation.to}: verified source requires a source URL`);
+
+    const key = `${relation.from}|${relation.type}|${relation.to}`;
+    if (relationKeys.has(key)) errors.push(`Duplicate relation: ${key}`);
+    relationKeys.add(key);
   }
 
   return errors;
