@@ -26,6 +26,7 @@ The public page is the actual user product, not an investor/demo dashboard. A vi
 16. Catalog pages may establish factual part identity/quantity/fitment evidence. They do not establish torque, pressure, fluid, metallurgy, repair order, reuse policy, or safety procedure unless the source explicitly and authoritatively provides that fact.
 17. Keep source URL, source type, market/configuration and review status for every ingested catalog observation.
 18. Do not bulk-download diagrams or product images without an explicit rights/licensing decision.
+19. Consumer vehicle selectors must use plain structured labels such as `Hybrid, 4 Door, 1.3L CVT transmission`. Never expose raw OEM/catalog configuration strings such as `MX HYBRID`, `MSS`, `KA CVT`, or similar internal matching codes as the primary trim label. Keep those codes only as provenance/matching data.
 
 ## Data trust layers
 
@@ -54,6 +55,7 @@ shopping
 - `src/lib/partCatalogStore.ts` — normalized static catalog identity/fitment read model.
 - `src/lib/hondaVehicleService.ts` — NHTSA model/VIN metadata.
 - `src/lib/hondaManualConfigurationService.ts` — public manual Honda configuration metadata.
+- `src/lib/hondaVehicleLabels.ts` — consumer-facing trim/body/engine/transmission formatting; raw catalog labels stay internal.
 - `src/pages/partgraph/PartGraphPrototype.tsx` — user-facing repair workflow.
 - `src/styles/partgraph.css` — responsive PartGraph visual system.
 - `catalog/schema.sql` — future SQLite/Cloudflare D1 catalog schema.
@@ -66,7 +68,7 @@ Examples:
 - repair logic task → `AGENTS.md`, `src/lib/repairEngine.ts`, relevant graph file
 - UI task → `AGENTS.md`, `src/pages/partgraph/PartGraphPrototype.tsx`, `src/styles/partgraph.css`
 - image/part preview task → `AGENTS.md`, `src/data/partGraphImages.ts`, relevant PartGraph UI
-- vehicle metadata task → `AGENTS.md`, `src/lib/hondaVehicleService.ts`, `src/lib/hondaManualConfigurationService.ts`
+- vehicle metadata task → `AGENTS.md`, `src/lib/hondaVehicleService.ts`, `src/lib/hondaManualConfigurationService.ts`, `src/lib/hondaVehicleLabels.ts`
 - catalog ingestion task → `AGENTS.md`, `tools/catalog/`, `catalog/schema.sql`, `src/lib/partCatalogStore.ts`
 - mechanical/service story → do not reuse catalog text as authority; add a separately sourced service layer
 
