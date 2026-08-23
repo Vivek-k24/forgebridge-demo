@@ -1,7 +1,10 @@
 import {publishedHondaConfigurations} from '../data/hondaPublishedCoverage';
+import {hondaConfigurationConsumerLabel} from './hondaVehicleLabels';
 
 export interface HondaManualConfiguration {
+  /** Stable internal configuration identifier. Never shown as the trim label. */
   value: string;
+  trim: string;
   label: string;
   secondary?: string;
   source: 'honda-official' | 'partgraph-published';
@@ -21,6 +24,9 @@ export interface HondaManualConfigurationResult {
  * after a PartGraph repair graph has been published for it. Broad vehicle/trim
  * discovery remains an admin/catalog-ingestion concern so the user never lands
  * on a dead Step 2.
+ *
+ * Important: raw catalog configuration labels remain internal provenance. The
+ * dropdown is built from structured trim/body/engine/transmission fields.
  */
 export async function fetchHondaManualConfigurations(year: number, model: string): Promise<HondaManualConfigurationResult> {
   const published = publishedHondaConfigurations(year, model);
@@ -35,17 +41,20 @@ export async function fetchHondaManualConfigurations(year: number, model: string
     };
   }
 
+  const options = published.map((configuration) => ({
+    value: configuration.id,
+    trim: configuration.trim,
+    label: hondaConfigurationConsumerLabel(configuration),
+    secondary: 'Exact repair graph available · Honda-published U.S. vehicle configuration',
+    source: 'partgraph-published' as const,
+    sourceUrl: configuration.vehicleSourceUrl,
+  }));
+
   return {
-    options: published.map((configuration) => ({
-      value: configuration.trim,
-      label: configuration.trim,
-      secondary: `${configuration.engine} · ${configuration.transmission} · ${configuration.market} market`,
-      source: 'partgraph-published',
-      sourceUrl: configuration.vehicleSourceUrl,
-    })),
+    options,
     sourceLabel: published[0].vehicleSourceLabel,
     sourceUrl: published[0].vehicleSourceUrl,
-    note: `${published[0].catalogLabel} is the current published repair configuration. The vehicle identity is Honda-published; ${published[0].oemPartsSourceLabel} is the OEM parts authority used by the offline ingestion/review pipeline.`,
+    note: `Choose the trim you recognize from the vehicle badge or owner documentation. Current coverage: ${options[0].label}. Exact OEM part identity is checked against ${published[0].oemPartsSourceLabel}.`,
     fromCache: true,
   };
 }
