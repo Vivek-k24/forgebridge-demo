@@ -9,9 +9,11 @@ export interface HondaPublishedConfiguration {
   engine: string;
   transmission: string;
   catalogLabel: string;
-  sourceLabel: string;
-  sourceUrl: string;
-  sourceGuideUrl: string;
+  vehicleSourceLabel: string;
+  vehicleSourceUrl: string;
+  oemPartsSourceLabel: string;
+  oemPartsSourceUrl: string;
+  oemPartsSourceGuideUrl: string;
 }
 
 export const hondaPublishedConfigurations: HondaPublishedConfiguration[] = [
@@ -26,9 +28,11 @@ export const hondaPublishedConfigurations: HondaPublishedConfiguration[] = [
     engine: '1.3L I4 gasoline-electric hybrid',
     transmission: 'CVT',
     catalogLabel: '2009 Honda Civic · 4DR MX HYBRID · KA CVT',
-    sourceLabel: 'American Honda ServiceExpress parts catalog',
-    sourceUrl: 'https://techinfo.honda.com/rjanisis/logon.aspx',
-    sourceGuideUrl: 'https://techinfo.honda.com/rjanisis/pubs/Web/SvcExp_QS.pdf',
+    vehicleSourceLabel: 'American Honda · 2009 Civic Sedan brochure',
+    vehicleSourceUrl: 'https://automobiles.honda.com/images/2009/civic-sedan/downloads/2009-civic-sedan-brochure.pdf',
+    oemPartsSourceLabel: 'American Honda ServiceExpress Parts Info',
+    oemPartsSourceUrl: 'https://techinfo.honda.com/rjanisis/logon.aspx',
+    oemPartsSourceGuideUrl: 'https://techinfo.honda.com/rjanisis/pubs/Web/SvcExp_QS.pdf',
   },
 ];
 
