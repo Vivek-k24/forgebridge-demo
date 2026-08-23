@@ -35,6 +35,11 @@ import {
   type HondaVehicleIdentity,
 } from '../../lib/hondaVehicleService';
 import {
+  fetchHondaManualConfigurations,
+  type HondaManualConfiguration,
+  type HondaManualConfigurationResult,
+} from '../../lib/hondaManualConfigurationService';
+import {
   PARTGRAPH_DB_VERSION,
   hardwareForPart,
   listRepairBlocks,
@@ -50,17 +55,6 @@ import '../../styles/partgraph-step2.css';
 const APP_URL = 'https://vivek-k24.github.io/forgebridge-demo/#/';
 const QR_URL = `https://api.qrserver.com/v1/create-qr-code/?size=132x132&margin=6&data=${encodeURIComponent(APP_URL)}`;
 const STORAGE_PREFIX = 'partgraph.step2.state.';
-
-const supported2009CivicTrims = [
-  'DX',
-  'DX-VP',
-  'LX',
-  'LX-S',
-  'EX',
-  'EX-L',
-  'Hybrid',
-  'Si',
-];
 
 const sellerDomains: Record<string, string> = {
   hondapartsnow: 'hondapartsnow.com',
@@ -157,11 +151,22 @@ function StateButtons({value, onChange, compact = false}: {value: PartState; onC
   );
 }
 
-function trimOptions(year: number, model: string): PartGraphSelectOption[] {
-  if (year === 2009 && model.trim().toLowerCase() === 'civic') {
-    return supported2009CivicTrims.map((trim) => ({value: trim, label: trim}));
+function toConfigurationOptions(configurations: HondaManualConfiguration[], loading: boolean): PartGraphSelectOption[] {
+  if (configurations.length) {
+    return configurations.map((configuration) => ({
+      value: configuration.value,
+      label: configuration.label,
+      secondary: configuration.secondary,
+    }));
   }
-  return [{value: '', label: 'Use VIN for exact trim', disabled: true, secondary: 'Manual trim map is not published for this model/year yet.'}];
+  return [{
+    value: '',
+    label: loading ? 'Loading public configurations…' : 'Model only / configuration not published',
+    disabled: loading,
+    secondary: loading
+      ? 'Checking public Honda and U.S. government vehicle data.'
+      : 'You can continue with the model. PartGraph will not guess an exact repair graph.',
+  }];
 }
 
 export function PartGraphStep2() {
@@ -172,6 +177,9 @@ export function PartGraphStep2() {
   const [trim, setTrim] = useState('Hybrid');
   const [models, setModels] = useState<HondaModelOption[]>([{id: 1, name: 'Civic'}]);
   const [modelLoading, setModelLoading] = useState(false);
+  const [configurations, setConfigurations] = useState<HondaManualConfiguration[]>([]);
+  const [configurationLoading, setConfigurationLoading] = useState(false);
+  const [configurationSource, setConfigurationSource] = useState<HondaManualConfigurationResult | null>(null);
   const [vin, setVin] = useState('');
   const [vinLoading, setVinLoading] = useState(false);
   const [vehicleError, setVehicleError] = useState('');
@@ -226,6 +234,30 @@ export function PartGraphStep2() {
       });
     return () => { cancelled = true; };
   }, [year]);
+
+  useEffect(() => {
+    if (mode !== 'manual' || !model) return;
+    let cancelled = false;
+    setConfigurationLoading(true);
+    setConfigurationSource(null);
+
+    fetchHondaManualConfigurations(year, model)
+      .then((result) => {
+        if (cancelled) return;
+        setConfigurations(result.options);
+        setConfigurationSource(result);
+        setTrim((currentTrim) => {
+          if (result.options.some((option) => option.value === currentTrim)) return currentTrim;
+          const hybrid = result.options.find((option) => option.value.toLowerCase() === 'hybrid');
+          return hybrid?.value ?? result.options[0]?.value ?? '';
+        });
+      })
+      .finally(() => {
+        if (!cancelled) setConfigurationLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [mode, year, model]);
 
   useEffect(() => {
     if (mode !== 'manual' || !model) return;
@@ -300,6 +332,7 @@ export function PartGraphStep2() {
 
   const yearOptions = hondaModelYears().map((item) => ({value: String(item), label: String(item)}));
   const modelOptions = models.map((item) => ({value: item.name, label: item.name}));
+  const configurationOptions = toConfigurationOptions(configurations, configurationLoading);
   const blockOptions = blocks.map((block) => ({value: block.id, label: block.label, secondary: block.description}));
   const subBlockOptions = subBlocks.map((item) => ({value: item.id, label: item.label, secondary: item.summary}));
   const targetOptions = targetParts.map((part) => ({value: part.id, label: part.name, secondary: part.oemNumber || 'Service item'}));
@@ -331,22 +364,29 @@ export function PartGraphStep2() {
         <div className="pg2-workflow-title">
           <div><span>STEP 1</span><strong>Vehicle</strong></div>
           <div className="pg2-mode">
-            <button type="button" className={mode === 'manual' ? 'active' : ''} onClick={() => setMode('manual')}>Choose</button>
-            <button type="button" className={mode === 'vin' ? 'active' : ''} onClick={() => setMode('vin')}>VIN</button>
+            <button type="button" className={mode === 'manual' ? 'active' : ''} onClick={() => setMode('manual')}>Manual selection</button>
+            <button type="button" className={mode === 'vin' ? 'active' : ''} onClick={() => setMode('vin')}>VIN lookup (optional)</button>
           </div>
         </div>
 
         {mode === 'manual' ? (
-          <div className="pg2-vehicle-row">
-            <PartGraphSelect label="Year" value={String(year)} options={yearOptions} onChange={(value) => {setYear(Number(value)); setTrim('');}}/>
-            <PartGraphSelect label={modelLoading ? 'Model · loading' : 'Model'} value={model} options={modelOptions} onChange={(value) => {setModel(value); setTrim('');}} placeholder="Choose Honda model"/>
-            <PartGraphSelect label="Trim / series" value={trim} options={trimOptions(year, model)} onChange={setTrim} placeholder="Choose trim"/>
-          </div>
+          <>
+            <div className="pg2-vehicle-row">
+              <PartGraphSelect label="Year" value={String(year)} options={yearOptions} onChange={(value) => {setYear(Number(value)); setTrim('');}}/>
+              <PartGraphSelect label={modelLoading ? 'Model · loading' : 'Model'} value={model} options={modelOptions} onChange={(value) => {setModel(value); setTrim('');}} placeholder="Choose Honda model"/>
+              <PartGraphSelect label={configurationLoading ? 'Trim / configuration · loading' : 'Trim / configuration'} value={trim} options={configurationOptions} onChange={setTrim} placeholder="Choose trim or configuration"/>
+            </div>
+            <p className="pg2-scope-note">
+              <CheckCircle2 size={13}/>
+              <span>{configurationSource?.note ?? 'Manual selection is the primary path. Public vehicle data is loading.'}</span>
+              {configurationSource?.sourceUrl ? <a href={configurationSource.sourceUrl} target="_blank" rel="noreferrer">{configurationSource.sourceLabel} <ExternalLink size={11}/></a> : null}
+            </p>
+          </>
         ) : (
           <div className="pg2-vin-row">
             <label><span>17-character VIN</span><input value={vin} onChange={(event) => setVin(normalizeVin(event.target.value))} maxLength={17} placeholder="2HGFA…"/></label>
             <button type="button" onClick={() => void decodeVin()} disabled={vinLoading}><ScanLine size={15}/>{vinLoading ? 'Decoding…' : 'Decode VIN'}</button>
-            <small>NHTSA vPIC · no model tokens</small>
+            <small>NHTSA vPIC public decoder · optional second path · no model tokens</small>
           </div>
         )}
 
@@ -365,7 +405,7 @@ export function PartGraphStep2() {
             <PartGraphSelect label="Sub-block" value={graph.id} options={subBlockOptions} onChange={(value) => activateGraph(readRepairGraph(value))} disabled={!coverage}/>
             <PartGraphSelect label="Target part" value={targetPart?.id ?? ''} options={targetOptions} onChange={setTargetPartId} disabled={!coverage}/>
           </div>
-          {coverage ? <p className="pg2-scope-note"><CheckCircle2 size={13}/>Published mapping: 2009 US Civic Hybrid / MX Hybrid KA CVT catalog. Consumer trim “Hybrid” maps into this verified catalog configuration.</p> : <p className="pg2-scope-note blocked"><AlertTriangle size={13}/>We do not substitute another trim's parts graph. Use the supported 2009 Civic Hybrid or decode a matching VIN.</p>}
+          {coverage ? <p className="pg2-scope-note"><CheckCircle2 size={13}/>Published mapping: 2009 US Civic Hybrid / MX Hybrid KA CVT catalog. Consumer trim “Hybrid” maps into this verified catalog configuration.</p> : <p className="pg2-scope-note blocked"><AlertTriangle size={13}/>We do not substitute another trim's parts graph. Vehicle browsing can be public-data driven even when PartGraph has not yet published a verified repair graph for that configuration.</p>}
         </div>
       </section>
 
