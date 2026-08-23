@@ -41,11 +41,11 @@ export async function fetchHondaManualConfigurations(year: number, model: string
       label: configuration.trim,
       secondary: `${configuration.engine} · ${configuration.transmission} · ${configuration.market} market`,
       source: 'partgraph-published',
-      sourceUrl: configuration.sourceUrl,
+      sourceUrl: configuration.vehicleSourceUrl,
     })),
-    sourceLabel: published[0].sourceLabel,
-    sourceUrl: published[0].sourceUrl,
-    note: `${published[0].catalogLabel} is the current published repair configuration. Honda ServiceExpress is the OEM authority; PartGraph exposes only configurations that have a reviewed graph instead of letting the repair flow dead-end.`,
+    sourceLabel: published[0].vehicleSourceLabel,
+    sourceUrl: published[0].vehicleSourceUrl,
+    note: `${published[0].catalogLabel} is the current published repair configuration. The vehicle identity is Honda-published; ${published[0].oemPartsSourceLabel} is the OEM parts authority used by the offline ingestion/review pipeline.`,
     fromCache: true,
   };
 }
