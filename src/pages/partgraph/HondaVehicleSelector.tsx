@@ -112,7 +112,7 @@ export function HondaVehicleSelector({value, onChange}: HondaVehicleSelectorProp
       })
       .finally(() => { if (!cancelled) setModelsLoading(false); });
     return () => { cancelled = true; };
-  }, [year]);
+  }, [year, model]);
 
   useEffect(() => {
     let cancelled = false;
@@ -132,7 +132,7 @@ export function HondaVehicleSelector({value, onChange}: HondaVehicleSelectorProp
       })
       .finally(() => { if (!cancelled) setConfigsLoading(false); });
     return () => { cancelled = true; };
-  }, [year, model]);
+  }, [year, model, configurationKey]);
 
   const useCatalogVehicle = () => {
     setError('');
@@ -252,7 +252,18 @@ export function HondaVehicleSelector({value, onChange}: HondaVehicleSelectorProp
         <div className="pg-vin-row">
           <label className="pg-field pg-field--vin">
             <span>17-character VIN</span>
-            <input value={vin} onChange={(event) => setVin(normalizeVin(event.target.value))} onKeyDown={(event) => { if (event.key === 'Enter') void decodeVin(); }} inputMode="text" autoCapitalize="characters" autoComplete="off" spellCheck={false} placeholder="2HGFA…" maxLength={17} aria-label="Honda VIN" />
+            <input
+              value={vin}
+              onChange={(event) => setVin(normalizeVin(event.target.value))}
+              onKeyDown={(event) => { if (event.key === 'Enter') void decodeVin(); }}
+              inputMode="text"
+              autoCapitalize="characters"
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="2HGFA…"
+              maxLength={17}
+              aria-label="Honda VIN"
+            />
             <small>{vin.length}/17</small>
           </label>
           <button className="pg-vin-submit" type="button" onClick={() => void decodeVin()} disabled={vinLoading}>
@@ -278,7 +289,9 @@ export function HondaVehicleSelector({value, onChange}: HondaVehicleSelectorProp
           <span>{value.bodyTrim || trimLabel}</span>
           <small>{value.emissionTransmission || engineLabel}</small>
         </div>
-        <button type="button" className="pg-id-details-toggle" onClick={() => setDetailsOpen((open) => !open)}>{detailsOpen ? 'Hide identifiers' : 'Show identifiers'}</button>
+        <button type="button" className="pg-id-details-toggle" onClick={() => setDetailsOpen((open) => !open)}>
+          {detailsOpen ? 'Hide identifiers' : 'Show identifiers'}
+        </button>
 
         {detailsOpen ? (
           <div className="pg-id-facts">
