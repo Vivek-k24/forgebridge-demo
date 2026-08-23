@@ -1,4 +1,5 @@
 import {publishedHondaConfigurations} from '../data/hondaPublishedCoverage';
+import {catalogConfigurations} from './hondaCatalogService';
 import {hondaConfigurationConsumerLabel} from './hondaVehicleLabels';
 
 export interface HondaManualConfiguration {
@@ -7,7 +8,7 @@ export interface HondaManualConfiguration {
   trim: string;
   label: string;
   secondary?: string;
-  source: 'honda-official' | 'partgraph-published';
+  source: 'catalog' | 'partgraph-published';
   sourceUrl: string;
 }
 
@@ -20,15 +21,35 @@ export interface HondaManualConfigurationResult {
 }
 
 /**
- * Consumer-facing vehicle selection is coverage-aware. We only offer a trim
- * after a PartGraph repair graph has been published for it. Broad vehicle/trim
- * discovery remains an admin/catalog-ingestion concern so the user never lands
- * on a dead Step 2.
- *
- * Important: raw catalog configuration labels remain internal provenance. The
- * dropdown is built from structured trim/body/engine/transmission fields.
+ * Vehicle browsing uses the broad static Honda catalog. Repair coverage remains
+ * a separate concern: selecting a catalog vehicle does not unlock a repair graph
+ * unless PartGraph has verified that exact configuration.
  */
 export async function fetchHondaManualConfigurations(year: number, model: string): Promise<HondaManualConfigurationResult> {
+  try {
+    const catalog = await catalogConfigurations(year, model);
+    if (catalog.length) {
+      const options = catalog.map((configuration) => ({
+        value: configuration.key,
+        trim: /hybrid/i.test(configuration.bodyTrim) ? 'Hybrid' : configuration.bodyTrim,
+        label: configuration.bodyTrim,
+        secondary: configuration.emissionTransmission,
+        source: 'catalog' as const,
+        sourceUrl: configuration.sourceUrl,
+      }));
+
+      return {
+        options,
+        sourceLabel: catalog[0].source,
+        sourceUrl: catalog[0].sourceUrl,
+        note: `${options.length} Honda catalog configuration${options.length === 1 ? '' : 's'} available for ${year} ${model}. Choose the body/trim and transmission that match the vehicle.`,
+        fromCache: true,
+      };
+    }
+  } catch {
+    // Fall back to published PartGraph coverage if the static catalog cannot load.
+  }
+
   const published = publishedHondaConfigurations(year, model);
 
   if (!published.length) {
@@ -36,7 +57,7 @@ export async function fetchHondaManualConfigurations(year: number, model: string
       options: [],
       sourceLabel: 'PartGraph published Honda coverage',
       sourceUrl: 'https://techinfo.honda.com/rjanisis/logon.aspx',
-      note: 'No consumer repair configuration is published for this year/model yet.',
+      note: 'No Honda catalog configuration could be loaded for this year/model.',
       fromCache: true,
     };
   }
@@ -54,7 +75,7 @@ export async function fetchHondaManualConfigurations(year: number, model: string
     options,
     sourceLabel: published[0].vehicleSourceLabel,
     sourceUrl: published[0].vehicleSourceUrl,
-    note: `Choose the trim you recognize from the vehicle badge or owner documentation. Current coverage: ${options[0].label}. Exact OEM part identity is checked against ${published[0].oemPartsSourceLabel}.`,
+    note: `Static catalog unavailable. Showing published repair coverage for ${year} ${model}.`,
     fromCache: true,
   };
 }
