@@ -3,7 +3,6 @@ import ReactDOM from 'react-dom/client';
 import {HashRouter} from 'react-router-dom';
 import App from './app/App';
 import './styles/partgraph.css';
-import './styles/partgraph-v0.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
