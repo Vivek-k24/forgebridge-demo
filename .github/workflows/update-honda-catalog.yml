@@ -58,7 +58,7 @@ jobs:
       - name: Commit refreshed catalog
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         run: |
-          if git diff --quiet -- public/data/honda; then
+          if [ -z "$(git status --porcelain -- public/data/honda)" ]; then
             echo 'Catalog unchanged.'
             exit 0
           fi
