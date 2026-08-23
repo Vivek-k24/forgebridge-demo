@@ -1,3 +1,9 @@
+import {
+  findPublishedHondaConfiguration,
+  publishedHondaModels,
+  publishedHondaYears,
+} from '../data/hondaPublishedCoverage';
+
 export type VehicleSelectionSource = 'demo' | 'manual' | 'nhtsa-vin';
 
 export interface HondaModelOption {
@@ -42,13 +48,6 @@ interface NhtsaResponse<T> {
   Results?: T[];
 }
 
-interface NhtsaModelResult {
-  Make_ID?: number;
-  Make_Name?: string;
-  Model_ID?: number;
-  Model_Name?: string;
-}
-
 type NhtsaVinResult = Record<string, string> & {
   VIN?: string;
   Make?: string;
@@ -80,68 +79,12 @@ type NhtsaVinResult = Record<string, string> & {
 };
 
 const NHTSA_BASE = 'https://vpic.nhtsa.dot.gov/api/vehicles';
-const MODEL_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-const modelMemoryCache = new Map<number, HondaModelOption[]>();
 const vinMemoryCache = new Map<string, HondaVehicleIdentity>();
 
-const fallbackHondaAutomobileModels = [
-  'Accord',
-  'Civic',
-  'CR-V',
-  'HR-V',
-  'Pilot',
-  'Passport',
-  'Odyssey',
-  'Ridgeline',
-  'Fit',
-  'Insight',
-  'S2000',
-  'Prelude',
-  'CR-X',
-  'del Sol',
-  'Element',
-  'Crosstour',
-  'CR-Z',
-  'Clarity',
-  'Prologue',
-] as const;
-
 export const hondaTrimSuggestions = [
-  'Base',
-  'CX',
-  'DX',
-  'DX-VP',
-  'EX',
-  'EX-L',
-  'EX-L Navi',
-  'EX-T',
-  'GX',
-  'HF',
-  'HX',
   'Hybrid',
-  'Hybrid-L',
-  'LX',
-  'LX-P',
-  'LX-S',
-  'SE',
-  'Si',
-  'Sport',
-  'Sport Hybrid',
-  'Sport-L',
-  'Sport-L Hybrid',
-  'Touring',
-  'Touring Hybrid',
-  'Type R',
-  'Elite',
-  'TrailSport',
-  'Black Edition',
-  'RTL',
-  'RTL-T',
-  'RTL-E',
-  'Sport Touring',
-  'Sport Touring Hybrid',
-  'Value Package',
   'MX Hybrid',
+  'Hybrid-L',
 ] as const;
 
 export const demoHondaIdentity: HondaVehicleIdentity = {
@@ -149,7 +92,7 @@ export const demoHondaIdentity: HondaVehicleIdentity = {
   make: 'Honda',
   year: 2009,
   model: 'Civic',
-  trim: 'MX Hybrid',
+  trim: 'Hybrid',
   series: 'Civic Hybrid',
   bodyClass: 'Sedan/Saloon',
   vehicleType: 'PASSENGER CAR',
@@ -163,11 +106,13 @@ export const demoHondaIdentity: HondaVehicleIdentity = {
   transmissionStyle: 'Continuously Variable Transmission (CVT)',
 };
 
+/**
+ * The consumer selector intentionally exposes only published PartGraph coverage.
+ * Broad Honda discovery belongs in the catalog/admin pipeline, not in a repair
+ * flow that would strand the user after identifying a vehicle.
+ */
 export function hondaModelYears(): number[] {
-  const latest = new Date().getFullYear() + 1;
-  const years: number[] = [];
-  for (let year = latest; year >= 1981; year -= 1) years.push(year);
-  return years;
+  return publishedHondaYears();
 }
 
 export function normalizeVin(value: string): string {
@@ -178,86 +123,20 @@ export function isCompleteVin(value: string): boolean {
   return /^[A-HJ-NPR-Z0-9]{17}$/.test(normalizeVin(value));
 }
 
-function cacheKeyForModels(year: number) {
-  return `partgraph.honda.models.${year}.v1`;
+export async function fetchHondaModels(year: number): Promise<{models: HondaModelOption[]; yearScoped: boolean; fromCache: boolean}> {
+  const models = publishedHondaModels(year).map((name, index) => ({id: index + 1, name}));
+  return {models, yearScoped: true, fromCache: true};
 }
 
-function readModelCache(year: number): HondaModelOption[] | null {
-  const memory = modelMemoryCache.get(year);
-  if (memory) return memory;
-  if (typeof window === 'undefined') return null;
-
-  try {
-    const raw = window.localStorage.getItem(cacheKeyForModels(year));
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as {savedAt: number; models: HondaModelOption[]};
-    if (!Array.isArray(parsed.models) || Date.now() - parsed.savedAt > MODEL_CACHE_TTL_MS) return null;
-    modelMemoryCache.set(year, parsed.models);
-    return parsed.models;
-  } catch {
-    return null;
-  }
-}
-
-function writeModelCache(year: number, models: HondaModelOption[]) {
-  modelMemoryCache.set(year, models);
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(cacheKeyForModels(year), JSON.stringify({savedAt: Date.now(), models}));
-  } catch {
-    // Local storage can be unavailable in strict privacy modes. The in-memory cache still works.
-  }
-}
-
-function dedupeModels(results: NhtsaModelResult[]): HondaModelOption[] {
-  const byName = new Map<string, HondaModelOption>();
-  for (const result of results) {
-    const name = result.Model_Name?.trim();
-    if (!name) continue;
-    const key = name.toLowerCase();
-    if (!byName.has(key)) byName.set(key, {id: result.Model_ID ?? 0, name});
-  }
-  return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
+function text(value: string | undefined) {
+  const normalized = value?.trim();
+  return normalized || undefined;
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
   const response = await fetch(url, {headers: {Accept: 'application/json'}});
   if (!response.ok) throw new Error(`NHTSA request failed (${response.status})`);
   return response.json() as Promise<T>;
-}
-
-export async function fetchHondaModels(year: number): Promise<{models: HondaModelOption[]; yearScoped: boolean; fromCache: boolean}> {
-  const cached = readModelCache(year);
-  if (cached) return {models: cached, yearScoped: year >= 1996, fromCache: true};
-
-  if (year < 1996) {
-    const models = fallbackHondaAutomobileModels.map((name, index) => ({id: index + 1, name}));
-    writeModelCache(year, models);
-    return {models, yearScoped: false, fromCache: false};
-  }
-
-  const vehicleTypes = ['Passenger Car', 'Multipurpose Passenger Vehicle (MPV)', 'Truck'];
-  try {
-    const responses = await Promise.all(
-      vehicleTypes.map((vehicleType) => {
-        const url = `${NHTSA_BASE}/GetModelsForMakeYear/make/honda/modelyear/${year}/vehicletype/${encodeURIComponent(vehicleType)}?format=json`;
-        return fetchJson<NhtsaResponse<NhtsaModelResult>>(url);
-      }),
-    );
-    const models = dedupeModels(responses.flatMap((response) => response.Results ?? []));
-    if (!models.length) throw new Error('NHTSA returned no Honda automobile models for this year.');
-    writeModelCache(year, models);
-    return {models, yearScoped: true, fromCache: false};
-  } catch {
-    const models = fallbackHondaAutomobileModels.map((name, index) => ({id: index + 1, name}));
-    writeModelCache(year, models);
-    return {models, yearScoped: false, fromCache: false};
-  }
-}
-
-function text(value: string | undefined) {
-  const normalized = value?.trim();
-  return normalized || undefined;
 }
 
 export async function decodeHondaVin(rawVin: string): Promise<HondaVehicleIdentity> {
@@ -314,6 +193,10 @@ export async function decodeHondaVin(rawVin: string): Promise<HondaVehicleIdenti
     nhtsaErrorText: text(result.ErrorText),
   };
 
+  if (!findPublishedHondaConfiguration(identity)) {
+    throw new Error(`This Honda is identified, but the current MVP has published repair coverage only for the 2009 Civic Hybrid (U.S., 1.3L CVT). The repair graph was not changed.`);
+  }
+
   vinMemoryCache.set(vin, identity);
   return identity;
 }
@@ -329,12 +212,15 @@ export function manualHondaIdentity(year: number, model: string, trim: string): 
 }
 
 export function identityTrimLabel(identity: HondaVehicleIdentity): string {
-  return identity.trim || identity.trim2 || identity.series || identity.series2 || 'Trim not verified';
+  return identity.trim || identity.trim2 || identity.series || identity.series2 || 'Configuration';
 }
 
 export function identityEngineLabel(identity: HondaVehicleIdentity): string {
-  const bits = [identity.displacementL ? `${identity.displacementL}L` : '', identity.engineCylinders ? `${identity.engineCylinders}-cyl` : '', identity.electrificationLevel || '']
-    .filter(Boolean);
+  const bits = [
+    identity.displacementL ? `${identity.displacementL}L` : '',
+    identity.engineCylinders ? `${identity.engineCylinders}-cyl` : '',
+    identity.electrificationLevel || '',
+  ].filter(Boolean);
   return bits.join(' · ') || identity.engineModel || 'Engine not reported';
 }
 
@@ -343,24 +229,5 @@ export function is2009CivicCandidate(identity: HondaVehicleIdentity): boolean {
 }
 
 export function hasVerifiedDemoCoverage(identity: HondaVehicleIdentity): boolean {
-  if (!is2009CivicCandidate(identity)) return false;
-  const clues = [
-    identity.trim,
-    identity.trim2,
-    identity.series,
-    identity.series2,
-    identity.fuelTypePrimary,
-    identity.fuelTypeSecondary,
-    identity.electrificationLevel,
-    identity.engineModel,
-    identity.displacementL,
-    identity.transmissionStyle,
-  ]
-    .filter((value): value is string => Boolean(value))
-    .join(' ')
-    .toLowerCase();
-
-  const hybridClue = clues.includes('hybrid') || clues.includes('electric');
-  const engineClue = clues.includes('1.3');
-  return hybridClue || engineClue;
+  return Boolean(findPublishedHondaConfiguration(identity));
 }

@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint . --max-warnings=0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "catalog:scrape": "node tools/catalog/scrape-public-catalog.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "3.9.1",

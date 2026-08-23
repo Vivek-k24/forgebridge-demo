@@ -2,6 +2,27 @@
 
 This file keeps engineering notes out of the user-facing README.
 
+## 2026-08-23 — Catalog ingestion boundary
+
+### Goal
+
+Broaden the parts-data pipeline without pretending that public catalog pages are equivalent to a manufacturer repair manual.
+
+### Changes
+
+- Added `catalog/schema.sql`, a SQLite/Cloudflare-D1-compatible schema for source, vehicle, part, fitment-observation, media-reference and scrape-run records.
+- Added `tools/catalog/sources.json`, an explicit source manifest for the current exact 2009 Civic Hybrid catalog pages plus corroborating dealer/catalog sources.
+- Added `tools/catalog/scrape-public-catalog.mjs`, a zero-LLM build-time collector that checks `robots.txt`, fetches slowly, extracts Honda-style OEM numbers/names/quantities, stores no raw HTML, downloads no images and emits **candidate** observations only.
+- Added `src/lib/partCatalogStore.ts`, a normalized read model over the already curated PartGraph data so OEM identity can be searched independently of the UI graph structure.
+- Added `npm run catalog:scrape`.
+- Expanded `AGENTS.md` with a strict trust boundary between vehicle metadata, catalog identity/fitment evidence, mechanical/service facts and shopping.
+
+### Trust boundary
+
+A part number printed on an exact-configuration catalog page is useful factual evidence. It does **not** automatically prove service sequence, torque, fluid/pressure data, material compatibility, reuse policy, safety procedure or aftermarket interchange.
+
+Scraped observations are never auto-published into the repair graph. Mechanical/service truth remains a separate story requiring authoritative manufacturer/verified service sources.
+
 ## 2026-08-23 — Public Honda manual selection
 
 ### Problem fixed
