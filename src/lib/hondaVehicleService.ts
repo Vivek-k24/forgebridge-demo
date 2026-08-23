@@ -1,8 +1,8 @@
 import {
   findPublishedHondaConfiguration,
   publishedHondaModels,
-  publishedHondaYears,
 } from '../data/hondaPublishedCoverage';
+import {catalogModels} from './hondaCatalogService';
 import {hondaConfigurationConsumerLabel, hondaIdentityConsumerLabel} from './hondaVehicleLabels';
 
 export type VehicleSelectionSource = 'demo' | 'manual' | 'nhtsa-vin';
@@ -81,6 +81,8 @@ type NhtsaVinResult = Record<string, string> & {
 
 const NHTSA_BASE = 'https://vpic.nhtsa.dot.gov/api/vehicles';
 const vinMemoryCache = new Map<string, HondaVehicleIdentity>();
+const HONDA_CATALOG_FIRST_YEAR = 1973;
+const HONDA_CATALOG_LAST_YEAR = 2026;
 
 export const hondaTrimSuggestions = [
   'Hybrid',
@@ -108,12 +110,15 @@ export const demoHondaIdentity: HondaVehicleIdentity = {
 };
 
 /**
- * The consumer selector intentionally exposes only published PartGraph coverage.
- * Broad Honda discovery belongs in the catalog/admin pipeline, not in a repair
- * flow that would strand the user after identifying a vehicle.
+ * Manual vehicle browsing uses the static Honda catalog rather than PartGraph's
+ * much smaller published repair-graph list. Selecting an unsupported Honda is
+ * allowed; the repair workflow remains locked until verified graph coverage exists.
  */
 export function hondaModelYears(): number[] {
-  return publishedHondaYears();
+  return Array.from(
+    {length: HONDA_CATALOG_LAST_YEAR - HONDA_CATALOG_FIRST_YEAR + 1},
+    (_, index) => HONDA_CATALOG_LAST_YEAR - index,
+  );
 }
 
 export function normalizeVin(value: string): string {
@@ -125,6 +130,13 @@ export function isCompleteVin(value: string): boolean {
 }
 
 export async function fetchHondaModels(year: number): Promise<{models: HondaModelOption[]; yearScoped: boolean; fromCache: boolean}> {
+  try {
+    const models = await catalogModels(year);
+    if (models.length) return {models, yearScoped: true, fromCache: true};
+  } catch {
+    // Fall through to published coverage only if the static catalog cannot load.
+  }
+
   const models = publishedHondaModels(year).map((name, index) => ({id: index + 1, name}));
   return {models, yearScoped: true, fromCache: true};
 }
