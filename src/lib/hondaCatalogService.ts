@@ -35,7 +35,10 @@ interface HondaCatalogYear {
   records: HondaCatalogConfiguration[];
 }
 
-const dataRoot = `${import.meta.env.BASE_URL}data/honda`;
+const appBase = typeof window !== 'undefined' && window.location.pathname.startsWith('/forgebridge-demo/')
+  ? '/forgebridge-demo/'
+  : '/';
+const dataRoot = `${appBase}data/honda`;
 let indexPromise: Promise<HondaCatalogIndex> | null = null;
 const yearPromises = new Map<number, Promise<HondaCatalogYear>>();
 
