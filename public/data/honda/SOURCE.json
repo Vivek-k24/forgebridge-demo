@@ -1,0 +1,12 @@
+{
+  "source": "HondaPartsNow",
+  "purpose": "Public genuine-Honda catalog reference and exact configuration identity",
+  "root": "https://www.hondapartsnow.com",
+  "collectionMethod": "XML sitemap URL parsing; no LLM",
+  "notes": [
+    "PartGraph stores normalized factual identifiers and the original source URL.",
+    "HondaPartsNow is a genuine-parts retailer/catalog reference, not American Honda Motor Co.",
+    "Production/commercial reuse rights require a dedicated terms/licensing review.",
+    "Mechanical repair graphs remain separately verified; this catalog does not make every repair graph complete."
+  ]
+}
