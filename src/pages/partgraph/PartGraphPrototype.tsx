@@ -4,17 +4,19 @@ import {
   CheckCircle2,
   ChevronDown,
   CircleHelp,
-  Database,
   ExternalLink,
-  Gauge,
+  ImageOff,
+  Info,
+  Maximize2,
   PackageCheck,
   RotateCcw,
   Save,
   Search,
   ShieldCheck,
   ShoppingCart,
+  Smartphone,
   Wrench,
-  XCircle,
+  X,
 } from 'lucide-react';
 import {
   commerceSources,
@@ -26,9 +28,14 @@ import {
   type PartNode,
   type PartState,
 } from '../../data/partGraphDemo';
-import {buildRepairLines, completenessScore, questionForPart, validateGraph} from '../../lib/repairEngine';
+import {partImageById} from '../../data/partGraphImages';
+import {buildRepairLines, questionForPart} from '../../lib/repairEngine';
 
 const STORAGE_KEY = 'partgraph.v0.repair-state';
+const APP_URL = 'https://vivek-k24.github.io/forgebridge-demo/#/';
+const QR_URL = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&margin=8&data=${encodeURIComponent(APP_URL)}`;
+
+type PartFilter = 'attention' | 'all' | 'have';
 
 const stateLabels: Record<PartState, string> = {
   need: 'Need',
@@ -62,10 +69,6 @@ function loadSavedStates(): Record<string, PartState> {
   }
 }
 
-function statusClass(state: PartState) {
-  return `pg-state pg-state--${state}`;
-}
-
 function sellerUrl(part: PartNode, source: {id: string; name: string}) {
   const direct = part.purchaseLinks?.find((link) => link.name === source.name);
   if (direct) return direct.url;
@@ -77,11 +80,37 @@ function sellerUrl(part: PartNode, source: {id: string; name: string}) {
   return `https://www.google.com/search?q=${encodeURIComponent(`site:${domain} "${part.oemNumber}"`)}`;
 }
 
+function PartThumbnail({part, onOpen}: {part: PartNode; onOpen: (part: PartNode) => void}) {
+  const image = partImageById[part.id];
+
+  if (!image) {
+    return (
+      <a className="pg-part-thumb pg-part-thumb--missing" href={part.source.url} target="_blank" rel="noreferrer" title="Open the source diagram">
+        <ImageOff size={20} />
+        <span>Source diagram</span>
+      </a>
+    );
+  }
+
+  return (
+    <button className="pg-part-thumb" type="button" onClick={() => onOpen(part)} aria-label={`Enlarge photo of ${part.name}`}>
+      <img src={image.url} alt={image.alt} loading="lazy" referrerPolicy="no-referrer" />
+      <span className="pg-thumb-action"><Maximize2 size={13} /></span>
+      <span className="pg-hover-preview" aria-hidden="true">
+        <img src={image.url} alt="" loading="lazy" referrerPolicy="no-referrer" />
+        <strong>{part.name}</strong>
+        {part.oemNumber ? <code>{part.oemNumber}</code> : null}
+      </span>
+    </button>
+  );
+}
+
 function Diagram({states}: {states: Record<string, PartState>}) {
   const byId = useMemo(() => new Map(demoParts.map((part) => [part.id, part])), []);
+
   return (
-    <div className="pg-diagram-wrap" aria-label="Logical exploded assembly diagram">
-      <svg viewBox="0 0 820 550" className="pg-diagram" role="img" aria-label="Logical relationships around the radiator repair target">
+    <div className="pg-diagram-wrap" aria-label="Exploded assembly relationship view">
+      <svg viewBox="0 0 820 550" className="pg-diagram" role="img" aria-label="Parts around the radiator assembly">
         <defs>
           <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
             <path d="M0,0 L8,4 L0,8 z" className="pg-arrow" />
@@ -95,7 +124,17 @@ function Diagram({states}: {states: Record<string, PartState>}) {
           const y1 = from.diagram.y + from.diagram.h / 2;
           const x2 = to.diagram.x + to.diagram.w / 2;
           const y2 = to.diagram.y + to.diagram.h / 2;
-          return <line key={`${relation.from}-${relation.to}-${index}`} x1={x1} y1={y1} x2={x2} y2={y2} className={relation.source.status === 'verified' ? 'pg-edge pg-edge--verified' : 'pg-edge pg-edge--prototype'} markerEnd="url(#arrow)" />;
+          return (
+            <line
+              key={`${relation.from}-${relation.to}-${index}`}
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              className={relation.source.status === 'verified' ? 'pg-edge pg-edge--verified' : 'pg-edge pg-edge--prototype'}
+              markerEnd="url(#arrow)"
+            />
+          );
         })}
         {demoParts.map((part) => {
           const state = states[part.id] ?? 'not-sure';
@@ -103,7 +142,7 @@ function Diagram({states}: {states: Record<string, PartState>}) {
             <g key={part.id} className={`pg-node pg-node--${state}`}>
               <rect x={part.diagram.x} y={part.diagram.y} width={part.diagram.w} height={part.diagram.h} rx="16" />
               <text x={part.diagram.x + part.diagram.w / 2} y={part.diagram.y + part.diagram.h / 2 - 5} textAnchor="middle">
-                {part.name.length > 24 ? part.name.slice(0, 23) + '…' : part.name}
+                {part.name.length > 24 ? `${part.name.slice(0, 23)}…` : part.name}
               </text>
               <text className="pg-node-state" x={part.diagram.x + part.diagram.w / 2} y={part.diagram.y + part.diagram.h / 2 + 18} textAnchor="middle">
                 {stateLabels[state]}
@@ -112,32 +151,56 @@ function Diagram({states}: {states: Record<string, PartState>}) {
           );
         })}
       </svg>
-      <div className="pg-diagram-note">
-        Solid lines = catalog-backed relationship. Dashed lines = prototype inference/recommendation. Diagram is logical, not dimensional CAD.
+      <div className="pg-diagram-legend">
+        <span><i className="need" />Need</span>
+        <span><i className="have" />Have</span>
+        <span><i className="inspect" />Inspect</span>
+        <span><i className="not-sure" />Not sure</span>
       </div>
+      <p className="pg-diagram-note">This view shows verified part relationships and relative assembly logic. It is not dimensional CAD.</p>
     </div>
   );
 }
 
 export function PartGraphPrototype() {
   const [states, setStates] = useState<Record<string, PartState>>(loadSavedStates);
-  const [photoName, setPhotoName] = useState<string>('');
-  const [photoUrl, setPhotoUrl] = useState<string>('');
-  const [savedAt, setSavedAt] = useState<string>('');
-  const packetRef = useRef<HTMLDivElement>(null);
+  const [photoName, setPhotoName] = useState('');
+  const [photoUrl, setPhotoUrl] = useState('');
+  const [savedAt, setSavedAt] = useState('');
+  const [filter, setFilter] = useState<PartFilter>('attention');
+  const [previewPartId, setPreviewPartId] = useState<string | null>(null);
+
+  const cameraRef = useRef<HTMLElement>(null);
+  const assemblyRef = useRef<HTMLElement>(null);
+  const packetRef = useRef<HTMLElement>(null);
+  const diagramRef = useRef<HTMLElement>(null);
 
   const lines = useMemo(() => buildRepairLines(demoParts, states), [states]);
-  const score = useMemo(() => completenessScore(lines), [lines]);
-  const graphErrors = useMemo(() => validateGraph(demoParts, demoRelations), []);
   const needed = lines.filter((line) => line.state === 'need');
   const unresolved = lines.filter((line) => line.state === 'not-sure');
   const inspect = lines.filter((line) => line.state === 'inspect');
-  const verifiedParts = demoParts.filter((part) => part.source.status === 'verified').length;
-  const verifiedRelations = demoRelations.filter((relation) => relation.source.status === 'verified').length;
+  const have = lines.filter((line) => line.state === 'have');
+  const previewPart = previewPartId ? demoParts.find((part) => part.id === previewPartId) ?? null : null;
+  const previewImage = previewPart ? partImageById[previewPart.id] : null;
+
+  const visibleParts = useMemo(() => {
+    if (filter === 'all') return demoParts;
+    if (filter === 'have') return demoParts.filter((part) => states[part.id] === 'have');
+    return demoParts.filter((part) => states[part.id] !== 'have');
+  }, [filter, states]);
 
   useEffect(() => () => {
     if (photoUrl) URL.revokeObjectURL(photoUrl);
   }, [photoUrl]);
+
+  useEffect(() => {
+    if (!previewPartId) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setPreviewPartId(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [previewPartId]);
 
   const changeState = (id: string, state: PartState) => {
     setStates((current) => ({...current, [id]: state}));
@@ -152,6 +215,7 @@ export function PartGraphPrototype() {
     setStates(initialPartStates);
     localStorage.removeItem(STORAGE_KEY);
     setSavedAt('');
+    setFilter('attention');
   };
 
   const onPhoto = (file?: File) => {
@@ -161,81 +225,110 @@ export function PartGraphPrototype() {
     setPhotoUrl(URL.createObjectURL(file));
   };
 
+  const scrollTo = (ref: {current: HTMLElement | null}) => ref.current?.scrollIntoView({behavior: 'smooth', block: 'start'});
+
   return (
     <main className="pg-shell">
       <header className="pg-header">
-        <div className="pg-brand">
-          <div className="pg-mark"><Wrench size={20} /></div>
-          <div>
-            <strong>PARTGRAPH</strong>
-            <span>Honda-first repair intelligence</span>
-          </div>
-        </div>
-        <div className="pg-header-badges">
-          <span><Database size={15} /> deterministic graph</span>
-          <span><Gauge size={15} /> 0 runtime LLM calls</span>
-          <button type="button" className="pg-header-action" onClick={saveRepair}><Save size={14} />{savedAt ? `Saved ${savedAt}` : 'Save locally'}</button>
-        </div>
+        <a className="pg-brand" href="#/" aria-label="PartGraph home">
+          <span className="pg-mark"><Wrench size={19} /></span>
+          <span><strong>PARTGRAPH</strong><small>Complete repair parts</small></span>
+        </a>
+        <nav className="pg-jump-nav" aria-label="Page sections">
+          <button type="button" onClick={() => scrollTo(cameraRef)}>Photo</button>
+          <button type="button" onClick={() => scrollTo(assemblyRef)}>Parts check</button>
+          <button type="button" onClick={() => scrollTo(packetRef)}>Buy</button>
+          <button type="button" onClick={() => scrollTo(diagramRef)}>Diagram</button>
+        </nav>
+        <button type="button" className="pg-save" onClick={saveRepair}><Save size={15} />{savedAt ? `Saved ${savedAt}` : 'Save repair'}</button>
       </header>
 
       <section className="pg-hero">
-        <div className="pg-kicker">COMPLETE THE REPAIR, NOT JUST THE CART</div>
-        <h1>Reconstruct the whole assembly before you order.</h1>
-        <p>
-          This first real code slice starts with one exact vehicle configuration and one radiator-area repair. The graph determines what belongs, what connects, what should be inspected, and which OEM identity can be used for shopping.
-        </p>
-        <div className="pg-truth-banner">
-          <ShieldCheck size={21} />
-          <div>
-            <strong>Precision rule</strong>
-            <span>Green “verified” records below are backed by exact-configuration OEM/dealer catalog pages. Torque, coolant capacity, bleed procedure, refrigerant work and other service-manual facts remain locked until the authoritative service source is verified.</span>
+        <div className="pg-hero-copy">
+          <span className="pg-kicker">HONDA REPAIR BUILDER</span>
+          <h1>Get every part before you start the repair.</h1>
+          <p>Choose what you are fixing, mark what you already have, and PartGraph builds the complete parts list around the assembly—not just the big part.</p>
+          <div className="pg-hero-trust">
+            <span><ShieldCheck size={15} /> OEM-number checks</span>
+            <span><CheckCircle2 size={15} /> No account needed</span>
+            <span><Smartphone size={15} /> Built for phone photos</span>
           </div>
         </div>
+        <aside className="pg-qr-card" aria-label="Open PartGraph on a phone">
+          <img src={QR_URL} alt="QR code to open PartGraph on a phone" />
+          <div><strong>Open on your phone</strong><span>Scan, then take photos beside the car.</span></div>
+        </aside>
       </section>
 
-      <section className="pg-workflow" aria-label="Repair selection workflow">
-        <div className="pg-step pg-step--done"><span>1</span><div><small>Vehicle</small><strong>{demoVehicle.year} {demoVehicle.make} {demoVehicle.model}</strong><em>{demoVehicle.trim} · {demoVehicle.engine} · {demoVehicle.transmission}</em></div></div>
-        <div className="pg-step pg-step--done"><span>2</span><div><small>Block</small><strong>Cooling</strong><em>Engine cooling system</em></div></div>
-        <div className="pg-step pg-step--done"><span>3</span><div><small>Sub-block</small><strong>Front cooling module</strong><em>Radiator / fan / condenser area</em></div></div>
-        <div className="pg-step pg-step--active"><span>4</span><div><small>Target part</small><strong>Radiator</strong><em>OEM 19010-RRH-901</em></div></div>
+      <section className="pg-path" aria-label="Current repair path">
+        <div><small>Make</small><strong>{demoVehicle.make}</strong></div>
+        <span>›</span>
+        <div><small>Year / model</small><strong>{demoVehicle.year} {demoVehicle.model}</strong></div>
+        <span>›</span>
+        <div><small>Trim</small><strong>{demoVehicle.trim}</strong></div>
+        <span>›</span>
+        <div><small>Block</small><strong>Cooling</strong></div>
+        <span>›</span>
+        <div><small>Sub-block</small><strong>Front cooling</strong></div>
+        <span>›</span>
+        <div className="active"><small>Part</small><strong>Radiator</strong></div>
       </section>
 
-      <section className="pg-evidence-strip" aria-label="Data coverage summary">
-        <div><strong>{verifiedParts}</strong><span>catalog-backed part identities</span></div>
-        <div><strong>{verifiedRelations}</strong><span>catalog-backed relationships</span></div>
-        <div><strong>{sourceLedger.length}</strong><span>exact-vehicle source pages</span></div>
-        <div><strong>5</strong><span>purchase paths for main part</span></div>
+      <section className="pg-camera-prompt" ref={cameraRef}>
+        <div className="pg-camera-icon"><Camera size={25} /></div>
+        <div className="pg-camera-copy">
+          <span className="pg-eyebrow">PHOTO HELP</span>
+          <h2>If you’re not sure what the parts are called, let us take a look.</h2>
+          <p>Take a clear photo with your phone. For now, we pin your photo while you compare it with verified part photos in the checklist; automatic matching will be added only when it can fail safely.</p>
+        </div>
+        {photoUrl ? (
+          <div className="pg-camera-result">
+            <img src={photoUrl} alt="Your selected part" />
+            <div><strong>{photoName}</strong><span>Stays on this device</span></div>
+            <label className="pg-camera-button secondary">Retake<input type="file" accept="image/*" capture="environment" onChange={(event) => onPhoto(event.target.files?.[0])} /></label>
+          </div>
+        ) : (
+          <label className="pg-camera-button"><Camera size={17} /> Take or choose a photo<input type="file" accept="image/*" capture="environment" onChange={(event) => onPhoto(event.target.files?.[0])} /></label>
+        )}
       </section>
 
-      <section className="pg-check-section">
+      <section className="pg-assembly" ref={assemblyRef}>
         <div className="pg-section-heading">
           <div>
             <span className="pg-eyebrow">ASSEMBLY CHECK</span>
-            <h2>Tell us what survived.</h2>
-            <p>The questions come from typed graph records. No prompt is generated and no language model is called.</p>
+            <h2>What do you still need?</h2>
+            <p>Tap a part photo to enlarge it. On a computer, hover over the thumbnail for a quick preview.</p>
           </div>
-          <div className="pg-score">
-            <strong>{score}%</strong>
-            <span>decisions resolved</span>
+          <div className="pg-progress-summary">
+            <strong>{unresolved.length}</strong>
+            <span>still unanswered</span>
           </div>
         </div>
 
-        <div className="pg-checklist">
-          {demoParts.map((part) => {
+        {photoUrl ? <div className="pg-pinned-photo"><img src={photoUrl} alt="Your part for comparison" /><span>Your photo stays visible while you compare.</span></div> : null}
+
+        <div className="pg-filter-row" role="group" aria-label="Filter assembly parts">
+          <button type="button" className={filter === 'attention' ? 'active' : ''} onClick={() => setFilter('attention')}>Needs attention <b>{demoParts.length - have.length}</b></button>
+          <button type="button" className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>All parts <b>{demoParts.length}</b></button>
+          <button type="button" className={filter === 'have' ? 'active' : ''} onClick={() => setFilter('have')}>Already have <b>{have.length}</b></button>
+        </div>
+
+        <div className="pg-part-grid">
+          {visibleParts.map((part) => {
             const state = states[part.id] ?? 'not-sure';
             const Icon = stateIcons[state];
             return (
-              <article key={part.id} className="pg-part-question">
-                <div className="pg-part-copy">
-                  <div className="pg-part-meta-row">
-                    <div className={statusClass(state)}><Icon size={16} /> {stateLabels[state]}</div>
-                    <span className={`pg-source-status pg-source-status--${part.source.status}`}>{part.source.status}</span>
-                    {part.oemNumber ? <code>{part.oemNumber}</code> : <code>service spec locked</code>}
+              <article key={part.id} className={`pg-part-card pg-part-card--${state}`}>
+                <PartThumbnail part={part} onOpen={(selected) => setPreviewPartId(selected.id)} />
+                <div className="pg-part-main">
+                  <div className="pg-part-topline">
+                    <span className={`pg-state-badge pg-state-badge--${state}`}><Icon size={13} />{stateLabels[state]}</span>
+                    {part.source.status === 'verified' ? <span className="pg-verified"><ShieldCheck size={12} />Verified</span> : <span className="pg-service-item">Service item</span>}
+                    {part.oemNumber ? <code>{part.oemNumber}</code> : null}
                   </div>
                   <h3>{part.name}{part.quantity > 1 ? ` ×${part.quantity}` : ''}</h3>
                   <p>{questionForPart(part)}</p>
                   <small>{part.description}</small>
-                  {part.supersededNumbers?.length ? <small className="pg-supersession">Supersedes / replaces catalog reference: {part.supersededNumbers.join(', ')}</small> : null}
                 </div>
                 <div className="pg-choice-group" aria-label={`State for ${part.name}`}>
                   {(['need', 'have', 'inspect', 'not-sure'] as PartState[]).map((option) => (
@@ -249,151 +342,103 @@ export function PartGraphPrototype() {
           })}
         </div>
 
-        <div className="pg-action-row">
-          <button className="pg-primary" type="button" onClick={() => packetRef.current?.scrollIntoView({behavior: 'smooth'})}>
-            Build repair packet <ChevronDown size={18} />
-          </button>
-          <button className="pg-secondary" type="button" onClick={resetRepair}><RotateCcw size={16} /> Reset demo</button>
+        <div className="pg-assembly-actions">
+          <div><strong>{needed.length} to buy</strong><span>{inspect.length} to inspect · {unresolved.length} not sure</span></div>
+          <button className="pg-primary" type="button" onClick={() => scrollTo(packetRef)}>Review parts to buy <ChevronDown size={18} /></button>
+          <button className="pg-text-button" type="button" onClick={resetRepair}><RotateCcw size={14} /> Reset</button>
         </div>
       </section>
 
-      <section className="pg-camera-section">
-        <div className="pg-section-heading compact">
-          <div>
-            <span className="pg-eyebrow">CAMERA INPUT — LOCAL V0 SHELL</span>
-            <h2>Unknown part? Narrow first, recognize second.</h2>
-            <p>The future recognizer will compare a photo only against parts valid for this vehicle and assembly. The current build intentionally performs no recognition and uploads nothing.</p>
-          </div>
-        </div>
-        <div className="pg-camera-card">
-          <label className="pg-upload">
-            <Camera size={26} />
-            <strong>{photoName || 'Take or choose a part photo'}</strong>
-            <span>Browser-local preview only. No server upload, no API cost and no model call.</span>
-            <input type="file" accept="image/*" capture="environment" onChange={(event) => onPhoto(event.target.files?.[0])} />
-          </label>
-          {photoUrl ? <img src={photoUrl} alt="Local part preview" className="pg-photo-preview" /> : (
-            <div className="pg-camera-rules">
-              <strong>Planned recognition evidence</strong>
-              <span>3 angles</span><span>mounting holes / ports</span><span>OCR on visible markings</span><span>reference scale when possible</span><span>candidate set constrained by vehicle + assembly</span>
-            </div>
-          )}
-        </div>
-      </section>
-
-      <div ref={packetRef} />
-      <section className="pg-packet">
+      <section className="pg-packet" ref={packetRef}>
         <div className="pg-section-heading">
           <div>
-            <span className="pg-eyebrow">REPAIR PACKET</span>
-            <h2>{needed.length} items marked “Need”</h2>
-            <p>{unresolved.length} unresolved · {inspect.length} to inspect before ordering</p>
+            <span className="pg-eyebrow">YOUR REPAIR LIST</span>
+            <h2>{needed.length ? `${needed.length} items to find` : 'Nothing marked for purchase yet'}</h2>
+            <p>Each shopping path starts from the verified OEM identity. Store “fits your vehicle” badges never override the part record.</p>
           </div>
-          <div className="pg-packet-status"><PackageCheck size={22} /> graph valid: {graphErrors.length === 0 ? 'yes' : 'no'}</div>
+          <span className="pg-package-status"><PackageCheck size={18} /> {demoVehicle.year} {demoVehicle.model} {demoVehicle.trim}</span>
         </div>
 
-        <div className="pg-summary-grid">
-          <article><strong>{needed.length}</strong><span>add to package</span></article>
-          <article><strong>{inspect.length}</strong><span>inspect first</span></article>
-          <article><strong>{unresolved.length}</strong><span>not decided</span></article>
-          <article><strong>{demoRelations.length}</strong><span>typed relationships</span></article>
-        </div>
-
-        <div className="pg-two-col">
-          <div className="pg-panel">
-            <div className="pg-panel-title"><ShoppingCart size={19} /><div><strong>Parts + five-source finder</strong><span>Main radiator has five researched product paths. Other verified parts fall back to exact-OEM-number searches until provider APIs/adapters exist.</span></div></div>
-            {needed.map(({part}) => (
-              <div className="pg-shopping-part" key={part.id}>
-                <div className="pg-shopping-heading">
-                  <div><strong>{part.name}</strong><span>Qty {part.quantity}</span></div>
-                  <span className={`pg-source-status pg-source-status--${part.source.status}`}>{part.source.status}</span>
-                </div>
-                <div className="pg-oem-row"><span>OEM identity</span><strong>{part.oemNumber ?? 'LOCKED — authoritative source required'}</strong></div>
-                <div className="pg-sellers">
-                  {commerceSources.map((source) => {
-                    const url = sellerUrl(part, source);
-                    const direct = part.purchaseLinks?.some((link) => link.name === source.name);
-                    return url ? (
-                      <a key={source.id} href={url} target="_blank" rel="noreferrer" title={direct ? 'Researched product/catalog link' : `Exact OEM-number search for ${part.oemNumber}`}>
-                        <ExternalLink size={14} />{source.name}<small>{direct ? 'direct' : 'OEM search'}</small>
-                      </a>
-                    ) : (
-                      <button key={source.id} type="button" disabled title="OEM number not source-verified"><Search size={14} />{source.name}</button>
-                    );
-                  })}
-                </div>
-                <div className="pg-source-footer">
-                  <small>{part.source.note}</small>
-                  {part.source.url ? <a href={part.source.url} target="_blank" rel="noreferrer">Open source <ExternalLink size={12} /></a> : null}
-                </div>
+        <div className="pg-buy-list">
+          {needed.map(({part}) => (
+            <article className="pg-buy-card" key={part.id}>
+              <PartThumbnail part={part} onOpen={(selected) => setPreviewPartId(selected.id)} />
+              <div className="pg-buy-info">
+                <div><strong>{part.name}</strong><span>Qty {part.quantity}</span></div>
+                <code>{part.oemNumber ?? 'Service specification not loaded'}</code>
+                <small>{part.source.status === 'verified' ? 'OEM identity checked against the current vehicle catalog.' : 'Purchase details wait for an authoritative service source.'}</small>
               </div>
-            ))}
-          </div>
-
-          <div className="pg-panel">
-            <div className="pg-panel-title"><Wrench size={19} /><div><strong>Repair intelligence</strong><span>Part identity can advance independently from safety-critical service specifications.</span></div></div>
-            <div className="pg-spec-grid">
-              <div><span>OEM part identity</span><strong>{verifiedParts} records catalog-backed</strong></div>
-              <div><span>Supersessions</span><strong>Tracked when the catalog exposes them</strong></div>
-              <div><span>Tools</span><strong>Pending service-source verification</strong></div>
-              <div><span>Fastener torque</span><strong>Locked</strong></div>
-              <div><span>Coolant type / quantity</span><strong>Locked</strong></div>
-              <div><span>Drain / refill points</span><strong>Locked</strong></div>
-              <div><span>Bleed procedure</span><strong>Locked</strong></div>
-              <div><span>Pressure / flow notes</span><strong>Locked</strong></div>
-              <div><span>Safety class</span><strong>Cooling + adjacent A/C / hybrid context</strong></div>
-              <div><span>Runtime LLM tokens</span><strong>0</strong></div>
-            </div>
-            <div className="pg-safety-note"><XCircle size={18} /><span>PartGraph must be allowed to stop. No unverified torque, refrigerant, high-voltage or mechanical procedure is invented to make a page look complete.</span></div>
-          </div>
-        </div>
-      </section>
-
-      <section className="pg-source-ledger">
-        <div className="pg-section-heading compact">
-          <div>
-            <span className="pg-eyebrow">SOURCE LEDGER</span>
-            <h2>Every mechanical fact needs a trail.</h2>
-            <p>This is the first primitive of the production data pipeline: source → structured claim → human/validator approval → versioned graph.</p>
-          </div>
-        </div>
-        <div className="pg-ledger-grid">
-          {sourceLedger.map((source) => (
-            <a key={source.id} href={source.url} target="_blank" rel="noreferrer" className="pg-ledger-card">
-              <ShieldCheck size={18} />
-              <div><strong>{source.label}</strong><span>{source.scope}</span></div>
-              <ExternalLink size={15} />
-            </a>
+              <div className="pg-sellers" aria-label={`Purchase links for ${part.name}`}>
+                {commerceSources.map((source) => {
+                  const url = sellerUrl(part, source);
+                  const direct = part.purchaseLinks?.some((link) => link.name === source.name);
+                  return url ? (
+                    <a key={source.id} href={url} target="_blank" rel="noreferrer" title={direct ? 'Direct researched product page' : `Search exact OEM number ${part.oemNumber}`}>
+                      <ExternalLink size={13} /><span>{source.name}</span><small>{direct ? 'direct' : 'OEM search'}</small>
+                    </a>
+                  ) : (
+                    <span key={source.id} className="disabled"><Search size={13} /><span>{source.name}</span></span>
+                  );
+                })}
+              </div>
+            </article>
           ))}
         </div>
+
+        <div className="pg-service-status">
+          <Info size={19} />
+          <div>
+            <strong>Repair instructions follow the same precision rule.</strong>
+            <span>Torque, coolant quantity, drain/refill steps, bleed procedure and safety-critical service instructions stay hidden until the exact Honda service source for this configuration is loaded and verified.</span>
+          </div>
+        </div>
       </section>
 
-      <section className="pg-exploded">
+      <section className="pg-exploded" ref={diagramRef}>
         <div className="pg-section-heading compact">
           <div>
-            <span className="pg-eyebrow">LOGICAL EXPLODED VIEW</span>
-            <h2>One graph, multiple outputs.</h2>
-            <p>The same typed relationships drive the checklist, shopping package and diagram. Geometry is deliberately schematic until licensed/verified CAD or dimensional data exists.</p>
+            <span className="pg-eyebrow">ASSEMBLY VIEW</span>
+            <h2>See how the selected pieces relate.</h2>
+            <p>The same relationship data that builds the checklist drives this view.</p>
           </div>
         </div>
         <Diagram states={states} />
       </section>
 
-      <section className="pg-architecture">
-        <div>
-          <span className="pg-eyebrow">TOKEN / COMPUTE DESIGN</span>
-          <h2>Runtime AI is off by default.</h2>
-          <p>Mechanical truth is precomputed and cached. Seller search is exact-number retrieval. Vision will use local/constrained inference. LLMs belong in the internal source-ingestion pipeline only when deterministic extraction is ambiguous.</p>
-        </div>
-        <div className="pg-architecture-flow">
-          <span>source ledger</span><b>→</b><span>verified JSON / DB graph</span><b>→</b><span>repair engine</span><b>→</b><span>browser workflow</span><b>→</b><span>seller adapters</span>
-        </div>
+      <section className="pg-proof">
+        <details>
+          <summary><ShieldCheck size={17} /> How PartGraph verifies this repair</summary>
+          <div className="pg-proof-body">
+            <p>Mechanical claims are stored with a source trail. Shopping searches happen only after the OEM identity is established.</p>
+            <div className="pg-proof-links">
+              {sourceLedger.map((source) => (
+                <a key={source.id} href={source.url} target="_blank" rel="noreferrer"><span><strong>{source.label}</strong><small>{source.scope}</small></span><ExternalLink size={14} /></a>
+              ))}
+            </div>
+          </div>
+        </details>
       </section>
 
       <footer className="pg-footer">
-        <strong>PartGraph Honda MVP</strong>
-        <span>Static V0 · exact-vehicle catalog data where marked verified · no live OEM feed · no seller API · no AI inference · service specifications remain gated</span>
+        <strong>PartGraph</strong>
+        <span>Current coverage: 2009 Honda Civic MX Hybrid · US market · front cooling/radiator area. We show a mechanical claim only when its source is available.</span>
       </footer>
+
+      <div className="pg-mobile-bar">
+        <div><strong>{needed.length} to buy</strong><span>{unresolved.length} unanswered</span></div>
+        <button type="button" onClick={() => scrollTo(packetRef)}>Review list</button>
+      </div>
+
+      {previewPart && previewImage ? (
+        <div className="pg-image-modal" role="dialog" aria-modal="true" aria-label={`Photo of ${previewPart.name}`} onClick={() => setPreviewPartId(null)}>
+          <div className="pg-image-modal-card" onClick={(event) => event.stopPropagation()}>
+            <button type="button" className="pg-modal-close" onClick={() => setPreviewPartId(null)} aria-label="Close image"><X size={19} /></button>
+            <img src={previewImage.url} alt={previewImage.alt} referrerPolicy="no-referrer" />
+            <div><strong>{previewPart.name}</strong>{previewPart.oemNumber ? <code>{previewPart.oemNumber}</code> : null}</div>
+            <a href={previewImage.sourcePageUrl} target="_blank" rel="noreferrer">Open image source <ExternalLink size={13} /></a>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
