@@ -47,6 +47,10 @@ export function PartGraphSelect({
     };
   }, [open]);
 
+  const selectedTitle = selected
+    ? [selected.label, selected.secondary].filter(Boolean).join(' — ')
+    : placeholder;
+
   return (
     <div className={`pg2-select ${className}`} ref={rootRef}>
       <span className="pg2-select-label">{label}</span>
@@ -57,6 +61,7 @@ export function PartGraphSelect({
         aria-haspopup="listbox"
         aria-expanded={open}
         disabled={disabled}
+        title={selectedTitle}
       >
         <span className={!selected ? 'placeholder' : ''}>{selected?.label ?? placeholder}</span>
         <ChevronDown size={15} />

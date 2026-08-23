@@ -3,6 +3,7 @@ import {
   publishedHondaModels,
   publishedHondaYears,
 } from '../data/hondaPublishedCoverage';
+import {hondaConfigurationConsumerLabel, hondaIdentityConsumerLabel} from './hondaVehicleLabels';
 
 export type VehicleSelectionSource = 'demo' | 'manual' | 'nhtsa-vin';
 
@@ -194,7 +195,7 @@ export async function decodeHondaVin(rawVin: string): Promise<HondaVehicleIdenti
   };
 
   if (!findPublishedHondaConfiguration(identity)) {
-    throw new Error(`This Honda is identified, but the current MVP has published repair coverage only for the 2009 Civic Hybrid (U.S., 1.3L CVT). The repair graph was not changed.`);
+    throw new Error('This Honda is identified, but the current release does not have a verified repair graph for this exact vehicle yet. The repair graph was not changed.');
   }
 
   vinMemoryCache.set(vin, identity);
@@ -212,7 +213,9 @@ export function manualHondaIdentity(year: number, model: string, trim: string): 
 }
 
 export function identityTrimLabel(identity: HondaVehicleIdentity): string {
-  return identity.trim || identity.trim2 || identity.series || identity.series2 || 'Configuration';
+  const published = findPublishedHondaConfiguration(identity);
+  if (published) return hondaConfigurationConsumerLabel(published);
+  return hondaIdentityConsumerLabel(identity);
 }
 
 export function identityEngineLabel(identity: HondaVehicleIdentity): string {

@@ -1,0 +1,12 @@
+.pg2-select-trigger>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pg2-vehicle-row{grid-template-columns:110px minmax(170px,.65fr) minmax(280px,1.35fr)}
+
+@media(max-width:680px){
+  .pg2-vehicle-row{grid-template-columns:1fr 1fr}
+  .pg2-vehicle-row>.pg2-select:last-child{grid-column:1/-1}
+}
+
+@media(max-width:420px){
+  .pg2-vehicle-row{grid-template-columns:1fr}
+  .pg2-vehicle-row>.pg2-select:last-child{grid-column:auto}
+}
