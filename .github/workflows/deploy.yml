@@ -1,4 +1,4 @@
-name: Deploy ForgeBridge to GitHub Pages
+name: Deploy PartGraph to GitHub Pages
 
 on:
   push:
@@ -10,13 +10,17 @@ permissions:
   pages: write
   id-token: write
 
+# PRs #10 and #11 landed within minutes of each other. Do not cancel an
+# in-flight Pages deployment when another merge reaches main; queue it instead
+# so the newest main commit always gets a clean deployment attempt.
 concurrency:
-  group: pages
-  cancel-in-progress: true
+  group: github-pages
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -36,6 +40,12 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Verify production artifact
+        run: |
+          test -f dist/index.html
+          test -d dist/assets
+          grep -q '/forgebridge-demo/' dist/index.html
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
@@ -49,6 +59,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: build
     steps:
       - name: Deploy to GitHub Pages
