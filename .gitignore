@@ -11,3 +11,7 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+.cache/partgraph/
+data/catalog/*.sqlite
+data/catalog/*.sqlite-shm
+data/catalog/*.sqlite-wal
