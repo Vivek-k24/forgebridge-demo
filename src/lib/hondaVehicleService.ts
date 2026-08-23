@@ -338,20 +338,29 @@ export function identityEngineLabel(identity: HondaVehicleIdentity): string {
   return bits.join(' · ') || identity.engineModel || 'Engine not reported';
 }
 
+export function is2009CivicCandidate(identity: HondaVehicleIdentity): boolean {
+  return identity.year === 2009 && identity.model.trim().toLowerCase() === 'civic';
+}
+
 export function hasVerifiedDemoCoverage(identity: HondaVehicleIdentity): boolean {
-  if (identity.year !== 2009 || identity.model.trim().toLowerCase() !== 'civic') return false;
+  if (!is2009CivicCandidate(identity)) return false;
   const clues = [
     identity.trim,
     identity.trim2,
     identity.series,
     identity.series2,
+    identity.fuelTypePrimary,
+    identity.fuelTypeSecondary,
     identity.electrificationLevel,
     identity.engineModel,
     identity.displacementL,
+    identity.transmissionStyle,
   ]
     .filter((value): value is string => Boolean(value))
     .join(' ')
     .toLowerCase();
 
-  return clues.includes('hybrid') || clues.includes('1.3');
+  const hybridClue = clues.includes('hybrid') || clues.includes('electric');
+  const engineClue = clues.includes('1.3');
+  return hybridClue || engineClue;
 }

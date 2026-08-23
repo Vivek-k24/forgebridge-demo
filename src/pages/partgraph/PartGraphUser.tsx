@@ -19,26 +19,28 @@ import {
   Wrench,
   X,
 } from 'lucide-react';
-import {
-  commerceSources,
-  demoParts,
-  demoRelations,
-  initialPartStates,
-  sourceLedger,
-  type PartNode,
-  type PartState,
-} from '../../data/partGraphDemo';
+import {commerceSources, type PartNode, type PartRelation, type PartState} from '../../data/partGraphDemo';
 import {partImageById} from '../../data/partGraphImages';
+import {
+  getRepairBlock,
+  getRepairGraph,
+  initialStatesForGraph,
+  publishedRepairGraphs,
+  repairBlocks,
+  type RepairBlockId,
+  type RepairGraphDefinition,
+} from '../../data/partGraphSystems';
 import {
   demoHondaIdentity,
   hasVerifiedDemoCoverage,
   identityTrimLabel,
+  is2009CivicCandidate,
   type HondaVehicleIdentity,
 } from '../../lib/hondaVehicleService';
 import {buildRepairLines, questionForPart} from '../../lib/repairEngine';
 import {HondaVehicleSelector} from './HondaVehicleSelector';
 
-const STORAGE_KEY = 'partgraph.v0.repair-state';
+const LEGACY_STORAGE_KEY = 'partgraph.v0.repair-state';
 const APP_URL = 'https://vivek-k24.github.io/forgebridge-demo/#/';
 const QR_URL = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&margin=8&data=${encodeURIComponent(APP_URL)}`;
 
@@ -65,14 +67,22 @@ const providerDomains: Record<string, string> = {
   autopartsprime: 'autopartsprime.com',
 };
 
-function loadSavedStates(): Record<string, PartState> {
+function storageKey(graphId: string) {
+  return `partgraph.v1.repair-state.${graphId}`;
+}
+
+function loadSavedStates(graph: RepairGraphDefinition): Record<string, PartState> {
+  const fallback = initialStatesForGraph(graph);
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return initialPartStates;
+    const raw = localStorage.getItem(storageKey(graph.id)) || (graph.id === 'front-cooling' ? localStorage.getItem(LEGACY_STORAGE_KEY) : null);
+    if (!raw) return fallback;
     const parsed = JSON.parse(raw) as Record<string, PartState>;
-    return {...initialPartStates, ...parsed};
+    const validIds = new Set(graph.parts.map((part) => part.id));
+    return Object.fromEntries(
+      Object.entries({...fallback, ...parsed}).filter(([id]) => validIds.has(id)),
+    );
   } catch {
-    return initialPartStates;
+    return fallback;
   }
 }
 
@@ -91,11 +101,19 @@ function PartThumbnail({part, onOpen}: {part: PartNode; onOpen: (part: PartNode)
   const image = partImageById[part.id];
 
   if (!image) {
+    if (part.source.url) {
+      return (
+        <a className="pg-part-thumb pg-part-thumb--missing" href={part.source.url} target="_blank" rel="noreferrer" title="Open the source diagram">
+          <ImageOff size={20} />
+          <span>Source diagram</span>
+        </a>
+      );
+    }
     return (
-      <a className="pg-part-thumb pg-part-thumb--missing" href={part.source.url} target="_blank" rel="noreferrer" title="Open the source diagram">
+      <span className="pg-part-thumb pg-part-thumb--missing" title="No verified preview image yet">
         <ImageOff size={20} />
-        <span>Source diagram</span>
-      </a>
+        <span>No verified image</span>
+      </span>
     );
   }
 
@@ -112,18 +130,18 @@ function PartThumbnail({part, onOpen}: {part: PartNode; onOpen: (part: PartNode)
   );
 }
 
-function Diagram({states}: {states: Record<string, PartState>}) {
-  const byId = useMemo(() => new Map(demoParts.map((part) => [part.id, part])), []);
+function Diagram({parts, relations, states}: {parts: PartNode[]; relations: PartRelation[]; states: Record<string, PartState>}) {
+  const byId = useMemo(() => new Map(parts.map((part) => [part.id, part])), [parts]);
 
   return (
     <div className="pg-diagram-wrap" aria-label="Exploded assembly relationship view">
-      <svg viewBox="0 0 820 550" className="pg-diagram" role="img" aria-label="Parts around the radiator assembly">
+      <svg viewBox="0 0 820 550" className="pg-diagram" role="img" aria-label="Parts in the selected assembly">
         <defs>
           <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
             <path d="M0,0 L8,4 L0,8 z" className="pg-arrow" />
           </marker>
         </defs>
-        {demoRelations.map((relation, index) => {
+        {relations.map((relation, index) => {
           const from = byId.get(relation.from);
           const to = byId.get(relation.to);
           if (!from || !to) return null;
@@ -143,7 +161,7 @@ function Diagram({states}: {states: Record<string, PartState>}) {
             />
           );
         })}
-        {demoParts.map((part) => {
+        {parts.map((part) => {
           const state = states[part.id] ?? 'not-sure';
           return (
             <g key={part.id} className={`pg-node pg-node--${state}`}>
@@ -164,15 +182,19 @@ function Diagram({states}: {states: Record<string, PartState>}) {
         <span><i className="inspect" />Inspect</span>
         <span><i className="not-sure" />Not sure</span>
       </div>
-      <p className="pg-diagram-note">This view shows verified part relationships and relative assembly logic. It is not dimensional CAD.</p>
+      <p className="pg-diagram-note">Logical relationship view from the selected catalog graph. It is not dimensional CAD and does not imply service order.</p>
     </div>
   );
 }
 
 export function PartGraphUser() {
-  const [states, setStates] = useState<Record<string, PartState>>(loadSavedStates);
+  const initialGraph = getRepairGraph('front-cooling');
   const [vehicle, setVehicle] = useState<HondaVehicleIdentity>(demoHondaIdentity);
-  const [targetPartId, setTargetPartId] = useState('radiator');
+  const [coverageOverride, setCoverageOverride] = useState(false);
+  const [blockId, setBlockId] = useState<RepairBlockId>('cooling');
+  const [graphId, setGraphId] = useState(initialGraph.id);
+  const [targetPartId, setTargetPartId] = useState(initialGraph.defaultTargetPartId);
+  const [states, setStates] = useState<Record<string, PartState>>(() => loadSavedStates(initialGraph));
   const [photoName, setPhotoName] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
   const [savedAt, setSavedAt] = useState('');
@@ -184,31 +206,35 @@ export function PartGraphUser() {
   const cameraRef = useRef<HTMLElement>(null);
   const assemblyRef = useRef<HTMLElement>(null);
   const packetRef = useRef<HTMLElement>(null);
-  const diagramRef = useRef<HTMLElement>(null);
 
-  const coverageSupported = hasVerifiedDemoCoverage(vehicle);
-  const targetPart = demoParts.find((part) => part.id === targetPartId) ?? demoParts[0];
-  const lines = useMemo(() => buildRepairLines(demoParts, states), [states]);
+  const activeBlock = getRepairBlock(blockId);
+  const activeGraph = getRepairGraph(graphId);
+  const parts = activeGraph.parts;
+  const relations = activeGraph.relations;
+  const coverageSupported = hasVerifiedDemoCoverage(vehicle) || coverageOverride;
+  const coverageCandidate = is2009CivicCandidate(vehicle) && !hasVerifiedDemoCoverage(vehicle);
+  const targetPart = parts.find((part) => part.id === targetPartId) ?? parts[0];
+  const lines = useMemo(() => buildRepairLines(parts, states), [parts, states]);
   const needed = lines.filter((line) => line.state === 'need');
   const unresolved = lines.filter((line) => line.state === 'not-sure');
   const inspect = lines.filter((line) => line.state === 'inspect');
   const have = lines.filter((line) => line.state === 'have');
-  const previewPart = previewPartId ? demoParts.find((part) => part.id === previewPartId) ?? null : null;
+  const previewPart = previewPartId ? parts.find((part) => part.id === previewPartId) ?? null : null;
   const previewImage = previewPart ? partImageById[previewPart.id] : null;
 
   const visibleParts = useMemo(() => {
     const filtered = filter === 'all'
-      ? demoParts
+      ? parts
       : filter === 'have'
-        ? demoParts.filter((part) => states[part.id] === 'have')
-        : demoParts.filter((part) => states[part.id] !== 'have');
+        ? parts.filter((part) => states[part.id] === 'have')
+        : parts.filter((part) => states[part.id] !== 'have');
 
     return [...filtered].sort((a, b) => {
       if (a.id === targetPartId) return -1;
       if (b.id === targetPartId) return 1;
       return 0;
     });
-  }, [filter, states, targetPartId]);
+  }, [filter, parts, states, targetPartId]);
 
   useEffect(() => () => {
     if (photoUrl) URL.revokeObjectURL(photoUrl);
@@ -223,26 +249,51 @@ export function PartGraphUser() {
     return () => window.removeEventListener('keydown', onKey);
   }, [previewPartId]);
 
+  const activateGraph = (graph: RepairGraphDefinition) => {
+    setGraphId(graph.id);
+    setBlockId(graph.blockId);
+    setTargetPartId(graph.defaultTargetPartId);
+    setStates(loadSavedStates(graph));
+    setFilter('attention');
+    setSavedAt('');
+    setPreviewPartId(null);
+  };
+
+  const selectBlock = (nextBlockId: RepairBlockId) => {
+    const nextBlock = getRepairBlock(nextBlockId);
+    const nextGraph = nextBlock.graphs[0];
+    if (!nextGraph) return;
+    activateGraph(nextGraph);
+  };
+
   const changeState = (id: string, state: PartState) => {
     setStates((current) => ({...current, [id]: state}));
   };
 
   const saveRepair = () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(states));
+    localStorage.setItem(storageKey(activeGraph.id), JSON.stringify(states));
     setSavedAt(new Date().toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'}));
   };
 
   const resetRepair = () => {
-    setStates(initialPartStates);
-    localStorage.removeItem(STORAGE_KEY);
+    const reset = initialStatesForGraph(activeGraph);
+    setStates(reset);
+    localStorage.removeItem(storageKey(activeGraph.id));
+    if (activeGraph.id === 'front-cooling') localStorage.removeItem(LEGACY_STORAGE_KEY);
     setSavedAt('');
     setFilter('attention');
   };
 
   const useVerifiedDemo = () => {
     setVehicle(demoHondaIdentity);
-    setTargetPartId('radiator');
+    setCoverageOverride(false);
+    activateGraph(getRepairGraph('front-cooling'));
     window.setTimeout(() => scopeRef.current?.scrollIntoView({behavior: 'smooth', block: 'start'}), 0);
+  };
+
+  const confirmHybridCoverage = () => {
+    setCoverageOverride(true);
+    activateGraph(getRepairGraph('front-cooling'));
   };
 
   const onPhoto = (file?: File) => {
@@ -269,14 +320,14 @@ export function PartGraphUser() {
           <button type="button" onClick={() => scrollTo(assemblyRef)}>Parts</button>
           <button type="button" onClick={() => scrollTo(packetRef)}>Buy</button>
         </nav>
-        <button type="button" className="pg-save" onClick={saveRepair}><Save size={15} />{savedAt ? `Saved ${savedAt}` : 'Save repair'}</button>
+        <button type="button" className="pg-save" onClick={saveRepair} disabled={!coverageSupported}><Save size={15} />{savedAt ? `Saved ${savedAt}` : 'Save repair'}</button>
       </header>
 
       <section className="pg-hero">
         <div className="pg-hero-copy">
           <span className="pg-kicker">HONDA REPAIR BUILDER</span>
           <h1>Get every part before you start the repair.</h1>
-          <p>Identify the exact Honda, choose the repair area, mark what you already have, and PartGraph builds the complete assembly list—not just the big part.</p>
+          <p>Identify the exact Honda, choose the repair area, mark what you already have, and PartGraph builds the connected assembly list—not just the big part.</p>
           <div className="pg-hero-trust">
             <span><ShieldCheck size={15} /> Source-backed identity</span>
             <span><CheckCircle2 size={15} /> No account needed</span>
@@ -290,7 +341,14 @@ export function PartGraphUser() {
       </section>
 
       <div ref={vehicleRef} className="pg-vehicle-anchor">
-        <HondaVehicleSelector value={vehicle} onChange={(identity) => { setVehicle(identity); setPreviewPartId(null); }} />
+        <HondaVehicleSelector
+          value={vehicle}
+          onChange={(identity) => {
+            setVehicle(identity);
+            setCoverageOverride(false);
+            setPreviewPartId(null);
+          }}
+        />
       </div>
 
       <section className="pg-scope-builder" ref={scopeRef}>
@@ -298,51 +356,56 @@ export function PartGraphUser() {
           <div>
             <span className="pg-eyebrow">STEP 2 · CHOOSE THE REPAIR</span>
             <h2>Where are you working?</h2>
-            <p>Block → sub-block → target part. The target moves to the top of the assembly check, while connected pieces stay visible.</p>
+            <p>Block → sub-block → target part. Only source-backed graphs are selectable.</p>
           </div>
           <span className={`pg-coverage-pill ${coverageSupported ? 'ready' : 'blocked'}`}>
             {coverageSupported ? <ShieldCheck size={14} /> : <ShieldAlert size={14} />}
-            {coverageSupported ? 'Verified graph available' : 'Vehicle identified · graph not published'}
+            {coverageSupported ? `Published graph · ${repairBlocks.length} systems / ${publishedRepairGraphs.length} assemblies` : 'Vehicle identified · graph not matched'}
           </span>
         </div>
 
         <div className="pg-scope-grid">
           <label className="pg-field">
             <span>Block</span>
-            <select value="cooling" disabled={!coverageSupported}>
-              <option value="cooling">Cooling</option>
-              <option disabled>Air conditioning — next</option>
-              <option disabled>Front body — planned</option>
-              <option disabled>Engine — planned</option>
-              <option disabled>Brakes — planned</option>
-              <option disabled>Suspension — planned</option>
-              <option disabled>Electrical — planned</option>
+            <select value={blockId} disabled={!coverageSupported} onChange={(event) => selectBlock(event.target.value as RepairBlockId)}>
+              {repairBlocks.map((block) => <option key={block.id} value={block.id}>{block.label}</option>)}
+              <option disabled>Cosmetics / body — later</option>
+              <option disabled>Lighting — later</option>
+              <option disabled>Interior / media — later</option>
+              <option disabled>Suspension / general chassis — later</option>
             </select>
           </label>
           <label className="pg-field">
             <span>Sub-block</span>
-            <select value="front-cooling" disabled={!coverageSupported}>
-              <option value="front-cooling">Front cooling / radiator area</option>
+            <select
+              value={activeGraph.id}
+              disabled={!coverageSupported}
+              onChange={(event) => activateGraph(getRepairGraph(event.target.value))}
+            >
+              {activeBlock.graphs.map((graph) => <option key={graph.id} value={graph.id}>{graph.label}</option>)}
             </select>
           </label>
           <label className="pg-field pg-field--target">
             <span>Target part</span>
             <select value={targetPartId} onChange={(event) => setTargetPartId(event.target.value)} disabled={!coverageSupported}>
-              {demoParts.map((part) => <option key={part.id} value={part.id}>{part.name}</option>)}
+              {parts.map((part) => <option key={part.id} value={part.id}>{part.name}</option>)}
             </select>
           </label>
         </div>
 
         {coverageSupported ? (
-          <div className="pg-scope-ready"><CheckCircle2 size={15} /> Exact published MVP coverage: 2009 Honda Civic Hybrid · US market · front cooling/radiator area.</div>
+          <div className="pg-scope-ready">
+            <CheckCircle2 size={15} />
+            Published catalog coverage: 2009 Honda Civic Hybrid · US market · Cooling, A/C, Drivetrain and Safety. {coverageOverride ? 'Vehicle variant was confirmed by the user.' : 'Hybrid identity matched from vehicle data.'}
+          </div>
         ) : (
           <div className="pg-scope-blocked">
             <ShieldAlert size={18} />
             <div>
               <strong>We identified the Honda, but we will not reuse another car's parts graph.</strong>
-              <span>Vehicle discovery is broad; verified mechanical coverage is intentionally narrow. This is the precision gate that prevents a wrong-model checklist.</span>
+              <span>Published mechanical coverage is currently the 2009 US Civic Hybrid catalog. We stop instead of guessing across trim, engine or production differences.</span>
             </div>
-            <button type="button" onClick={useVerifiedDemo}>Open the verified 2009 Civic Hybrid repair</button>
+            {coverageCandidate ? <button type="button" onClick={confirmHybridCoverage}>This is a 2009 Civic Hybrid — use its catalog graph</button> : <button type="button" onClick={useVerifiedDemo}>Open the verified 2009 Civic Hybrid repair</button>}
           </div>
         )}
       </section>
@@ -354,9 +417,9 @@ export function PartGraphUser() {
         <span>›</span>
         <div><small>Trim / series</small><strong>{vehicleTrim}</strong></div>
         <span>›</span>
-        <div><small>Block</small><strong>{coverageSupported ? 'Cooling' : '—'}</strong></div>
+        <div><small>Block</small><strong>{coverageSupported ? activeBlock.label : '—'}</strong></div>
         <span>›</span>
-        <div><small>Sub-block</small><strong>{coverageSupported ? 'Front cooling' : '—'}</strong></div>
+        <div><small>Sub-block</small><strong>{coverageSupported ? activeGraph.shortLabel : '—'}</strong></div>
         <span>›</span>
         <div className="active"><small>Part</small><strong>{coverageSupported ? targetPart.name : 'Waiting for coverage'}</strong></div>
       </section>
@@ -368,7 +431,7 @@ export function PartGraphUser() {
             <div className="pg-camera-copy">
               <span className="pg-eyebrow">PHOTO HELP</span>
               <h2>If you’re not sure what the parts are called, let us take a look.</h2>
-              <p>Take a clear photo with your phone. For now, we pin your photo while you compare it with verified part photos in the checklist; automatic matching will be added only when it can fail safely.</p>
+              <p>Take a clear photo with your phone. For now, we pin your photo while you compare it with verified part photos or the source diagram; automatic matching will be added only when it can fail safely.</p>
             </div>
             {photoUrl ? (
               <div className="pg-camera-result">
@@ -381,24 +444,28 @@ export function PartGraphUser() {
             )}
           </section>
 
+          {activeGraph.warning ? (
+            <div className="pg-service-status" style={{maxWidth: 1192, margin: '0 auto 12px'}}>
+              <ShieldAlert size={19} />
+              <div><strong>Safety / precision boundary</strong><span>{activeGraph.warning}</span></div>
+            </div>
+          ) : null}
+
           <section className="pg-assembly" ref={assemblyRef}>
             <div className="pg-section-heading">
               <div>
                 <span className="pg-eyebrow">STEP 3 · ASSEMBLY CHECK</span>
                 <h2>What do you still need?</h2>
-                <p><strong>{targetPart.name}</strong> is first. Tap a part photo to enlarge it; on a computer, hover over the thumbnail for a quick preview.</p>
+                <p><strong>{targetPart.name}</strong> is first. Tap a verified part photo to enlarge it; items without a licensed preview link to the exact source diagram.</p>
               </div>
-              <div className="pg-progress-summary">
-                <strong>{unresolved.length}</strong>
-                <span>still unanswered</span>
-              </div>
+              <div className="pg-progress-summary"><strong>{unresolved.length}</strong><span>still unanswered</span></div>
             </div>
 
             {photoUrl ? <div className="pg-pinned-photo"><img src={photoUrl} alt="Your part for comparison" /><span>Your photo stays visible while you compare.</span></div> : null}
 
             <div className="pg-filter-row" role="group" aria-label="Filter assembly parts">
-              <button type="button" className={filter === 'attention' ? 'active' : ''} onClick={() => setFilter('attention')}>Needs attention <b>{demoParts.length - have.length}</b></button>
-              <button type="button" className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>All parts <b>{demoParts.length}</b></button>
+              <button type="button" className={filter === 'attention' ? 'active' : ''} onClick={() => setFilter('attention')}>Needs attention <b>{parts.length - have.length}</b></button>
+              <button type="button" className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>All parts <b>{parts.length}</b></button>
               <button type="button" className={filter === 'have' ? 'active' : ''} onClick={() => setFilter('have')}>Already have <b>{have.length}</b></button>
             </div>
 
@@ -422,9 +489,7 @@ export function PartGraphUser() {
                     </div>
                     <div className="pg-choice-group" aria-label={`State for ${part.name}`}>
                       {(['need', 'have', 'inspect', 'not-sure'] as PartState[]).map((option) => (
-                        <button key={option} type="button" className={state === option ? 'active' : ''} onClick={() => changeState(part.id, option)}>
-                          {stateLabels[option]}
-                        </button>
+                        <button key={option} type="button" className={state === option ? 'active' : ''} onClick={() => changeState(part.id, option)}>{stateLabels[option]}</button>
                       ))}
                     </div>
                   </article>
@@ -444,9 +509,9 @@ export function PartGraphUser() {
               <div>
                 <span className="pg-eyebrow">YOUR REPAIR LIST</span>
                 <h2>{needed.length ? `${needed.length} items to find` : 'Nothing marked for purchase yet'}</h2>
-                <p>Each shopping path starts from the verified OEM identity. Store “fits your vehicle” badges never override the part record.</p>
+                <p>Each shopping path starts from a catalog OEM identity. Store “fits your vehicle” badges never override the graph.</p>
               </div>
-              <span className="pg-package-status"><PackageCheck size={18} /> {vehicle.year} {vehicle.model} {vehicleTrim}</span>
+              <span className="pg-package-status"><PackageCheck size={18} /> {activeGraph.shortLabel} · {vehicle.year} {vehicle.model}</span>
             </div>
 
             <div className="pg-buy-list">
@@ -456,7 +521,7 @@ export function PartGraphUser() {
                   <div className="pg-buy-info">
                     <div><strong>{part.name}</strong><span>Qty {part.quantity}</span></div>
                     <code>{part.oemNumber ?? 'Service specification not loaded'}</code>
-                    <small>{part.source.status === 'verified' ? 'OEM identity checked against the current vehicle catalog.' : 'Purchase details wait for an authoritative service source.'}</small>
+                    <small>{part.source.status === 'verified' ? 'OEM identity checked against the selected exact-configuration catalog.' : 'Purchase details wait for an authoritative source.'}</small>
                   </div>
                   <div className="pg-sellers" aria-label={`Purchase links for ${part.name}`}>
                     {commerceSources.map((source) => {
@@ -478,21 +543,17 @@ export function PartGraphUser() {
             <div className="pg-service-status">
               <Info size={19} />
               <div>
-                <strong>Repair instructions follow the same precision rule.</strong>
-                <span>Torque, coolant quantity, drain/refill steps, bleed procedure and safety-critical service instructions stay hidden until the exact Honda service source for this configuration is loaded and verified.</span>
+                <strong>Catalog graph ≠ service manual.</strong>
+                <span>Torque, fluid quantities, bleeding, calibration, refrigerant procedures and safety-critical sequence stay hidden unless an exact authoritative service source is loaded and verified.</span>
               </div>
             </div>
           </section>
 
-          <section className="pg-exploded" ref={diagramRef}>
+          <section className="pg-exploded">
             <div className="pg-section-heading compact">
-              <div>
-                <span className="pg-eyebrow">ASSEMBLY VIEW</span>
-                <h2>See how the selected pieces relate.</h2>
-                <p>The same relationship data that builds the checklist drives this view.</p>
-              </div>
+              <div><span className="pg-eyebrow">ASSEMBLY VIEW</span><h2>See how the selected pieces relate.</h2><p>The same relationship data that builds the checklist drives this logical view.</p></div>
             </div>
-            <Diagram states={states} />
+            <Diagram parts={parts} relations={relations} states={states} />
           </section>
 
           <section className="pg-proof">
@@ -501,7 +562,7 @@ export function PartGraphUser() {
               <div className="pg-proof-body">
                 <p>Mechanical claims are stored with a source trail. Shopping searches happen only after the OEM identity is established.</p>
                 <div className="pg-proof-links">
-                  {sourceLedger.map((source) => (
+                  {activeGraph.sources.map((source) => (
                     <a key={source.id} href={source.url} target="_blank" rel="noreferrer"><span><strong>{source.label}</strong><small>{source.scope}</small></span><ExternalLink size={14} /></a>
                   ))}
                 </div>
@@ -515,22 +576,19 @@ export function PartGraphUser() {
           <div>
             <span className="pg-eyebrow">MECHANICAL DATA GATE</span>
             <h2>No guessed repair data.</h2>
-            <p>PartGraph can identify this Honda, but the verified assembly graph for this exact configuration has not been published yet. We stop here instead of showing parts from a different trim, engine, body or production split.</p>
+            <p>PartGraph can identify this Honda, but the published graph currently covers the 2009 US Civic Hybrid. We stop instead of showing parts from a different trim, engine, body or production split.</p>
           </div>
-          <button type="button" onClick={useVerifiedDemo}>Show the current verified repair</button>
+          {coverageCandidate ? <button type="button" onClick={confirmHybridCoverage}>Confirm this is a 2009 Civic Hybrid</button> : <button type="button" onClick={useVerifiedDemo}>Show the current published vehicle</button>}
         </section>
       )}
 
       <footer className="pg-footer">
         <strong>PartGraph</strong>
-        <span>{coverageSupported ? 'Published mechanical coverage: 2009 Honda Civic Hybrid · US market · front cooling/radiator area.' : `Vehicle identification loaded for ${vehicle.year} Honda ${vehicle.model}; mechanical coverage is not published for this selection.`}</span>
+        <span>{coverageSupported ? `Published coverage: 2009 Honda Civic Hybrid · Cooling, A/C, Drivetrain and Safety · ${publishedRepairGraphs.length} assembly graphs.` : `Vehicle identification loaded for ${vehicle.year} Honda ${vehicle.model}; published mechanical coverage did not match.`}</span>
       </footer>
 
       {coverageSupported ? (
-        <div className="pg-mobile-bar">
-          <div><strong>{needed.length} to buy</strong><span>{unresolved.length} unanswered</span></div>
-          <button type="button" onClick={() => scrollTo(packetRef)}>Review list</button>
-        </div>
+        <div className="pg-mobile-bar"><div><strong>{needed.length} to buy</strong><span>{unresolved.length} unanswered</span></div><button type="button" onClick={() => scrollTo(packetRef)}>Review list</button></div>
       ) : null}
 
       {previewPart && previewImage ? (
