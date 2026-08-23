@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "eslint . --max-warnings=0",
     "preview": "vite preview",
-    "catalog:scrape": "node tools/catalog/scrape-public-catalog.mjs"
+    "catalog:scrape": "node tools/catalog/scrape-public-catalog.mjs",
+    "catalog:parts": "python scripts/build_honda_parts_catalog.py",
+    "catalog:parts:self-test": "python scripts/build_honda_parts_catalog.py --self-test"
   },
   "dependencies": {
     "@hookform/resolvers": "3.9.1",
