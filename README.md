@@ -1,76 +1,72 @@
-# PartGraph — Honda MVP
+# PartGraph
 
-PartGraph is a Honda-first repair-completion prototype. Instead of stopping at “this radiator fits your car,” it models the assembly around a repair target so the user can determine what they need, what they already have, what should be inspected, and what must be verified before purchase.
+PartGraph helps you repair a Honda without discovering halfway through the job that you forgot a mount, seal, clip, hose, fastener, sensor, or other connected part.
 
-The current branch focuses on one deliberately narrow example: a **2009 Honda Civic 4-door MX Hybrid, US market, KA CVT, front cooling / radiator area**. Part identities marked verified are backed by exact-configuration OEM/dealer catalog pages. Service-manual facts such as torque, coolant capacity, bleed procedure, refrigerant work and hybrid/high-voltage procedures remain locked until authoritative service information is verified.
+**Live app:** https://vivek-k24.github.io/forgebridge-demo/#/
 
-## Product flow
+## What PartGraph does
+
+Instead of stopping at “this part fits your car,” PartGraph walks through the repair as an assembly.
 
 ```text
-Vehicle
-→ block
-→ sub-block
-→ target part
-→ connected-part checklist
-→ repair packet
-→ verified OEM/interchange identity
-→ five seller links
-→ logical exploded view
+Choose your Honda
+→ choose the repair area
+→ choose the main part
+→ check the connected parts and hardware
+→ mark what you already have and what you still need
+→ open verified purchase paths
 ```
 
-## What V0 now proves
+## How to use it
 
-- deterministic vehicle/assembly/part relationship graph
-- exact-configuration catalog source ledger with provenance
-- source-backed OEM identities for the radiator, mounts, cushions, hoses, fan/shroud components, sensor, drain hardware and adjacent condenser components
-- radiator OEM `19010-RRH-901` with five researched purchase/catalog paths
-- exact-OEM-number seller searches for other verified parts until provider APIs/adapters are implemented
-- `need / have / inspect / not sure` repair-state workflow
-- local guest persistence through `localStorage`
-- local-only camera preview shell for future constrained part recognition
-- logical SVG exploded view driven by the same graph
-- graph invariants that reject missing provenance, duplicate IDs/relations and verified records without OEM/source identity
+1. **Choose your Honda manually.** Select the year, model, and available trim/configuration information. Manual selection is the main path.
+2. **Or use a VIN.** VIN lookup is optional and can provide additional vehicle identifiers when you want stronger verification.
+3. **Choose the repair.** Select the block, sub-block, and main part you are working on.
+4. **Use photo help if needed.** If you do not know what a part is called, take or choose a photo on your phone. The current version keeps the photo on your device for comparison.
+5. **Check the assembly.** Mark each connected item as **Need**, **Have**, **Inspect**, or **Not sure**. Smaller hardware stays grouped with the part it belongs to.
+6. **Find the parts.** Items marked **Need** receive purchase/search paths only after PartGraph has a verified OEM identity for them.
 
-## Architecture
+## What vehicle data is used
 
-- React + TypeScript + Vite frontend
-- deterministic typed part graph
-- deterministic repair-state engine
-- static/relational graph data; no graph database required
-- SVG logical exploded view
-- camera-input shell for future constrained visual identification
-- commerce adapters only after OEM identity is verified
-- runtime language-model usage disabled by design
+PartGraph uses public and source-backed vehicle information rather than forcing VIN entry.
 
-## Token / compute policy
+- **American Honda published material** is used where available for Honda trim/configuration information.
+- **NHTSA vPIC** supplies public Honda model discovery and optional VIN decoding.
+- **FuelEconomy.gov (U.S. EPA / Department of Energy)** can provide additional public powertrain/configuration choices for Honda model years it covers.
 
-Normal repair sessions use **zero LLM tokens**. Mechanical truth is precomputed, versioned and cached. Future camera recognition should use constrained local/browser inference where practical. LLMs are reserved for the internal source-ingestion pipeline when deterministic parsing is insufficient, and their output must be human-verified before entering the production graph.
+VIN is a second option, not a requirement for normal browsing.
 
-`AGENTS.md` keeps Codex context intentionally small: it directs code tasks to the few files relevant to that subsystem rather than rereading the legacy repository.
+## Current repair coverage
 
-## Run locally
+The vehicle selector can browse more Honda years and models, but the fully verified repair graph is intentionally narrower while the data is being checked.
 
-```bash
-npm install
-npm run dev
-npm run lint
-npm run build
-```
+The strongest current repair coverage is:
 
-GitHub Pages remains configured for the existing `/forgebridge-demo/` repository path.
+**2009 U.S.-market Honda Civic Hybrid / MX Hybrid, KA CVT — front cooling and related assemblies.**
 
-## Current limitations
+If you select a Honda for which PartGraph has not yet published a verified mechanical graph, the vehicle can still be identified, but repair parts stay locked instead of borrowing parts from another trim or guessing.
 
-- no live Honda/OEM feed; V0 uses curated source-backed catalog records
-- no live seller APIs or inventory/price synchronization
-- only the main radiator currently has five researched direct purchase/catalog paths
-- no repair-manual replacement
-- no verified torque, coolant-capacity, bleed, refrigerant or high-voltage procedures yet
-- no live computer-vision inference
-- exploded view is logically arranged, not dimensional CAD
-- catalog-backed part identity does not by itself prove service sequence, reuse policy or torque
-- data/licensing rights still need production review before large-scale ingestion
+## Why PartGraph is careful
 
-## Next engineering milestone
+A seller saying “fits your vehicle” is not enough. PartGraph separates two jobs:
 
-Build the service-spec source layer for this same radiator workflow and verify the remaining repair semantics before widening vehicle coverage. After that, implement provider adapters/caching, then constrained camera recognition. Do not expand to “all Honda” until this one repair packet survives real-world validation.
+- **Mechanical identification:** determine the part and its relationship to the exact vehicle/assembly from source-backed records.
+- **Shopping:** once the identity is known, find places that sell that exact OEM part or a verified interchange.
+
+PartGraph does not invent torque values, fluid procedures, fitment, or repair instructions from a language model.
+
+## Photos and privacy
+
+The current photo helper uses a browser-local preview. Your selected photo is not uploaded to a PartGraph server by this version.
+
+Repair choices are saved locally in your browser when you use **Save repair**. No payment-card information is collected.
+
+## What is being added next
+
+- more Honda vehicle/assembly coverage
+- more source-backed part images
+- stronger seller/provider search and caching
+- repair specifications only when an authoritative source has been verified
+- constrained camera recognition that compares a photo against parts already known to belong to the selected vehicle and assembly
+
+PartGraph is being built around one rule: **when the system does not have enough evidence to identify a part safely, it should say so instead of guessing.**
