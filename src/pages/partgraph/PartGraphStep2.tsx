@@ -11,7 +11,6 @@ import {
   ScanLine,
   ShieldCheck,
   ShoppingCart,
-  Smartphone,
   Wrench,
   X,
 } from 'lucide-react';
@@ -165,10 +164,6 @@ function trimOptions(year: number, model: string): PartGraphSelectOption[] {
   return [{value: '', label: 'Use VIN for exact trim', disabled: true, secondary: 'Manual trim map is not published for this model/year yet.'}];
 }
 
-function toOptions(values: string[]): PartGraphSelectOption[] {
-  return values.map((value) => ({value, label: value}));
-}
-
 export function PartGraphStep2() {
   const blocks = useMemo(() => listRepairBlocks(), []);
   const [mode, setMode] = useState<'manual' | 'vin'>('manual');
@@ -220,10 +215,11 @@ export function PartGraphStep2() {
       .then((result) => {
         if (cancelled) return;
         setModels(result.models);
-        if (!result.models.some((item) => item.name.toLowerCase() === model.toLowerCase())) {
-          setModel(result.models[0]?.name ?? '');
+        setModel((currentModel) => {
+          if (result.models.some((item) => item.name.toLowerCase() === currentModel.toLowerCase())) return currentModel;
           setTrim('');
-        }
+          return result.models[0]?.name ?? '';
+        });
       })
       .finally(() => {
         if (!cancelled) setModelLoading(false);
