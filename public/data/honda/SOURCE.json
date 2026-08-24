@@ -11,7 +11,7 @@
   "notes": [
     "PartGraph stores normalized factual identifiers and the original source URL.",
     "The consumer catalog is intentionally limited to model year 1996 and newer.",
-    "North American filtering is conservative because Honda destination and emissions codes vary by era.",
+    "North American filtering is applied conservatively at runtime because Honda destination codes vary by era.",
     "HondaPartsNow is a genuine-parts retailer/catalog reference, not American Honda Motor Co.",
     "Production/commercial reuse rights require a dedicated terms/licensing review.",
     "Mechanical repair graphs remain separately verified; catalog presence does not make a repair graph complete."
