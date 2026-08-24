@@ -68,7 +68,7 @@ export function loadHondaCatalogYear(year: number): Promise<HondaCatalogYear> {
 export function catalogYears(): number[] {
   return Array.from(
     {length: HONDA_CATALOG_LAST_YEAR - HONDA_CATALOG_FIRST_YEAR + 1},
-    (_, index) => HONDA_CATALOG_LAST_YEAR - index,
+    (_, index) => HONDA_CATALOG_FIRST_YEAR + index,
   );
 }
 
