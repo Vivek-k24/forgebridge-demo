@@ -16,6 +16,7 @@ interface PartGraphSelectProps {
   disabled?: boolean;
   placeholder?: string;
   className?: string;
+  helperText?: string;
 }
 
 export function PartGraphSelect({
@@ -26,6 +27,7 @@ export function PartGraphSelect({
   disabled = false,
   placeholder = 'Choose…',
   className = '',
+  helperText = '',
 }: PartGraphSelectProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -33,12 +35,14 @@ export function PartGraphSelect({
 
   useEffect(() => {
     if (!open) return;
+
     const close = (event: MouseEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
     };
     const key = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setOpen(false);
     };
+
     document.addEventListener('mousedown', close);
     window.addEventListener('keydown', key);
     return () => {
@@ -66,6 +70,9 @@ export function PartGraphSelect({
         <span className={!selected ? 'placeholder' : ''}>{selected?.label ?? placeholder}</span>
         <ChevronDown size={15} />
       </button>
+
+      {helperText ? <small className="pg2-select-helper">{helperText}</small> : null}
+
       {open ? (
         <div className="pg2-select-menu" role="listbox" aria-label={label}>
           <div className="pg2-select-scroll">

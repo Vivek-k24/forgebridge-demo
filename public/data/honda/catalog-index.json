@@ -1,35 +1,16 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "source": "HondaPartsNow catalog sitemap",
   "sourceRoot": "https://www.hondapartsnow.com",
-  "generatedAt": "2026-08-24T09:03:57Z",
-  "recordCount": 5393,
-  "yearCount": 54,
-  "modelCount": 25,
+  "supportedModelYears": {
+    "from": 1996,
+    "through": 2026
+  },
+  "generatedAt": "2026-08-24T23:02:20Z",
+  "recordCount": 4063,
+  "yearCount": 31,
+  "modelCount": 24,
   "years": [
-    1973,
-    1974,
-    1975,
-    1976,
-    1977,
-    1978,
-    1979,
-    1980,
-    1981,
-    1982,
-    1983,
-    1984,
-    1985,
-    1986,
-    1987,
-    1988,
-    1989,
-    1990,
-    1991,
-    1992,
-    1993,
-    1994,
-    1995,
     1996,
     1997,
     1998,
@@ -63,126 +44,6 @@
     2026
   ],
   "modelsByYear": {
-    "1973": [
-      "Civic"
-    ],
-    "1974": [
-      "Civic"
-    ],
-    "1975": [
-      "Civic"
-    ],
-    "1976": [
-      "Accord",
-      "Civic"
-    ],
-    "1977": [
-      "Accord",
-      "Civic"
-    ],
-    "1978": [
-      "Accord",
-      "Civic"
-    ],
-    "1979": [
-      "Accord",
-      "Civic",
-      "Prelude"
-    ],
-    "1980": [
-      "Accord",
-      "Civic",
-      "Prelude"
-    ],
-    "1981": [
-      "Accord",
-      "Civic",
-      "Prelude"
-    ],
-    "1982": [
-      "Accord",
-      "Civic",
-      "Prelude"
-    ],
-    "1983": [
-      "Accord",
-      "Civic",
-      "Prelude"
-    ],
-    "1984": [
-      "Accord",
-      "CRX",
-      "Civic",
-      "Prelude"
-    ],
-    "1985": [
-      "Accord",
-      "CRX",
-      "Civic",
-      "Prelude"
-    ],
-    "1986": [
-      "Accord",
-      "CRX",
-      "Civic",
-      "Prelude"
-    ],
-    "1987": [
-      "Accord",
-      "CRX",
-      "Civic",
-      "Prelude"
-    ],
-    "1988": [
-      "Accord",
-      "CRX",
-      "Civic",
-      "Prelude"
-    ],
-    "1989": [
-      "Accord",
-      "CRX",
-      "Civic",
-      "Prelude"
-    ],
-    "1990": [
-      "Accord",
-      "CRX",
-      "Civic",
-      "Prelude"
-    ],
-    "1991": [
-      "Accord",
-      "CRX",
-      "Civic",
-      "Prelude"
-    ],
-    "1992": [
-      "Accord",
-      "Civic",
-      "Prelude"
-    ],
-    "1993": [
-      "Accord",
-      "Civic",
-      "Del Sol",
-      "Prelude"
-    ],
-    "1994": [
-      "Accord",
-      "Civic",
-      "Del Sol",
-      "Passport",
-      "Prelude"
-    ],
-    "1995": [
-      "Accord",
-      "Civic",
-      "Del Sol",
-      "Odyssey",
-      "Passport",
-      "Prelude"
-    ],
     "1996": [
       "Accord",
       "Civic",
@@ -546,26 +407,6 @@
   },
   "yearsByModel": {
     "Accord": [
-      1976,
-      1977,
-      1978,
-      1979,
-      1980,
-      1981,
-      1982,
-      1983,
-      1984,
-      1985,
-      1986,
-      1987,
-      1988,
-      1989,
-      1990,
-      1991,
-      1992,
-      1993,
-      1994,
-      1995,
       1996,
       1997,
       1998,
@@ -662,40 +503,7 @@
       2015,
       2016
     ],
-    "CRX": [
-      1984,
-      1985,
-      1986,
-      1987,
-      1988,
-      1989,
-      1990,
-      1991
-    ],
     "Civic": [
-      1973,
-      1974,
-      1975,
-      1976,
-      1977,
-      1978,
-      1979,
-      1980,
-      1981,
-      1982,
-      1983,
-      1984,
-      1985,
-      1986,
-      1987,
-      1988,
-      1989,
-      1990,
-      1991,
-      1992,
-      1993,
-      1994,
-      1995,
       1996,
       1997,
       1998,
@@ -759,9 +567,6 @@
       2015
     ],
     "Del Sol": [
-      1993,
-      1994,
-      1995,
       1996,
       1997
     ],
@@ -827,7 +632,6 @@
       2022
     ],
     "Odyssey": [
-      1995,
       1996,
       1997,
       1998,
@@ -861,8 +665,6 @@
       2026
     ],
     "Passport": [
-      1994,
-      1995,
       1996,
       1997,
       1998,
@@ -905,23 +707,6 @@
       2025
     ],
     "Prelude": [
-      1979,
-      1980,
-      1981,
-      1982,
-      1983,
-      1984,
-      1985,
-      1986,
-      1987,
-      1988,
-      1989,
-      1990,
-      1991,
-      1992,
-      1993,
-      1994,
-      1995,
       1996,
       1997,
       1998,
