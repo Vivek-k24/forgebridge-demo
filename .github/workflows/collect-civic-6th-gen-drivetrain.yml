@@ -19,7 +19,7 @@ permissions:
 
 concurrency:
   group: civic-6th-gen-drivetrain-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   collect-year:
@@ -104,12 +104,17 @@ jobs:
           assert years == [1996, 1997, 1998, 1999, 2000], years
           violations = connection.execute('PRAGMA foreign_key_check').fetchall()
           assert not violations, violations[:20]
+          failed_runs = connection.execute(
+              "SELECT COUNT(*) FROM catalog_scrape_runs WHERE error_text IS NOT NULL OR http_status IS NULL"
+          ).fetchone()[0]
+          assert failed_runs == 0, f'unresolved catalog scrape failures: {failed_runs}'
           counts = {
               'vehicleConfigs': connection.execute('SELECT COUNT(*) FROM vehicle_configs').fetchone()[0],
               'assemblies': connection.execute('SELECT COUNT(*) FROM assemblies').fetchone()[0],
               'uniqueParts': connection.execute('SELECT COUNT(*) FROM parts').fetchone()[0],
               'fitmentObservations': connection.execute('SELECT COUNT(*) FROM part_fitment_observations').fetchone()[0],
               'assemblyPartObservations': connection.execute('SELECT COUNT(*) FROM assembly_part_observations').fetchone()[0],
+              'failedRuns': failed_runs,
           }
           connection.close()
           print(json.dumps({'years': years, 'counts': counts}, indent=2))
