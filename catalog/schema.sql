@@ -1,5 +1,6 @@
 -- PartGraph catalog schema (SQLite / Cloudflare D1 compatible)
--- This schema stores identity/fitment evidence. It does NOT store inferred repair procedures.
+-- Stores catalog identity, fitment and assembly-membership observations.
+-- It does NOT store inferred repair procedures or unverified mechanical relationships.
 
 PRAGMA foreign_keys = ON;
 
@@ -63,6 +64,29 @@ CREATE TABLE IF NOT EXISTS parts (
 
 CREATE INDEX IF NOT EXISTS idx_parts_oem_number ON parts(oem_number);
 
+CREATE TABLE IF NOT EXISTS assemblies (
+  id TEXT PRIMARY KEY,
+  vehicle_config_id TEXT NOT NULL,
+  category_slug TEXT NOT NULL,
+  category_name TEXT,
+  assembly_slug TEXT NOT NULL,
+  assembly_name TEXT,
+  source_id TEXT NOT NULL,
+  source_url TEXT NOT NULL,
+  review_status TEXT NOT NULL DEFAULT 'candidate' CHECK (review_status IN (
+    'candidate',
+    'corroborated',
+    'verified',
+    'rejected'
+  )),
+  observed_at TEXT NOT NULL,
+  FOREIGN KEY (vehicle_config_id) REFERENCES vehicle_configs(id),
+  FOREIGN KEY (source_id) REFERENCES catalog_sources(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_assemblies_vehicle ON assemblies(vehicle_config_id);
+CREATE INDEX IF NOT EXISTS idx_assemblies_slug ON assemblies(category_slug, assembly_slug);
+
 CREATE TABLE IF NOT EXISTS part_fitment_observations (
   id TEXT PRIMARY KEY,
   part_id TEXT NOT NULL,
@@ -86,6 +110,28 @@ CREATE TABLE IF NOT EXISTS part_fitment_observations (
 
 CREATE INDEX IF NOT EXISTS idx_fitment_vehicle ON part_fitment_observations(vehicle_config_id);
 CREATE INDEX IF NOT EXISTS idx_fitment_part ON part_fitment_observations(part_id);
+
+CREATE TABLE IF NOT EXISTS assembly_part_observations (
+  id TEXT PRIMARY KEY,
+  assembly_id TEXT NOT NULL,
+  part_id TEXT NOT NULL,
+  fitment_observation_id TEXT NOT NULL,
+  source_id TEXT NOT NULL,
+  observed_at TEXT NOT NULL,
+  review_status TEXT NOT NULL DEFAULT 'candidate' CHECK (review_status IN (
+    'candidate',
+    'corroborated',
+    'verified',
+    'rejected'
+  )),
+  FOREIGN KEY (assembly_id) REFERENCES assemblies(id),
+  FOREIGN KEY (part_id) REFERENCES parts(id),
+  FOREIGN KEY (fitment_observation_id) REFERENCES part_fitment_observations(id),
+  FOREIGN KEY (source_id) REFERENCES catalog_sources(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_assembly_parts_assembly ON assembly_part_observations(assembly_id);
+CREATE INDEX IF NOT EXISTS idx_assembly_parts_part ON assembly_part_observations(part_id);
 
 CREATE TABLE IF NOT EXISTS part_media_refs (
   id TEXT PRIMARY KEY,
@@ -118,4 +164,4 @@ CREATE TABLE IF NOT EXISTS catalog_scrape_runs (
 
 -- Mechanical/service truth belongs in a separate verified story/table set later.
 -- Do not derive torque, pressure, fluid type/quantity, removal sequence, safety procedure,
--- metallurgy, or repair relationships from seller/catalog text alone.
+-- metallurgy, fastener reuse, interchange, or repair relationships from seller/catalog text alone.
