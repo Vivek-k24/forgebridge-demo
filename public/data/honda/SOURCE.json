@@ -2,11 +2,18 @@
   "source": "HondaPartsNow",
   "purpose": "Public genuine-Honda catalog reference and exact configuration identity",
   "root": "https://www.hondapartsnow.com",
+  "supportedModelYears": {
+    "from": 1996,
+    "through": 2026
+  },
+  "consumerMarketScope": "United States and Canada first",
   "collectionMethod": "XML sitemap URL parsing; no LLM",
   "notes": [
     "PartGraph stores normalized factual identifiers and the original source URL.",
+    "The consumer catalog is intentionally limited to model year 1996 and newer.",
+    "North American filtering is conservative because Honda destination and emissions codes vary by era.",
     "HondaPartsNow is a genuine-parts retailer/catalog reference, not American Honda Motor Co.",
     "Production/commercial reuse rights require a dedicated terms/licensing review.",
-    "Mechanical repair graphs remain separately verified; this catalog does not make every repair graph complete."
+    "Mechanical repair graphs remain separately verified; catalog presence does not make a repair graph complete."
   ]
 }

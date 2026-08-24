@@ -2,8 +2,16 @@ import {
   findPublishedHondaConfiguration,
   publishedHondaModels,
 } from '../data/hondaPublishedCoverage';
-import {catalogModels} from './hondaCatalogService';
-import {hondaConfigurationConsumerLabel, hondaIdentityConsumerLabel} from './hondaVehicleLabels';
+import {
+  catalogModels,
+  catalogYears,
+  HONDA_CATALOG_FIRST_YEAR,
+  HONDA_CATALOG_LAST_YEAR,
+} from './hondaCatalogService';
+import {
+  hondaConfigurationConsumerLabel,
+  hondaIdentityConsumerLabel,
+} from './hondaVehicleLabels';
 
 export type VehicleSelectionSource = 'demo' | 'manual' | 'nhtsa-vin';
 
@@ -81,14 +89,8 @@ type NhtsaVinResult = Record<string, string> & {
 
 const NHTSA_BASE = 'https://vpic.nhtsa.dot.gov/api/vehicles';
 const vinMemoryCache = new Map<string, HondaVehicleIdentity>();
-const HONDA_CATALOG_FIRST_YEAR = 1973;
-const HONDA_CATALOG_LAST_YEAR = 2026;
 
-export const hondaTrimSuggestions = [
-  'Hybrid',
-  'MX Hybrid',
-  'Hybrid-L',
-] as const;
+export const hondaTrimSuggestions = ['Hybrid', 'MX Hybrid', 'Hybrid-L'] as const;
 
 export const demoHondaIdentity: HondaVehicleIdentity = {
   source: 'demo',
@@ -109,16 +111,8 @@ export const demoHondaIdentity: HondaVehicleIdentity = {
   transmissionStyle: 'Continuously Variable Transmission (CVT)',
 };
 
-/**
- * Manual vehicle browsing uses the static Honda catalog rather than PartGraph's
- * much smaller published repair-graph list. Selecting an unsupported Honda is
- * allowed; the repair workflow remains locked until verified graph coverage exists.
- */
 export function hondaModelYears(): number[] {
-  return Array.from(
-    {length: HONDA_CATALOG_LAST_YEAR - HONDA_CATALOG_FIRST_YEAR + 1},
-    (_, index) => HONDA_CATALOG_LAST_YEAR - index,
-  );
+  return catalogYears();
 }
 
 export function normalizeVin(value: string): string {
@@ -129,15 +123,24 @@ export function isCompleteVin(value: string): boolean {
   return /^[A-HJ-NPR-Z0-9]{17}$/.test(normalizeVin(value));
 }
 
-export async function fetchHondaModels(year: number): Promise<{models: HondaModelOption[]; yearScoped: boolean; fromCache: boolean}> {
+export async function fetchHondaModels(
+  year: number,
+): Promise<{models: HondaModelOption[]; yearScoped: boolean; fromCache: boolean}> {
+  if (year < HONDA_CATALOG_FIRST_YEAR || year > HONDA_CATALOG_LAST_YEAR) {
+    return {models: [], yearScoped: true, fromCache: true};
+  }
+
   try {
     const models = await catalogModels(year);
     if (models.length) return {models, yearScoped: true, fromCache: true};
   } catch {
-    // Fall through to published coverage only if the static catalog cannot load.
+    // Fall through to the much smaller published repair coverage list.
   }
 
-  const models = publishedHondaModels(year).map((name, index) => ({id: index + 1, name}));
+  const models = publishedHondaModels(year).map((name, index) => ({
+    id: index + 1,
+    name,
+  }));
   return {models, yearScoped: true, fromCache: true};
 }
 
@@ -154,7 +157,11 @@ async function fetchJson<T>(url: string): Promise<T> {
 
 export async function decodeHondaVin(rawVin: string): Promise<HondaVehicleIdentity> {
   const vin = normalizeVin(rawVin);
-  if (!isCompleteVin(vin)) throw new Error('Enter a complete 17-character VIN. Letters I, O and Q are not valid VIN characters.');
+  if (!isCompleteVin(vin)) {
+    throw new Error(
+      'Enter a complete 17-character VIN. Letters I, O and Q are not valid VIN characters.',
+    );
+  }
 
   const cached = vinMemoryCache.get(vin);
   if (cached) return cached;
@@ -166,13 +173,21 @@ export async function decodeHondaVin(rawVin: string): Promise<HondaVehicleIdenti
 
   const make = text(result.Make);
   if (!make || make.toLowerCase() !== 'honda') {
-    throw new Error(make ? `This VIN decodes as ${make}, not Honda.` : 'NHTSA could not verify this VIN as a Honda.');
+    throw new Error(
+      make ? `This VIN decodes as ${make}, not Honda.` : 'NHTSA could not verify this VIN as a Honda.',
+    );
   }
 
   const year = Number.parseInt(result.ModelYear ?? '', 10);
   const model = text(result.Model);
   if (!Number.isFinite(year) || !model) {
     throw new Error(result.ErrorText || 'NHTSA could not resolve the model year and model from this VIN.');
+  }
+
+  if (year < HONDA_CATALOG_FIRST_YEAR || year > HONDA_CATALOG_LAST_YEAR) {
+    throw new Error(
+      `PartGraph currently supports Honda model years ${HONDA_CATALOG_FIRST_YEAR}–${HONDA_CATALOG_LAST_YEAR}.`,
+    );
   }
 
   const identity: HondaVehicleIdentity = {
@@ -207,14 +222,20 @@ export async function decodeHondaVin(rawVin: string): Promise<HondaVehicleIdenti
   };
 
   if (!findPublishedHondaConfiguration(identity)) {
-    throw new Error('This Honda is identified, but the current release does not have a verified repair graph for this exact vehicle yet. The repair graph was not changed.');
+    throw new Error(
+      'This Honda is identified, but PartGraph does not have a verified repair map for this exact vehicle yet.',
+    );
   }
 
   vinMemoryCache.set(vin, identity);
   return identity;
 }
 
-export function manualHondaIdentity(year: number, model: string, trim: string): HondaVehicleIdentity {
+export function manualHondaIdentity(
+  year: number,
+  model: string,
+  trim: string,
+): HondaVehicleIdentity {
   return {
     source: 'manual',
     make: 'Honda',
