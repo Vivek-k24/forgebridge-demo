@@ -1,0 +1,147 @@
+name: Collect Civic 6th-gen drivetrain catalog
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - partgraph-civic-6th-gen-drivetrain-catalog
+    paths:
+      - scripts/build_honda_parts_catalog.py
+      - scripts/build_civic_6th_gen_drivetrain_catalog.py
+      - scripts/merge_parts_catalogs.py
+      - catalog/schema.sql
+      - public/data/honda/years/**
+      - data/catalog/README.md
+      - .github/workflows/collect-civic-6th-gen-drivetrain.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: civic-6th-gen-drivetrain-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  collect-year:
+    name: Collect ${{ matrix.year }} Civic drivetrain
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        year: [1996, 1997, 1998, 1999, 2000]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Verify PR #15 collector core
+        run: python scripts/build_honda_parts_catalog.py --self-test
+
+      - name: Collect drivetrain catalog candidates
+        run: |
+          python scripts/build_civic_6th_gen_drivetrain_catalog.py \
+            --year "${{ matrix.year }}" \
+            --db "data/catalog/honda-parts-${{ matrix.year }}.sqlite" \
+            --summary "data/catalog/civic-6th-gen-drivetrain-${{ matrix.year }}-summary.json"
+
+      - name: Upload year shard and summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: civic-6th-gen-drivetrain-${{ matrix.year }}
+          path: |
+            data/catalog/honda-parts-${{ matrix.year }}.sqlite
+            data/catalog/civic-6th-gen-drivetrain-${{ matrix.year }}-summary.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  merge-generation:
+    name: Merge 1996-2000 drivetrain catalog
+    needs: collect-year
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Download year shards
+        uses: actions/download-artifact@v4
+        with:
+          pattern: civic-6th-gen-drivetrain-*
+          path: data/catalog/year-artifacts
+          merge-multiple: true
+
+      - name: Merge and validate generation database
+        shell: bash
+        run: |
+          mapfile -t DB_FILES < <(find data/catalog/year-artifacts -type f -name 'honda-parts-*.sqlite' | sort)
+          if [ "${#DB_FILES[@]}" -ne 5 ]; then
+            echo "Expected 5 year databases; found ${#DB_FILES[@]}" >&2
+            printf '%s\n' "${DB_FILES[@]}" >&2
+            exit 1
+          fi
+          python scripts/merge_parts_catalogs.py \
+            --output data/catalog/honda-parts.sqlite \
+            --summary data/catalog/civic-6th-gen-drivetrain-summary.json \
+            "${DB_FILES[@]}"
+
+      - name: Verify complete generation coverage
+        run: |
+          python - <<'PY'
+          import json
+          import sqlite3
+          from pathlib import Path
+
+          db = Path('data/catalog/honda-parts.sqlite')
+          connection = sqlite3.connect(db)
+          years = [row[0] for row in connection.execute(
+              "SELECT DISTINCT year FROM vehicle_configs WHERE make='Honda' AND model='Civic' ORDER BY year"
+          )]
+          assert years == [1996, 1997, 1998, 1999, 2000], years
+          violations = connection.execute('PRAGMA foreign_key_check').fetchall()
+          assert not violations, violations[:20]
+          counts = {
+              'vehicleConfigs': connection.execute('SELECT COUNT(*) FROM vehicle_configs').fetchone()[0],
+              'assemblies': connection.execute('SELECT COUNT(*) FROM assemblies').fetchone()[0],
+              'uniqueParts': connection.execute('SELECT COUNT(*) FROM parts').fetchone()[0],
+              'fitmentObservations': connection.execute('SELECT COUNT(*) FROM part_fitment_observations').fetchone()[0],
+              'assemblyPartObservations': connection.execute('SELECT COUNT(*) FROM assembly_part_observations').fetchone()[0],
+          }
+          connection.close()
+          print(json.dumps({'years': years, 'counts': counts}, indent=2))
+          with open(Path.cwd() / 'catalog-verification.json', 'w', encoding='utf-8') as handle:
+              json.dump({'years': years, 'counts': counts}, handle, indent=2)
+              handle.write('\n')
+          PY
+
+      - name: Publish run summary
+        shell: bash
+        run: |
+          {
+            echo '## 6th-generation Civic drivetrain catalog'
+            echo
+            echo '- Scope: 1996-2000 Honda Civic'
+            echo '- Database: `data/catalog/honda-parts.sqlite`'
+            echo '- Per-year summaries: `data/catalog/year-artifacts/`'
+            echo '- Candidate catalog evidence only; no automatic mechanical/service verification.'
+            echo
+            echo '```json'
+            cat catalog-verification.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload merged generation catalog
+        uses: actions/upload-artifact@v4
+        with:
+          name: civic-6th-gen-drivetrain-catalog
+          path: |
+            data/catalog/honda-parts.sqlite
+            data/catalog/civic-6th-gen-drivetrain-summary.json
+            data/catalog/year-artifacts/*-summary.json
+            catalog-verification.json
+          if-no-files-found: error
+          retention-days: 30
