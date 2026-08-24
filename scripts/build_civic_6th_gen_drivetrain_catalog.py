@@ -20,6 +20,7 @@ import argparse
 import json
 import sqlite3
 import sys
+import time
 from pathlib import Path
 from typing import Iterable, Sequence
 
@@ -47,7 +48,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CIVIC_SIXTH_GEN_YEARS = (1996, 1997, 1998, 1999, 2000)
 DEFAULT_SUMMARY = ROOT / "data" / "catalog" / "civic-6th-gen-drivetrain-summary.json"
 
-# Matching is intentionally based only on source catalog assembly metadata.  The
+# Matching is intentionally based only on source catalog assembly metadata. The
 # collector does not infer that a part belongs to the drivetrain from a seller name.
 DEFAULT_DRIVETRAIN_TERMS = (
     "transmission",
@@ -103,6 +104,35 @@ def assembly_search_text(assembly: AssemblyPage) -> str:
 def is_drivetrain_assembly(assembly: AssemblyPage, terms: Sequence[str]) -> bool:
     searchable = assembly_search_text(assembly)
     return any(term.casefold() in searchable for term in terms)
+
+
+def fetch_with_retries(
+    fetcher: Fetcher,
+    url: str,
+    retries: int,
+    retry_backoff: float,
+    label: str,
+) -> tuple[str, bool]:
+    """Retry transient catalog failures without weakening PR #15's robots/rate limits."""
+    attempts = max(1, retries + 1)
+    last_error: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            return fetcher.fetch_text(url)
+        except Exception as exc:  # the PR #15 fetcher normalizes network/HTTP failures
+            last_error = exc
+            if attempt >= attempts:
+                break
+            sleep_seconds = max(0.0, retry_backoff) * attempt
+            print(
+                f"[generation] retry {attempt}/{retries} for {label} after {exc}; "
+                f"sleeping {sleep_seconds:.1f}s",
+                file=sys.stderr,
+            )
+            if sleep_seconds:
+                time.sleep(sleep_seconds)
+    assert last_error is not None
+    raise last_error
 
 
 def load_civic_configs(years: Iterable[int], model: str) -> list[VehicleConfig]:
@@ -208,7 +238,13 @@ def collect(args: argparse.Namespace) -> int:
             }
 
             try:
-                vehicle_html, vehicle_cache_hit = fetcher.fetch_text(vehicle.source_url)
+                vehicle_html, vehicle_cache_hit = fetch_with_retries(
+                    fetcher,
+                    vehicle.source_url,
+                    args.retries,
+                    args.retry_backoff,
+                    f"vehicle {vehicle.key}",
+                )
                 totals["cache_hits"] += int(vehicle_cache_hit)
                 assemblies = discover_assembly_pages(vehicle.source_url, vehicle_html)
                 result["discoveredAssemblies"] = len(assemblies)
@@ -218,7 +254,7 @@ def collect(args: argparse.Namespace) -> int:
                 result["errors"].append(f"vehicle page: {exc}")
                 vehicle_results.append(result)
                 connection.commit()
-                print(f"[generation] vehicle skipped: {exc}", file=sys.stderr)
+                print(f"[generation] vehicle skipped after retries: {exc}", file=sys.stderr)
                 if args.fail_fast:
                     raise
                 continue
@@ -254,7 +290,13 @@ def collect(args: argparse.Namespace) -> int:
                     assembly_position,
                 )
                 try:
-                    page_html, cache_hit = fetcher.fetch_text(assembly.url)
+                    page_html, cache_hit = fetch_with_retries(
+                        fetcher,
+                        assembly.url,
+                        args.retries,
+                        args.retry_backoff,
+                        assembly.url,
+                    )
                     totals["cache_hits"] += int(cache_hit)
                     candidates = extract_part_candidates(assembly.url, page_html)
                     assembly_id = upsert_assembly(connection, vehicle, assembly, source_id)
@@ -274,7 +316,7 @@ def collect(args: argparse.Namespace) -> int:
                     result["storedAssemblies"] = int(result["storedAssemblies"]) + 1
                     result["storedPartObservations"] = int(result["storedPartObservations"]) + len(candidates)
                     connection.commit()
-                except Exception as exc:  # preserve the same fail-soft boundary as PR #15
+                except Exception as exc:  # preserve PR #15 provenance for unresolved failures
                     totals["assembly_errors"] += 1
                     result["errors"].append(f"{assembly.url}: {exc}")
                     connection.execute(
@@ -287,7 +329,7 @@ def collect(args: argparse.Namespace) -> int:
                         (run_id, started_at, utc_now(), source_id, str(exc)[:1000]),
                     )
                     connection.commit()
-                    print(f"[generation]   skipped: {exc}", file=sys.stderr)
+                    print(f"[generation]   skipped after retries: {exc}", file=sys.stderr)
                     if args.fail_fast:
                         raise
 
@@ -328,7 +370,20 @@ def collect(args: argparse.Namespace) -> int:
         print(json.dumps({"totals": totals, "databaseCounts": counts}, indent=2), file=sys.stderr)
         print(db_path.resolve())
         print(summary_path.resolve())
-        return 0 if totals["drivetrain_assembly_pages_stored"] else 2
+
+        complete = (
+            totals["drivetrain_assembly_pages_stored"] > 0
+            and totals["vehicle_page_errors"] == 0
+            and totals["assembly_errors"] == 0
+            and totals["drivetrain_assembly_pages_stored"] == totals["drivetrain_assembly_pages_matched"]
+        )
+        if not complete:
+            print(
+                "[generation] incomplete collection: unresolved source-page errors remain; "
+                "the workflow must not merge this shard as complete.",
+                file=sys.stderr,
+            )
+        return 0 if complete else 2
     finally:
         connection.close()
 
@@ -355,13 +410,25 @@ def build_parser() -> argparse.ArgumentParser:
         help="Minimum seconds between network page requests",
     )
     parser.add_argument(
+        "--retries",
+        type=int,
+        default=3,
+        help="Retries after a transient vehicle/assembly fetch failure (default: 3)",
+    )
+    parser.add_argument(
+        "--retry-backoff",
+        type=float,
+        default=2.0,
+        help="Linear retry backoff in seconds (default: 2.0)",
+    )
+    parser.add_argument(
         "--assembly-term",
         action="append",
         help="Override the default drivetrain assembly match terms; repeat for multiple terms",
     )
     parser.add_argument("--refresh", action="store_true", help="Ignore cached HTML and fetch again")
     parser.add_argument("--offline", action="store_true", help="Use cache only; make no network requests")
-    parser.add_argument("--fail-fast", action="store_true", help="Stop on the first retrieval/parse error")
+    parser.add_argument("--fail-fast", action="store_true", help="Stop on the first unresolved retrieval/parse error")
     parser.add_argument(
         "--max-configs",
         type=int,
