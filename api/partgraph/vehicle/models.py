@@ -17,6 +17,7 @@ class VehicleConfiguration(Base):
     )
 
     id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
+    base_identity_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     identity_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
     year: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     market: Mapped[str] = mapped_column(String(32), nullable=False)
