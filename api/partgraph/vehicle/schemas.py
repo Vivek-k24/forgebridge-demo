@@ -4,9 +4,11 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from .policy import validate_supported_year
+
 
 class VehicleConfigurationInput(BaseModel):
-    year: int = Field(ge=1886, le=2100)
+    year: int = Field(strict=True)
     market: str = Field(min_length=1, max_length=64)
     make: str = Field(min_length=1, max_length=64)
     model: str = Field(min_length=1, max_length=96)
@@ -16,6 +18,11 @@ class VehicleConfigurationInput(BaseModel):
     engine: str | None = Field(default=None, max_length=128)
     transmission: str | None = Field(default=None, max_length=128)
     drivetrain: str | None = Field(default=None, max_length=64)
+
+    @field_validator("year")
+    @classmethod
+    def enforce_supported_year(cls, value: int) -> int:
+        return validate_supported_year(value)
 
     @field_validator("market", "make", "model")
     @classmethod
