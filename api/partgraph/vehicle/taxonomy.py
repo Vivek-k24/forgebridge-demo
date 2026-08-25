@@ -319,7 +319,11 @@ def _transmission_family(key: str) -> str | None:
         return "DCT"
     if key in {"mt", "manual", "manualtransmission"} or "manual" in key:
         return "Manual"
-    if key in {"at", "auto", "automatic", "automatictransmission"} or "automatic" in key:
+    if (
+        key in {"at", "auto", "automatic", "automatictransmission"}
+        or "automatic" in key
+        or "auto" in key
+    ):
         return "Automatic"
     return None
 
