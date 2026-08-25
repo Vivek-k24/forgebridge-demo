@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -6,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 class VehicleConfigurationInput(BaseModel):
     year: int = Field(ge=1886, le=2100)
-    market: str = Field(min_length=1, max_length=32)
+    market: str = Field(min_length=1, max_length=64)
     make: str = Field(min_length=1, max_length=64)
     model: str = Field(min_length=1, max_length=96)
     generation: str | None = Field(default=None, max_length=96)
@@ -56,9 +57,16 @@ class VehicleConfigurationRead(BaseModel):
     drivetrain: str | None
     identity_source: str
     verification_status: str
+    canonicalization_version: int
     created_at: datetime
+    updated_at: datetime
 
 
 class VehicleConfigurationResult(BaseModel):
-    created: bool
+    resolution: Literal["created", "matched", "enriched"]
     configuration: VehicleConfigurationRead
+
+
+class VehicleBrandRead(BaseModel):
+    name: str
+    status: Literal["active", "legacy"]
