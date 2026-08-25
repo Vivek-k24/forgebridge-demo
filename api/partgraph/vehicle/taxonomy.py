@@ -65,18 +65,25 @@ EXCLUDED_EUROPEAN_PREMIUM_BRANDS: tuple[str, ...] = (
     "Audi",
     "Bentley",
     "BMW",
+    "Bugatti",
     "Ferrari",
+    "INEOS",
     "Jaguar",
+    "Koenigsegg",
     "Lamborghini",
     "Land Rover",
     "Range Rover",
     "Lotus",
     "Maserati",
+    "Maybach",
     "McLaren",
     "Mercedes-Benz",
     "MINI",
+    "Morgan",
+    "Pagani",
     "Polestar",
     "Porsche",
+    "Rimac",
     "Rolls-Royce",
     "Volvo",
 )
@@ -85,6 +92,7 @@ _MARKET_ALIASES = {
     "us": "US",
     "usa": "US",
     "unitedstates": "US",
+    "unitedstatesamerica": "US",
     "unitedstatesofamerica": "US",
     "ca": "CA",
     "can": "CA",
@@ -92,55 +100,33 @@ _MARKET_ALIASES = {
 }
 
 _BODY_STYLE_ALIASES = {
-    "sedan": "Sedan",
-    "4drsedan": "Sedan",
-    "4doorsedan": "Sedan",
-    "fourdoorsedan": "Sedan",
     "saloon": "Sedan",
-    "coupe": "Coupe",
-    "2drcoupe": "Coupe",
-    "2doorcoupe": "Coupe",
-    "twodoorcoupe": "Coupe",
-    "hatch": "Hatchback",
-    "hatchback": "Hatchback",
-    "3drhatchback": "Hatchback",
-    "5drhatchback": "Hatchback",
-    "3doorhatchback": "Hatchback",
-    "5doorhatchback": "Hatchback",
-    "wagon": "Wagon",
-    "stationwagon": "Wagon",
     "estate": "Wagon",
-    "suv": "SUV",
+    "cuv": "Crossover",
     "sportutility": "SUV",
     "sportutilityvehicle": "SUV",
-    "crossover": "Crossover",
-    "cuv": "Crossover",
-    "pickup": "Pickup",
     "pickuptruck": "Pickup",
-    "truck": "Pickup",
-    "minivan": "Minivan",
-    "van": "Van",
-    "convertible": "Convertible",
     "cabriolet": "Convertible",
-    "roadster": "Roadster",
 }
-
-_TRANSMISSION_ALIASES = {
-    "cvt": "CVT",
-    "continuouslyvariable": "CVT",
-    "continuouslyvariabletransmission": "CVT",
-    "ecvt": "eCVT",
-    "electroniccvt": "eCVT",
-    "manual": "Manual",
-    "manualtransmission": "Manual",
-    "mt": "Manual",
-    "automatic": "Automatic",
-    "automatictransmission": "Automatic",
-    "at": "Automatic",
-    "dct": "DCT",
-    "dualclutch": "DCT",
-    "dualclutchtransmission": "DCT",
-}
+_BODY_STYLE_PATTERNS: tuple[tuple[str, str], ...] = (
+    ("hatch", "Hatchback"),
+    ("sedan", "Sedan"),
+    ("saloon", "Sedan"),
+    ("coupe", "Coupe"),
+    ("stationwagon", "Wagon"),
+    ("wagon", "Wagon"),
+    ("estate", "Wagon"),
+    ("sportutilityvehicle", "SUV"),
+    ("sportutility", "SUV"),
+    ("crossover", "Crossover"),
+    ("cuv", "Crossover"),
+    ("pickup", "Pickup"),
+    ("minivan", "Minivan"),
+    ("convertible", "Convertible"),
+    ("cabriolet", "Convertible"),
+    ("roadster", "Roadster"),
+    ("van", "Van"),
+)
 
 _DRIVETRAIN_ALIASES = {
     "fwd": "FWD",
@@ -201,6 +187,9 @@ _ENGINE_FEATURES = (
     ("turbo", "TURBO"),
     ("supercharged", "SUPERCHARGED"),
 )
+
+_TRANSMISSION_SPEED = re.compile(r"\b(\d{1,2})\s*(?:speed|spd)\b", re.IGNORECASE)
+_TRANSMISSION_COMPACT = re.compile(r"^(\d{1,2})(at|mt|dct)$", re.IGNORECASE)
 
 
 def words(value: str) -> str:
@@ -308,7 +297,31 @@ def canonical_body_style(value: str | None) -> str | None:
     cleaned = clean_display(value)
     if not cleaned:
         return None
-    return _BODY_STYLE_ALIASES.get(compact_key(cleaned), cleaned.title())
+
+    key = compact_key(cleaned)
+    direct = _BODY_STYLE_ALIASES.get(key)
+    if direct is not None:
+        return direct
+    for marker, canonical in _BODY_STYLE_PATTERNS:
+        if marker in key:
+            return canonical
+    if key == "truck":
+        return "Pickup"
+    return cleaned.title()
+
+
+def _transmission_family(key: str) -> str | None:
+    if "ecvt" in key or "electroniccvt" in key:
+        return "eCVT"
+    if "cvt" in key or "continuouslyvariable" in key:
+        return "CVT"
+    if "dct" in key or "dualclutch" in key:
+        return "DCT"
+    if key in {"mt", "manual", "manualtransmission"} or "manual" in key:
+        return "Manual"
+    if key in {"at", "auto", "automatic", "automatictransmission"} or "automatic" in key:
+        return "Automatic"
+    return None
 
 
 def canonical_transmission(value: str | None) -> str | None:
@@ -317,16 +330,28 @@ def canonical_transmission(value: str | None) -> str | None:
     cleaned = clean_display(value)
     if not cleaned:
         return None
+
     key = compact_key(cleaned)
+    compact_match = _TRANSMISSION_COMPACT.fullmatch(key)
+    if compact_match:
+        speed = int(compact_match.group(1))
+        suffix = compact_match.group(2).casefold()
+        family = {"at": "Automatic", "mt": "Manual", "dct": "DCT"}[suffix]
+        return f"{speed}-speed {family}"
 
-    if "ecvt" in key or "electroniccvt" in key:
-        return "eCVT"
-    if "cvt" in key or "continuouslyvariable" in key:
-        return "CVT"
-    if "dct" in key or "dualclutch" in key:
-        return "DCT"
+    family = _transmission_family(key)
+    if family in {"CVT", "eCVT"}:
+        return family
 
-    return _TRANSMISSION_ALIASES.get(key, cleaned.upper())
+    speed_match = _TRANSMISSION_SPEED.search(words(cleaned))
+    if speed_match and family is not None:
+        return f"{int(speed_match.group(1))}-speed {family}"
+
+    speed_anywhere = re.search(r"(?:^|\D)(\d{1,2})(?:\D|$)", cleaned)
+    if speed_anywhere and family is not None:
+        return f"{int(speed_anywhere.group(1))}-speed {family}"
+
+    return family or cleaned.upper()
 
 
 def canonical_drivetrain(value: str | None) -> str | None:
@@ -389,7 +414,7 @@ def canonical_engine(value: str | None) -> str | None:
 def comparison_key(field: str, value: str | None) -> str:
     if value is None:
         return ""
-    if field == "engine":
+    if field in {"engine", "transmission"}:
         keys = {
             compact_key(token)
             for token in value.split()
