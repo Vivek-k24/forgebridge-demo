@@ -4,7 +4,6 @@ from sqlalchemy import create_engine, pool
 from partgraph.config import settings
 from partgraph.vehicle.models import VehicleConfiguration
 
-
 target_metadata = VehicleConfiguration.metadata
 
 
