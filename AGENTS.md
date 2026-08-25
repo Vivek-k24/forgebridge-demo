@@ -29,6 +29,8 @@ Do not create an empty collector implementation. Add its container only when the
 6. LLM output may interpret ambiguous language but is never authoritative mechanical truth.
 7. Prefer deterministic extraction and lookup for alphanumeric OEM/catalog data.
 8. ML training and evaluation are offline. Promote a model only after measurable evaluation against the current baseline.
+9. A manually entered vehicle configuration remains `unverified` until an evidence-backed process verifies it. Normalized deduplication is not verification.
+10. Vehicle configuration identity records are not silently rewritten. Reconciliation or correction must remain explicit and auditable.
 
 ## Runtime performance rules
 
@@ -53,4 +55,4 @@ Do not reintroduce retired prototype pages, committed browser catalog dumps, dup
 
 ## Validation
 
-Before presenting a block as ready for review, verify its relevant automated checks. For the runtime foundation that means API tests against PostgreSQL, web typecheck/build, and Docker Compose configuration validation.
+Before presenting a block as ready for review, verify API lint/tests against PostgreSQL, database migrations, web typecheck/build, and Docker Compose configuration validation.

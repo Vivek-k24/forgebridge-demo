@@ -1,0 +1,1 @@
+"""Vehicle identity domain."""
