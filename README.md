@@ -1,56 +1,43 @@
 # PartGraph
 
-PartGraph helps Honda owners complete a repair assembly without discovering halfway through the job that a mount, cushion, seal, clip, hose, fastener, sensor, or other connected part was missed.
+PartGraph is a stateful AI-assisted repair companion that reconstructs the exact vehicle assembly, tracks every part and repair action as you work, and lets you stop for days or weeks and resume from the same step, same part, and same fastener.
 
-**Live app:** https://vivek-k24.github.io/forgebridge-demo/#/
+## Current state
 
-## Current staged coverage
+**Block 0: repository reset.** The previous prototype application, generated Honda catalog files, browser-side catalog repositories, repair-specific static data, scraping scripts, and automated deployment/catalog workflows have been removed from the active codebase.
 
-- **Home (`#/`)** — 6th Generation Honda Civic (1996–2000), U.S. market, Stage 1 front-cooling/radiator workflow.
-- **8th-gen (`#/8th-gen`)** — preserved 2009 U.S.-market Honda Civic Hybrid repair workflow with broader catalog-backed adjacent systems.
+The successful 6th-generation Civic drivetrain collection from the previous architecture is preserved separately as migration/test data. It is not canonical PartGraph data and is not committed to this repository.
 
-Coverage is intentionally published in stages. Unsupported assemblies return a clear unavailable state instead of borrowing another trim's data or guessing.
+## Architecture direction
 
-## What PartGraph does
+PartGraph will use three application boundaries:
 
-```text
-Choose your Honda
-→ choose the repair area
-→ choose the main part
-→ use photo help if you are unsure what a part is called
-→ check connected parts and hardware
-→ mark Need / Have / Inspect / Not sure
-→ open OEM-number-first purchase paths
-```
+- `web` — React + TypeScript user and developer interfaces.
+- `api` — Python application implemented as a modular monolith for vehicle identity, canonical catalog, assembly graph, repair state, inventory, evidence, guidance, and learning.
+- `collector` — isolated Python catalog-ingestion service that can write staging observations but cannot directly promote canonical mechanical truth.
 
-The application separates four trust layers:
+The collector is not part of the interactive user request path.
 
-1. **Vehicle identity** — exact year/model/configuration and, where useful, VIN evidence.
-2. **Part identity and catalog membership** — source-backed OEM numbers, quantities and assembly observations.
-3. **Mechanical/service truth** — only published when separately supported by authoritative service/engineering evidence.
-4. **Shopping** — seller/search links appear only after the part identity is established.
+## Performance contract
 
-Seller titles and “fits your vehicle” badges never override verified PartGraph fitment.
+The repair workflow must become useful immediately from local state when possible. Server-backed workflow retrieval targets p95 under 3 seconds. Ten seconds is a hard blocking boundary, not a target: after that point the UI must render verified cached/partial state instead of holding the user behind a spinner.
 
-## Photos and privacy
+Catalog collection, model training, and large language model calls must never block repair-session resume.
 
-Photo help is mobile-first. Current camera/file input stays browser-local; PartGraph does not pretend that automatic recognition is connected when it is not. Future recognition is intended to compare a photo only against parts already valid for the selected vehicle and assembly and to return **unknown** when confidence is insufficient.
-
-## Data pipeline
-
-PartGraph maintains a deterministic Honda vehicle catalog plus a candidate-ingestion pipeline for part observations. Public/dealer catalog pages can corroborate part identity and quantity, but scraped observations are not automatically promoted into mechanical truth.
-
-Runtime repair workflows are designed to use **zero LLM tokens**. Structured extraction, graph traversal, fitment checks, diagrams and OEM-number shopping paths should remain deterministic wherever possible.
-
-## Development
+## Local development
 
 ```bash
 npm install
 npm run dev
+```
+
+Validation:
+
+```bash
 npm run lint
 npm run build
 ```
 
-Read `AGENTS.md` before using Codex. It contains the current code map, trust boundaries and token-discipline rules.
+## Development rhythm
 
-PartGraph follows one rule above everything else: **when the system does not have enough evidence to identify a part or relationship safely, it should say so instead of guessing.**
+Each product block is implemented on its own branch and pull request. Pull the branch locally, run it in VS Code, inspect the behavior, and merge only after manual approval.
