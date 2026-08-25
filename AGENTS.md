@@ -19,6 +19,15 @@ Inside `api`, domain modules remain in-process until measured scale or team owne
 
 Do not create an empty collector implementation. Add its container only when the real ingestion capability is built.
 
+## Vehicle scope
+
+1. PartGraph is multi-brand. Honda is not a privileged architecture path.
+2. Initial market scope is the United States and Canada.
+3. The supported-brand registry is maintained in `api/partgraph/vehicle/taxonomy.py`.
+4. European premium/luxury brands are outside the current product scope.
+5. Mainstream, domestic premium, Japanese/Korean premium, and meaningful legacy North-American used-fleet brands may be supported.
+6. Brand support is an explicit product decision, not inferred from arbitrary user input.
+
 ## Trust rules
 
 1. Never invent OEM numbers, fitment, torque values, fluids, procedures, fastener specifications, interchange, or safety facts.
@@ -29,8 +38,12 @@ Do not create an empty collector implementation. Add its container only when the
 6. LLM output may interpret ambiguous language but is never authoritative mechanical truth.
 7. Prefer deterministic extraction and lookup for alphanumeric OEM/catalog data.
 8. ML training and evaluation are offline. Promote a model only after measurable evaluation against the current baseline.
-9. A manually entered vehicle configuration remains `unverified` until an evidence-backed process verifies it. Normalized deduplication is not verification.
-10. Vehicle configuration identity records are not silently rewritten. Reconciliation or correction must remain explicit and auditable.
+9. A manually entered vehicle configuration remains `unverified` until an evidence-backed process verifies it.
+10. Raw vehicle wording is canonicalized before canonical configuration persistence.
+11. Case, punctuation, spacing, safe synonyms, and notation variants must not create duplicate configurations.
+12. Compatible partial identities may enrich one canonical record; conflicting facts remain distinct.
+13. If more than one canonical configuration is compatible, reject the write as ambiguous instead of guessing.
+14. Do not use fuzzy string similarity to merge safety-relevant vehicle variants such as trims, engines, transmissions, or drivetrains.
 
 ## Runtime performance rules
 
