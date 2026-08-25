@@ -48,10 +48,11 @@ SUPPORTED_BRANDS: tuple[BrandDefinition, ...] = (
     BrandDefinition("Nissan", "active"),
     BrandDefinition("Ram", "active", ("Ram Trucks",)),
     BrandDefinition("Subaru", "active"),
-    BrandDefinition("Tesla", "active"),
     BrandDefinition("Toyota", "active"),
     BrandDefinition("Volkswagen", "active", ("VW",)),
+    BrandDefinition("Volvo", "active"),
     BrandDefinition("Hummer", "legacy"),
+    BrandDefinition("Isuzu", "legacy"),
     BrandDefinition("Mercury", "legacy"),
     BrandDefinition("Pontiac", "legacy"),
     BrandDefinition("Saturn", "legacy"),
@@ -85,7 +86,15 @@ EXCLUDED_EUROPEAN_PREMIUM_BRANDS: tuple[str, ...] = (
     "Porsche",
     "Rimac",
     "Rolls-Royce",
-    "Volvo",
+)
+
+EXCLUDED_MODERN_EV_BRANDS: tuple[str, ...] = (
+    "Tesla",
+    "Tesla Motors",
+    "Rivian",
+    "Rivian Automotive",
+    "Lucid",
+    "Lucid Motors",
 )
 
 _MARKET_ALIASES = {
@@ -226,7 +235,10 @@ def _build_brand_maps() -> tuple[dict[str, BrandDefinition], set[str]]:
 
     excluded = {
         compact_key(label)
-        for label in EXCLUDED_EUROPEAN_PREMIUM_BRANDS
+        for label in (
+            *EXCLUDED_EUROPEAN_PREMIUM_BRANDS,
+            *EXCLUDED_MODERN_EV_BRANDS,
+        )
     }
     excluded.update({"mercedes", "benz", "landrover", "rangerover", "rollsroyce"})
     return supported, excluded
@@ -239,7 +251,7 @@ def canonical_make(value: str) -> str:
     key = compact_key(value)
     if key in _EXCLUDED_BRAND_KEYS:
         raise UnsupportedBrandError(
-            "This European premium brand is outside the current PartGraph scope."
+            "This brand is outside the current PartGraph scope."
         )
 
     brand = _SUPPORTED_BRAND_MAP.get(key)
