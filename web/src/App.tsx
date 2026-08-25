@@ -27,6 +27,7 @@ type VehicleConfiguration = {
 
 type VehicleConfigurationResult = {
   created: boolean
+  resolution: 'created' | 'matched' | 'enriched'
   configuration: VehicleConfiguration
 }
 
@@ -156,9 +157,12 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
-      setSaveMessage(result.created
-        ? `Saved configuration ${result.configuration.id}.`
-        : `Matched existing configuration ${result.configuration.id}.`)
+      const messages = {
+        created: `Saved configuration ${result.configuration.id}.`,
+        matched: `Matched existing configuration ${result.configuration.id}.`,
+        enriched: `Updated existing configuration ${result.configuration.id} with the new details.`,
+      }
+      setSaveMessage(messages[result.resolution])
       setForm(EMPTY_FORM)
       await loadConfigurations()
     } catch (error) {
@@ -205,7 +209,7 @@ function App() {
           <span className="trust-badge">unverified until evidence-backed</span>
         </div>
         <p className="hint">
-          No catalog data is preloaded. Normalized duplicates reuse one database record, but normalization is not verification.
+          Compatible partial entries enrich one record. Conflicting or ambiguous identities are never merged automatically.
         </p>
 
         <form className="vehicle-form" onSubmit={(event) => void saveConfiguration(event)}>
