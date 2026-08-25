@@ -10,7 +10,12 @@ from .schemas import (
     VehicleConfigurationRead,
     VehicleConfigurationResult,
 )
-from .service import create_or_get_configuration, get_configuration, list_configurations
+from .service import (
+    VehicleIdentityAmbiguousError,
+    create_or_get_configuration,
+    get_configuration,
+    list_configurations,
+)
 
 router = APIRouter(prefix="/api/v1/vehicle-configurations", tags=["Vehicle Identity"])
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
@@ -21,8 +26,19 @@ async def create_configuration(
     payload: VehicleConfigurationInput,
     session: SessionDep,
 ) -> VehicleConfigurationResult:
-    configuration, created = await create_or_get_configuration(session, payload)
-    return VehicleConfigurationResult(created=created, configuration=configuration)
+    try:
+        configuration, resolution = await create_or_get_configuration(session, payload)
+    except VehicleIdentityAmbiguousError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+
+    return VehicleConfigurationResult(
+        created=resolution == "created",
+        resolution=resolution,
+        configuration=configuration,
+    )
 
 
 @router.get("", response_model=list[VehicleConfigurationRead])
