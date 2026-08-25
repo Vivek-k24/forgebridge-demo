@@ -18,7 +18,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -177,7 +178,8 @@ h2 {
   font-weight: 700;
 }
 
-.vehicle-form input {
+.vehicle-form input,
+.vehicle-form select {
   width: 100%;
   border: 1px solid #2c3945;
   border-radius: 10px;
@@ -187,7 +189,8 @@ h2 {
   background: #0d141b;
 }
 
-.vehicle-form input:focus {
+.vehicle-form input:focus,
+.vehicle-form select:focus {
   border-color: #66c79b;
   box-shadow: 0 0 0 3px rgba(102, 199, 155, 0.1);
 }
