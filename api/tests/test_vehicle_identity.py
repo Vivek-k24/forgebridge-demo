@@ -103,6 +103,42 @@ def test_vehicle_identity_is_not_honda_specific() -> None:
         assert second.json()["configuration"]["drivetrain"] == "4WD"
 
 
+def test_transmission_detail_enriches_but_different_speeds_stay_distinct() -> None:
+    suffix = uuid4().hex[:8]
+    base = {
+        "year": 2018,
+        "market": "US",
+        "make": "Ford",
+        "model": f"Test-{suffix}",
+        "trim": "SE",
+        "body_style": "sedan 4D",
+    }
+
+    with TestClient(app) as client:
+        partial = client.post(
+            "/api/v1/vehicle-configurations",
+            json={**base, "transmission": "automatic"},
+        )
+        six_speed = client.post(
+            "/api/v1/vehicle-configurations",
+            json={**base, "transmission": "6AT"},
+        )
+        eight_speed = client.post(
+            "/api/v1/vehicle-configurations",
+            json={**base, "transmission": "8-speed automatic"},
+        )
+
+    assert partial.status_code == 200
+    assert six_speed.status_code == 200
+    assert eight_speed.status_code == 200
+    assert partial.json()["resolution"] == "created"
+    assert six_speed.json()["resolution"] == "enriched"
+    assert partial.json()["configuration"]["id"] == six_speed.json()["configuration"]["id"]
+    assert six_speed.json()["configuration"]["transmission"] == "6-speed Automatic"
+    assert eight_speed.json()["resolution"] == "created"
+    assert eight_speed.json()["configuration"]["id"] != six_speed.json()["configuration"]["id"]
+
+
 def test_incomplete_identity_is_rejected_when_multiple_variants_fit() -> None:
     suffix = uuid4().hex[:8]
     base = {
