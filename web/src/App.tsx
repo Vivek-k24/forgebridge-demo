@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
 const HARD_TIMEOUT_MS = 10_000
+const MIN_SUPPORTED_YEAR = 1996
+const MAX_SUPPORTED_YEAR = new Date().getFullYear()
 
 type RuntimeState =
   | { status: 'checking' }
@@ -234,7 +236,8 @@ function App() {
         <p className="hint">
           Case, punctuation, spacing, market names, safe body/transmission/drivetrain synonyms,
           generation wording, and engine notation are normalized before persistence. Ambiguous
-          identities are rejected instead of guessed.
+          identities are rejected instead of guessed. Supported model years are {MIN_SUPPORTED_YEAR}
+          –{MAX_SUPPORTED_YEAR}.
         </p>
 
         <form className="vehicle-form" onSubmit={(event) => void saveConfiguration(event)}>
@@ -242,9 +245,10 @@ function App() {
             Year
             <input
               required
+              type="number"
               inputMode="numeric"
-              min="1886"
-              max="2100"
+              min={MIN_SUPPORTED_YEAR}
+              max={MAX_SUPPORTED_YEAR}
               value={form.year}
               onChange={(event) => updateField('year', event.target.value)}
             />
