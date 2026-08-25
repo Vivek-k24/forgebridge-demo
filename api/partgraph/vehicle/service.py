@@ -20,6 +20,7 @@ OPTIONAL_IDENTITY_FIELDS = (
     "transmission",
     "drivetrain",
 )
+STRUCTURED_DETAIL_FIELDS = {"engine", "transmission"}
 
 
 class AmbiguousVehicleIdentityError(ValueError):
@@ -55,10 +56,10 @@ def _identity_hash(values: dict[str, int | str | None]) -> str:
     return _hash(tuple(parts))
 
 
-def _engine_tokens(value: str) -> set[str]:
+def _detail_tokens(field: str, value: str) -> set[str]:
     return {
         token
-        for token in comparison_key("engine", value).split("|")
+        for token in comparison_key(field, value).split("|")
         if token
     }
 
@@ -66,9 +67,9 @@ def _engine_tokens(value: str) -> set[str]:
 def _compatible(field: str, current: str | None, incoming: str | None) -> bool:
     if current is None or incoming is None:
         return True
-    if field == "engine":
-        current_tokens = _engine_tokens(current)
-        incoming_tokens = _engine_tokens(incoming)
+    if field in STRUCTURED_DETAIL_FIELDS:
+        current_tokens = _detail_tokens(field, current)
+        incoming_tokens = _detail_tokens(field, incoming)
         return current_tokens <= incoming_tokens or incoming_tokens <= current_tokens
     return comparison_key(field, current) == comparison_key(field, incoming)
 
@@ -118,11 +119,11 @@ def _merge_candidate(
             setattr(candidate, field, supplied)
             changed = True
             continue
-        if field == "engine":
-            current_tokens = _engine_tokens(current)
-            incoming_tokens = _engine_tokens(supplied)
+        if field in STRUCTURED_DETAIL_FIELDS:
+            current_tokens = _detail_tokens(field, current)
+            incoming_tokens = _detail_tokens(field, supplied)
             if current_tokens < incoming_tokens:
-                candidate.engine = supplied
+                setattr(candidate, field, supplied)
                 changed = True
     return changed
 
