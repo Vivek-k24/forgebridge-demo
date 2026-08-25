@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -61,4 +62,5 @@ class VehicleConfigurationRead(BaseModel):
 
 class VehicleConfigurationResult(BaseModel):
     created: bool
+    resolution: Literal["created", "matched", "enriched"]
     configuration: VehicleConfigurationRead
