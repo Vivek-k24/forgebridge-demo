@@ -43,6 +43,8 @@ def test_market_variants_are_canonical(raw: str, expected: str) -> None:
         ("lexus", "Lexus"),
         ("ACURA", "Acura"),
         ("Genesis", "Genesis"),
+        ("Isuzu", "Isuzu"),
+        ("VOLVO", "Volvo"),
     ],
 )
 def test_supported_make_variants_are_canonical(raw: str, expected: str) -> None:
@@ -62,7 +64,6 @@ def test_supported_make_variants_are_canonical(raw: str, expected: str) -> None:
         "Land Rover",
         "Range Rover",
         "Rolls Royce",
-        "Volvo",
         "Jaguar",
         "Maserati",
         "Alfa Romeo",
@@ -79,6 +80,22 @@ def test_supported_make_variants_are_canonical(raw: str, expected: str) -> None:
     ],
 )
 def test_excluded_european_premium_brands_are_rejected(brand: str) -> None:
+    with pytest.raises(UnsupportedBrandError):
+        canonical_make(brand)
+
+
+@pytest.mark.parametrize(
+    "brand",
+    [
+        "Tesla",
+        "Tesla Motors",
+        "Rivian",
+        "Rivian Automotive",
+        "Lucid",
+        "Lucid Motors",
+    ],
+)
+def test_excluded_modern_ev_brands_are_rejected(brand: str) -> None:
     with pytest.raises(UnsupportedBrandError):
         canonical_make(brand)
 
