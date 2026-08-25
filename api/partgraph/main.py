@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from .config import settings
 from .database import database_readiness, engine
+from .vehicle.router import router as vehicle_router
 
 
 class LiveHealth(BaseModel):
@@ -26,16 +27,17 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="PartGraph API",
-    version="0.1.0",
+    version="0.2.0",
     lifespan=lifespan,
 )
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.web_origin],
     allow_credentials=False,
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+app.include_router(vehicle_router)
 
 
 @app.get("/api/v1/health/live", response_model=LiveHealth)
