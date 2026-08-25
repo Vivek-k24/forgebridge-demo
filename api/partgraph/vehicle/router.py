@@ -30,7 +30,8 @@ async def configurations(
     session: SessionDep,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> list[VehicleConfigurationRead]:
-    return [VehicleConfigurationRead.model_validate(item) for item in await list_configurations(session, limit)]
+    items = await list_configurations(session, limit)
+    return [VehicleConfigurationRead.model_validate(item) for item in items]
 
 
 @router.get("/{configuration_id}", response_model=VehicleConfigurationRead)
