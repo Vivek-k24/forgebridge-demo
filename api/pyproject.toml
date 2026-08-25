@@ -21,6 +21,9 @@ test = [
   "ruff>=0.12,<1",
 ]
 
+[tool.setuptools.packages.find]
+include = ["partgraph*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
