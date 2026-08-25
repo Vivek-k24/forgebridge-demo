@@ -100,7 +100,7 @@ def test_excluded_european_premium_brands_are_rejected(brand: str) -> None:
         ("station wagon", "Wagon"),
         ("sport utility vehicle", "SUV"),
         ("4 door sport utility", "SUV"),
-        ("compact crossover SUV", "SUV"),
+        ("compact crossover SUV", "Crossover"),
         ("pickup truck", "Pickup"),
         ("truck pickup 4D", "Pickup"),
         ("cabriolet", "Convertible"),
