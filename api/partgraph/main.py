@@ -72,7 +72,7 @@ async def platform_boundary(request: Request, call_next) -> Response:
                         PartGraphError(
                             code=ErrorCode.REQUEST_PAYLOAD_TOO_LARGE,
                             message="Authentication request payload is too large.",
-                            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                         ),
                     )
                     return _finish_response(request, response, 0.0)
@@ -94,7 +94,7 @@ async def platform_boundary(request: Request, call_next) -> Response:
                 PartGraphError(
                     code=ErrorCode.REQUEST_PAYLOAD_TOO_LARGE,
                     message="Authentication request payload is too large.",
-                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                 ),
             )
             return _finish_response(request, response, 0.0)
@@ -176,6 +176,7 @@ async def http_error_handler(request: Request, exc: StarletteHTTPException) -> R
         status.HTTP_404_NOT_FOUND: ErrorCode.REQUEST_NOT_FOUND,
         status.HTTP_405_METHOD_NOT_ALLOWED: ErrorCode.REQUEST_METHOD_NOT_ALLOWED,
         status.HTTP_409_CONFLICT: ErrorCode.REQUEST_CONFLICT,
+        status.HTTP_422_UNPROCESSABLE_CONTENT: ErrorCode.REQUEST_VALIDATION_FAILED,
         status.HTTP_429_TOO_MANY_REQUESTS: ErrorCode.RATE_LIMITED,
     }
     code = code_by_status.get(exc.status_code, f"HTTP_{exc.status_code}")
