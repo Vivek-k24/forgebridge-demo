@@ -48,6 +48,7 @@ Do not create an empty collector implementation. Add its container only when the
 15. If more than one canonical configuration is compatible, reject the write as ambiguous instead of guessing.
 16. Do not use fuzzy string similarity to merge safety-relevant vehicle variants such as trims, engines, transmissions, or drivetrains.
 17. Ordinary user input and future collector output never create shared canonical truth directly.
+18. VIN decoders and other external identity providers produce observations, not canonical truth. Cache their observation if useful, but re-resolve it against current canonical data rather than freezing a provider result as authority.
 
 ## Runtime performance rules
 
@@ -67,8 +68,11 @@ Do not create an empty collector implementation. Add its container only when the
 4. Private data must be user-scoped before `UserVehicle`, VIN, photos, repair sessions, inventory, or fastener state are released.
 5. PostgreSQL row-level security is required once private user tables exist.
 6. V1 permits one active editing device per repair session; other devices may be read-only until control transfers.
-7. Full VIN values must never appear in application logs, analytics, or LLM prompts.
-8. Passwords, password hashes, raw session tokens, CSRF material, and secrets must never be logged.
+7. Full VIN values must never appear in application logs, analytics, exception messages, cache keys, or LLM prompts.
+8. Full VIN values stored by PartGraph require authenticated encryption with explicit key versioning; encryption keys come only from runtime secret configuration.
+9. Deterministic VIN duplicate detection uses a keyed, owner-scoped fingerprint rather than plaintext or a bare unsalted hash. Different owners must not be able to infer one another's VIN presence from duplicate behavior.
+10. Normal API/UI representations expose a masked VIN only. Decryption is not part of ordinary list/read rendering.
+11. Passwords, password hashes, raw session tokens, CSRF material, VIN cryptographic keys, and other secrets must never be logged.
 
 ## Reliability and error contract
 
