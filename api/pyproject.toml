@@ -1,24 +1,27 @@
 [build-system]
-requires = ["setuptools>=80"]
+requires = ["setuptools==80.9.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "partgraph-api"
-version = "0.2.0"
+version = "0.3.0"
 description = "Interactive PartGraph API modular monolith"
 requires-python = ">=3.14,<3.15"
 dependencies = [
-  "alembic>=1.16,<2",
+  "alembic==1.19.1",
+  "argon2-cffi==25.1.0",
+  "email-validator==2.3.0",
   "fastapi[standard]==0.141.1",
-  "sqlalchemy>=2.0.43,<2.1",
-  "psycopg[binary]>=3.2.9,<4",
+  "sqlalchemy==2.0.52",
+  "psycopg[binary]==3.3.4",
 ]
 
 [project.optional-dependencies]
 test = [
-  "httpx>=0.28,<0.29",
-  "pytest>=8.4,<9",
-  "ruff>=0.12,<1",
+  "httpx2==2.12.0",
+  "pip-audit==2.10.1",
+  "pytest==9.0.3",
+  "ruff==0.16.4",
 ]
 
 [tool.setuptools.packages.find]
@@ -26,6 +29,7 @@ include = ["partgraph*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+filterwarnings = ["error"]
 
 [tool.ruff]
 target-version = "py314"

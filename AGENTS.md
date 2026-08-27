@@ -4,7 +4,7 @@
 
 PartGraph maintains a trustworthy digital representation of a physical repair as it changes over time. It must know what the exact vehicle assembly should contain, what the user has observed, what has already changed during the repair, and what can safely happen next.
 
-> PartGraph is a stateful AI-assisted repair companion that reconstructs the exact vehicle assembly, tracks every part and repair action as you work, and lets you stop for days or weeks and resume from the same step, same part, and same fastener.
+> PartGraph is a stateful AI-assisted repair companion that reconstructs the exact vehicle assembly, tracks every part and repair action as work progresses, and lets a repair resume from the same physical state after a pause.
 
 ## System architecture
 
@@ -62,10 +62,41 @@ Do not create an empty collector implementation. Add its container only when the
 ## User isolation
 
 1. V1 is one owner account with many vehicles.
-2. Private data must be user-scoped before `UserVehicle`, VIN, photos, repair sessions, inventory, or fastener state are released.
-3. PostgreSQL row-level security is required once private user tables exist.
-4. V1 permits one active editing device per repair session; other devices may be read-only until control transfers.
-5. Full VIN values must never appear in application logs, analytics, or LLM prompts.
+2. Sign-up uses email, username, and password. Sign-in accepts username or email.
+3. Usernames are case-insensitive, 3–32 characters, and contain only ASCII letters, digits, or underscore.
+4. Private data must be user-scoped before `UserVehicle`, VIN, photos, repair sessions, inventory, or fastener state are released.
+5. PostgreSQL row-level security is required once private user tables exist.
+6. V1 permits one active editing device per repair session; other devices may be read-only until control transfers.
+7. Full VIN values must never appear in application logs, analytics, or LLM prompts.
+8. Passwords, password hashes, raw session tokens, CSRF material, and secrets must never be logged.
+
+## Reliability and error contract
+
+1. A failure class must be prevented structurally, caught in CI, or produce a visible coded fallback/degraded state. Silent failure is not acceptable.
+2. Every non-success API response must use the versioned PartGraph error envelope with a stable `code`, user-safe `message`, `request_id`, `retryable` flag, and appropriate HTTP status.
+3. Every warning/error log entry must carry a stable code and correlation/request ID where a request exists. Never log request bodies merely to diagnose an error.
+4. API paths, schemas, and API-version headers are contracts. Client/API version mismatch must fail visibly instead of being silently deserialized.
+5. Validate user input independently at browser, API, and database boundaries where integrity matters. Browser validation is UX, never the security boundary.
+6. Bound payload/file sizes before expensive parsing, hashing, AI, or storage work.
+7. Use UTC-aware server timestamps and explicit wire formats. Do not depend on machine-local timezone or locale.
+8. Automatic retries must be bounded and limited to safe/idempotent work unless an explicit idempotency key/protocol exists for the state-changing action.
+9. A network timeout or unavailable dependency may not be converted into a successful state transition. Preserve known server-authoritative state and show degraded/retry UX.
+10. Cache use requires user/tenant scope, version/invalidation semantics, TTL, and authoritative fallback before adoption. A cache must never become an undocumented second database.
+11. Identity creation, event/state transitions, deduplication, and other concurrent writes require race-condition tests and database-enforced invariants.
+12. CORS, CSRF, cookie flags, reverse-proxy behavior, security headers, and Content Security Policy must be integration-tested whenever those boundaries change.
+13. New capabilities such as uploads, WebSockets, or webhooks require their own size/handshake/signature/replay/error tests before they ship; do not add placeholder infrastructure merely to satisfy this rule.
+
+## Dependency and runtime compatibility
+
+1. Supported runtimes are explicit. Current baseline is Python 3.14 and Node.js 24; a runtime-major change is an intentional migration, not ambient CI drift.
+2. Direct dependencies use exact versions. JavaScript transitive dependencies use a committed lockfile and `npm ci`.
+3. Use one package manager/lock strategy per deployable. Do not mix npm/yarn/pnpm or Poetry/Pipenv state.
+4. CI runs dependency-integrity and security checks (`pip check`, `pip-audit`, `npm audit`) and type/build/container smoke tests.
+5. React and React-DOM versions must match. Vite/plugins, TypeScript/type packages, and framework peers must resolve without `--force` or `--legacy-peer-deps`.
+6. Reversible Alembic migrations must be downgrade/upgrade tested in CI before merge. Destructive migrations require an explicit data-preservation/migration plan instead of a fake rollback.
+7. Production containers must not depend on global developer packages or mutable host environments.
+8. Native/C-extension or multi-architecture support must be tested on every claimed architecture before ARM64/x86 portability is stated.
+9. Do not accept a dependency warning as harmless by default. Resolve it, pin around it with documented evidence, or fail the build.
 
 ## Repair capability boundary
 
@@ -87,4 +118,4 @@ Do not reintroduce retired prototype pages, committed browser catalog dumps, dup
 
 ## Validation
 
-Before merging a block, verify applicable GitHub Actions workflows are green and GitHub reports the PR mergeable/ready. API work must include Ruff, migrations, PostgreSQL tests, container build/smoke; Web work must include TypeScript/build/container smoke; full-stack changes must pass Compose integration.
+Before merging a block, verify applicable GitHub Actions workflows are green and GitHub reports the PR mergeable/ready. API work must include Ruff, dependency integrity/security checks, reversible migration checks, PostgreSQL tests, container build/smoke; Web work must include locked dependency install, dependency audit, TypeScript/build/container smoke; full-stack changes must pass Compose integration and relevant adversarial user-flow checks.

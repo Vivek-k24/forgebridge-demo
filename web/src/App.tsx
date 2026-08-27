@@ -8,9 +8,8 @@ import {
   type PointerEvent,
   type WheelEvent,
 } from 'react'
+import { apiRequest, formatApiFailure } from './api'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
-const HARD_TIMEOUT_MS = 10_000
 const MIN_SUPPORTED_YEAR = 1996
 const MAX_SUPPORTED_YEAR = new Date().getFullYear()
 const DEFAULT_YEAR = Math.min(MAX_SUPPORTED_YEAR, Math.max(MIN_SUPPORTED_YEAR, 2015))
@@ -82,31 +81,6 @@ const EMPTY_FORM: VehicleForm = {
   model: '',
   trim: '',
   generation: '',
-}
-
-async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const controller = new AbortController()
-  const timeout = window.setTimeout(() => controller.abort(), HARD_TIMEOUT_MS)
-
-  try {
-    const response = await fetch(`${API_BASE_URL}${path}`, {
-      ...init,
-      signal: controller.signal,
-    })
-    if (!response.ok) {
-      let message = `API returned ${response.status}`
-      try {
-        const payload = (await response.json()) as { detail?: string }
-        if (payload.detail) message = payload.detail
-      } catch {
-        // Preserve the HTTP status when the response has no JSON body.
-      }
-      throw new Error(message)
-    }
-    return (await response.json()) as T
-  } finally {
-    window.clearTimeout(timeout)
-  }
 }
 
 function optionPath(path: string, params: Record<string, string | number | undefined>): string {
@@ -314,16 +288,29 @@ function App() {
         databaseMs: payload.database_ms,
       })
     } catch (error) {
-      const message = error instanceof DOMException && error.name === 'AbortError'
-        ? 'Hard 10-second boundary reached.'
-        : 'Interactive runtime is unavailable.'
-      setRuntime({ status: 'unavailable', message })
+      setRuntime({
+        status: 'unavailable',
+        message: formatApiFailure(error, 'Interactive runtime is unavailable.'),
+      })
     }
   }, [])
 
   useEffect(() => {
     void checkRuntime()
-    void apiRequest<VehicleBrand[]>('/api/v1/vehicle-brands').then(setBrands)
+    let active = true
+    void apiRequest<VehicleBrand[]>('/api/v1/vehicle-brands')
+      .then((items) => {
+        if (active) setBrands(items)
+      })
+      .catch((error) => {
+        if (active) {
+          setBrands([])
+          setSelectionError(formatApiFailure(error, 'Could not load supported vehicle brands.'))
+        }
+      })
+    return () => {
+      active = false
+    }
   }, [checkRuntime])
 
   useEffect(() => {
@@ -343,9 +330,15 @@ function App() {
           q: form.model || undefined,
         }),
       ).then((items) => {
-        if (active) setModelOptions(items)
-      }).catch(() => {
-        if (active) setModelOptions([])
+        if (active) {
+          setModelOptions(items)
+          setSelectionError(null)
+        }
+      }).catch((error) => {
+        if (active) {
+          setModelOptions([])
+          setSelectionError(formatApiFailure(error, 'Could not load model options.'))
+        }
       }).finally(() => {
         if (active) setModelLoading(false)
       })
@@ -374,9 +367,15 @@ function App() {
           q: form.trim || undefined,
         }),
       ).then((items) => {
-        if (active) setTrimOptions(items)
-      }).catch(() => {
-        if (active) setTrimOptions([])
+        if (active) {
+          setTrimOptions(items)
+          setSelectionError(null)
+        }
+      }).catch((error) => {
+        if (active) {
+          setTrimOptions([])
+          setSelectionError(formatApiFailure(error, 'Could not load trim options.'))
+        }
       }).finally(() => {
         if (active) setTrimLoading(false)
       })
@@ -406,9 +405,15 @@ function App() {
           q: form.generation || undefined,
         }),
       ).then((items) => {
-        if (active) setGenerationOptions(items)
-      }).catch(() => {
-        if (active) setGenerationOptions([])
+        if (active) {
+          setGenerationOptions(items)
+          setSelectionError(null)
+        }
+      }).catch((error) => {
+        if (active) {
+          setGenerationOptions([])
+          setSelectionError(formatApiFailure(error, 'Could not load generation options.'))
+        }
       }).finally(() => {
         if (active) setGenerationLoading(false)
       })
@@ -452,7 +457,7 @@ function App() {
       })
       setSelection(result)
     } catch (error) {
-      setSelectionError(error instanceof Error ? error.message : 'Could not check this vehicle.')
+      setSelectionError(formatApiFailure(error, 'Could not check this vehicle.'))
     } finally {
       setResolving(false)
     }

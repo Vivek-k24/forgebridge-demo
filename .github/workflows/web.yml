@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   test:
-    name: Web test + container smoke
+    name: Web test + security + container smoke
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -36,10 +36,22 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
 
-      - name: Install web dependencies
+      - name: Install locked web dependencies
         working-directory: web
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
+
+      - name: Verify Web dependency integrity
+        working-directory: web
+        run: |
+          npm ls --all
+          sha256sum package-lock.json
+
+      - name: Audit Web dependencies
+        working-directory: web
+        run: npm audit --audit-level=high
 
       - name: Typecheck web
         working-directory: web
@@ -54,11 +66,13 @@ jobs:
       - name: Build production web container
         run: docker build --build-arg VITE_API_BASE_URL= -t partgraph-web:ci ./web
 
-      - name: Smoke-test web container over HTTP
+      - name: Smoke-test web container over HTTP and security headers
         run: |
           docker run -d --name partgraph-web-ci -p 8080:80 partgraph-web:ci
           for attempt in $(seq 1 30); do
             if curl --fail --silent --show-error http://127.0.0.1:8080/ >/dev/null; then
+              curl --fail --silent --show-error -I http://127.0.0.1:8080/ | grep -qi 'X-Frame-Options: DENY'
+              curl --fail --silent --show-error -I http://127.0.0.1:8080/ | grep -qi 'Content-Security-Policy:'
               exit 0
             fi
             sleep 1
