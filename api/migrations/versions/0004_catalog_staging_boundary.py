@@ -146,7 +146,7 @@ def upgrade() -> None:
     )
     op.execute(
         sa.text(
-            f"GRANT INSERT (id, source_name, source_type, collector_version) "
+            f"GRANT INSERT (id, source_name, source_type, collector_version, status) "
             f"ON {STAGING_SCHEMA}.ingestion_batches TO {COLLECTOR_ROLE}"
         )
     )
