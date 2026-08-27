@@ -1,6 +1,5 @@
 import asyncio
 import json
-import socket
 from dataclasses import dataclass
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
@@ -58,7 +57,10 @@ def normalize_vin(value: str) -> str:
 
 
 def expected_check_digit(vin: str) -> str:
-    total = sum(VIN_TRANSLITERATION[character] * weight for character, weight in zip(vin, VIN_WEIGHTS))
+    total = sum(
+        VIN_TRANSLITERATION[character] * weight
+        for character, weight in zip(vin, VIN_WEIGHTS, strict=True)
+    )
     remainder = total % 11
     return "X" if remainder == 10 else str(remainder)
 
@@ -235,7 +237,7 @@ def _fetch_sync(vin: str) -> object:
                     retryable=True,
                 )
             body = response.read(MAX_PROVIDER_BYTES + 1)
-    except (TimeoutError, socket.timeout) as exc:
+    except TimeoutError as exc:
         raise PartGraphError(
             code=ErrorCode.VIN_PROVIDER_TIMEOUT,
             message="VIN decoder timed out. Use vehicle details or try again.",
@@ -253,7 +255,7 @@ def _fetch_sync(vin: str) -> object:
         reason = exc.reason
         code = (
             ErrorCode.VIN_PROVIDER_TIMEOUT
-            if isinstance(reason, (TimeoutError, socket.timeout))
+            if isinstance(reason, TimeoutError)
             else ErrorCode.VIN_PROVIDER_UNAVAILABLE
         )
         http_status = (
