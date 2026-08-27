@@ -5,10 +5,16 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .models import VehicleConfiguration
-from .schemas import VehicleConfigurationInput
+from .schemas import VehicleConfigurationInput, VehicleSelectionInput
 from .taxonomy import (
     CANONICALIZATION_VERSION,
+    canonical_generation,
+    canonical_make,
+    canonical_market,
+    canonical_model,
+    canonical_trim,
     canonicalize_fields,
+    compact_key,
     comparison_key,
 )
 
@@ -141,6 +147,7 @@ async def resolve_configuration(
     session: AsyncSession,
     payload: VehicleConfigurationInput,
 ) -> tuple[VehicleConfiguration, str]:
+    """Internal canonical write path used by verified ingestion/tests, not the public UI."""
     incoming = canonicalize_fields(**payload.model_dump())
     base_hash = _base_hash(incoming)
     fingerprint = _identity_hash(incoming)
@@ -218,6 +225,153 @@ async def resolve_configuration(
     await session.commit()
     await session.refresh(configuration)
     return configuration, "created"
+
+
+async def _selection_base_candidates(
+    session: AsyncSession,
+    *,
+    year: int,
+    market: str,
+    make: str,
+) -> list[VehicleConfiguration]:
+    normalized_market = canonical_market(market)
+    normalized_make = canonical_make(make)
+    rows = await session.scalars(
+        select(VehicleConfiguration).where(
+            VehicleConfiguration.year == year,
+            VehicleConfiguration.market == normalized_market,
+            VehicleConfiguration.make == normalized_make,
+        )
+    )
+    return list(rows)
+
+
+def _filter_query(values: set[str], query: str | None, limit: int) -> list[str]:
+    if query:
+        query_key = compact_key(query)
+        values = {value for value in values if query_key in compact_key(value)}
+    return sorted(values, key=str.casefold)[:limit]
+
+
+async def list_model_options(
+    session: AsyncSession,
+    *,
+    year: int,
+    market: str,
+    make: str,
+    query: str | None,
+    limit: int,
+) -> list[str]:
+    candidates = await _selection_base_candidates(
+        session,
+        year=year,
+        market=market,
+        make=make,
+    )
+    return _filter_query({candidate.model for candidate in candidates}, query, limit)
+
+
+async def list_trim_options(
+    session: AsyncSession,
+    *,
+    year: int,
+    market: str,
+    make: str,
+    model: str,
+    query: str | None,
+    limit: int,
+) -> list[str]:
+    candidates = await _selection_base_candidates(
+        session,
+        year=year,
+        market=market,
+        make=make,
+    )
+    model_key = comparison_key("model", canonical_model(model))
+    values = {
+        candidate.trim
+        for candidate in candidates
+        if candidate.trim is not None
+        and comparison_key("model", candidate.model) == model_key
+    }
+    return _filter_query(values, query, limit)
+
+
+async def list_generation_options(
+    session: AsyncSession,
+    *,
+    year: int,
+    market: str,
+    make: str,
+    model: str,
+    trim: str | None,
+    query: str | None,
+    limit: int,
+) -> list[str]:
+    candidates = await _selection_base_candidates(
+        session,
+        year=year,
+        market=market,
+        make=make,
+    )
+    model_key = comparison_key("model", canonical_model(model))
+    trim_key = comparison_key("trim", canonical_trim(trim)) if trim else None
+    values = {
+        candidate.generation
+        for candidate in candidates
+        if candidate.generation is not None
+        and comparison_key("model", candidate.model) == model_key
+        and (
+            trim_key is None
+            or (
+                candidate.trim is not None
+                and comparison_key("trim", candidate.trim) == trim_key
+            )
+        )
+    }
+    return _filter_query(values, query, limit)
+
+
+async def resolve_selection(
+    session: AsyncSession,
+    payload: VehicleSelectionInput,
+) -> tuple[str, dict[str, int | str | None], list[VehicleConfiguration]]:
+    """Resolve user text against canonical rows without mutating shared truth."""
+    normalized = {
+        "year": payload.year,
+        "market": canonical_market(payload.market),
+        "make": canonical_make(payload.make),
+        "model": canonical_model(payload.model),
+        "trim": canonical_trim(payload.trim),
+        "generation": canonical_generation(payload.generation),
+    }
+    candidates = await _selection_base_candidates(
+        session,
+        year=payload.year,
+        market=payload.market,
+        make=payload.make,
+    )
+    model_key = comparison_key("model", str(normalized["model"]))
+    matches = [
+        candidate
+        for candidate in candidates
+        if comparison_key("model", candidate.model) == model_key
+    ]
+
+    if isinstance(normalized["trim"], str):
+        trim_key = comparison_key("trim", normalized["trim"])
+        matches = [
+            candidate
+            for candidate in matches
+            if candidate.trim is not None
+            and comparison_key("trim", candidate.trim) == trim_key
+        ]
+
+    if not matches:
+        return "manual_candidate", normalized, []
+    if len(matches) == 1:
+        return "matched", normalized, matches
+    return "ambiguous", normalized, matches[:10]
 
 
 async def get_configuration(

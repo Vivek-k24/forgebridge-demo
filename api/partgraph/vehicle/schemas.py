@@ -48,6 +48,36 @@ class VehicleConfigurationInput(BaseModel):
         return cleaned or None
 
 
+class VehicleSelectionInput(BaseModel):
+    year: int = Field(strict=True)
+    market: str = Field(min_length=1, max_length=64)
+    make: str = Field(min_length=1, max_length=64)
+    model: str = Field(min_length=1, max_length=96)
+    trim: str | None = Field(default=None, max_length=128)
+    generation: str | None = Field(default=None, max_length=96)
+
+    @field_validator("year")
+    @classmethod
+    def enforce_supported_year(cls, value: int) -> int:
+        return validate_supported_year(value)
+
+    @field_validator("market", "make", "model")
+    @classmethod
+    def clean_required(cls, value: str) -> str:
+        cleaned = " ".join(value.split())
+        if not cleaned:
+            raise ValueError("value cannot be blank")
+        return cleaned
+
+    @field_validator("trim", "generation")
+    @classmethod
+    def clean_optional(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = " ".join(value.split())
+        return cleaned or None
+
+
 class VehicleConfigurationRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -72,6 +102,21 @@ class VehicleConfigurationRead(BaseModel):
 class VehicleConfigurationResult(BaseModel):
     resolution: Literal["created", "matched", "enriched"]
     configuration: VehicleConfigurationRead
+
+
+class VehicleSelectionNormalized(BaseModel):
+    year: int
+    market: str
+    make: str
+    model: str
+    trim: str | None
+    generation: str | None
+
+
+class VehicleSelectionResult(BaseModel):
+    resolution: Literal["matched", "ambiguous", "manual_candidate"]
+    normalized: VehicleSelectionNormalized
+    matches: list[VehicleConfigurationRead]
 
 
 class VehicleBrandRead(BaseModel):
