@@ -11,6 +11,7 @@ from sqlalchemy import (
     Text,
     Uuid,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
@@ -34,7 +35,9 @@ class CatalogIngestionBatch(Base):
     source_name: Mapped[str] = mapped_column(String(128), nullable=False)
     source_type: Mapped[str] = mapped_column(String(64), nullable=False)
     collector_version: Mapped[str | None] = mapped_column(String(64))
-    status: Mapped[str] = mapped_column(String(24), nullable=False, default="open")
+    status: Mapped[str] = mapped_column(
+        String(24), nullable=False, default="open", server_default=text("'open'")
+    )
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -77,10 +80,12 @@ class CatalogSourceRecord(Base):
     provenance: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
     extraction_method: Mapped[str] = mapped_column(String(64), nullable=False)
     confidence: Mapped[Decimal | None] = mapped_column(Numeric(5, 4))
-    review_status: Mapped[str] = mapped_column(String(24), nullable=False, default="pending")
+    review_status: Mapped[str] = mapped_column(
+        String(24), nullable=False, default="pending", server_default=text("'pending'")
+    )
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     reviewed_by: Mapped[str | None] = mapped_column(String(128))
-    dedupe_key: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    dedupe_key: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -92,9 +97,7 @@ class CatalogVerifiedEvidence(Base):
     __tablename__ = "catalog_verified_evidence"
 
     id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
-    staging_record_id: Mapped[UUID] = mapped_column(
-        Uuid(as_uuid=True), nullable=False, unique=True, index=True
-    )
+    staging_record_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), nullable=False, unique=True)
     candidate_type: Mapped[str] = mapped_column(String(64), nullable=False)
     verified_payload: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
     vehicle_identity: Mapped[dict[str, object] | None] = mapped_column(JSONB)
