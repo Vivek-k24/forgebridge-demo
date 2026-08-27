@@ -123,7 +123,8 @@ def _finish_response(request: Request, response: Response, duration_ms: float) -
 
     if duration_ms >= 10_000:
         logger.warning(
-            "code=PERF_HARD_BOUNDARY_EXCEEDED request_id=%s method=%s path=%s status=%s duration_ms=%.2f",
+            "code=PERF_HARD_BOUNDARY_EXCEEDED request_id=%s method=%s "
+            "path=%s status=%s duration_ms=%.2f",
             request.state.request_id,
             request.method,
             request.url.path,
