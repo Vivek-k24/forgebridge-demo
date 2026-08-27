@@ -23,36 +23,53 @@ Do not create an empty collector implementation. Add its container only when the
 
 1. PartGraph is multi-brand. Honda is not a privileged architecture path.
 2. Initial market scope is the United States and Canada.
-3. The supported-brand registry is maintained in `api/partgraph/vehicle/taxonomy.py`.
-4. European premium/luxury brands are outside the current product scope.
-5. Mainstream, domestic premium, Japanese/Korean premium, and meaningful legacy North-American used-fleet brands may be supported.
-6. Brand support is an explicit product decision, not inferred from arbitrary user input.
+3. Supported model years are 1996 through the current calendar year.
+4. The supported-brand registry is maintained in `api/partgraph/vehicle/taxonomy.py`.
+5. European premium/luxury brands are outside the current product scope except Volvo, which is explicitly supported.
+6. Mainstream, domestic premium, Japanese/Korean premium, and meaningful legacy North-American used-fleet brands may be supported.
+7. Brand support is an explicit product decision, not inferred from arbitrary user input.
 
 ## Trust rules
 
 1. Never invent OEM numbers, fitment, torque values, fluids, procedures, fastener specifications, interchange, or safety facts.
 2. Mechanical truth comes from versioned structured evidence with provenance, not from an LLM.
 3. Collector output is staging evidence only and cannot automatically become canonical catalog or service truth.
-4. The collector preserves source, URL, observed vehicle configuration, timestamp, extraction method, and review status.
-5. Seller data never overrides verified identity or fitment.
-6. LLM output may interpret ambiguous language but is never authoritative mechanical truth.
-7. Prefer deterministic extraction and lookup for alphanumeric OEM/catalog data.
-8. ML training and evaluation are offline. Promote a model only after measurable evaluation against the current baseline.
-9. A manually entered vehicle configuration remains `unverified` until an evidence-backed process verifies it.
-10. Raw vehicle wording is canonicalized before canonical configuration persistence.
-11. Case, punctuation, spacing, safe synonyms, and notation variants must not create duplicate configurations.
-12. Compatible partial identities may enrich one canonical record; conflicting facts remain distinct.
-13. If more than one canonical configuration is compatible, reject the write as ambiguous instead of guessing.
-14. Do not use fuzzy string similarity to merge safety-relevant vehicle variants such as trims, engines, transmissions, or drivetrains.
+4. Preserve source identity, source record identity, URL, observed vehicle context, timestamps, raw content hash/payload, extraction method, provenance, confidence, and review state for staging evidence.
+5. The collector database role may write only the `catalog_staging` boundary and operational telemetry. It must not write canonical vehicle data or verified catalog evidence.
+6. Promotion from staging is an explicit verified operation. Rejected evidence cannot be promoted in place.
+7. A promoted `catalog_verified_evidence` row is an immutable verified evidence snapshot; future canonical part/fitment entities still require their own domain validation.
+8. Seller data never overrides verified identity or fitment.
+9. LLM output may interpret ambiguous language but is never authoritative mechanical truth.
+10. Prefer deterministic extraction and lookup for alphanumeric OEM/catalog data.
+11. ML training and evaluation are offline. Promote a model only after measurable evaluation against the current baseline.
+12. Raw vehicle wording is canonicalized before canonical configuration persistence.
+13. Case, punctuation, spacing, safe synonyms, and notation variants must not create duplicate configurations.
+14. Compatible partial identities may enrich one canonical record; conflicting facts remain distinct.
+15. If more than one canonical configuration is compatible, reject the write as ambiguous instead of guessing.
+16. Do not use fuzzy string similarity to merge safety-relevant vehicle variants such as trims, engines, transmissions, or drivetrains.
+17. Ordinary user input and future collector output never create shared canonical truth directly.
 
 ## Runtime performance rules
 
 1. Catalog collection, training, deployment work, and LLM calls are never on the repair-session resume critical path.
 2. Interactive server-backed workflow retrieval targets p95 under 3 seconds.
-3. Ten seconds is the hard blocking boundary. The UI must stop blocking and render useful cached/partial verified state.
-4. Repair state is designed to become local-first for poor garage connectivity.
-5. Prefer purpose-built read models/endpoints over frontend request waterfalls.
-6. Instrument latency before adding caches or infrastructure.
+3. Ten seconds is the hard blocking boundary. The UI must stop blocking and render a useful failure/fallback state rather than spin indefinitely.
+4. PostgreSQL is authoritative for private repair state. PartGraph does not promise full offline repair operation.
+5. Small transient client caches are acceptable for responsiveness and brief connectivity interruptions, but they are not a second authoritative database.
+6. Prefer purpose-built read models/endpoints over frontend request waterfalls.
+7. Instrument latency before adding caches or infrastructure.
+
+## User isolation
+
+1. V1 is one owner account with many vehicles.
+2. Private data must be user-scoped before `UserVehicle`, VIN, photos, repair sessions, inventory, or fastener state are released.
+3. PostgreSQL row-level security is required once private user tables exist.
+4. V1 permits one active editing device per repair session; other devices may be read-only until control transfers.
+5. Full VIN values must never appear in application logs, analytics, or LLM prompts.
+
+## Repair capability boundary
+
+Guided V1 workflows exclude high-voltage EV/hybrid battery work, airbags/SRS and pyrotechnic pretensioners, immobilizer/security programming, ADAS calibration, structural collision/frame repair, high-voltage inverter/internal battery service, and other procedures explicitly classified as professional/information-only.
 
 ## Collector boundary
 
@@ -60,12 +77,14 @@ The collector is separate because crawling is long-running, retry-heavy, externa
 
 The collector is never invoked by a normal user workflow. Do not run production collection from CI or deployment. CI will test the collector against deterministic fixtures when that block exists.
 
+No catalog collection occurs merely because staging tables, migrations, tests, or delivery workflows run.
+
 ## Scope discipline
 
-Implement one product block at a time. Every block must be runnable locally and understandable before merge.
+Implement one product block at a time. Keep each block understandable and backed by automated CI/CD checks before merge.
 
 Do not reintroduce retired prototype pages, committed browser catalog dumps, duplicate scripts/tool directories, or infrastructure added only for résumé value.
 
 ## Validation
 
-Before presenting a block as ready for review, verify API lint/tests against PostgreSQL, database migrations, web typecheck/build, and Docker Compose configuration validation.
+Before merging a block, verify applicable GitHub Actions workflows are green and GitHub reports the PR mergeable/ready. API work must include Ruff, migrations, PostgreSQL tests, container build/smoke; Web work must include TypeScript/build/container smoke; full-stack changes must pass Compose integration.
