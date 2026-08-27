@@ -174,7 +174,7 @@ def test_rejected_evidence_cannot_be_promoted_and_closed_batches_reject_new_reco
     asyncio.run(scenario())
 
 
-def test_collector_database_role_can_write_staging_but_not_canonical_tables() -> None:
+def test_collector_role_is_append_only_and_cannot_set_review_or_canonical_truth() -> None:
     async def scenario() -> None:
         async with session_factory() as session:
             result = await session.execute(
@@ -182,10 +182,23 @@ def test_collector_database_role_can_write_staging_but_not_canonical_tables() ->
                     """
                     SELECT
                         has_schema_privilege('partgraph_collector', 'catalog_staging', 'USAGE'),
-                        has_table_privilege(
+                        has_column_privilege(
                             'partgraph_collector',
                             'catalog_staging.source_records',
+                            'candidate_payload',
                             'INSERT'
+                        ),
+                        has_column_privilege(
+                            'partgraph_collector',
+                            'catalog_staging.source_records',
+                            'review_status',
+                            'INSERT'
+                        ),
+                        has_column_privilege(
+                            'partgraph_collector',
+                            'catalog_staging.source_records',
+                            'review_status',
+                            'UPDATE'
                         ),
                         has_table_privilege(
                             'partgraph_collector',
@@ -200,9 +213,18 @@ def test_collector_database_role_can_write_staging_but_not_canonical_tables() ->
                     """
                 )
             )
-            schema_usage, staging_insert, evidence_insert, vehicle_insert = result.one()
+            (
+                schema_usage,
+                candidate_insert,
+                review_insert,
+                review_update,
+                evidence_insert,
+                vehicle_insert,
+            ) = result.one()
             assert schema_usage is True
-            assert staging_insert is True
+            assert candidate_insert is True
+            assert review_insert is False
+            assert review_update is False
             assert evidence_insert is False
             assert vehicle_insert is False
 
