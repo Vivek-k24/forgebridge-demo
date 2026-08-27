@@ -1,72 +1,59 @@
-name: Validate PartGraph
+name: Integration CI
 
 on:
   pull_request:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: integration-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  validate:
+  integration:
+    name: Compose full-stack smoke
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    services:
-      postgres:
-        image: postgres:18.6-alpine
-        env:
-          POSTGRES_DB: partgraph
-          POSTGRES_USER: partgraph
-          POSTGRES_PASSWORD: partgraph
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U partgraph -d partgraph"
-          --health-interval 2s
-          --health-timeout 3s
-          --health-retries 15
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Set up Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: '3.14'
-
-      - name: Install API dependencies
-        run: python -m pip install -e './api[test]'
-
-      - name: Lint API
-        run: ruff check api/partgraph api/tests api/migrations
-
-      - name: Apply database migrations
-        env:
-          PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
-        run: alembic -c api/alembic.ini upgrade head
-
-      - name: Test API and PostgreSQL boundary
-        env:
-          PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
-        run: pytest api/tests -q
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24
-
-      - name: Install web dependencies
-        working-directory: web
-        run: npm install --no-audit --no-fund
-
-      - name: Typecheck web
-        working-directory: web
-        run: npm run typecheck
-
-      - name: Build web
-        working-directory: web
-        run: npm run build
-
       - name: Validate Compose model
         run: docker compose config --quiet
+
+      - name: Build and start PartGraph stack
+        run: docker compose up -d --build
+
+      - name: Verify API and Web integration
+        run: |
+          for attempt in $(seq 1 45); do
+            API_OK=0
+            WEB_OK=0
+            PROXY_OK=0
+
+            curl --fail --silent --show-error \
+              http://127.0.0.1:8000/api/v1/health/ready >/dev/null && API_OK=1 || true
+            curl --fail --silent --show-error \
+              http://127.0.0.1:5173/ >/dev/null && WEB_OK=1 || true
+            curl --fail --silent --show-error \
+              http://127.0.0.1:5173/api/v1/health/ready >/dev/null && PROXY_OK=1 || true
+
+            if [ "$API_OK" -eq 1 ] && [ "$WEB_OK" -eq 1 ] && [ "$PROXY_OK" -eq 1 ]; then
+              echo "PartGraph full stack is healthy."
+              exit 0
+            fi
+            sleep 2
+          done
+
+          docker compose ps
+          docker compose logs --no-color
+          exit 1
+
+      - name: Stop PartGraph stack
+        if: always()
+        run: docker compose down
