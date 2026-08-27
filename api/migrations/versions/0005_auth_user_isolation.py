@@ -32,6 +32,7 @@ def upgrade() -> None:
         "users",
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("email", sa.String(length=320), nullable=False),
+        sa.Column("username", sa.String(length=32), nullable=False),
         sa.Column("password_hash", sa.String(length=512), nullable=False),
         sa.Column("is_active", sa.Boolean(), server_default=sa.true(), nullable=False),
         sa.Column(
@@ -40,10 +41,16 @@ def upgrade() -> None:
             server_default=sa.text("now()"),
             nullable=False,
         ),
+        sa.CheckConstraint(
+            "username ~ '^[a-z0-9_]+$' AND char_length(username) BETWEEN 3 AND 32",
+            name="ck_users_username_format",
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("email", name="uq_users_email"),
+        sa.UniqueConstraint("username", name="uq_users_username"),
     )
     op.create_index("ix_users_email", "users", ["email"], unique=True)
+    op.create_index("ix_users_username", "users", ["username"], unique=True)
 
     op.create_table(
         "auth_sessions",
@@ -149,5 +156,6 @@ def downgrade() -> None:
     op.drop_index("ix_auth_sessions_user_id", table_name="auth_sessions")
     op.drop_index("ix_auth_sessions_token_hash", table_name="auth_sessions")
     op.drop_table("auth_sessions")
+    op.drop_index("ix_users_username", table_name="users")
     op.drop_index("ix_users_email", table_name="users")
     op.drop_table("users")
