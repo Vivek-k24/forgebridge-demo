@@ -4,11 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "partgraph-api"
-version = "0.2.0"
+version = "0.3.0"
 description = "Interactive PartGraph API modular monolith"
 requires-python = ">=3.14,<3.15"
 dependencies = [
   "alembic>=1.16,<2",
+  "argon2-cffi>=25.1,<26",
+  "email-validator>=2.2,<3",
   "fastapi[standard]==0.141.1",
   "sqlalchemy>=2.0.43,<2.1",
   "psycopg[binary]>=3.2.9,<4",
@@ -17,6 +19,7 @@ dependencies = [
 [project.optional-dependencies]
 test = [
   "httpx>=0.28,<0.29",
+  "pip-audit>=2.9,<3",
   "pytest>=8.4,<9",
   "ruff>=0.12,<1",
 ]
