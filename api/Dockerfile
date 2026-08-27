@@ -11,7 +11,12 @@ COPY pyproject.toml alembic.ini ./
 COPY migrations ./migrations
 COPY partgraph ./partgraph
 
-RUN python -m pip install --upgrade pip && python -m pip install .
+RUN python -m pip install --upgrade pip && \
+    python -m pip install . && \
+    useradd --create-home --uid 10001 --shell /usr/sbin/nologin partgraph && \
+    chown -R partgraph:partgraph /app
+
+USER partgraph
 
 EXPOSE 8000
 
