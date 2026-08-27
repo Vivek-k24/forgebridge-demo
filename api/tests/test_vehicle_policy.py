@@ -1,17 +1,14 @@
-from uuid import uuid4
-
 from fastapi.testclient import TestClient
 
 from partgraph.main import app
 from partgraph.vehicle.policy import MIN_SUPPORTED_YEAR, max_supported_year
 
 
-def _payload(year: int) -> dict[str, object]:
+def _params(year: int) -> dict[str, object]:
     return {
         "year": year,
         "market": "US",
         "make": "Honda",
-        "model": f"Policy-Test-{uuid4().hex[:8]}",
     }
 
 
@@ -20,15 +17,15 @@ def test_year_policy_is_1996_through_current_calendar_year() -> None:
     assert max_supported_year() >= MIN_SUPPORTED_YEAR
 
     with TestClient(app) as client:
-        oldest = client.post("/api/v1/vehicle-configurations", json=_payload(1996))
-        newest = client.post(
-            "/api/v1/vehicle-configurations",
-            json=_payload(max_supported_year()),
+        oldest = client.get("/api/v1/vehicle-options/models", params=_params(1996))
+        newest = client.get(
+            "/api/v1/vehicle-options/models",
+            params=_params(max_supported_year()),
         )
-        too_old = client.post("/api/v1/vehicle-configurations", json=_payload(1995))
-        future = client.post(
-            "/api/v1/vehicle-configurations",
-            json=_payload(max_supported_year() + 1),
+        too_old = client.get("/api/v1/vehicle-options/models", params=_params(1995))
+        future = client.get(
+            "/api/v1/vehicle-options/models",
+            params=_params(max_supported_year() + 1),
         )
 
     assert oldest.status_code == 200
