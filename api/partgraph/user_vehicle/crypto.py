@@ -6,6 +6,7 @@ import secrets
 from dataclasses import dataclass
 from uuid import UUID
 
+from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from ..config import settings
@@ -113,5 +114,5 @@ def reveal_vin(
             _aad(key_version, user_id),
         )
         return plaintext.decode("ascii")
-    except (ValueError, UnicodeDecodeError) as exc:
+    except (InvalidTag, ValueError, UnicodeDecodeError) as exc:
         raise VinCryptoError("VIN ciphertext authentication failed.") from exc
