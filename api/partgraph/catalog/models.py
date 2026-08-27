@@ -81,7 +81,7 @@ class CatalogSourceRecord(Base):
     extraction_method: Mapped[str] = mapped_column(String(64), nullable=False)
     confidence: Mapped[Decimal | None] = mapped_column(Numeric(5, 4))
     review_status: Mapped[str] = mapped_column(
-        String(24), nullable=False, default="pending", server_default=text("'pending'")
+        String(24), nullable=False, server_default=text("'pending'")
     )
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     reviewed_by: Mapped[str | None] = mapped_column(String(128))
