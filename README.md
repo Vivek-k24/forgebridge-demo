@@ -1,13 +1,13 @@
 # PartGraph
 
-PartGraph is a stateful AI-assisted repair companion that reconstructs the exact vehicle assembly, tracks every part and repair action as you work, and lets you stop for days or weeks and resume from the same step, same part, and same fastener.
+PartGraph is a stateful AI-assisted repair companion that reconstructs the exact vehicle assembly, tracks every part and repair action as work progresses, and lets a repair resume from the same physical state after a pause.
 
 ## Current architecture
 
 ```text
-web (React/TypeScript)
+web (React / TypeScript / Nginx)
         ↓
-api (Python/FastAPI modular monolith)
+api (Python / FastAPI modular monolith)
         ↓
 PostgreSQL
 
@@ -18,22 +18,18 @@ The collector remains outside the interactive user path. No catalog collection r
 
 ## Vehicle identity foundation
 
-The first domain module is `api/partgraph/vehicle`.
+PartGraph is multi-brand from the skeleton onward. Current market scope is the United States and Canada, with supported model years from 1996 through the current calendar year.
 
-PartGraph is multi-brand from the skeleton onward. Current market scope is the United States and Canada. A vehicle identity request is processed before it reaches canonical storage:
+The vehicle selector is read-only against shared canonical data:
 
-1. market and make aliases are resolved against an explicit supported taxonomy;
-2. case, whitespace, punctuation, body-style wording, transmission wording, drivetrain wording, generation wording, and common engine notation are canonicalized deterministically;
-3. the processor looks for an exact or compatible canonical configuration;
-4. compatible partial information enriches one existing configuration;
-5. conflicting facts create distinct variants;
-6. ambiguous partial input is rejected instead of guessed.
+1. market and make are controlled by the supported taxonomy;
+2. year, model, trim, and optional generation are used to search known configurations;
+3. model/trim wording is normalized deterministically for comparison;
+4. generation is supporting metadata and is not required to establish a fitment match;
+5. ambiguous variants are surfaced instead of guessed;
+6. unknown manual model/trim text remains a candidate and does not create shared canonical truth.
 
-Manual vehicle configurations remain explicitly `unverified`. Canonicalization prevents duplicate wording from becoming duplicate identities; it does not prove fitment.
-
-European premium/luxury brands are currently excluded by product scope. The supported brand registry lives in `api/partgraph/vehicle/taxonomy.py`.
-
-Database changes are versioned with Alembic. Migration `0002_canonical_vehicle_identity` intentionally replaces the earlier Block 2 manual-test identity table so incorrect tuple-based test duplicates do not become permanent canonical data. No collected catalog data is affected.
+The VIN tab currently validates VIN format only. External VIN decoding belongs to the later private `UserVehicle` layer after authentication and user isolation exist.
 
 ## Run locally
 
@@ -48,10 +44,9 @@ Open:
 - Web: `http://localhost:5173`
 - API readiness: `http://localhost:8000/api/v1/health/ready`
 - Supported brands: `http://localhost:8000/api/v1/vehicle-brands`
-- Vehicle configurations: `http://localhost:8000/api/v1/vehicle-configurations`
 - API docs: `http://localhost:8000/docs`
 
-Try entering the same physical vehicle using equivalent wording such as `US` vs `United States`, `4 Dr Sedan` vs `Sedan`, or `CVT` vs `continuously variable transmission`. PartGraph should resolve one canonical configuration. If the input could describe more than one existing variant, the API returns a conflict and asks for more detail rather than merging them.
+The production Web container serves the built React application through Nginx. Browser `/api/...` requests are reverse-proxied to the API container, while direct local API access remains available on port 8000.
 
 Stop with:
 
@@ -59,21 +54,91 @@ Stop with:
 docker compose down
 ```
 
-The PostgreSQL volume is retained between runs, so canonical configuration records survive container restarts. Use `docker compose down -v` only when intentionally resetting local database data.
+The PostgreSQL volume is retained between runs. Use `docker compose down -v` only when intentionally deleting local database data.
+
+## CI/CD
+
+GitHub Actions is the automated quality and delivery system.
+
+### API
+
+Workflow: https://github.com/Vivek-k24/forgebridge-demo/actions/workflows/api.yml
+
+On a pull request the API workflow:
+
+- installs the Python test environment;
+- runs Ruff;
+- applies Alembic migrations to PostgreSQL;
+- runs API/integration tests;
+- builds the API Docker image;
+- starts the built container and verifies `/api/v1/health/ready`.
+
+After a successful merge to `main`, the same tested source is published as:
+
+- `ghcr.io/vivek-k24/partgraph-api:<commit-sha>`
+- `ghcr.io/vivek-k24/partgraph-api:main`
+
+Package: https://github.com/users/Vivek-k24/packages/container/package/partgraph-api
+
+### Web
+
+Workflow: https://github.com/Vivek-k24/forgebridge-demo/actions/workflows/web.yml
+
+On a pull request the Web workflow:
+
+- installs Node dependencies;
+- runs TypeScript type checking;
+- performs the production Vite build;
+- builds the production Nginx container;
+- starts it and verifies an HTTP response.
+
+After a successful merge to `main`, the Web image is published as:
+
+- `ghcr.io/vivek-k24/partgraph-web:<commit-sha>`
+- `ghcr.io/vivek-k24/partgraph-web:main`
+
+Package: https://github.com/users/Vivek-k24/packages/container/package/partgraph-web
+
+### Full-stack integration
+
+Workflow: https://github.com/Vivek-k24/forgebridge-demo/actions/workflows/validate.yml
+
+The integration workflow builds the real Compose stack and verifies:
+
+- direct API readiness;
+- Web HTTP availability;
+- Web-to-API reverse-proxy health.
+
+A future Collector will receive its own workflow and GHCR package when the service actually exists.
+
+The pipeline currently provides continuous integration and tested container delivery. A public full-stack PartGraph URL requires a runtime host for the API and PostgreSQL; GitHub Actions/GHCR are not themselves an application host.
+
+## Merge discipline
+
+For implementation PRs:
+
+1. define scope in a GitHub issue;
+2. branch from current `main`;
+3. create the PR;
+4. wait for all applicable Actions workflows to pass;
+5. verify GitHub reports the PR mergeable / ready;
+6. merge;
+7. allow `main` delivery workflows to publish tested images.
 
 ## Performance contract
 
-The normal interactive workflow target is p95 under 3 seconds. Ten seconds is a hard blocking boundary, not a target. Collector work, model training, deployments, and LLM calls must never be on the repair-session critical path.
+Normal interactive work should remain comfortably below the 10-second hard blocking boundary. Current quality targets include searchable dropdown p95 under 250 ms, normal API p95 under 1 second, and repair resume p95 under 2 seconds once those workflows exist. Collector work, model training, deployments, and LLM calls never belong on the repair-session critical path.
 
 ## Current technology baseline
 
 - React 19
 - Vite 8
 - TypeScript 6
+- Nginx 1.29
 - Python 3.14
 - FastAPI
 - SQLAlchemy 2
 - Alembic
 - PostgreSQL 18
-
-Production deployment remains disabled while the rebuild is reviewed block by block.
+- Docker / Docker Compose
+- GitHub Actions / GitHub Container Registry

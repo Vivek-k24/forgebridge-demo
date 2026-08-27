@@ -1,0 +1,122 @@
+name: API CI/CD
+
+on:
+  pull_request:
+    paths:
+      - 'api/**'
+      - 'compose.yaml'
+      - '.github/workflows/api.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'api/**'
+      - 'compose.yaml'
+      - '.github/workflows/api.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: api-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: API test + container smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18.6-alpine
+        env:
+          POSTGRES_DB: partgraph
+          POSTGRES_USER: partgraph
+          POSTGRES_PASSWORD: partgraph
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U partgraph -d partgraph"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
+
+      - name: Install API dependencies
+        run: python -m pip install -e './api[test]'
+
+      - name: Lint API
+        run: ruff check api/partgraph api/tests api/migrations
+
+      - name: Apply database migrations
+        env:
+          PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
+        run: alembic -c api/alembic.ini upgrade head
+
+      - name: Test API against PostgreSQL
+        env:
+          PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
+        run: pytest api/tests -q
+
+      - name: Build API container
+        run: docker build -t partgraph-api:ci ./api
+
+      - name: Smoke-test running API container
+        env:
+          PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
+        run: |
+          docker run -d --name partgraph-api-ci --network host \
+            -e PARTGRAPH_DATABASE_URL="$PARTGRAPH_DATABASE_URL" \
+            -e PARTGRAPH_WEB_ORIGIN=http://localhost:5173 \
+            partgraph-api:ci
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error http://127.0.0.1:8000/api/v1/health/ready; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs partgraph-api-ci
+          exit 1
+
+      - name: Stop API smoke container
+        if: always()
+        run: docker rm -f partgraph-api-ci >/dev/null 2>&1 || true
+
+  publish:
+    name: Publish API image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Authenticate to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
+      - name: Build and publish API image
+        run: |
+          OWNER_LC="${GITHUB_REPOSITORY_OWNER,,}"
+          IMAGE="ghcr.io/${OWNER_LC}/partgraph-api"
+          docker build -t "$IMAGE:$GITHUB_SHA" -t "$IMAGE:main" ./api
+          docker push "$IMAGE:$GITHUB_SHA"
+          docker push "$IMAGE:main"
+          {
+            echo '### PartGraph API delivery'
+            echo "- Image: \`$IMAGE:$GITHUB_SHA\`"
+            echo "- Rolling tag: \`$IMAGE:main\`"
+            echo "- [GHCR package](https://github.com/users/${GITHUB_REPOSITORY_OWNER}/packages/container/package/partgraph-api)"
+          } >> "$GITHUB_STEP_SUMMARY"

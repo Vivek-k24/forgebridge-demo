@@ -1,0 +1,102 @@
+name: Web CI/CD
+
+on:
+  pull_request:
+    paths:
+      - 'web/**'
+      - 'compose.yaml'
+      - '.github/workflows/web.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'compose.yaml'
+      - '.github/workflows/web.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: web-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Web test + container smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Install web dependencies
+        working-directory: web
+        run: npm install --no-audit --no-fund
+
+      - name: Typecheck web
+        working-directory: web
+        run: npm run typecheck
+
+      - name: Build web
+        working-directory: web
+        env:
+          VITE_API_BASE_URL: ''
+        run: npm run build
+
+      - name: Build production web container
+        run: docker build --build-arg VITE_API_BASE_URL= -t partgraph-web:ci ./web
+
+      - name: Smoke-test web container over HTTP
+        run: |
+          docker run -d --name partgraph-web-ci -p 8080:80 partgraph-web:ci
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error http://127.0.0.1:8080/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs partgraph-web-ci
+          exit 1
+
+      - name: Stop web smoke container
+        if: always()
+        run: docker rm -f partgraph-web-ci >/dev/null 2>&1 || true
+
+  publish:
+    name: Publish Web image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Authenticate to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
+      - name: Build and publish Web image
+        run: |
+          OWNER_LC="${GITHUB_REPOSITORY_OWNER,,}"
+          IMAGE="ghcr.io/${OWNER_LC}/partgraph-web"
+          docker build --build-arg VITE_API_BASE_URL= \
+            -t "$IMAGE:$GITHUB_SHA" -t "$IMAGE:main" ./web
+          docker push "$IMAGE:$GITHUB_SHA"
+          docker push "$IMAGE:main"
+          {
+            echo '### PartGraph Web delivery'
+            echo "- Image: \`$IMAGE:$GITHUB_SHA\`"
+            echo "- Rolling tag: \`$IMAGE:main\`"
+            echo "- [GHCR package](https://github.com/users/${GITHUB_REPOSITORY_OWNER}/packages/container/package/partgraph-web)"
+          } >> "$GITHUB_STEP_SUMMARY"
