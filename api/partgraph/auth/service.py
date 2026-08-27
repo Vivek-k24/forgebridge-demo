@@ -6,11 +6,13 @@ from uuid import UUID
 
 from argon2 import PasswordHasher
 from argon2.exceptions import VerificationError, VerifyMismatchError
-from sqlalchemy import case, delete, select, text
+from sqlalchemy import case, delete, or_, select, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
+from ..database import session_factory
+from ..errors import ErrorCode
 from .models import AuthRateLimit, AuthSession, User, UserPreference
 
 SESSION_COOKIE = "partgraph_session"
@@ -22,7 +24,9 @@ _dummy_hash = _password_hasher.hash("PartGraph-dummy-password-value")
 
 
 class AuthenticationError(ValueError):
-    pass
+    def __init__(self, code: ErrorCode, message: str) -> None:
+        super().__init__(message)
+        self.code = code
 
 
 class RateLimitError(AuthenticationError):
@@ -31,6 +35,14 @@ class RateLimitError(AuthenticationError):
 
 def normalize_email(email: str) -> str:
     return email.strip().casefold()
+
+
+def normalize_username(username: str) -> str:
+    return username.casefold()
+
+
+def normalize_identifier(identifier: str) -> str:
+    return identifier.strip().casefold()
 
 
 def hash_password(password: str) -> str:
@@ -58,61 +70,97 @@ def hash_session_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
-def _rate_key(email: str) -> str:
-    return hashlib.sha256(normalize_email(email).encode("utf-8")).hexdigest()
+def _rate_key(value: str) -> str:
+    return hashlib.sha256(normalize_identifier(value).encode("utf-8")).hexdigest()
 
 
-async def consume_rate_limit(session: AsyncSession, *, action: str, email: str) -> None:
+async def consume_rate_limit(*, action: str, key: str) -> None:
+    """Increment auth attempt state in its own committed transaction.
+
+    The limit decision is raised only after the transaction exits successfully so a
+    401/409 response cannot roll the counter back with the request transaction.
+    """
+
     now = datetime.now(UTC)
     cutoff = now - timedelta(minutes=settings.auth_rate_limit_minutes)
-    key_hash = _rate_key(email)
-    stale = AuthRateLimit.window_started_at < cutoff
-    statement = (
-        insert(AuthRateLimit)
-        .values(action=action, key_hash=key_hash, window_started_at=now, attempts=1)
-        .on_conflict_do_update(
-            index_elements=["action", "key_hash"],
-            set_={
-                "attempts": case((stale, 1), else_=AuthRateLimit.attempts + 1),
-                "window_started_at": case((stale, now), else_=AuthRateLimit.window_started_at),
-            },
+    key_hash = _rate_key(key)
+    exceeded = False
+
+    async with session_factory() as session:
+        async with session.begin():
+            await session.execute(text("SET LOCAL ROLE partgraph_app"))
+            stale = AuthRateLimit.window_started_at < cutoff
+            statement = (
+                insert(AuthRateLimit)
+                .values(action=action, key_hash=key_hash, window_started_at=now, attempts=1)
+                .on_conflict_do_update(
+                    index_elements=["action", "key_hash"],
+                    set_={
+                        "attempts": case((stale, 1), else_=AuthRateLimit.attempts + 1),
+                        "window_started_at": case(
+                            (stale, now), else_=AuthRateLimit.window_started_at
+                        ),
+                    },
+                )
+                .returning(AuthRateLimit.attempts)
+            )
+            attempts = (await session.execute(statement)).scalar_one()
+            exceeded = attempts > settings.auth_rate_limit_attempts
+
+    if exceeded:
+        raise RateLimitError(
+            ErrorCode.AUTH_RATE_LIMITED,
+            "Too many authentication attempts. Try again later.",
         )
-        .returning(AuthRateLimit.attempts)
-    )
-    attempts = (await session.execute(statement)).scalar_one()
-    if attempts > settings.auth_rate_limit_attempts:
-        raise RateLimitError("Too many authentication attempts. Try again later.")
 
 
-async def clear_rate_limit(session: AsyncSession, *, action: str, email: str) -> None:
-    await session.execute(
-        delete(AuthRateLimit).where(
-            AuthRateLimit.action == action,
-            AuthRateLimit.key_hash == _rate_key(email),
-        )
-    )
+async def clear_rate_limit(*, action: str, key: str) -> None:
+    async with session_factory() as session:
+        async with session.begin():
+            await session.execute(text("SET LOCAL ROLE partgraph_app"))
+            await session.execute(
+                delete(AuthRateLimit).where(
+                    AuthRateLimit.action == action,
+                    AuthRateLimit.key_hash == _rate_key(key),
+                )
+            )
 
 
-async def set_user_context(session: AsyncSession, user_id: UUID) -> None:
+async def set_user_context(session: AsyncSession, user_id: UUID | str) -> None:
     await session.execute(
         text("SELECT set_config('partgraph.user_id', :user_id, true)"),
         {"user_id": str(user_id)},
     )
 
 
-async def register_user(session: AsyncSession, *, email: str, password: str) -> User:
-    normalized = normalize_email(email)
+async def register_user(
+    session: AsyncSession,
+    *,
+    email: str,
+    username: str,
+    password: str,
+) -> User:
+    normalized_email = normalize_email(email)
+    normalized_username = normalize_username(username)
     password_hash = await asyncio.to_thread(hash_password, password)
     created_id = (
         await session.execute(
             insert(User)
-            .values(email=normalized, password_hash=password_hash, is_active=True)
-            .on_conflict_do_nothing(index_elements=["email"])
+            .values(
+                email=normalized_email,
+                username=normalized_username,
+                password_hash=password_hash,
+                is_active=True,
+            )
+            .on_conflict_do_nothing()
             .returning(User.id)
         )
     ).scalar_one_or_none()
     if created_id is None:
-        raise AuthenticationError("An account with this email already exists.")
+        raise AuthenticationError(
+            ErrorCode.AUTH_IDENTITY_CONFLICT,
+            "Username or email is unavailable.",
+        )
 
     user = await session.get(User, created_id)
     if user is None:
@@ -123,15 +171,20 @@ async def register_user(session: AsyncSession, *, email: str, password: str) -> 
     return user
 
 
-async def authenticate_user(session: AsyncSession, *, email: str, password: str) -> User:
-    normalized = normalize_email(email)
+async def authenticate_user(session: AsyncSession, *, identifier: str, password: str) -> User:
+    normalized = normalize_identifier(identifier)
     user = (
-        await session.execute(select(User).where(User.email == normalized))
+        await session.execute(
+            select(User).where(or_(User.email == normalized, User.username == normalized))
+        )
     ).scalar_one_or_none()
     password_hash = user.password_hash if user is not None else None
     valid_password = await asyncio.to_thread(verify_password, password_hash, password)
     if not valid_password or user is None or not user.is_active:
-        raise AuthenticationError("Invalid email or password.")
+        raise AuthenticationError(
+            ErrorCode.AUTH_INVALID_CREDENTIALS,
+            "Invalid username/email or password.",
+        )
 
     if needs_password_rehash(user.password_hash):
         user.password_hash = await asyncio.to_thread(hash_password, password)
@@ -155,23 +208,24 @@ async def create_auth_session(session: AsyncSession, user_id: UUID) -> tuple[Aut
 
 async def resolve_auth_session(session: AsyncSession, token: str | None) -> tuple[User, AuthSession]:
     if not token:
-        raise AuthenticationError("Authentication required.")
+        raise AuthenticationError(ErrorCode.AUTH_REQUIRED, "Authentication required.")
+
     now = datetime.now(UTC)
     auth_session = (
         await session.execute(
             select(AuthSession).where(AuthSession.token_hash == hash_session_token(token))
         )
     ).scalar_one_or_none()
-    if (
-        auth_session is None
-        or auth_session.revoked_at is not None
-        or auth_session.expires_at <= now
-    ):
-        raise AuthenticationError("Authentication required.")
+    if auth_session is None:
+        raise AuthenticationError(ErrorCode.AUTH_REQUIRED, "Authentication required.")
+    if auth_session.revoked_at is not None:
+        raise AuthenticationError(ErrorCode.AUTH_SESSION_REVOKED, "Session was revoked.")
+    if auth_session.expires_at <= now:
+        raise AuthenticationError(ErrorCode.AUTH_SESSION_EXPIRED, "Session expired.")
 
     user = await session.get(User, auth_session.user_id)
     if user is None or not user.is_active:
-        raise AuthenticationError("Authentication required.")
+        raise AuthenticationError(ErrorCode.AUTH_REQUIRED, "Authentication required.")
 
     if auth_session.last_seen_at < now - timedelta(minutes=5):
         auth_session.last_seen_at = now
