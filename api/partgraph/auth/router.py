@@ -1,8 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, Request, Response, status
 
 from ..config import settings
+from ..errors import ErrorCode, ErrorEnvelope, PartGraphError
 from .dependencies import AuthSessionDep, CurrentUserDep, require_csrf
-from .schemas import AuthResult, Credentials, PreferenceRead, PreferenceUpdate, UserRead
+from .schemas import (
+    AuthResult,
+    LoginInput,
+    PreferenceRead,
+    PreferenceUpdate,
+    RegistrationInput,
+    UserRead,
+)
 from .service import (
     SESSION_COOKIE,
     AuthenticationError,
@@ -17,7 +25,14 @@ from .service import (
     update_preferences,
 )
 
-router = APIRouter(prefix="/api/v1", tags=["Authentication"])
+ERROR_RESPONSES = {
+    401: {"model": ErrorEnvelope},
+    403: {"model": ErrorEnvelope},
+    409: {"model": ErrorEnvelope},
+    422: {"model": ErrorEnvelope},
+    429: {"model": ErrorEnvelope},
+}
+router = APIRouter(prefix="/api/v1", tags=["Authentication"], responses=ERROR_RESPONSES)
 CsrfDep = Depends(require_csrf)
 
 
@@ -45,23 +60,34 @@ def _clear_session_cookie(response: Response) -> None:
 
 @router.post("/auth/register", response_model=AuthResult, dependencies=[CsrfDep])
 async def register(
-    payload: Credentials,
+    payload: RegistrationInput,
     response: Response,
     session: AuthSessionDep,
 ) -> AuthResult:
     try:
-        await consume_rate_limit(session, action="register", email=str(payload.email))
-        user = await register_user(session, email=str(payload.email), password=payload.password)
+        await consume_rate_limit(action="register", key=str(payload.email))
+        user = await register_user(
+            session,
+            email=str(payload.email),
+            username=payload.username,
+            password=payload.password,
+        )
         _, token = await create_auth_session(session, user.id)
-        await clear_rate_limit(session, action="register", email=str(payload.email))
+        await clear_rate_limit(action="register", key=str(payload.email))
     except RateLimitError as exc:
-        raise HTTPException(
+        raise PartGraphError(
+            code=ErrorCode.AUTH_RATE_LIMITED,
+            message=str(exc),
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=str(exc),
+            retryable=True,
             headers={"Retry-After": str(settings.auth_rate_limit_minutes * 60)},
         ) from exc
     except AuthenticationError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        raise PartGraphError(
+            code=exc.code,
+            message=str(exc),
+            status_code=status.HTTP_409_CONFLICT,
+        ) from exc
 
     _set_session_cookie(response, token)
     return AuthResult(user=UserRead.model_validate(user))
@@ -69,25 +95,32 @@ async def register(
 
 @router.post("/auth/login", response_model=AuthResult, dependencies=[CsrfDep])
 async def login(
-    payload: Credentials,
+    payload: LoginInput,
     response: Response,
     session: AuthSessionDep,
 ) -> AuthResult:
     try:
-        await consume_rate_limit(session, action="login", email=str(payload.email))
-        user = await authenticate_user(session, email=str(payload.email), password=payload.password)
+        await consume_rate_limit(action="login", key=payload.identifier)
+        user = await authenticate_user(
+            session,
+            identifier=payload.identifier,
+            password=payload.password,
+        )
         _, token = await create_auth_session(session, user.id)
-        await clear_rate_limit(session, action="login", email=str(payload.email))
+        await clear_rate_limit(action="login", key=payload.identifier)
     except RateLimitError as exc:
-        raise HTTPException(
+        raise PartGraphError(
+            code=ErrorCode.AUTH_RATE_LIMITED,
+            message=str(exc),
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=str(exc),
+            retryable=True,
             headers={"Retry-After": str(settings.auth_rate_limit_minutes * 60)},
         ) from exc
     except AuthenticationError as exc:
-        raise HTTPException(
+        raise PartGraphError(
+            code=ErrorCode.AUTH_INVALID_CREDENTIALS,
+            message="Invalid username/email or password.",
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password.",
         ) from exc
 
     _set_session_cookie(response, token)
