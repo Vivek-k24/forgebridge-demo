@@ -245,6 +245,7 @@ def _fetch_sync(vin: str) -> object:
             retryable=True,
         ) from exc
     except HTTPError as exc:
+        exc.close()
         raise PartGraphError(
             code=ErrorCode.VIN_PROVIDER_UNAVAILABLE,
             message="VIN decoder is temporarily unavailable.",
