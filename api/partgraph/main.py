@@ -4,10 +4,11 @@ from contextlib import asynccontextmanager
 from time import perf_counter
 from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException, Request, Response, status
+from fastapi import FastAPI, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .auth.router import router as auth_router
 from .config import settings
@@ -71,7 +72,7 @@ async def platform_boundary(request: Request, call_next) -> Response:
                         PartGraphError(
                             code=ErrorCode.REQUEST_PAYLOAD_TOO_LARGE,
                             message="Authentication request payload is too large.",
-                            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                         ),
                     )
                     return _finish_response(request, response, 0.0)
@@ -93,7 +94,7 @@ async def platform_boundary(request: Request, call_next) -> Response:
                 PartGraphError(
                     code=ErrorCode.REQUEST_PAYLOAD_TOO_LARGE,
                     message="Authentication request payload is too large.",
-                    status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                 ),
             )
             return _finish_response(request, response, 0.0)
@@ -167,8 +168,8 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
     )
 
 
-@app.exception_handler(HTTPException)
-async def http_error_handler(request: Request, exc: HTTPException) -> Response:
+@app.exception_handler(StarletteHTTPException)
+async def http_error_handler(request: Request, exc: StarletteHTTPException) -> Response:
     code_by_status = {
         status.HTTP_403_FORBIDDEN: ErrorCode.REQUEST_FORBIDDEN,
         status.HTTP_404_NOT_FOUND: ErrorCode.REQUEST_NOT_FOUND,
@@ -197,7 +198,6 @@ async def unexpected_error_handler(request: Request, exc: Exception) -> Response
         getattr(request.state, "request_id", "unknown"),
         request.method,
         request.url.path,
-        exc_info=exc,
     )
     return error_response(
         request,
