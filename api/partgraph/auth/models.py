@@ -9,6 +9,12 @@ from ..database import Base
 
 class User(Base):
     __tablename__ = "users"
+    __table_args__ = (
+        CheckConstraint(
+            "username ~ '^[a-z0-9_]+$' AND char_length(username) BETWEEN 3 AND 32",
+            name="ck_users_username_format",
+        ),
+    )
 
     id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
     email: Mapped[str] = mapped_column(String(320), nullable=False, unique=True, index=True)
