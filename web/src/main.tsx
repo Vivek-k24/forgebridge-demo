@@ -1,13 +1,13 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import App from './App'
 import AuthGate from './AuthGate'
+import Block5Shell from './Block5Shell'
 import './app.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthGate>
-      <App />
+      <Block5Shell />
     </AuthGate>
   </StrictMode>,
 )
