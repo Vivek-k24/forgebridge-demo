@@ -1,162 +1,347 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import './auth.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
-const CSRF_HEADERS = { 'Content-Type': 'application/json', 'X-PartGraph-CSRF': '1' }
+const HARD_TIMEOUT_MS = 10_000
+const EXPECTED_API_VERSION = 'v1'
+const CSRF_HEADERS = { 'X-PartGraph-CSRF': '1' }
+const USERNAME_PATTERN = /^[A-Za-z0-9_]{3,32}$/
 
 type User = {
   id: string
   email: string
+  username: string
   created_at: string
 }
 
-type AuthPayload = { user: User }
+type AuthResult = { user: User }
+
+type ErrorEnvelope = {
+  error?: {
+    code?: string
+    message?: string
+    request_id?: string
+    retryable?: boolean
+  }
+}
+
+class ApiFailure extends Error {
+  code: string
+  requestId: string | null
+  retryable: boolean
+  status: number | null
+
+  constructor(
+    message: string,
+    options: { code: string; requestId?: string | null; retryable?: boolean; status?: number | null },
+  ) {
+    super(message)
+    this.name = 'ApiFailure'
+    this.code = options.code
+    this.requestId = options.requestId ?? null
+    this.retryable = options.retryable ?? false
+    this.status = options.status ?? null
+  }
+}
+
+function clientRequestId(): string {
+  return crypto.randomUUID().replaceAll('-', '')
+}
+
+async function sleep(milliseconds: number) {
+  await new Promise((resolve) => window.setTimeout(resolve, milliseconds))
+}
+
+async function request<T>(
+  path: string,
+  init: RequestInit = {},
+  retryIdempotent = false,
+): Promise<T> {
+  const attempts = retryIdempotent ? 2 : 1
+  let lastFailure: ApiFailure | null = null
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), HARD_TIMEOUT_MS)
+    const requestId = clientRequestId()
+
+    try {
+      const response = await fetch(`${API_BASE_URL}${path}`, {
+        ...init,
+        credentials: 'include',
+        headers: {
+          ...init.headers,
+          'X-Request-ID': requestId,
+        },
+        signal: controller.signal,
+      })
+      const responseRequestId = response.headers.get('x-request-id') ?? requestId
+      const apiVersion = response.headers.get('x-partgraph-api-version')
+      if (apiVersion && apiVersion !== EXPECTED_API_VERSION) {
+        throw new ApiFailure('Client and API versions do not match.', {
+          code: 'CLIENT_API_VERSION_MISMATCH',
+          requestId: responseRequestId,
+          status: response.status,
+        })
+      }
+
+      if (!response.ok) {
+        let envelope: ErrorEnvelope = {}
+        try {
+          envelope = (await response.json()) as ErrorEnvelope
+        } catch {
+          throw new ApiFailure(`API returned HTTP ${response.status} without a valid error envelope.`, {
+            code: 'CLIENT_ERROR_ENVELOPE_INVALID',
+            requestId: responseRequestId,
+            retryable: response.status >= 500,
+            status: response.status,
+          })
+        }
+        throw new ApiFailure(envelope.error?.message ?? `API returned HTTP ${response.status}.`, {
+          code: envelope.error?.code ?? `HTTP_${response.status}`,
+          requestId: envelope.error?.request_id ?? responseRequestId,
+          retryable: envelope.error?.retryable ?? response.status >= 500,
+          status: response.status,
+        })
+      }
+
+      if (response.status === 204) return undefined as T
+      return (await response.json()) as T
+    } catch (error) {
+      if (error instanceof ApiFailure) {
+        lastFailure = error
+      } else if (error instanceof DOMException && error.name === 'AbortError') {
+        lastFailure = new ApiFailure('The request reached PartGraph’s 10-second blocking limit.', {
+          code: 'CLIENT_REQUEST_TIMEOUT',
+          requestId,
+          retryable: true,
+        })
+      } else {
+        lastFailure = new ApiFailure('PartGraph could not reach the API.', {
+          code: 'CLIENT_NETWORK_FAILURE',
+          requestId,
+          retryable: true,
+        })
+      }
+    } finally {
+      window.clearTimeout(timeout)
+    }
+
+    if (!lastFailure.retryable || attempt + 1 >= attempts) break
+    await sleep(250)
+  }
+
+  throw lastFailure ?? new ApiFailure('Unknown client failure.', { code: 'CLIENT_UNKNOWN_FAILURE' })
+}
 
 type AuthState =
   | { status: 'checking' }
-  | { status: 'guest' }
-  | { status: 'ready'; user: User }
+  | { status: 'signed-out' }
+  | { status: 'signed-in'; user: User }
+  | { status: 'unavailable'; failure: ApiFailure }
 
-async function authRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    credentials: 'include',
-  })
-  if (!response.ok) {
-    let message = response.status === 401 ? 'Email or password was not accepted.' : `Request failed (${response.status}).`
-    try {
-      const payload = (await response.json()) as { detail?: string }
-      if (payload.detail) message = payload.detail
-    } catch {
-      // Keep the status-based fallback.
-    }
-    throw new Error(message)
-  }
-  if (response.status === 204) return undefined as T
-  return (await response.json()) as T
+function FailureNotice({ failure }: { failure: ApiFailure }) {
+  return (
+    <div className="auth-error" role="alert">
+      <strong>{failure.message}</strong>
+      <span>{failure.code}{failure.requestId ? ` · request ${failure.requestId}` : ''}</span>
+    </div>
+  )
 }
 
 export default function AuthGate({ children }: { children: ReactNode }) {
   const [auth, setAuth] = useState<AuthState>({ status: 'checking' })
   const [mode, setMode] = useState<'login' | 'register'>('login')
+  const [identifier, setIdentifier] = useState('')
   const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [working, setWorking] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [failure, setFailure] = useState<ApiFailure | null>(null)
+
+  const loadSession = useCallback(async () => {
+    setAuth({ status: 'checking' })
+    try {
+      const result = await request<AuthResult>('/api/v1/auth/me', {}, true)
+      setAuth({ status: 'signed-in', user: result.user })
+    } catch (error) {
+      const apiFailure = error instanceof ApiFailure
+        ? error
+        : new ApiFailure('Could not verify session.', { code: 'CLIENT_SESSION_CHECK_FAILED' })
+      if (['AUTH_REQUIRED', 'AUTH_SESSION_EXPIRED', 'AUTH_SESSION_REVOKED'].includes(apiFailure.code)) {
+        setAuth({ status: 'signed-out' })
+      } else {
+        setAuth({ status: 'unavailable', failure: apiFailure })
+      }
+    }
+  }, [])
 
   useEffect(() => {
-    void authRequest<AuthPayload>('/api/v1/auth/me')
-      .then((payload) => setAuth({ status: 'ready', user: payload.user }))
-      .catch(() => setAuth({ status: 'guest' }))
-  }, [])
+    void loadSession()
+  }, [loadSession])
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setWorking(true)
-    setError(null)
+    setFailure(null)
+
+    if (mode === 'register' && !USERNAME_PATTERN.test(username)) {
+      setFailure(new ApiFailure(
+        'Username must be 3–32 characters and contain only letters, numbers, or underscore.',
+        { code: 'CLIENT_USERNAME_INVALID' },
+      ))
+      return
+    }
+
+    setSubmitting(true)
     try {
-      const payload = await authRequest<AuthPayload>(
-        mode === 'login' ? '/api/v1/auth/login' : '/api/v1/auth/register',
-        {
-          method: 'POST',
-          headers: CSRF_HEADERS,
-          body: JSON.stringify({ email, password }),
-        },
-      )
+      const result = mode === 'register'
+        ? await request<AuthResult>('/api/v1/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...CSRF_HEADERS },
+            body: JSON.stringify({
+              email,
+              username: username.toLowerCase(),
+              password,
+            }),
+          })
+        : await request<AuthResult>('/api/v1/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...CSRF_HEADERS },
+            body: JSON.stringify({ identifier, password }),
+          })
+
       setPassword('')
-      setAuth({ status: 'ready', user: payload.user })
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Authentication failed.')
+      setFailure(null)
+      setAuth({ status: 'signed-in', user: result.user })
+    } catch (error) {
+      setFailure(error instanceof ApiFailure
+        ? error
+        : new ApiFailure('Authentication failed.', { code: 'CLIENT_AUTH_UNKNOWN_FAILURE' }))
     } finally {
-      setWorking(false)
+      setSubmitting(false)
     }
   }
 
   async function logout() {
-    setWorking(true)
+    setFailure(null)
+    setSubmitting(true)
     try {
-      await authRequest<void>('/api/v1/auth/logout', {
+      await request<void>('/api/v1/auth/logout', {
         method: 'POST',
-        headers: { 'X-PartGraph-CSRF': '1' },
+        headers: CSRF_HEADERS,
       })
-    } finally {
-      setEmail('')
+      setAuth({ status: 'signed-out' })
       setPassword('')
-      setAuth({ status: 'guest' })
-      setWorking(false)
+    } catch (error) {
+      setFailure(error instanceof ApiFailure
+        ? error
+        : new ApiFailure('Logout could not be confirmed.', { code: 'CLIENT_LOGOUT_UNKNOWN_FAILURE' }))
+    } finally {
+      setSubmitting(false)
     }
   }
 
   if (auth.status === 'checking') {
     return (
       <main className="auth-shell">
-        <section className="auth-card auth-card--checking">
+        <section className="auth-card auth-card--checking" aria-live="polite">
           <p className="auth-kicker">PARTGRAPH · SECURE SESSION</p>
           <div className="auth-pulse" aria-hidden="true" />
           <h1>Restoring your workspace…</h1>
+          <p>Private data stays locked until the server confirms your session.</p>
         </section>
       </main>
     )
   }
 
-  if (auth.status === 'guest') {
+  if (auth.status === 'unavailable') {
+    return (
+      <main className="auth-shell">
+        <section className="auth-card">
+          <p className="auth-kicker">PARTGRAPH · DEGRADED</p>
+          <h1>Session check unavailable.</h1>
+          <FailureNotice failure={auth.failure} />
+          <button type="button" onClick={() => void loadSession()}>Try again</button>
+          <p className="auth-note">PartGraph does not guess that you are signed out when the network or API is unavailable.</p>
+        </section>
+      </main>
+    )
+  }
+
+  if (auth.status === 'signed-out') {
     return (
       <main className="auth-shell">
         <section className="auth-card">
           <div className="auth-brand">
             <p className="auth-kicker">PARTGRAPH · OWNER WORKSPACE</p>
-            <h1>Your repair state starts with a private account.</h1>
-            <p>
-              One account can hold many vehicles. VINs, photos, repair sessions, inventory, and
-              fastener state stay behind this user boundary.
-            </p>
+            <h1>{mode === 'login' ? 'Sign in.' : 'Create your account.'}</h1>
+            <p>One account can hold many vehicles. Session credentials stay in an HttpOnly cookie, not browser storage.</p>
           </div>
 
           <div className="auth-tabs" role="tablist" aria-label="Authentication mode">
-            <button
-              type="button"
-              className={mode === 'login' ? 'auth-tab auth-tab--active' : 'auth-tab'}
-              onClick={() => { setMode('login'); setError(null) }}
-            >
-              Sign in
-            </button>
-            <button
-              type="button"
-              className={mode === 'register' ? 'auth-tab auth-tab--active' : 'auth-tab'}
-              onClick={() => { setMode('register'); setError(null) }}
-            >
-              Create account
-            </button>
+            <button type="button" className={mode === 'login' ? 'auth-tab auth-tab--active' : 'auth-tab'} onClick={() => { setMode('login'); setFailure(null) }}>Sign in</button>
+            <button type="button" className={mode === 'register' ? 'auth-tab auth-tab--active' : 'auth-tab'} onClick={() => { setMode('register'); setFailure(null) }}>Create account</button>
           </div>
 
-          <form className="auth-form" onSubmit={submit}>
-            <label>
-              <span>Email</span>
-              <input
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="you@example.com"
-                required
-              />
-            </label>
+          <form className="auth-form" onSubmit={(event) => void submit(event)}>
+            {mode === 'login' ? (
+              <label>
+                <span>Username or email</span>
+                <input
+                  required
+                  value={identifier}
+                  autoComplete="username"
+                  maxLength={320}
+                  onChange={(event) => setIdentifier(event.target.value)}
+                />
+              </label>
+            ) : (
+              <>
+                <label>
+                  <span>Email</span>
+                  <input
+                    required
+                    type="email"
+                    value={email}
+                    autoComplete="email"
+                    maxLength={320}
+                    onChange={(event) => setEmail(event.target.value)}
+                  />
+                </label>
+                <label>
+                  <span>Username</span>
+                  <input
+                    required
+                    value={username}
+                    autoComplete="username"
+                    minLength={3}
+                    maxLength={32}
+                    pattern="[A-Za-z0-9_]+"
+                    title="Letters, numbers, and underscore only"
+                    onChange={(event) => setUsername(event.target.value.replace(/\s/g, ''))}
+                  />
+                  <small>3–32 characters. Letters, numbers, and underscore only.</small>
+                </label>
+              </>
+            )}
+
             <label>
               <span>Password</span>
               <input
+                required
                 type="password"
-                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                 value={password}
+                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                 minLength={12}
                 maxLength={128}
                 onChange={(event) => setPassword(event.target.value)}
-                placeholder={mode === 'register' ? '12+ characters' : 'Your password'}
-                required
               />
+              {mode === 'register' && <small>Minimum 12 characters.</small>}
             </label>
-            {error && <p className="auth-error" role="alert">{error}</p>}
-            <button className="auth-submit" type="submit" disabled={working}>
-              {working ? 'Working…' : mode === 'login' ? 'Enter PartGraph' : 'Create private workspace'}
+
+            {failure && <FailureNotice failure={failure} />}
+            <button className="auth-submit" type="submit" disabled={submitting}>
+              {submitting ? 'Working…' : mode === 'login' ? 'Enter PartGraph' : 'Create private workspace'}
             </button>
           </form>
 
@@ -176,9 +361,12 @@ export default function AuthGate({ children }: { children: ReactNode }) {
         <div>
           <span className="account-dot" aria-hidden="true" />
           <span className="account-status">PRIVATE SESSION</span>
-          <span className="account-email">{auth.user.email}</span>
+          <span className="account-email">@{auth.user.username} · {auth.user.email}</span>
         </div>
-        <button type="button" onClick={() => void logout()} disabled={working}>Sign out</button>
+        {failure && <span className="account-warning">{failure.code}</span>}
+        <button type="button" onClick={() => void logout()} disabled={submitting}>
+          {submitting ? 'Working…' : 'Sign out'}
+        </button>
       </div>
       {children}
     </div>
