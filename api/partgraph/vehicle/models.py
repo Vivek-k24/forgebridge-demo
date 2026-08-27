@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import CheckConstraint, DateTime, SmallInteger, String, Uuid, func
+from sqlalchemy import CheckConstraint, DateTime, Index, SmallInteger, String, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..database import Base
@@ -11,8 +11,16 @@ class VehicleConfiguration(Base):
     __tablename__ = "vehicle_configurations"
     __table_args__ = (
         CheckConstraint(
-            "year >= 1886 AND year <= 2100",
+            "year >= 1996 AND year <= 2100",
             name="ck_vehicle_configurations_year",
+        ),
+        Index(
+            "ix_vehicle_configurations_selection",
+            "market",
+            "year",
+            "make",
+            "model",
+            "trim",
         ),
     )
 
