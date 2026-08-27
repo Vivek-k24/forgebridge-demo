@@ -110,7 +110,6 @@ async def stage_source_record(
             provenance=record.provenance,
             extraction_method=extraction_method,
             confidence=(Decimal(str(record.confidence)) if record.confidence is not None else None),
-            review_status="pending",
             dedupe_key=dedupe_key,
         )
         .on_conflict_do_nothing(index_elements=["dedupe_key"])
