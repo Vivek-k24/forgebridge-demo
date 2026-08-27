@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from typing import Literal
 from uuid import UUID
 
 from fastapi import status
@@ -32,6 +33,8 @@ from .schemas import (
 )
 from .vin import ProviderIdentity, decode_vin_values_extended, mask_vin, validate_vin
 
+Resolution = Literal["matched", "ambiguous", "manual_candidate"]
+VinSource = Literal["provider", "cache"]
 OPTIONAL_MATCH_FIELDS = (
     "generation",
     "trim",
@@ -45,17 +48,17 @@ STRUCTURED_FIELDS = {"engine", "transmission"}
 
 @dataclass(frozen=True, slots=True)
 class ResolvedVin:
-    source: str
+    source: VinSource
     provider: str
     masked_vin: str
     observed_at: datetime
     expires_at: datetime
-    resolution: str
+    resolution: Resolution
     identity: VehicleIdentitySnapshot
     matches: list[VehicleConfiguration]
 
 
-def _crypto_error(exc: VinCryptoError) -> PartGraphError:
+def _crypto_error(_: VinCryptoError) -> PartGraphError:
     return PartGraphError(
         code=ErrorCode.VIN_CRYPTO_UNAVAILABLE,
         message="VIN protection is unavailable. Use vehicle details or try again later.",
@@ -79,14 +82,19 @@ def _snapshot_from_configuration(configuration: VehicleConfiguration) -> Vehicle
     )
 
 
+def _optional_text(values: dict[str, int | str | None], key: str) -> str | None:
+    value = values.get(key)
+    return value if isinstance(value, str) else None
+
+
 def _snapshot_from_selection(values: dict[str, int | str | None]) -> VehicleIdentitySnapshot:
     return VehicleIdentitySnapshot(
         year=int(values["year"]),
         market=str(values["market"]),
         make=str(values["make"]),
         model=str(values["model"]),
-        generation=values.get("generation") if isinstance(values.get("generation"), str) else None,
-        trim=values.get("trim") if isinstance(values.get("trim"), str) else None,
+        generation=_optional_text(values, "generation"),
+        trim=_optional_text(values, "trim"),
     )
 
 
@@ -107,7 +115,7 @@ def _details_compatible(field: str, candidate: str | None, observed: str | None)
 async def _resolve_identity_snapshot(
     session: AsyncSession,
     identity: VehicleIdentitySnapshot,
-) -> tuple[str, list[VehicleConfiguration]]:
+) -> tuple[Resolution, list[VehicleConfiguration]]:
     rows = list(
         await session.scalars(
             select(VehicleConfiguration).where(
@@ -169,11 +177,12 @@ async def _cache_observation(
     fingerprint: str,
     market: str,
     identity: VehicleIdentitySnapshot,
-    resolution: str,
+    resolution: Resolution,
     matches: list[VehicleConfiguration],
     observed_at: datetime,
     expires_at: datetime,
 ) -> None:
+    match_ids = [str(item.id) for item in matches]
     statement = (
         insert(VinDecodeCache)
         .values(
@@ -182,7 +191,7 @@ async def _cache_observation(
             market=market,
             identity_resolution=resolution,
             identity_snapshot=identity.model_dump(mode="json"),
-            canonical_match_ids=[str(item.id) for item in matches],
+            canonical_match_ids=match_ids,
             provider="nhtsa_vpic",
             observed_at=observed_at,
             expires_at=expires_at,
@@ -192,7 +201,7 @@ async def _cache_observation(
             set_={
                 "identity_resolution": resolution,
                 "identity_snapshot": identity.model_dump(mode="json"),
-                "canonical_match_ids": [str(item.id) for item in matches],
+                "canonical_match_ids": match_ids,
                 "provider": "nhtsa_vpic",
                 "observed_at": observed_at,
                 "expires_at": expires_at,
@@ -224,15 +233,13 @@ async def _decode_validated_vin(
         try:
             identity = VehicleIdentitySnapshot.model_validate(cached.identity_snapshot)
         except ValidationError:
-            cached = None
+            pass
         else:
             resolution, matches = await _resolve_identity_snapshot(session, identity)
-            if (
-                resolution != cached.identity_resolution
-                or [str(item.id) for item in matches] != cached.canonical_match_ids
-            ):
+            match_ids = [str(item.id) for item in matches]
+            if resolution != cached.identity_resolution or match_ids != cached.canonical_match_ids:
                 cached.identity_resolution = resolution
-                cached.canonical_match_ids = [str(item.id) for item in matches]
+                cached.canonical_match_ids = match_ids
                 cached.updated_at = now
             return ResolvedVin(
                 source="cache",
@@ -282,7 +289,7 @@ async def decode_user_vin(
 ) -> ResolvedVin:
     vin = validate_vin(vin_value)
     try:
-        fingerprint = vin_fingerprint(vin)
+        fingerprint = vin_fingerprint(vin, user_id=user_id)
     except VinCryptoError as exc:
         raise _crypto_error(exc) from exc
 
@@ -347,7 +354,7 @@ async def create_vin_user_vehicle(
 ) -> UserVehicle:
     vin = validate_vin(payload.vin)
     try:
-        protected = protect_vin(vin)
+        protected = protect_vin(vin, user_id=user_id)
     except VinCryptoError as exc:
         raise _crypto_error(exc) from exc
 
@@ -462,8 +469,9 @@ async def archive_user_vehicle(
             status_code=status.HTTP_404_NOT_FOUND,
         )
     if vehicle.archived_at is None:
-        vehicle.archived_at = datetime.now(UTC)
-        vehicle.updated_at = datetime.now(UTC)
+        now = datetime.now(UTC)
+        vehicle.archived_at = now
+        vehicle.updated_at = now
         await session.flush()
     return vehicle
 
@@ -488,12 +496,12 @@ def serialize_user_vehicle(vehicle: UserVehicle) -> dict[str, object]:
 
 def serialize_vin_resolution(resolved: ResolvedVin) -> VinDecodeRead:
     return VinDecodeRead(
-        source=resolved.source,  # type: ignore[arg-type]
+        source=resolved.source,
         provider=resolved.provider,
         masked_vin=resolved.masked_vin,
         observed_at=resolved.observed_at,
         expires_at=resolved.expires_at,
-        resolution=resolved.resolution,  # type: ignore[arg-type]
+        resolution=resolved.resolution,
         identity=resolved.identity,
         matches=[VehicleConfigurationRead.model_validate(item) for item in resolved.matches],
     )
