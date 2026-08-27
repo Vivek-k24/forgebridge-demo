@@ -1,10 +1,12 @@
 from alembic import context
 from sqlalchemy import create_engine, pool
 
+import partgraph.catalog.models  # noqa: F401
+import partgraph.vehicle.models  # noqa: F401
 from partgraph.config import settings
-from partgraph.vehicle.models import VehicleConfiguration
+from partgraph.database import Base
 
-target_metadata = VehicleConfiguration.metadata
+target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
