@@ -26,11 +26,30 @@ def _int_env(name: str, default: int, *, minimum: int, maximum: int) -> int:
     return value
 
 
+def _float_env(name: str, default: float, *, minimum: float, maximum: float) -> float:
+    raw = getenv(name)
+    try:
+        value = default if raw is None else float(raw)
+    except ValueError as exc:
+        raise ValueError(f"{name} must be a number") from exc
+    if not minimum <= value <= maximum:
+        raise ValueError(f"{name} must be between {minimum} and {maximum}")
+    return value
+
+
 def _web_origin() -> str:
     value = getenv("PARTGRAPH_WEB_ORIGIN", "http://localhost:5173").strip().rstrip("/")
     parsed = urlparse(value)
     if parsed.scheme not in {"http", "https"} or not parsed.netloc or parsed.path:
         raise ValueError("PARTGRAPH_WEB_ORIGIN must be one exact http(s) origin without a path")
+    return value
+
+
+def _http_base_url(name: str, default: str) -> str:
+    value = getenv(name, default).strip().rstrip("/")
+    parsed = urlparse(value)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError(f"{name} must be an http(s) URL")
     return value
 
 
@@ -42,6 +61,12 @@ class Settings:
     session_days: int
     auth_rate_limit_attempts: int
     auth_rate_limit_minutes: int
+    vin_encryption_keys: str | None
+    vin_active_key_version: int
+    vin_lookup_key: str | None
+    vin_cache_hours: int
+    nhtsa_base_url: str
+    nhtsa_timeout_seconds: float
 
 
 def _load_settings() -> Settings:
@@ -57,6 +82,9 @@ def _load_settings() -> Settings:
     if web_origin.startswith("https://") and not cookie_secure:
         raise ValueError("PARTGRAPH_COOKIE_SECURE must be enabled for an HTTPS web origin")
 
+    vin_encryption_keys = getenv("PARTGRAPH_VIN_ENCRYPTION_KEYS")
+    vin_lookup_key = getenv("PARTGRAPH_VIN_LOOKUP_KEY")
+
     return Settings(
         database_url=database_url,
         web_origin=web_origin,
@@ -67,6 +95,19 @@ def _load_settings() -> Settings:
         ),
         auth_rate_limit_minutes=_int_env(
             "PARTGRAPH_AUTH_RATE_LIMIT_MINUTES", 15, minimum=1, maximum=1_440
+        ),
+        vin_encryption_keys=vin_encryption_keys.strip() if vin_encryption_keys else None,
+        vin_active_key_version=_int_env(
+            "PARTGRAPH_VIN_ACTIVE_KEY_VERSION", 1, minimum=1, maximum=32_767
+        ),
+        vin_lookup_key=vin_lookup_key.strip() if vin_lookup_key else None,
+        vin_cache_hours=_int_env("PARTGRAPH_VIN_CACHE_HOURS", 720, minimum=1, maximum=2_160),
+        nhtsa_base_url=_http_base_url(
+            "PARTGRAPH_NHTSA_BASE_URL",
+            "https://vpic.nhtsa.dot.gov/api/vehicles",
+        ),
+        nhtsa_timeout_seconds=_float_env(
+            "PARTGRAPH_NHTSA_TIMEOUT_SECONDS", 4.0, minimum=0.5, maximum=8.0
         ),
     )
 
