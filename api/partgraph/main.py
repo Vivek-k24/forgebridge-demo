@@ -14,11 +14,13 @@ from .auth.router import router as auth_router
 from .config import settings
 from .database import database_readiness, engine
 from .errors import ErrorCode, PartGraphError, error_response
+from .user_vehicle.router import router as user_vehicle_router
 from .vehicle.router import router as vehicle_router
 
 logger = logging.getLogger("partgraph.api")
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 AUTH_BODY_LIMIT_BYTES = 16 * 1024
+USER_VEHICLE_BODY_LIMIT_BYTES = 32 * 1024
 API_VERSION = "v1"
 
 
@@ -40,7 +42,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="PartGraph API",
-    version="0.3.0",
+    version="0.4.0",
     lifespan=lifespan,
 )
 app.add_middleware(
@@ -53,6 +55,17 @@ app.add_middleware(
 )
 app.include_router(auth_router)
 app.include_router(vehicle_router)
+app.include_router(user_vehicle_router)
+
+
+def _request_body_limit(request: Request) -> tuple[int, str] | None:
+    if request.method not in {"POST", "PATCH", "PUT"}:
+        return None
+    if request.url.path.startswith("/api/v1/auth/"):
+        return AUTH_BODY_LIMIT_BYTES, "Authentication request payload is too large."
+    if request.url.path.startswith("/api/v1/user-vehicles"):
+        return USER_VEHICLE_BODY_LIMIT_BYTES, "Vehicle request payload is too large."
+    return None
 
 
 @app.middleware("http")
@@ -62,16 +75,18 @@ async def platform_boundary(request: Request, call_next) -> Response:
         supplied_request_id if REQUEST_ID_PATTERN.fullmatch(supplied_request_id) else uuid4().hex
     )
 
-    if request.url.path.startswith("/api/v1/auth/") and request.method in {"POST", "PATCH", "PUT"}:
+    body_limit = _request_body_limit(request)
+    if body_limit is not None:
+        maximum_bytes, message = body_limit
         content_length = request.headers.get("content-length")
         if content_length is not None:
             try:
-                if int(content_length) > AUTH_BODY_LIMIT_BYTES:
+                if int(content_length) > maximum_bytes:
                     response = error_response(
                         request,
                         PartGraphError(
                             code=ErrorCode.REQUEST_PAYLOAD_TOO_LARGE,
-                            message="Authentication request payload is too large.",
+                            message=message,
                             status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                         ),
                     )
@@ -88,12 +103,12 @@ async def platform_boundary(request: Request, call_next) -> Response:
                 return _finish_response(request, response, 0.0)
 
         body = await request.body()
-        if len(body) > AUTH_BODY_LIMIT_BYTES:
+        if len(body) > maximum_bytes:
             response = error_response(
                 request,
                 PartGraphError(
                     code=ErrorCode.REQUEST_PAYLOAD_TOO_LARGE,
-                    message="Authentication request payload is too large.",
+                    message=message,
                     status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                 ),
             )
@@ -113,7 +128,9 @@ def _finish_response(request: Request, response: Response, duration_ms: float) -
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["Permissions-Policy"] = "camera=(self), microphone=(self), geolocation=()"
 
-    if request.url.path.startswith(("/api/v1/auth", "/api/v1/account")):
+    if request.url.path.startswith(
+        ("/api/v1/auth", "/api/v1/account", "/api/v1/user-vehicles")
+    ):
         response.headers["Cache-Control"] = "no-store"
     elif "Cache-Control" not in response.headers:
         response.headers["Cache-Control"] = "no-cache"
