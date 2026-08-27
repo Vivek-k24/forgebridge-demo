@@ -37,7 +37,7 @@ def upgrade() -> None:
         sa.Column("source_name", sa.String(length=128), nullable=False),
         sa.Column("source_type", sa.String(length=64), nullable=False),
         sa.Column("collector_version", sa.String(length=64), nullable=True),
-        sa.Column("status", sa.String(length=24), nullable=False),
+        sa.Column("status", sa.String(length=24), server_default="open", nullable=False),
         sa.Column(
             "started_at",
             sa.DateTime(timezone=True),
@@ -75,7 +75,7 @@ def upgrade() -> None:
         sa.Column("provenance", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.Column("extraction_method", sa.String(length=64), nullable=False),
         sa.Column("confidence", sa.Numeric(precision=5, scale=4), nullable=True),
-        sa.Column("review_status", sa.String(length=24), nullable=False),
+        sa.Column("review_status", sa.String(length=24), server_default="pending", nullable=False),
         sa.Column("reviewed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("reviewed_by", sa.String(length=128), nullable=True),
         sa.Column("dedupe_key", sa.String(length=64), nullable=False),
@@ -109,13 +109,6 @@ def upgrade() -> None:
         unique=False,
         schema=STAGING_SCHEMA,
     )
-    op.create_index(
-        op.f("ix_catalog_staging_source_records_dedupe_key"),
-        "source_records",
-        ["dedupe_key"],
-        unique=True,
-        schema=STAGING_SCHEMA,
-    )
 
     op.create_table(
         "catalog_verified_evidence",
@@ -143,24 +136,32 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("staging_record_id"),
     )
-    op.create_index(
-        op.f("ix_catalog_verified_evidence_staging_record_id"),
-        "catalog_verified_evidence",
-        ["staging_record_id"],
-        unique=True,
-    )
 
     op.execute(sa.text(f"GRANT USAGE ON SCHEMA {STAGING_SCHEMA} TO {COLLECTOR_ROLE}"))
     op.execute(
         sa.text(
-            f"GRANT SELECT, INSERT, UPDATE ON {STAGING_SCHEMA}.ingestion_batches "
+            f"GRANT SELECT ON {STAGING_SCHEMA}.ingestion_batches, "
+            f"{STAGING_SCHEMA}.source_records TO {COLLECTOR_ROLE}"
+        )
+    )
+    op.execute(
+        sa.text(
+            f"GRANT INSERT (id, source_name, source_type, collector_version) "
+            f"ON {STAGING_SCHEMA}.ingestion_batches TO {COLLECTOR_ROLE}"
+        )
+    )
+    op.execute(
+        sa.text(
+            f"GRANT UPDATE (status, completed_at) ON {STAGING_SCHEMA}.ingestion_batches "
             f"TO {COLLECTOR_ROLE}"
         )
     )
     op.execute(
         sa.text(
-            f"GRANT SELECT, INSERT, UPDATE ON {STAGING_SCHEMA}.source_records "
-            f"TO {COLLECTOR_ROLE}"
+            f"GRANT INSERT (id, batch_id, source_record_id, source_url, fetched_at, observed_at, "
+            f"candidate_type, raw_sha256, raw_payload, candidate_payload, vehicle_identity, "
+            f"provenance, extraction_method, confidence, dedupe_key) "
+            f"ON {STAGING_SCHEMA}.source_records TO {COLLECTOR_ROLE}"
         )
     )
     op.execute(
@@ -189,16 +190,7 @@ def downgrade() -> None:
         )
     )
     op.execute(sa.text(f"REVOKE USAGE ON SCHEMA {STAGING_SCHEMA} FROM {COLLECTOR_ROLE}"))
-    op.drop_index(
-        op.f("ix_catalog_verified_evidence_staging_record_id"),
-        table_name="catalog_verified_evidence",
-    )
     op.drop_table("catalog_verified_evidence")
-    op.drop_index(
-        op.f("ix_catalog_staging_source_records_dedupe_key"),
-        table_name="source_records",
-        schema=STAGING_SCHEMA,
-    )
     op.drop_index(
         op.f("ix_catalog_staging_source_records_batch_id"),
         table_name="source_records",
