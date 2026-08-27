@@ -31,6 +31,18 @@ The vehicle selector is read-only against shared canonical data:
 
 The VIN tab currently validates VIN format only. External VIN decoding belongs to the later private `UserVehicle` layer after authentication and user isolation exist.
 
+## Catalog trust boundary
+
+Catalog collection is not implemented or invoked yet. PostgreSQL now contains a separate `catalog_staging` schema for future collector output.
+
+- `catalog_staging.ingestion_batches` records source and ingestion-run provenance.
+- `catalog_staging.source_records` preserves raw evidence, normalized candidate data, vehicle context, extraction method, confidence, timestamps, review state, and deterministic deduplication.
+- `public.catalog_verified_evidence` is an immutable snapshot created only by an explicit verification/promotion operation. It is evidence for future canonical catalog entities; it is not itself a claim that a part or fitment is mechanically correct.
+- the database group role `partgraph_collector` can write the staging schema but has no write privilege on canonical vehicle data or verified evidence.
+- rejected staging records cannot be promoted in place, and identical source evidence is idempotently deduplicated.
+
+There is intentionally no public staging/promotion API before authentication and administrative authorization exist. The preserved historical catalog artifact is not imported or modified by this block.
+
 ## Run locally
 
 Requirements: Docker Desktop with Docker Compose.
@@ -128,6 +140,8 @@ For implementation PRs:
 ## Performance contract
 
 Normal interactive work should remain comfortably below the 10-second hard blocking boundary. Current quality targets include searchable dropdown p95 under 250 ms, normal API p95 under 1 second, and repair resume p95 under 2 seconds once those workflows exist. Collector work, model training, deployments, and LLM calls never belong on the repair-session critical path.
+
+PartGraph is server-authoritative rather than offline-first. Small transient client caches may improve responsiveness or survive short network interruptions, but private repair truth remains in PostgreSQL and the application does not promise full offline repair operation.
 
 ## Current technology baseline
 
