@@ -73,7 +73,14 @@ export async function apiRequest<T>(
       })
       const responseRequestId = response.headers.get('x-request-id') ?? requestId
       const apiVersion = response.headers.get('x-partgraph-api-version')
-      if (apiVersion && apiVersion !== EXPECTED_API_VERSION) {
+      if (!apiVersion) {
+        throw new ApiFailure('PartGraph received a response without an API version.', {
+          code: 'CLIENT_API_VERSION_MISSING',
+          requestId: responseRequestId,
+          status: response.status,
+        })
+      }
+      if (apiVersion !== EXPECTED_API_VERSION) {
         throw new ApiFailure('Client and API versions do not match.', {
           code: 'CLIENT_API_VERSION_MISMATCH',
           requestId: responseRequestId,
