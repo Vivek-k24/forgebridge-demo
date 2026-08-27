@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
 const HARD_TIMEOUT_MS = 10_000
+const MIN_SUPPORTED_YEAR = 1996
+const MAX_SUPPORTED_YEAR = new Date().getFullYear()
 
 type RuntimeState =
   | { status: 'checking' }
@@ -22,12 +24,19 @@ type VehicleConfiguration = {
   drivetrain: string | null
   identity_source: string
   verification_status: string
+  canonicalization_version: number
   created_at: string
+  updated_at: string
 }
 
 type VehicleConfigurationResult = {
-  created: boolean
+  resolution: 'created' | 'matched' | 'enriched'
   configuration: VehicleConfiguration
+}
+
+type VehicleBrand = {
+  name: string
+  status: 'active' | 'legacy'
 }
 
 type VehicleForm = {
@@ -45,7 +54,7 @@ type VehicleForm = {
 
 const EMPTY_FORM: VehicleForm = {
   year: '',
-  market: '',
+  market: 'US',
   make: '',
   model: '',
   generation: '',
@@ -89,6 +98,7 @@ function optional(value: string): string | undefined {
 function App() {
   const [runtime, setRuntime] = useState<RuntimeState>({ status: 'checking' })
   const [form, setForm] = useState<VehicleForm>(EMPTY_FORM)
+  const [brands, setBrands] = useState<VehicleBrand[]>([])
   const [configurations, setConfigurations] = useState<VehicleConfiguration[]>([])
   const [saving, setSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
@@ -113,20 +123,24 @@ function App() {
     }
   }, [])
 
-  const loadConfigurations = useCallback(async () => {
+  const loadReferenceData = useCallback(async () => {
     try {
-      const items = await apiRequest<VehicleConfiguration[]>('/api/v1/vehicle-configurations?limit=20')
-      setConfigurations(items)
+      const [brandItems, configurationItems] = await Promise.all([
+        apiRequest<VehicleBrand[]>('/api/v1/vehicle-brands'),
+        apiRequest<VehicleConfiguration[]>('/api/v1/vehicle-configurations?limit=20'),
+      ])
+      setBrands(brandItems)
+      setConfigurations(configurationItems)
       setListError(null)
     } catch (error) {
-      setListError(error instanceof Error ? error.message : 'Could not load configurations.')
+      setListError(error instanceof Error ? error.message : 'Could not load vehicle data.')
     }
   }, [])
 
   useEffect(() => {
     void checkRuntime()
-    void loadConfigurations()
-  }, [checkRuntime, loadConfigurations])
+    void loadReferenceData()
+  }, [checkRuntime, loadReferenceData])
 
   function updateField(field: keyof VehicleForm, value: string) {
     setForm((current) => ({ ...current, [field]: value }))
@@ -151,16 +165,22 @@ function App() {
     }
 
     try {
-      const result = await apiRequest<VehicleConfigurationResult>('/api/v1/vehicle-configurations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      setSaveMessage(result.created
-        ? `Saved configuration ${result.configuration.id}.`
-        : `Matched existing configuration ${result.configuration.id}.`)
+      const result = await apiRequest<VehicleConfigurationResult>(
+        '/api/v1/vehicle-configurations',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+      )
+      const messages = {
+        created: 'Created one canonical vehicle configuration.',
+        matched: 'Matched the existing canonical vehicle configuration.',
+        enriched: 'Enriched the existing canonical vehicle configuration.',
+      }
+      setSaveMessage(`${messages[result.resolution]} ${result.configuration.id}`)
       setForm(EMPTY_FORM)
-      await loadConfigurations()
+      await loadReferenceData()
     } catch (error) {
       setSaveMessage(error instanceof Error ? error.message : 'Could not save configuration.')
     } finally {
@@ -168,13 +188,17 @@ function App() {
     }
   }
 
+  const activeBrands = brands.filter((brand) => brand.status === 'active')
+  const legacyBrands = brands.filter((brand) => brand.status === 'legacy')
+
   return (
     <main className="shell">
       <header className="hero">
-        <p className="eyebrow">PARTGRAPH · BLOCK 2</p>
-        <h1>Vehicle identity</h1>
+        <p className="eyebrow">PARTGRAPH · VEHICLE IDENTITY</p>
+        <h1>Canonical vehicle identity</h1>
         <p className="lede">
-          Persist an exact configuration before any parts, assemblies, or repair state can depend on it.
+          Normalize US and Canadian vehicle wording before a configuration is allowed into
+          canonical storage.
         </p>
       </header>
 
@@ -191,7 +215,12 @@ function App() {
           )}
           {runtime.status === 'unavailable' && <p>{runtime.message}</p>}
         </div>
-        <button type="button" className="secondary" onClick={() => void checkRuntime()} disabled={runtime.status === 'checking'}>
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => void checkRuntime()}
+          disabled={runtime.status === 'checking'}
+        >
           Check again
         </button>
       </section>
@@ -199,20 +228,71 @@ function App() {
       <section className="panel">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">MANUAL IDENTITY INPUT</p>
-            <h2>Save a configuration</h2>
+            <p className="eyebrow">IDENTITY PROCESSOR</p>
+            <h2>Resolve a configuration</h2>
           </div>
           <span className="trust-badge">unverified until evidence-backed</span>
         </div>
         <p className="hint">
-          No catalog data is preloaded. Normalized duplicates reuse one database record, but normalization is not verification.
+          Case, punctuation, spacing, market names, safe body/transmission/drivetrain synonyms,
+          generation wording, and engine notation are normalized before persistence. Ambiguous
+          identities are rejected instead of guessed. Supported model years are {MIN_SUPPORTED_YEAR}
+          –{MAX_SUPPORTED_YEAR}.
         </p>
 
         <form className="vehicle-form" onSubmit={(event) => void saveConfiguration(event)}>
-          <label>Year<input required inputMode="numeric" min="1886" max="2100" value={form.year} onChange={(event) => updateField('year', event.target.value)} /></label>
-          <label>Market<input required placeholder="US" value={form.market} onChange={(event) => updateField('market', event.target.value)} /></label>
-          <label>Make<input required placeholder="Honda" value={form.make} onChange={(event) => updateField('make', event.target.value)} /></label>
-          <label>Model<input required placeholder="Civic" value={form.model} onChange={(event) => updateField('model', event.target.value)} /></label>
+          <label>
+            Year
+            <input
+              required
+              type="number"
+              inputMode="numeric"
+              min={MIN_SUPPORTED_YEAR}
+              max={MAX_SUPPORTED_YEAR}
+              value={form.year}
+              onChange={(event) => updateField('year', event.target.value)}
+            />
+          </label>
+          <label>
+            Market
+            <select
+              required
+              value={form.market}
+              onChange={(event) => updateField('market', event.target.value)}
+            >
+              <option value="US">United States</option>
+              <option value="CA">Canada</option>
+            </select>
+          </label>
+          <label>
+            Make
+            <select
+              required
+              value={form.make}
+              onChange={(event) => updateField('make', event.target.value)}
+            >
+              <option value="">Select brand</option>
+              <optgroup label="Active">
+                {activeBrands.map((brand) => (
+                  <option key={brand.name} value={brand.name}>{brand.name}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Legacy / used fleet">
+                {legacyBrands.map((brand) => (
+                  <option key={brand.name} value={brand.name}>{brand.name}</option>
+                ))}
+              </optgroup>
+            </select>
+          </label>
+          <label>
+            Model
+            <input
+              required
+              placeholder="Civic, Corolla, F-150…"
+              value={form.model}
+              onChange={(event) => updateField('model', event.target.value)}
+            />
+          </label>
           <label>Generation<input placeholder="Optional" value={form.generation} onChange={(event) => updateField('generation', event.target.value)} /></label>
           <label>Trim<input placeholder="Optional" value={form.trim} onChange={(event) => updateField('trim', event.target.value)} /></label>
           <label>Body style<input placeholder="Optional" value={form.body_style} onChange={(event) => updateField('body_style', event.target.value)} /></label>
@@ -221,7 +301,7 @@ function App() {
           <label>Drivetrain<input placeholder="Optional" value={form.drivetrain} onChange={(event) => updateField('drivetrain', event.target.value)} /></label>
 
           <div className="form-actions">
-            <button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save configuration'}</button>
+            <button type="submit" disabled={saving}>{saving ? 'Resolving…' : 'Resolve configuration'}</button>
             {saveMessage && <p className="save-message">{saveMessage}</p>}
           </div>
         </form>
@@ -230,7 +310,7 @@ function App() {
       <section className="panel">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">POSTGRESQL</p>
+            <p className="eyebrow">CANONICAL POSTGRESQL STATE</p>
             <h2>Stored configurations</h2>
           </div>
           <strong>{configurations.length}</strong>
@@ -238,7 +318,7 @@ function App() {
 
         {listError && <p className="error-message">{listError}</p>}
         {!listError && configurations.length === 0 && (
-          <p className="empty-state">No vehicle configurations stored yet.</p>
+          <p className="empty-state">No canonical vehicle configurations stored yet.</p>
         )}
         <div className="configuration-list">
           {configurations.map((item) => (
@@ -250,6 +330,7 @@ function App() {
               <div className="configuration-meta">
                 <span>{item.market}</span>
                 <span>{item.verification_status}</span>
+                <span>canon v{item.canonicalization_version}</span>
                 <code>{item.id.slice(0, 8)}</code>
               </div>
             </article>

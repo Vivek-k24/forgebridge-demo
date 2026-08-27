@@ -18,6 +18,12 @@ class VehicleConfiguration(Base):
 
     id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
     identity_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    base_identity_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    canonicalization_version: Mapped[int] = mapped_column(
+        SmallInteger,
+        nullable=False,
+        default=2,
+    )
     year: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     market: Mapped[str] = mapped_column(String(32), nullable=False)
     make: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -38,4 +44,10 @@ class VehicleConfiguration(Base):
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
     )

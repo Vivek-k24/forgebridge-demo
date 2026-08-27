@@ -6,26 +6,59 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_session
 from .schemas import (
+    VehicleBrandRead,
     VehicleConfigurationInput,
     VehicleConfigurationRead,
     VehicleConfigurationResult,
 )
-from .service import create_or_get_configuration, get_configuration, list_configurations
+from .service import (
+    AmbiguousVehicleIdentityError,
+    get_configuration,
+    list_configurations,
+    resolve_configuration,
+)
+from .taxonomy import VehicleIdentityError, supported_brand_records
 
-router = APIRouter(prefix="/api/v1/vehicle-configurations", tags=["Vehicle Identity"])
+router = APIRouter(prefix="/api/v1", tags=["Vehicle Identity"])
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 
-@router.post("", response_model=VehicleConfigurationResult)
+@router.get("/vehicle-brands", response_model=list[VehicleBrandRead])
+async def vehicle_brands() -> list[VehicleBrandRead]:
+    return [VehicleBrandRead.model_validate(item) for item in supported_brand_records()]
+
+
+@router.post(
+    "/vehicle-configurations",
+    response_model=VehicleConfigurationResult,
+)
 async def create_configuration(
     payload: VehicleConfigurationInput,
     session: SessionDep,
 ) -> VehicleConfigurationResult:
-    configuration, created = await create_or_get_configuration(session, payload)
-    return VehicleConfigurationResult(created=created, configuration=configuration)
+    try:
+        configuration, resolution = await resolve_configuration(session, payload)
+    except AmbiguousVehicleIdentityError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+    except VehicleIdentityError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+
+    return VehicleConfigurationResult(
+        resolution=resolution,
+        configuration=configuration,
+    )
 
 
-@router.get("", response_model=list[VehicleConfigurationRead])
+@router.get(
+    "/vehicle-configurations",
+    response_model=list[VehicleConfigurationRead],
+)
 async def configurations(
     session: SessionDep,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
@@ -34,7 +67,10 @@ async def configurations(
     return [VehicleConfigurationRead.model_validate(item) for item in items]
 
 
-@router.get("/{configuration_id}", response_model=VehicleConfigurationRead)
+@router.get(
+    "/vehicle-configurations/{configuration_id}",
+    response_model=VehicleConfigurationRead,
+)
 async def configuration(
     configuration_id: UUID,
     session: SessionDep,

@@ -16,13 +16,24 @@ collector (separate service, not implemented yet)
 
 The collector remains outside the interactive user path. No catalog collection runs in the current application.
 
-## Block 2 — vehicle identity
+## Vehicle identity foundation
 
-Block 2 adds the first real domain module: `api/partgraph/vehicle`.
+The first domain module is `api/partgraph/vehicle`.
 
-A vehicle configuration records year, market, make, model, and optional generation/trim/body/engine/transmission/drivetrain fields. Manual entries are normalized for deterministic deduplication and persisted in PostgreSQL, but remain explicitly `unverified`. Deduplication is not fitment verification.
+PartGraph is multi-brand from the skeleton onward. Current market scope is the United States and Canada. A vehicle identity request is processed before it reaches canonical storage:
 
-Database changes are versioned with Alembic. The API container applies migrations before starting FastAPI.
+1. market and make aliases are resolved against an explicit supported taxonomy;
+2. case, whitespace, punctuation, body-style wording, transmission wording, drivetrain wording, generation wording, and common engine notation are canonicalized deterministically;
+3. the processor looks for an exact or compatible canonical configuration;
+4. compatible partial information enriches one existing configuration;
+5. conflicting facts create distinct variants;
+6. ambiguous partial input is rejected instead of guessed.
+
+Manual vehicle configurations remain explicitly `unverified`. Canonicalization prevents duplicate wording from becoming duplicate identities; it does not prove fitment.
+
+European premium/luxury brands are currently excluded by product scope. The supported brand registry lives in `api/partgraph/vehicle/taxonomy.py`.
+
+Database changes are versioned with Alembic. Migration `0002_canonical_vehicle_identity` intentionally replaces the earlier Block 2 manual-test identity table so incorrect tuple-based test duplicates do not become permanent canonical data. No collected catalog data is affected.
 
 ## Run locally
 
@@ -36,10 +47,11 @@ Open:
 
 - Web: `http://localhost:5173`
 - API readiness: `http://localhost:8000/api/v1/health/ready`
+- Supported brands: `http://localhost:8000/api/v1/vehicle-brands`
 - Vehicle configurations: `http://localhost:8000/api/v1/vehicle-configurations`
 - API docs: `http://localhost:8000/docs`
 
-In the web page, enter a vehicle configuration and save it. Re-enter the same values with different casing or extra whitespace; the API should match the existing configuration ID rather than create a duplicate.
+Try entering the same physical vehicle using equivalent wording such as `US` vs `United States`, `4 Dr Sedan` vs `Sedan`, or `CVT` vs `continuously variable transmission`. PartGraph should resolve one canonical configuration. If the input could describe more than one existing variant, the API returns a conflict and asks for more detail rather than merging them.
 
 Stop with:
 
@@ -47,7 +59,7 @@ Stop with:
 docker compose down
 ```
 
-The PostgreSQL volume is retained between runs, so stored configuration records survive container restarts. Use `docker compose down -v` only when intentionally resetting local database data.
+The PostgreSQL volume is retained between runs, so canonical configuration records survive container restarts. Use `docker compose down -v` only when intentionally resetting local database data.
 
 ## Performance contract
 

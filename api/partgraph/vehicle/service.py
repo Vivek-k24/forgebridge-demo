@@ -1,68 +1,223 @@
 from hashlib import sha256
 from uuid import UUID
 
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .models import VehicleConfiguration
 from .schemas import VehicleConfigurationInput
+from .taxonomy import (
+    CANONICALIZATION_VERSION,
+    canonicalize_fields,
+    comparison_key,
+)
+
+OPTIONAL_IDENTITY_FIELDS = (
+    "generation",
+    "trim",
+    "body_style",
+    "engine",
+    "transmission",
+    "drivetrain",
+)
+STRUCTURED_DETAIL_FIELDS = {"engine", "transmission"}
 
 
-def _canonical(value: str | None) -> str:
-    if value is None:
-        return ""
-    return " ".join(value.casefold().split())
+class AmbiguousVehicleIdentityError(ValueError):
+    pass
 
 
-def identity_hash(payload: VehicleConfigurationInput) -> str:
-    parts = (
-        str(payload.year),
-        _canonical(payload.market),
-        _canonical(payload.make),
-        _canonical(payload.model),
-        _canonical(payload.generation),
-        _canonical(payload.trim),
-        _canonical(payload.body_style),
-        _canonical(payload.engine),
-        _canonical(payload.transmission),
-        _canonical(payload.drivetrain),
-    )
+def _hash(parts: tuple[str, ...]) -> str:
     return sha256("\x1f".join(parts).encode()).hexdigest()
 
 
-async def create_or_get_configuration(
+def _base_hash(values: dict[str, int | str | None]) -> str:
+    return _hash(
+        (
+            str(values["year"]),
+            str(values["market"]),
+            str(values["make"]),
+            comparison_key("model", str(values["model"])),
+        )
+    )
+
+
+def _identity_hash(values: dict[str, int | str | None]) -> str:
+    parts = [
+        str(values["year"]),
+        str(values["market"]),
+        str(values["make"]),
+        comparison_key("model", str(values["model"])),
+    ]
+    parts.extend(
+        comparison_key(field, values[field] if isinstance(values[field], str) else None)
+        for field in OPTIONAL_IDENTITY_FIELDS
+    )
+    return _hash(tuple(parts))
+
+
+def _detail_tokens(field: str, value: str) -> set[str]:
+    return {
+        token
+        for token in comparison_key(field, value).split("|")
+        if token
+    }
+
+
+def _compatible(field: str, current: str | None, incoming: str | None) -> bool:
+    if current is None or incoming is None:
+        return True
+    if field in STRUCTURED_DETAIL_FIELDS:
+        current_tokens = _detail_tokens(field, current)
+        incoming_tokens = _detail_tokens(field, incoming)
+        return current_tokens <= incoming_tokens or incoming_tokens <= current_tokens
+    return comparison_key(field, current) == comparison_key(field, incoming)
+
+
+def _candidate_score(
+    candidate: VehicleConfiguration,
+    incoming: dict[str, int | str | None],
+) -> tuple[int, int]:
+    matched = 0
+    specificity = 0
+    for field in OPTIONAL_IDENTITY_FIELDS:
+        current = getattr(candidate, field)
+        supplied = incoming[field]
+        if current is not None:
+            specificity += 1
+        if current is not None and isinstance(supplied, str):
+            if _compatible(field, current, supplied):
+                matched += 1
+    return matched, specificity
+
+
+def _candidate_is_compatible(
+    candidate: VehicleConfiguration,
+    incoming: dict[str, int | str | None],
+) -> bool:
+    return all(
+        _compatible(
+            field,
+            getattr(candidate, field),
+            incoming[field] if isinstance(incoming[field], str) else None,
+        )
+        for field in OPTIONAL_IDENTITY_FIELDS
+    )
+
+
+def _merge_candidate(
+    candidate: VehicleConfiguration,
+    incoming: dict[str, int | str | None],
+) -> bool:
+    changed = False
+    for field in OPTIONAL_IDENTITY_FIELDS:
+        current = getattr(candidate, field)
+        supplied = incoming[field]
+        if not isinstance(supplied, str):
+            continue
+        if current is None:
+            setattr(candidate, field, supplied)
+            changed = True
+            continue
+        if field in STRUCTURED_DETAIL_FIELDS:
+            current_tokens = _detail_tokens(field, current)
+            incoming_tokens = _detail_tokens(field, supplied)
+            if current_tokens < incoming_tokens:
+                setattr(candidate, field, supplied)
+                changed = True
+    return changed
+
+
+async def _lock_base_identity(session: AsyncSession, base_hash: str) -> None:
+    unsigned = int(base_hash[:16], 16)
+    signed = unsigned if unsigned < 2**63 else unsigned - 2**64
+    await session.execute(
+        text("SELECT pg_advisory_xact_lock(:lock_key)"),
+        {"lock_key": signed},
+    )
+
+
+async def resolve_configuration(
     session: AsyncSession,
     payload: VehicleConfigurationInput,
-) -> tuple[VehicleConfiguration, bool]:
-    fingerprint = identity_hash(payload)
-    existing = await session.scalar(
-        select(VehicleConfiguration).where(VehicleConfiguration.identity_hash == fingerprint)
+) -> tuple[VehicleConfiguration, str]:
+    incoming = canonicalize_fields(**payload.model_dump())
+    base_hash = _base_hash(incoming)
+    fingerprint = _identity_hash(incoming)
+
+    await _lock_base_identity(session, base_hash)
+
+    exact = await session.scalar(
+        select(VehicleConfiguration).where(
+            VehicleConfiguration.identity_hash == fingerprint
+        )
     )
-    if existing is not None:
-        return existing, False
+    if exact is not None:
+        return exact, "matched"
+
+    candidates = list(
+        await session.scalars(
+            select(VehicleConfiguration)
+            .where(VehicleConfiguration.base_identity_hash == base_hash)
+            .with_for_update()
+        )
+    )
+    compatible = [
+        candidate
+        for candidate in candidates
+        if _candidate_is_compatible(candidate, incoming)
+    ]
+
+    if compatible:
+        scores = {
+            candidate.id: _candidate_score(candidate, incoming)
+            for candidate in compatible
+        }
+        best_score = max(scores.values())
+        best = [
+            candidate
+            for candidate in compatible
+            if scores[candidate.id] == best_score
+        ]
+        if len(best) != 1:
+            await session.rollback()
+            raise AmbiguousVehicleIdentityError(
+                "Multiple stored configurations are compatible. Add trim, body, engine, "
+                "transmission, drivetrain, or generation detail before continuing."
+            )
+
+        candidate = best[0]
+        changed = _merge_candidate(candidate, incoming)
+        if changed:
+            values = {
+                "year": candidate.year,
+                "market": candidate.market,
+                "make": candidate.make,
+                "model": candidate.model,
+                **{
+                    field: getattr(candidate, field)
+                    for field in OPTIONAL_IDENTITY_FIELDS
+                },
+            }
+            candidate.identity_hash = _identity_hash(values)
+            candidate.canonicalization_version = CANONICALIZATION_VERSION
+            await session.commit()
+            await session.refresh(candidate)
+            return candidate, "enriched"
+        return candidate, "matched"
 
     configuration = VehicleConfiguration(
         identity_hash=fingerprint,
-        **payload.model_dump(),
+        base_identity_hash=base_hash,
+        canonicalization_version=CANONICALIZATION_VERSION,
+        **incoming,
         identity_source="manual",
         verification_status="unverified",
     )
     session.add(configuration)
-
-    try:
-        await session.commit()
-    except IntegrityError:
-        await session.rollback()
-        existing = await session.scalar(
-            select(VehicleConfiguration).where(VehicleConfiguration.identity_hash == fingerprint)
-        )
-        if existing is None:
-            raise
-        return existing, False
-
+    await session.commit()
     await session.refresh(configuration)
-    return configuration, True
+    return configuration, "created"
 
 
 async def get_configuration(
@@ -78,7 +233,7 @@ async def list_configurations(
 ) -> list[VehicleConfiguration]:
     rows = await session.scalars(
         select(VehicleConfiguration)
-        .order_by(VehicleConfiguration.created_at.desc())
+        .order_by(VehicleConfiguration.updated_at.desc())
         .limit(limit)
     )
     return list(rows)
