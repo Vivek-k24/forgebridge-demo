@@ -4,6 +4,7 @@ import hmac
 import json
 import secrets
 from dataclasses import dataclass
+from uuid import UUID
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
@@ -68,34 +69,49 @@ def _lookup_key() -> bytes:
     return _decode_key(raw)
 
 
-def vin_fingerprint(vin: str) -> str:
-    return hmac.new(_lookup_key(), vin.encode("ascii"), hashlib.sha256).hexdigest()
+def vin_fingerprint(vin: str, *, user_id: UUID) -> str:
+    scoped_value = f"{user_id}\x1f{vin}".encode("ascii")
+    return hmac.new(_lookup_key(), scoped_value, hashlib.sha256).hexdigest()
 
 
-def _aad(version: int) -> bytes:
-    return f"partgraph:user-vehicle:vin:v{version}".encode("ascii")
+def _aad(version: int, user_id: UUID) -> bytes:
+    return f"partgraph:user-vehicle:vin:v{version}:owner:{user_id}".encode("ascii")
 
 
-def protect_vin(vin: str) -> ProtectedVin:
+def protect_vin(vin: str, *, user_id: UUID) -> ProtectedVin:
     keys = _encryption_keyring()
     version = settings.vin_active_key_version
     nonce = secrets.token_bytes(NONCE_BYTES)
-    ciphertext = AESGCM(keys[version]).encrypt(nonce, vin.encode("ascii"), _aad(version))
+    ciphertext = AESGCM(keys[version]).encrypt(
+        nonce,
+        vin.encode("ascii"),
+        _aad(version, user_id),
+    )
     return ProtectedVin(
         ciphertext=ciphertext,
         nonce=nonce,
         key_version=version,
-        fingerprint=vin_fingerprint(vin),
+        fingerprint=vin_fingerprint(vin, user_id=user_id),
     )
 
 
-def reveal_vin(*, ciphertext: bytes, nonce: bytes, key_version: int) -> str:
+def reveal_vin(
+    *,
+    ciphertext: bytes,
+    nonce: bytes,
+    key_version: int,
+    user_id: UUID,
+) -> str:
     keys = _encryption_keyring()
     key = keys.get(key_version)
     if key is None:
         raise VinCryptoError("VIN key version is unavailable.")
     try:
-        plaintext = AESGCM(key).decrypt(nonce, ciphertext, _aad(key_version))
+        plaintext = AESGCM(key).decrypt(
+            nonce,
+            ciphertext,
+            _aad(key_version, user_id),
+        )
         return plaintext.decode("ascii")
     except (ValueError, UnicodeDecodeError) as exc:
         raise VinCryptoError("VIN ciphertext authentication failed.") from exc
