@@ -1,170 +1,218 @@
+import asyncio
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
+from partgraph.database import session_factory
 from partgraph.main import app
+from partgraph.vehicle.schemas import VehicleConfigurationInput
+from partgraph.vehicle.service import resolve_configuration
 
 
-def test_vehicle_configuration_enriches_equivalent_identity() -> None:
-    suffix = uuid4().hex[:8]
-    first_payload = {
-        "year": 2009,
-        "market": "US",
-        "make": "honda",
-        "model": f"Civic {suffix}",
-        "generation": "8th gen",
-        "trim": "Hybrid",
-        "body_style": "4 Dr Sedan",
-    }
-    richer_payload = {
-        "year": 2009,
-        "market": "United States of America",
-        "make": " HONDA ",
-        "model": f"civic-{suffix}",
-        "generation": "eighth generation",
-        "trim": "HYBRID",
-        "body_style": "four-door sedan",
-        "engine": "hybrid inline-4 1.3 liter",
-        "transmission": "continuously variable transmission",
-        "drivetrain": "front wheel drive",
-    }
+def seed_configuration(payload: dict[str, object]) -> str:
+    async def seed() -> str:
+        async with session_factory() as session:
+            configuration, _ = await resolve_configuration(
+                session,
+                VehicleConfigurationInput.model_validate(payload),
+            )
+            return str(configuration.id)
 
+    return asyncio.run(seed())
+
+
+def test_public_api_does_not_create_canonical_vehicle_truth() -> None:
     with TestClient(app) as client:
-        first = client.post("/api/v1/vehicle-configurations", json=first_payload)
-        second = client.post("/api/v1/vehicle-configurations", json=richer_payload)
-
-        assert first.status_code == 200
-        assert second.status_code == 200
-
-        first_body = first.json()
-        second_body = second.json()
-        configuration_id = first_body["configuration"]["id"]
-
-        assert first_body["resolution"] == "created"
-        assert second_body["resolution"] == "enriched"
-        assert second_body["configuration"]["id"] == configuration_id
-        assert second_body["configuration"]["market"] == "US"
-        assert second_body["configuration"]["make"] == "Honda"
-        assert second_body["configuration"]["body_style"] == "Sedan"
-        assert second_body["configuration"]["engine"] == "1.3L I4 HYBRID"
-        assert second_body["configuration"]["transmission"] == "CVT"
-        assert second_body["configuration"]["drivetrain"] == "FWD"
-        assert second_body["configuration"]["verification_status"] == "unverified"
-
-        third = client.post(
+        response = client.post(
             "/api/v1/vehicle-configurations",
             json={
-                **richer_payload,
-                "market": "U.S.A.",
-                "body_style": "Sedan",
-                "engine": "1.3L I4 hybrid",
-                "transmission": "CVT",
-                "drivetrain": "FWD",
+                "year": 2009,
+                "market": "US",
+                "make": "Honda",
+                "model": "Civic",
+                "trim": "Hybrid",
             },
         )
-        assert third.status_code == 200
-        assert third.json()["resolution"] == "matched"
-        assert third.json()["configuration"]["id"] == configuration_id
+
+    assert response.status_code == 405
 
 
-def test_vehicle_identity_is_not_honda_specific() -> None:
+def test_vehicle_options_are_read_from_known_canonical_rows() -> None:
     suffix = uuid4().hex[:8]
-    first_payload = {
-        "year": 2020,
-        "market": "USA",
-        "make": "Chevy",
-        "model": f"Silverado-1500-{suffix}",
-        "trim": "LT",
-        "body_style": "pickup truck",
-        "transmission": "automatic transmission",
-        "drivetrain": "4x4",
-    }
-    equivalent_payload = {
-        **first_payload,
-        "market": "United States",
-        "make": "Chevrolet",
-        "model": f"silverado 1500 {suffix}",
-        "body_style": "truck",
-        "transmission": "AT",
-        "drivetrain": "four wheel drive",
-    }
+    model = f"Civic-{suffix}"
+    seed_configuration(
+        {
+            "year": 2009,
+            "market": "US",
+            "make": "Honda",
+            "model": model,
+            "generation": "8th gen",
+            "trim": "Hybrid",
+            "body_style": "Sedan",
+            "engine": "1.3L I4 Hybrid",
+            "transmission": "CVT",
+            "drivetrain": "FWD",
+        }
+    )
+    seed_configuration(
+        {
+            "year": 2009,
+            "market": "US",
+            "make": "Honda",
+            "model": model,
+            "generation": "8th gen",
+            "trim": "EX",
+            "body_style": "Sedan",
+            "engine": "1.8L I4",
+            "transmission": "5AT",
+            "drivetrain": "FWD",
+        }
+    )
 
     with TestClient(app) as client:
-        first = client.post("/api/v1/vehicle-configurations", json=first_payload)
-        second = client.post("/api/v1/vehicle-configurations", json=equivalent_payload)
+        models = client.get(
+            "/api/v1/vehicle-options/models",
+            params={"year": 2009, "market": "USA", "make": "honda", "q": suffix},
+        )
+        trims = client.get(
+            "/api/v1/vehicle-options/trims",
+            params={
+                "year": 2009,
+                "market": "US",
+                "make": "Honda",
+                "model": model.replace("-", " "),
+            },
+        )
+        generations = client.get(
+            "/api/v1/vehicle-options/generations",
+            params={
+                "year": 2009,
+                "market": "US",
+                "make": "Honda",
+                "model": model,
+                "trim": "Hybrid",
+            },
+        )
 
-        assert first.status_code == 200
-        assert second.status_code == 200
-        assert first.json()["resolution"] == "created"
-        assert second.json()["resolution"] == "matched"
-        assert first.json()["configuration"]["id"] == second.json()["configuration"]["id"]
-        assert second.json()["configuration"]["make"] == "Chevrolet"
-        assert second.json()["configuration"]["body_style"] == "Pickup"
-        assert second.json()["configuration"]["drivetrain"] == "4WD"
+    assert models.status_code == 200
+    assert model.upper() in models.json()
+    assert trims.status_code == 200
+    assert trims.json() == ["EX", "HYBRID"]
+    assert generations.status_code == 200
+    assert generations.json() == ["8"]
 
 
-def test_transmission_detail_enriches_but_different_speeds_stay_distinct() -> None:
+def test_selection_resolves_known_trim_without_using_generation() -> None:
     suffix = uuid4().hex[:8]
-    base = {
-        "year": 2018,
-        "market": "US",
-        "make": "Ford",
-        "model": f"Test-{suffix}",
-        "trim": "SE",
-        "body_style": "sedan 4D",
-    }
+    model = f"Corolla-{suffix}"
+    configuration_id = seed_configuration(
+        {
+            "year": 2021,
+            "market": "Canada",
+            "make": "Toyota",
+            "model": model,
+            "generation": "12th",
+            "trim": "LE",
+            "body_style": "Sedan",
+        }
+    )
 
     with TestClient(app) as client:
-        partial = client.post(
-            "/api/v1/vehicle-configurations",
-            json={**base, "transmission": "automatic"},
-        )
-        six_speed = client.post(
-            "/api/v1/vehicle-configurations",
-            json={**base, "transmission": "6AT"},
-        )
-        eight_speed = client.post(
-            "/api/v1/vehicle-configurations",
-            json={**base, "transmission": "8-speed automatic"},
+        response = client.post(
+            "/api/v1/vehicle-selection/resolve",
+            json={
+                "year": 2021,
+                "market": "CA",
+                "make": "toyota",
+                "model": model.replace("-", " ").lower(),
+                "trim": "le",
+                "generation": "99th generation",
+            },
         )
 
-    assert partial.status_code == 200
-    assert six_speed.status_code == 200
-    assert eight_speed.status_code == 200
-    assert partial.json()["resolution"] == "created"
-    assert six_speed.json()["resolution"] == "enriched"
-    assert partial.json()["configuration"]["id"] == six_speed.json()["configuration"]["id"]
-    assert six_speed.json()["configuration"]["transmission"] == "6-speed Automatic"
-    assert eight_speed.json()["resolution"] == "created"
-    assert eight_speed.json()["configuration"]["id"] != six_speed.json()["configuration"]["id"]
+    assert response.status_code == 200
+    body = response.json()
+    assert body["resolution"] == "matched"
+    assert body["matches"][0]["id"] == configuration_id
+    assert body["normalized"]["market"] == "CA"
+    assert body["normalized"]["make"] == "Toyota"
+    assert body["normalized"]["generation"] == "99"
 
 
-def test_incomplete_identity_is_rejected_when_multiple_variants_fit() -> None:
+def test_selection_surfaces_ambiguity_instead_of_guessing() -> None:
     suffix = uuid4().hex[:8]
-    base = {
-        "year": 2021,
-        "market": "Canada",
-        "make": "Toyota",
-        "model": f"Corolla {suffix}",
-        "body_style": "Sedan",
-    }
+    model = f"Accord-{suffix}"
+    for trim in ("LX", "EX"):
+        seed_configuration(
+            {
+                "year": 2018,
+                "market": "US",
+                "make": "Honda",
+                "model": model,
+                "trim": trim,
+                "body_style": "Sedan",
+            }
+        )
 
     with TestClient(app) as client:
-        le = client.post(
-            "/api/v1/vehicle-configurations",
-            json={**base, "trim": "LE"},
+        response = client.post(
+            "/api/v1/vehicle-selection/resolve",
+            json={
+                "year": 2018,
+                "market": "US",
+                "make": "Honda",
+                "model": model,
+            },
         )
-        xle = client.post(
-            "/api/v1/vehicle-configurations",
-            json={**base, "trim": "XLE"},
-        )
-        ambiguous = client.post("/api/v1/vehicle-configurations", json=base)
 
-        assert le.status_code == 200
-        assert xle.status_code == 200
-        assert le.json()["configuration"]["id"] != xle.json()["configuration"]["id"]
-        assert ambiguous.status_code == 409
-        assert "Multiple stored configurations" in ambiguous.json()["detail"]
+    assert response.status_code == 200
+    body = response.json()
+    assert body["resolution"] == "ambiguous"
+    assert len(body["matches"]) == 2
+
+
+def test_unknown_manual_text_is_candidate_only_and_does_not_write_canonical_db() -> None:
+    suffix = uuid4().hex[:8]
+    unknown_model = f"Garage-Special-{suffix}"
+
+    with TestClient(app) as client:
+        before = client.get(
+            "/api/v1/vehicle-options/models",
+            params={"year": 2015, "market": "US", "make": "Ford", "q": suffix},
+        )
+        resolved = client.post(
+            "/api/v1/vehicle-selection/resolve",
+            json={
+                "year": 2015,
+                "market": "US",
+                "make": "Ford",
+                "model": unknown_model,
+                "trim": "Home Garage",
+            },
+        )
+        after = client.get(
+            "/api/v1/vehicle-options/models",
+            params={"year": 2015, "market": "US", "make": "Ford", "q": suffix},
+        )
+
+    assert before.status_code == 200
+    assert before.json() == []
+    assert resolved.status_code == 200
+    assert resolved.json()["resolution"] == "manual_candidate"
+    assert resolved.json()["matches"] == []
+    assert after.status_code == 200
+    assert after.json() == []
+
+
+def test_selection_year_policy_is_enforced() -> None:
+    with TestClient(app) as client:
+        response = client.get(
+            "/api/v1/vehicle-options/models",
+            params={"year": 1995, "market": "US", "make": "Honda"},
+        )
+
+    assert response.status_code == 422
+    assert "1996" in response.json()["detail"]
 
 
 def test_brand_registry_is_served_by_api() -> None:
@@ -178,5 +226,8 @@ def test_brand_registry_is_served_by_api() -> None:
     assert brands["Lexus"] == "active"
     assert brands["Acura"] == "active"
     assert brands["Genesis"] == "active"
-    assert brands["Pontiac"] == "legacy"
+    assert brands["Volkswagen"] == "active"
+    assert brands["Volvo"] == "active"
+    assert brands["Isuzu"] == "legacy"
+    assert "Tesla" not in brands
     assert "BMW" not in brands
