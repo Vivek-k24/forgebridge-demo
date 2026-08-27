@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, status
 
 from ..auth.dependencies import AuthSessionDep, CurrentUserDep, require_csrf
-from ..errors import ErrorEnvelope
+from ..errors import ErrorCode, ErrorEnvelope, PartGraphError
 from .schemas import (
     ManualUserVehicleCreate,
     UserVehicleRead,
@@ -33,7 +33,11 @@ ERROR_RESPONSES = {
     503: {"model": ErrorEnvelope},
     504: {"model": ErrorEnvelope},
 }
-router = APIRouter(prefix="/api/v1/user-vehicles", tags=["User Vehicles"], responses=ERROR_RESPONSES)
+router = APIRouter(
+    prefix="/api/v1/user-vehicles",
+    tags=["User Vehicles"],
+    responses=ERROR_RESPONSES,
+)
 CsrfDep = Depends(require_csrf)
 
 
@@ -114,8 +118,6 @@ async def vehicle(
 ) -> UserVehicleRead:
     item = await get_user_vehicle(session, user_id=user.id, vehicle_id=vehicle_id)
     if item is None:
-        from ..errors import ErrorCode, PartGraphError
-
         raise PartGraphError(
             code=ErrorCode.USER_VEHICLE_NOT_FOUND,
             message="Vehicle not found.",
