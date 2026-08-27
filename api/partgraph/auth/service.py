@@ -206,7 +206,10 @@ async def create_auth_session(session: AsyncSession, user_id: UUID) -> tuple[Aut
     return auth_session, token
 
 
-async def resolve_auth_session(session: AsyncSession, token: str | None) -> tuple[User, AuthSession]:
+async def resolve_auth_session(
+    session: AsyncSession,
+    token: str | None,
+) -> tuple[User, AuthSession]:
     if not token:
         raise AuthenticationError(ErrorCode.AUTH_REQUIRED, "Authentication required.")
 
