@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import secrets
 from datetime import UTC, datetime, timedelta
@@ -101,15 +102,21 @@ async def set_user_context(session: AsyncSession, user_id: UUID) -> None:
 
 async def register_user(session: AsyncSession, *, email: str, password: str) -> User:
     normalized = normalize_email(email)
-    existing = (
-        await session.execute(select(User.id).where(User.email == normalized))
+    password_hash = await asyncio.to_thread(hash_password, password)
+    created_id = (
+        await session.execute(
+            insert(User)
+            .values(email=normalized, password_hash=password_hash, is_active=True)
+            .on_conflict_do_nothing(index_elements=["email"])
+            .returning(User.id)
+        )
     ).scalar_one_or_none()
-    if existing is not None:
+    if created_id is None:
         raise AuthenticationError("An account with this email already exists.")
 
-    user = User(email=normalized, password_hash=hash_password(password))
-    session.add(user)
-    await session.flush()
+    user = await session.get(User, created_id)
+    if user is None:
+        raise RuntimeError("registered user disappeared after insert")
     await set_user_context(session, user.id)
     session.add(UserPreference(user_id=user.id, units="us_customary"))
     await session.flush()
@@ -122,11 +129,12 @@ async def authenticate_user(session: AsyncSession, *, email: str, password: str)
         await session.execute(select(User).where(User.email == normalized))
     ).scalar_one_or_none()
     password_hash = user.password_hash if user is not None else None
-    if not verify_password(password_hash, password) or user is None or not user.is_active:
+    valid_password = await asyncio.to_thread(verify_password, password_hash, password)
+    if not valid_password or user is None or not user.is_active:
         raise AuthenticationError("Invalid email or password.")
 
     if needs_password_rehash(user.password_hash):
-        user.password_hash = hash_password(password)
+        user.password_hash = await asyncio.to_thread(hash_password, password)
         await session.flush()
     return user
 
