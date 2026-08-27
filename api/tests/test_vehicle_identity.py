@@ -212,7 +212,10 @@ def test_selection_year_policy_is_enforced() -> None:
         )
 
     assert response.status_code == 422
-    assert "1996" in response.json()["detail"]
+    error = response.json()["error"]
+    assert error["code"] == "REQUEST_VALIDATION_FAILED"
+    assert "1996" in error["message"]
+    assert error["request_id"] == response.headers["x-request-id"]
 
 
 def test_brand_registry_is_served_by_api() -> None:
