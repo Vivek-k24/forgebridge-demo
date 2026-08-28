@@ -37,7 +37,7 @@ jobs:
       - name: Build and start PartGraph stack
         run: docker compose up -d --build
 
-      - name: Verify API, Web, auth, vehicle, and repair-session integration
+      - name: Verify API, Web, auth, vehicle, repair-session, and repair-memory integration
         run: |
           for attempt in $(seq 1 45); do
             API_OK=0
@@ -142,6 +142,100 @@ jobs:
             "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/lease/takeover" \
             | grep -q '"status":"owned"'
 
+          STORAGE=$(curl --fail --silent --show-error \
+            -b "$COOKIE_JAR" \
+            -H 'Content-Type: application/json' \
+            -H 'X-PartGraph-CSRF: 1' \
+            -H "X-PartGraph-Device-ID: $DEVICE_B" \
+            -H 'Idempotency-Key: ci_memory_storage_01' \
+            --data '{"label":"CI magnetic tray"}' \
+            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/storage-locations")
+          STORAGE_ID=$(python -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<< "$STORAGE")
+
+          FASTENER=$(curl --fail --silent --show-error \
+            -b "$COOKIE_JAR" \
+            -H 'Content-Type: application/json' \
+            -H 'X-PartGraph-CSRF: 1' \
+            -H "X-PartGraph-Device-ID: $DEVICE_B" \
+            -H 'Idempotency-Key: ci_memory_fastener_01' \
+            --data "{\"label\":\"CI upper support bolt\",\"origin\":\"radiator support\",\"position\":\"driver side\",\"physical_state\":\"stored\",\"storage_location_id\":\"$STORAGE_ID\"}" \
+            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/fasteners")
+          echo "$FASTENER" | grep -q '"physical_state":"stored"'
+          FASTENER_ID=$(python -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<< "$FASTENER")
+
+          INVENTORY=$(curl --fail --silent --show-error \
+            -b "$COOKIE_JAR" \
+            -H 'Content-Type: application/json' \
+            -H 'X-PartGraph-CSRF: 1' \
+            -H "X-PartGraph-Device-ID: $DEVICE_B" \
+            -H 'Idempotency-Key: ci_memory_inventory_01' \
+            --data '{"name":"CI replacement bolt","quantity":1,"procurement_state":"needed"}' \
+            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/inventory")
+          INVENTORY_ID=$(python -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<< "$INVENTORY")
+
+          curl --fail --silent --show-error \
+            -b "$COOKIE_JAR" \
+            -X PATCH \
+            -H 'Content-Type: application/json' \
+            -H 'X-PartGraph-CSRF: 1' \
+            -H "X-PartGraph-Device-ID: $DEVICE_B" \
+            -H 'Idempotency-Key: ci_memory_inventory_02' \
+            --data '{"procurement_state":"available","quantity":1}' \
+            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/inventory/$INVENTORY_ID" \
+            | grep -q '"procurement_state":"available"'
+
+          OBSERVATION=$(curl --fail --silent --show-error \
+            -b "$COOKIE_JAR" \
+            -H 'Content-Type: application/json' \
+            -H 'X-PartGraph-CSRF: 1' \
+            -H "X-PartGraph-Device-ID: $DEVICE_B" \
+            -H 'Idempotency-Key: ci_memory_observation_01' \
+            --data "{\"category\":\"condition\",\"text\":\"CI threads appear reusable.\",\"fastener_id\":\"$FASTENER_ID\"}" \
+            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/observations")
+          echo "$OBSERVATION" | grep -q '"source":"user"'
+          OBSERVATION_ID=$(python -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<< "$OBSERVATION")
+
+          printf '\x89PNG\r\n\x1a\nPartGraph-CI' > /tmp/partgraph-ci.png
+          PHOTO=$(curl --fail --silent --show-error \
+            -b "$COOKIE_JAR" \
+            -H 'X-PartGraph-CSRF: 1' \
+            -H "X-PartGraph-Device-ID: $DEVICE_B" \
+            -H 'Idempotency-Key: ci_memory_photo_01' \
+            -F 'purpose=fastener' \
+            -F "fastener_id=$FASTENER_ID" \
+            -F "observation_id=$OBSERVATION_ID" \
+            -F 'photo=@/tmp/partgraph-ci.png;type=image/png' \
+            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/photos")
+          echo "$PHOTO" | grep -q '"purpose":"fastener"'
+          PHOTO_ID=$(python -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<< "$PHOTO")
+
+          curl --fail --silent --show-error \
+            -b "$COOKIE_JAR" \
+            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/photos/$PHOTO_ID/content" \
+            --output /tmp/partgraph-ci-downloaded.png
+          cmp /tmp/partgraph-ci.png /tmp/partgraph-ci-downloaded.png
+
+          curl --fail --silent --show-error \
+            -b "$COOKIE_JAR" \
+            -H "X-PartGraph-Device-ID: $DEVICE_B" \
+            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/resume" \
+            | grep -q '"event_type":"photo_evidence_added"'
+
+          curl --fail --silent --show-error \
+            -b "$COOKIE_JAR" \
+            -X DELETE \
+            -H 'X-PartGraph-CSRF: 1' \
+            -H "X-PartGraph-Device-ID: $DEVICE_B" \
+            -H 'Idempotency-Key: ci_memory_photo_delete_01' \
+            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/photos/$PHOTO_ID" \
+            | grep -q "\"id\":\"$PHOTO_ID\""
+
+          PHOTO_STATUS=$(curl --silent --output /tmp/partgraph-photo-error.json --write-out '%{http_code}' \
+            -b "$COOKIE_JAR" \
+            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/photos/$PHOTO_ID/content")
+          test "$PHOTO_STATUS" = "404"
+          grep -q 'PHOTO_EVIDENCE_NOT_FOUND' /tmp/partgraph-photo-error.json
+
           curl --fail --silent --show-error \
             -b "$COOKIE_JAR" \
             -X POST \
@@ -162,8 +256,15 @@ jobs:
 
           HISTORY=$(curl --fail --silent --show-error \
             -b "$COOKIE_JAR" \
-            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/events?after_sequence=0&limit=20")
+            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/events?after_sequence=0&limit=50")
           echo "$HISTORY" | grep -q 'session_started'
+          echo "$HISTORY" | grep -q 'storage_location_created'
+          echo "$HISTORY" | grep -q 'fastener_recorded'
+          echo "$HISTORY" | grep -q 'inventory_item_recorded'
+          echo "$HISTORY" | grep -q 'inventory_state_changed'
+          echo "$HISTORY" | grep -q 'observation_recorded'
+          echo "$HISTORY" | grep -q 'photo_evidence_added'
+          echo "$HISTORY" | grep -q 'photo_evidence_deleted'
           echo "$HISTORY" | grep -q 'session_paused'
           echo "$HISTORY" | grep -q 'session_resumed'
 
