@@ -161,7 +161,11 @@ def test_physical_memory_flow_is_idempotent_and_preserves_session_status() -> No
 
         photo = client.post(
             f"/api/v1/repair-sessions/{session_id}/photos",
-            data={"purpose": "fastener", "fastener_id": fastener_id, "observation_id": observation_id},
+            data={
+                "purpose": "fastener",
+                "fastener_id": fastener_id,
+                "observation_id": observation_id,
+            },
             files={"photo": ("bolt.png", PNG_BYTES, "image/png")},
             headers=_headers(device_id, "memory_photo_01"),
         )
