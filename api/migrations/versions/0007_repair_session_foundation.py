@@ -54,9 +54,16 @@ def upgrade() -> None:
             server_default=sa.text("now()"),
             nullable=False,
         ),
-        sa.CheckConstraint("length(btrim(title)) BETWEEN 1 AND 160", name="ck_repair_sessions_title"),
+        sa.CheckConstraint(
+            "length(btrim(title)) BETWEEN 1 AND 160",
+            name="ck_repair_sessions_title",
+        ),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["user_vehicle_id"], ["user_vehicles.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["user_vehicle_id"],
+            ["user_vehicles.id"],
+            ondelete="CASCADE",
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
             "user_id",
@@ -94,7 +101,9 @@ def upgrade() -> None:
         ),
         sa.CheckConstraint("sequence >= 1", name="ck_repair_session_events_sequence"),
         sa.CheckConstraint(
-            "event_type IN ('session_started', 'session_paused', 'session_resumed', 'session_archived')",
+            "event_type IN ("
+            "'session_started', 'session_paused', 'session_resumed', 'session_archived'"
+            ")",
             name="ck_repair_session_events_type",
         ),
         sa.ForeignKeyConstraint(["session_id"], ["repair_sessions.id"], ondelete="CASCADE"),
@@ -157,7 +166,8 @@ def upgrade() -> None:
 
     op.execute(
         sa.text(
-            f"GRANT SELECT, INSERT, UPDATE ON repair_sessions, repair_session_projections TO {APP_ROLE}"
+            "GRANT SELECT, INSERT, UPDATE ON repair_sessions, "
+            f"repair_session_projections TO {APP_ROLE}"
         )
     )
     op.execute(sa.text(f"GRANT SELECT, INSERT ON repair_session_events TO {APP_ROLE}"))
@@ -169,7 +179,8 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.execute(
         sa.text(
-            "DROP POLICY IF EXISTS repair_session_projections_owner ON repair_session_projections"
+            "DROP POLICY IF EXISTS repair_session_projections_owner "
+            "ON repair_session_projections"
         )
     )
     op.execute(
