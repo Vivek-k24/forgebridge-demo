@@ -86,7 +86,7 @@ class FastenerCreate(BaseModel):
         return _clean_optional(value)
 
     @model_validator(mode="after")
-    def storage_matches_state(self) -> "FastenerCreate":
+    def storage_matches_state(self) -> FastenerCreate:
         if self.physical_state == "stored" and self.storage_location_id is None:
             raise ValueError("stored fasteners require a storage_location_id")
         if self.physical_state in {"installed", "replaced"} and self.storage_location_id is not None:
@@ -105,7 +105,7 @@ class FastenerStateUpdate(BaseModel):
         return _clean_optional(value)
 
     @model_validator(mode="after")
-    def storage_matches_state(self) -> "FastenerStateUpdate":
+    def storage_matches_state(self) -> FastenerStateUpdate:
         if self.physical_state == "stored" and self.storage_location_id is None:
             raise ValueError("stored fasteners require a storage_location_id")
         if self.physical_state in {"installed", "replaced"} and self.storage_location_id is not None:
