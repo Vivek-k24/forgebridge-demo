@@ -78,6 +78,15 @@ jobs:
           alembic -c api/alembic.ini downgrade 0004_catalog_staging_boundary
           alembic -c api/alembic.ini upgrade head
 
+      - name: Verify persisted legacy revision can upgrade without volume reset
+        env:
+          PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
+        run: |
+          alembic -c api/alembic.ini downgrade 0001_vehicle_identity
+          alembic -c api/alembic.ini stamp 0002_vehicle_identity_resolution
+          alembic -c api/alembic.ini upgrade head
+          test "$(alembic -c api/alembic.ini current | tail -n 1)" = "0006_user_vehicle_vin (head)"
+
       - name: Test API, authentication, RLS, and PostgreSQL boundary
         env:
           PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
