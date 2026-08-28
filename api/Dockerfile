@@ -14,6 +14,7 @@ COPY partgraph ./partgraph
 RUN python -m pip install --upgrade pip && \
     python -m pip install . && \
     useradd --create-home --uid 10001 --shell /usr/sbin/nologin partgraph && \
+    mkdir -p /app/media && \
     chown -R partgraph:partgraph /app
 
 USER partgraph
