@@ -56,6 +56,7 @@ def _http_base_url(name: str, default: str) -> str:
 @dataclass(frozen=True, slots=True)
 class Settings:
     database_url: str
+    database_pooling: bool
     web_origin: str
     cookie_secure: bool
     session_days: int
@@ -88,6 +89,7 @@ def _load_settings() -> Settings:
 
     return Settings(
         database_url=database_url,
+        database_pooling=_bool_env("PARTGRAPH_DATABASE_POOLING", True),
         web_origin=web_origin,
         cookie_secure=cookie_secure,
         session_days=_int_env("PARTGRAPH_SESSION_DAYS", 30, minimum=1, maximum=90),
