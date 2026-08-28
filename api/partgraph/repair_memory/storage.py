@@ -6,10 +6,10 @@ from pathlib import Path
 from uuid import UUID
 
 import anyio
+from fastapi import status
 
 from ..config import settings
 from ..errors import ErrorCode, PartGraphError
-from fastapi import status
 
 _STORAGE_KEY_PATTERN = re.compile(r"^[0-9a-f]{32}\.(?:jpg|png|webp|heic)$")
 
