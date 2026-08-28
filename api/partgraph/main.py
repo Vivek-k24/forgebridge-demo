@@ -14,6 +14,7 @@ from .auth.router import router as auth_router
 from .config import settings
 from .database import database_readiness, engine
 from .errors import ErrorCode, PartGraphError, error_response
+from .repair_session.router import router as repair_session_router
 from .user_vehicle.router import router as user_vehicle_router
 from .vehicle.router import router as vehicle_router
 
@@ -21,6 +22,7 @@ logger = logging.getLogger("partgraph.api")
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 AUTH_BODY_LIMIT_BYTES = 16 * 1024
 USER_VEHICLE_BODY_LIMIT_BYTES = 32 * 1024
+REPAIR_SESSION_BODY_LIMIT_BYTES = 16 * 1024
 API_VERSION = "v1"
 
 
@@ -42,7 +44,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="PartGraph API",
-    version="0.4.0",
+    version="0.5.0",
     lifespan=lifespan,
 )
 app.add_middleware(
@@ -50,12 +52,19 @@ app.add_middleware(
     allow_origins=[settings.web_origin],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH"],
-    allow_headers=["Content-Type", "X-PartGraph-CSRF", "X-Request-ID"],
+    allow_headers=[
+        "Content-Type",
+        "X-PartGraph-CSRF",
+        "X-Request-ID",
+        "X-PartGraph-Device-ID",
+        "Idempotency-Key",
+    ],
     expose_headers=["X-Request-ID", "X-PartGraph-API-Version", "Retry-After"],
 )
 app.include_router(auth_router)
 app.include_router(vehicle_router)
 app.include_router(user_vehicle_router)
+app.include_router(repair_session_router)
 
 
 def _request_body_limit(request: Request) -> tuple[int, str] | None:
@@ -65,6 +74,8 @@ def _request_body_limit(request: Request) -> tuple[int, str] | None:
         return AUTH_BODY_LIMIT_BYTES, "Authentication request payload is too large."
     if request.url.path.startswith("/api/v1/user-vehicles"):
         return USER_VEHICLE_BODY_LIMIT_BYTES, "Vehicle request payload is too large."
+    if request.url.path.startswith("/api/v1/repair-sessions"):
+        return REPAIR_SESSION_BODY_LIMIT_BYTES, "Repair-session request payload is too large."
     return None
 
 
@@ -129,7 +140,12 @@ def _finish_response(request: Request, response: Response, duration_ms: float) -
     response.headers["Permissions-Policy"] = "camera=(self), microphone=(self), geolocation=()"
 
     if request.url.path.startswith(
-        ("/api/v1/auth", "/api/v1/account", "/api/v1/user-vehicles")
+        (
+            "/api/v1/auth",
+            "/api/v1/account",
+            "/api/v1/user-vehicles",
+            "/api/v1/repair-sessions",
+        )
     ):
         response.headers["Cache-Control"] = "no-store"
     elif "Cache-Control" not in response.headers:
