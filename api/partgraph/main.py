@@ -14,6 +14,7 @@ from .auth.router import router as auth_router
 from .config import settings
 from .database import database_readiness, engine
 from .errors import ErrorCode, PartGraphError, error_response
+from .repair_memory.router import router as repair_memory_router
 from .repair_session.router import router as repair_session_router
 from .user_vehicle.router import router as user_vehicle_router
 from .vehicle.router import router as vehicle_router
@@ -23,6 +24,7 @@ REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 AUTH_BODY_LIMIT_BYTES = 16 * 1024
 USER_VEHICLE_BODY_LIMIT_BYTES = 32 * 1024
 REPAIR_SESSION_BODY_LIMIT_BYTES = 16 * 1024
+PHOTO_MULTIPART_OVERHEAD_BYTES = 256 * 1024
 API_VERSION = "v1"
 
 
@@ -44,14 +46,14 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="PartGraph API",
-    version="0.5.0",
+    version="0.6.0",
     lifespan=lifespan,
 )
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.web_origin],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PATCH"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=[
         "Content-Type",
         "X-PartGraph-CSRF",
@@ -65,6 +67,7 @@ app.include_router(auth_router)
 app.include_router(vehicle_router)
 app.include_router(user_vehicle_router)
 app.include_router(repair_session_router)
+app.include_router(repair_memory_router)
 
 
 def _request_body_limit(request: Request) -> tuple[int, str] | None:
@@ -75,6 +78,11 @@ def _request_body_limit(request: Request) -> tuple[int, str] | None:
     if request.url.path.startswith("/api/v1/user-vehicles"):
         return USER_VEHICLE_BODY_LIMIT_BYTES, "Vehicle request payload is too large."
     if request.url.path.startswith("/api/v1/repair-sessions"):
+        if request.url.path.endswith("/photos"):
+            return (
+                settings.photo_max_bytes + PHOTO_MULTIPART_OVERHEAD_BYTES,
+                "Photo upload payload is too large.",
+            )
         return REPAIR_SESSION_BODY_LIMIT_BYTES, "Repair-session request payload is too large."
     return None
 
@@ -209,6 +217,7 @@ async def http_error_handler(request: Request, exc: StarletteHTTPException) -> R
         status.HTTP_404_NOT_FOUND: ErrorCode.REQUEST_NOT_FOUND,
         status.HTTP_405_METHOD_NOT_ALLOWED: ErrorCode.REQUEST_METHOD_NOT_ALLOWED,
         status.HTTP_409_CONFLICT: ErrorCode.REQUEST_CONFLICT,
+        status.HTTP_413_CONTENT_TOO_LARGE: ErrorCode.REQUEST_PAYLOAD_TOO_LARGE,
         status.HTTP_422_UNPROCESSABLE_CONTENT: ErrorCode.REQUEST_VALIDATION_FAILED,
         status.HTTP_429_TOO_MANY_REQUESTS: ErrorCode.RATE_LIMITED,
     }
