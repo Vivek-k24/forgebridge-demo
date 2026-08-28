@@ -56,6 +56,7 @@ def _http_base_url(name: str, default: str) -> str:
 @dataclass(frozen=True, slots=True)
 class Settings:
     database_url: str
+    database_pooling: bool
     web_origin: str
     cookie_secure: bool
     session_days: int
@@ -67,6 +68,7 @@ class Settings:
     vin_cache_hours: int
     nhtsa_base_url: str
     nhtsa_timeout_seconds: float
+    repair_edit_lease_seconds: int
 
 
 def _load_settings() -> Settings:
@@ -87,6 +89,7 @@ def _load_settings() -> Settings:
 
     return Settings(
         database_url=database_url,
+        database_pooling=_bool_env("PARTGRAPH_DATABASE_POOLING", True),
         web_origin=web_origin,
         cookie_secure=cookie_secure,
         session_days=_int_env("PARTGRAPH_SESSION_DAYS", 30, minimum=1, maximum=90),
@@ -108,6 +111,9 @@ def _load_settings() -> Settings:
         ),
         nhtsa_timeout_seconds=_float_env(
             "PARTGRAPH_NHTSA_TIMEOUT_SECONDS", 4.0, minimum=0.5, maximum=8.0
+        ),
+        repair_edit_lease_seconds=_int_env(
+            "PARTGRAPH_REPAIR_EDIT_LEASE_SECONDS", 300, minimum=30, maximum=3_600
         ),
     )
 

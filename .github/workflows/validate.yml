@@ -37,7 +37,7 @@ jobs:
       - name: Build and start PartGraph stack
         run: docker compose up -d --build
 
-      - name: Verify API, Web, auth, and private vehicle integration
+      - name: Verify API, Web, auth, vehicle, and repair-session integration
         run: |
           for attempt in $(seq 1 45); do
             API_OK=0
@@ -67,6 +67,8 @@ jobs:
           EMAIL="ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}@example.com"
           PASSWORD='PartGraph-ci-password-123!'
           COOKIE_JAR=/tmp/partgraph-ci.cookies
+          DEVICE_A=$(python -c 'import uuid; print(uuid.uuid4())')
+          DEVICE_B=$(python -c 'import uuid; print(uuid.uuid4())')
 
           curl --fail --silent --show-error \
             -c "$COOKIE_JAR" \
@@ -104,6 +106,88 @@ jobs:
             http://127.0.0.1:5173/api/v1/user-vehicles/vin/decode)
           test "$VIN_STATUS" = "422"
           grep -q 'VIN_CHECK_DIGIT_INVALID' /tmp/partgraph-vin-error.json
+
+          REPAIR=$(curl --fail --silent --show-error \
+            -b "$COOKIE_JAR" \
+            -H 'Content-Type: application/json' \
+            -H 'X-PartGraph-CSRF: 1' \
+            -H "X-PartGraph-Device-ID: $DEVICE_A" \
+            -H 'Idempotency-Key: ci_repair_create_01' \
+            --data "{\"user_vehicle_id\":\"$VEHICLE_ID\",\"title\":\"CI radiator repair\"}" \
+            http://127.0.0.1:5173/api/v1/repair-sessions)
+          echo "$REPAIR" | grep -q '"status":"active"'
+          echo "$REPAIR" | grep -q '"event_type":"session_started"'
+          SESSION_ID=$(python -c 'import json,sys; print(json.load(sys.stdin)["session"]["id"])' <<< "$REPAIR")
+
+          curl --fail --silent --show-error \
+            -b "$COOKIE_JAR" \
+            -H "X-PartGraph-Device-ID: $DEVICE_B" \
+            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/resume" \
+            | grep -q '"status":"held_by_other"'
+
+          LEASE_STATUS=$(curl --silent --output /tmp/partgraph-lease-error.json --write-out '%{http_code}' \
+            -b "$COOKIE_JAR" \
+            -X POST \
+            -H 'X-PartGraph-CSRF: 1' \
+            -H "X-PartGraph-Device-ID: $DEVICE_B" \
+            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/lease/acquire")
+          test "$LEASE_STATUS" = "409"
+          grep -q 'REPAIR_SESSION_LEASE_HELD' /tmp/partgraph-lease-error.json
+
+          curl --fail --silent --show-error \
+            -b "$COOKIE_JAR" \
+            -X POST \
+            -H 'X-PartGraph-CSRF: 1' \
+            -H "X-PartGraph-Device-ID: $DEVICE_B" \
+            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/lease/takeover" \
+            | grep -q '"status":"owned"'
+
+          curl --fail --silent --show-error \
+            -b "$COOKIE_JAR" \
+            -X POST \
+            -H 'X-PartGraph-CSRF: 1' \
+            -H "X-PartGraph-Device-ID: $DEVICE_B" \
+            -H 'Idempotency-Key: ci_repair_pause_01' \
+            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/pause" \
+            | grep -q '"event_type":"session_paused"'
+
+          curl --fail --silent --show-error \
+            -b "$COOKIE_JAR" \
+            -X POST \
+            -H 'X-PartGraph-CSRF: 1' \
+            -H "X-PartGraph-Device-ID: $DEVICE_B" \
+            -H 'Idempotency-Key: ci_repair_resume_01' \
+            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/resume" \
+            | grep -q '"event_type":"session_resumed"'
+
+          HISTORY=$(curl --fail --silent --show-error \
+            -b "$COOKIE_JAR" \
+            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/events?after_sequence=0&limit=20")
+          echo "$HISTORY" | grep -q 'session_started'
+          echo "$HISTORY" | grep -q 'session_paused'
+          echo "$HISTORY" | grep -q 'session_resumed'
+
+          curl --fail --silent --show-error \
+            -b "$COOKIE_JAR" \
+            -X PATCH \
+            -H 'X-PartGraph-CSRF: 1' \
+            -H "X-PartGraph-Device-ID: $DEVICE_B" \
+            -H 'Idempotency-Key: ci_repair_archive_01' \
+            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/archive" \
+            | grep -q '"event_type":"session_archived"'
+
+          if curl --fail --silent --show-error \
+            -b "$COOKIE_JAR" \
+            http://127.0.0.1:5173/api/v1/repair-sessions \
+            | grep -q "\"id\":\"$SESSION_ID\""; then
+            echo "Archived repair leaked into the default active list."
+            exit 1
+          fi
+
+          curl --fail --silent --show-error \
+            -b "$COOKIE_JAR" \
+            'http://127.0.0.1:5173/api/v1/repair-sessions?include_archived=true' \
+            | grep -q "\"id\":\"$SESSION_ID\""
 
           curl --fail --silent --show-error \
             -b "$COOKIE_JAR" \

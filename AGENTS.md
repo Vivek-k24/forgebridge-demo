@@ -6,6 +6,8 @@ PartGraph maintains a trustworthy digital representation of a physical repair as
 
 > PartGraph is a stateful AI-assisted repair companion that reconstructs the exact vehicle assembly, tracks every part and repair action as work progresses, and lets a repair resume from the same physical state after a pause.
 
+The private `RepairSession` is the product center. Vehicle identification is an entry point; chat, AI, catalog ingestion, and diagnosis are supporting capabilities rather than the primary state container.
+
 ## System architecture
 
 PartGraph is distributed at the top-level service boundary but deliberately not microservice-heavy.
@@ -53,7 +55,7 @@ Do not create an empty collector implementation. Add its container only when the
 ## Runtime performance rules
 
 1. Catalog collection, training, deployment work, and LLM calls are never on the repair-session resume critical path.
-2. Interactive server-backed workflow retrieval targets p95 under 3 seconds.
+2. Interactive server-backed workflow retrieval targets p95 under 3 seconds; the purpose-built repair-session Resume read targets p95 under 2 seconds.
 3. Ten seconds is the hard blocking boundary. The UI must stop blocking and render a useful failure/fallback state rather than spin indefinitely.
 4. PostgreSQL is authoritative for private repair state. PartGraph does not promise full offline repair operation.
 5. Small transient client caches are acceptable for responsiveness and brief connectivity interruptions, but they are not a second authoritative database.
@@ -73,6 +75,19 @@ Do not create an empty collector implementation. Add its container only when the
 9. Deterministic VIN duplicate detection uses a keyed, owner-scoped fingerprint rather than plaintext or a bare unsalted hash. Different owners must not be able to infer one another's VIN presence from duplicate behavior.
 10. Normal API/UI representations expose a masked VIN only. Decryption is not part of ordinary list/read rendering.
 11. Passwords, password hashes, raw session tokens, CSRF material, VIN cryptographic keys, and other secrets must never be logged.
+
+## Repair-session state rules
+
+1. A `RepairSession` belongs to exactly one user-owned `UserVehicle`. It is private and covered by the same application user filter plus PostgreSQL RLS defense in depth.
+2. Repair-session event history is append-only from the application role. Never update or delete an event to make current state look correct.
+3. Current repair state is a disposable projection/read model. If it is missing or stale, rebuild it deterministically from the immutable ordered event history.
+4. Every physical-state mutation requires the active edit lease for that session and a stable idempotency key. Viewing/resume reads do not require editing control.
+5. V1 has one active editing device per repair session. A second device may read; mutation is rejected until the lease expires or the user explicitly takes over the session.
+6. Event sequence and idempotency uniqueness are database-enforced. Concurrent requests must serialize or fail with a deterministic coded conflict rather than depend on Python timing.
+7. Pausing, resuming, archiving, and future repair-state transitions append events first and advance the projection transactionally in the same database transaction.
+8. Repair sessions are archived rather than hard-deleted once history exists.
+9. A Resume response may report only state PartGraph has actually recorded. Never populate missing parts, fasteners, observations, blockers, plan steps, or actions just to make the UI look complete.
+10. A “next safe action” requires verified repair-plan/dependency truth plus current physical state. Until that domain exists, the product must explicitly say the action is unavailable rather than infer one from an LLM or a generic procedure.
 
 ## Reliability and error contract
 

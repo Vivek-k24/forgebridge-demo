@@ -85,7 +85,7 @@ jobs:
           alembic -c api/alembic.ini downgrade 0001_vehicle_identity
           alembic -c api/alembic.ini stamp 0002_vehicle_identity_resolution
           alembic -c api/alembic.ini upgrade head
-          test "$(alembic -c api/alembic.ini current | tail -n 1)" = "0006_user_vehicle_vin (head)"
+          test "$(alembic -c api/alembic.ini current | tail -n 1)" = "0007_repair_session_foundation (head)"
 
       - name: Test API, authentication, RLS, and PostgreSQL boundary
         env:

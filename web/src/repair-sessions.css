@@ -1,0 +1,310 @@
+.repair-workspace {
+  width: min(1180px, calc(100% - 2rem));
+  margin: 0 auto 3rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.repair-heading,
+.repair-current-head,
+.repair-section-title,
+.repair-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.repair-heading {
+  align-items: end;
+  padding: 2rem 0 0.5rem;
+}
+
+.repair-heading h1 {
+  max-width: 760px;
+}
+
+.repair-device,
+.repair-status,
+.repair-section-title > span {
+  border: 1px solid rgba(33, 37, 41, 0.14);
+  border-radius: 999px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.repair-device {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.repair-alert {
+  border-radius: 0.75rem;
+  padding: 0.85rem 1rem;
+  font-weight: 650;
+}
+
+.repair-alert--error {
+  border: 1px solid rgba(159, 45, 45, 0.28);
+  background: rgba(159, 45, 45, 0.1);
+  color: #7d2222;
+}
+
+.repair-alert--success {
+  border: 1px solid rgba(28, 107, 66, 0.25);
+  background: rgba(28, 107, 66, 0.09);
+  color: #145332;
+}
+
+.repair-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.38fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.repair-sidebar,
+.repair-main {
+  padding: 1.25rem;
+}
+
+.repair-sidebar {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.repair-section-title h2,
+.repair-section-title h3,
+.repair-current-head h2 {
+  margin: 0.15rem 0 0;
+}
+
+.repair-session-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.repair-session-card {
+  width: 100%;
+  display: grid;
+  gap: 0.28rem;
+  text-align: left;
+  padding: 0.8rem;
+  border: 1px solid rgba(33, 37, 41, 0.13);
+  border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.4);
+  color: inherit;
+  cursor: pointer;
+}
+
+.repair-session-card span {
+  font-size: 0.82rem;
+  opacity: 0.68;
+}
+
+.repair-session-card--active {
+  border-color: rgba(27, 96, 65, 0.5);
+  box-shadow: inset 3px 0 0 rgba(27, 96, 65, 0.85);
+  background: rgba(40, 129, 87, 0.08);
+}
+
+.repair-create {
+  display: grid;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(33, 37, 41, 0.12);
+}
+
+.repair-create label {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 650;
+}
+
+.repair-create input,
+.repair-create select {
+  min-height: 44px;
+  width: 100%;
+  border: 1px solid rgba(33, 37, 41, 0.18);
+  border-radius: 0.6rem;
+  padding: 0.65rem 0.7rem;
+  background: rgba(255, 255, 255, 0.72);
+  color: inherit;
+  font: inherit;
+}
+
+.repair-empty {
+  border: 1px dashed rgba(33, 37, 41, 0.2);
+  border-radius: 0.75rem;
+  padding: 0.9rem;
+}
+
+.repair-empty p {
+  margin-bottom: 0;
+}
+
+.repair-empty--large {
+  min-height: 320px;
+  display: grid;
+  place-content: center;
+  text-align: center;
+}
+
+.repair-current-head {
+  align-items: flex-start;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(33, 37, 41, 0.12);
+}
+
+.repair-current-head p {
+  margin: 0.4rem 0 0;
+}
+
+.repair-status {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 750;
+}
+
+.repair-status--active {
+  border-color: rgba(28, 107, 66, 0.3);
+  background: rgba(28, 107, 66, 0.09);
+}
+
+.repair-status--paused {
+  border-color: rgba(132, 92, 20, 0.3);
+  background: rgba(132, 92, 20, 0.08);
+}
+
+.repair-status--archived {
+  opacity: 0.65;
+}
+
+.repair-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.repair-facts > div {
+  display: grid;
+  gap: 0.35rem;
+  min-height: 120px;
+  align-content: start;
+  padding: 0.9rem;
+  border: 1px solid rgba(33, 37, 41, 0.11);
+  border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.repair-facts span,
+.repair-facts small,
+.repair-history small {
+  font-size: 0.8rem;
+  opacity: 0.68;
+}
+
+.repair-actions {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  padding: 0.25rem 0 1.25rem;
+  border-bottom: 1px solid rgba(33, 37, 41, 0.12);
+}
+
+.repair-history {
+  padding-top: 1.25rem;
+}
+
+.repair-history ol {
+  list-style: none;
+  padding: 0;
+  margin: 0.9rem 0 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.repair-history li {
+  display: grid;
+  grid-template-columns: 2rem 1fr;
+  gap: 0.75rem;
+  align-items: start;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid rgba(33, 37, 41, 0.08);
+}
+
+.repair-history li > span {
+  width: 1.8rem;
+  height: 1.8rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(33, 37, 41, 0.08);
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.repair-history li div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.repair-loading {
+  width: min(1120px, calc(100% - 2rem));
+  margin: 4rem auto;
+}
+
+.block5-mode-tabs--three {
+  display: grid;
+  grid-template-columns: repeat(3, max-content);
+}
+
+@media (max-width: 820px) {
+  .repair-grid,
+  .repair-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .repair-sidebar {
+    order: 2;
+  }
+
+  .repair-main {
+    order: 1;
+  }
+
+  .repair-facts > div {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .repair-workspace {
+    width: min(100% - 1rem, 1180px);
+  }
+
+  .repair-heading,
+  .repair-current-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .repair-device,
+  .repair-status {
+    align-self: flex-start;
+  }
+
+  .block5-mode-tabs--three {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .block5-mode-tabs--three .block5-mode-tab {
+    padding-inline: 0.4rem;
+    font-size: 0.86rem;
+  }
+
+  .repair-actions button,
+  .repair-create button {
+    width: 100%;
+  }
+}
