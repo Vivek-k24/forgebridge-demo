@@ -1,0 +1,223 @@
+.block5-mode-shell {
+  width: min(1120px, calc(100% - 2rem));
+  margin: 1rem auto -0.25rem;
+}
+
+.block5-mode-tabs {
+  display: inline-flex;
+  gap: 0.35rem;
+  padding: 0.3rem;
+  border: 1px solid rgba(33, 37, 41, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.58);
+  backdrop-filter: blur(10px);
+}
+
+.block5-mode-tab {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.62rem 0.95rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.block5-mode-tab--active {
+  background: rgba(33, 37, 41, 0.9);
+  color: white;
+}
+
+/* App's original internal tabs predate the private garage shell. Keep its proven
+   Vehicle Details screen intact and let Block5Shell own the top-level mode switch. */
+.block5-details-host .workspace > .tabs {
+  display: none;
+}
+
+.private-vehicle-workspace {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.vin-form--live {
+  align-items: end;
+}
+
+.vin-result {
+  display: grid;
+  gap: 1rem;
+}
+
+.vin-result__headline,
+.garage__heading,
+.garage-card,
+.vin-save-row,
+.save-manual {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.masked-vin {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.vin-save-row,
+.save-manual {
+  align-items: end;
+}
+
+.vin-save-row label,
+.save-manual label {
+  flex: 1;
+}
+
+.save-manual {
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.save-manual .inline-success,
+.save-manual .inline-error {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.inline-success {
+  color: var(--success, #1c6b42);
+  font-weight: 650;
+}
+
+.inline-error {
+  color: var(--danger, #9f2d2d);
+  font-weight: 650;
+}
+
+.vin-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.garage {
+  margin-top: 0.75rem;
+  border-top: 1px solid rgba(33, 37, 41, 0.12);
+  padding-top: 1.25rem;
+}
+
+.garage__heading {
+  align-items: end;
+  margin-bottom: 1rem;
+}
+
+.garage__heading h3,
+.garage-card h4 {
+  margin: 0.1rem 0 0;
+}
+
+.archive-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.archive-toggle input {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+}
+
+.garage__empty {
+  border: 1px dashed rgba(33, 37, 41, 0.22);
+  border-radius: 0.8rem;
+  padding: 1rem;
+}
+
+.garage__empty p {
+  margin-bottom: 0;
+}
+
+.garage__list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.garage-card {
+  align-items: flex-start;
+  padding: 1rem;
+  border: 1px solid rgba(33, 37, 41, 0.12);
+  border-radius: 0.8rem;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.garage-card p {
+  margin: 0.35rem 0 0;
+}
+
+.garage-card__meta {
+  font-size: 0.84rem;
+  opacity: 0.72;
+}
+
+.garage-card--archived {
+  opacity: 0.68;
+}
+
+.archived-badge {
+  border: 1px solid rgba(33, 37, 41, 0.16);
+  border-radius: 999px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .block5-mode-shell {
+    width: min(100% - 1rem, 1120px);
+    margin-top: 0.5rem;
+  }
+
+  .block5-mode-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+    border-radius: 0.8rem;
+  }
+
+  .block5-mode-tab {
+    border-radius: 0.6rem;
+  }
+
+  .vin-result__headline,
+  .garage__heading,
+  .garage-card,
+  .vin-save-row,
+  .save-manual,
+  .vin-fallback {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .vin-save-row button,
+  .save-manual button,
+  .vin-fallback button,
+  .garage-card button {
+    width: 100%;
+  }
+
+  .archive-toggle {
+    align-self: flex-start;
+  }
+
+  .masked-vin {
+    align-self: flex-start;
+  }
+}

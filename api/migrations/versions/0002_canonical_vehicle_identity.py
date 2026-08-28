@@ -6,7 +6,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0002_canonical_vehicle_identity"
-down_revision: str | None = "0001_vehicle_identity"
+down_revision: str | None = "0002_vehicle_identity_resolution"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

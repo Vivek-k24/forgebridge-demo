@@ -23,13 +23,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
+      - name: Prepare ephemeral VIN protection keys
+        run: |
+          VIN_ENCRYPTION_KEY="$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '\n')"
+          VIN_LOOKUP_KEY="$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '\n')"
+          echo "PARTGRAPH_VIN_ENCRYPTION_KEYS={\"1\":\"${VIN_ENCRYPTION_KEY}\"}" >> "$GITHUB_ENV"
+          echo "PARTGRAPH_VIN_ACTIVE_KEY_VERSION=1" >> "$GITHUB_ENV"
+          echo "PARTGRAPH_VIN_LOOKUP_KEY=${VIN_LOOKUP_KEY}" >> "$GITHUB_ENV"
+
       - name: Validate Compose model
         run: docker compose config --quiet
 
       - name: Build and start PartGraph stack
         run: docker compose up -d --build
 
-      - name: Verify API and Web integration
+      - name: Verify API, Web, auth, and private vehicle integration
         run: |
           for attempt in $(seq 1 45); do
             API_OK=0
@@ -72,6 +80,50 @@ jobs:
             -b "$COOKIE_JAR" \
             http://127.0.0.1:5173/api/v1/auth/me \
             | grep -q "\"username\":\"$USERNAME\""
+
+          MANUAL_VEHICLE=$(curl --fail --silent --show-error \
+            -b "$COOKIE_JAR" \
+            -H 'Content-Type: application/json' \
+            -H 'X-PartGraph-CSRF: 1' \
+            --data '{"nickname":"CI garage car","selection":{"year":2009,"market":"US","make":"Honda","model":"Civic","trim":"Hybrid"}}' \
+            http://127.0.0.1:5173/api/v1/user-vehicles/manual)
+          echo "$MANUAL_VEHICLE" | grep -q '"identity_source":"manual"'
+          echo "$MANUAL_VEHICLE" | grep -q '"identity_resolution":"manual_candidate"'
+          VEHICLE_ID=$(python -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<< "$MANUAL_VEHICLE")
+
+          curl --fail --silent --show-error \
+            -b "$COOKIE_JAR" \
+            http://127.0.0.1:5173/api/v1/user-vehicles \
+            | grep -q "\"id\":\"$VEHICLE_ID\""
+
+          VIN_STATUS=$(curl --silent --output /tmp/partgraph-vin-error.json --write-out '%{http_code}' \
+            -b "$COOKIE_JAR" \
+            -H 'Content-Type: application/json' \
+            -H 'X-PartGraph-CSRF: 1' \
+            --data '{"market":"US","vin":"1HGCM82643A004352"}' \
+            http://127.0.0.1:5173/api/v1/user-vehicles/vin/decode)
+          test "$VIN_STATUS" = "422"
+          grep -q 'VIN_CHECK_DIGIT_INVALID' /tmp/partgraph-vin-error.json
+
+          curl --fail --silent --show-error \
+            -b "$COOKIE_JAR" \
+            -X PATCH \
+            -H 'X-PartGraph-CSRF: 1' \
+            "http://127.0.0.1:5173/api/v1/user-vehicles/$VEHICLE_ID/archive" \
+            | grep -q '"archived_at"'
+
+          if curl --fail --silent --show-error \
+            -b "$COOKIE_JAR" \
+            http://127.0.0.1:5173/api/v1/user-vehicles \
+            | grep -q "\"id\":\"$VEHICLE_ID\""; then
+            echo "Archived vehicle leaked into the default active list."
+            exit 1
+          fi
+
+          curl --fail --silent --show-error \
+            -b "$COOKIE_JAR" \
+            'http://127.0.0.1:5173/api/v1/user-vehicles?include_archived=true' \
+            | grep -q "\"id\":\"$VEHICLE_ID\""
 
           curl --fail --silent --show-error \
             -b "$COOKIE_JAR" \

@@ -55,6 +55,10 @@ class VehicleSelectionInput(BaseModel):
     model: str = Field(min_length=1, max_length=96)
     trim: str | None = Field(default=None, max_length=128)
     generation: str | None = Field(default=None, max_length=96)
+    body_style: str | None = Field(default=None, max_length=64)
+    engine: str | None = Field(default=None, max_length=128)
+    transmission: str | None = Field(default=None, max_length=128)
+    drivetrain: str | None = Field(default=None, max_length=64)
 
     @field_validator("year")
     @classmethod
@@ -69,7 +73,14 @@ class VehicleSelectionInput(BaseModel):
             raise ValueError("value cannot be blank")
         return cleaned
 
-    @field_validator("trim", "generation")
+    @field_validator(
+        "trim",
+        "generation",
+        "body_style",
+        "engine",
+        "transmission",
+        "drivetrain",
+    )
     @classmethod
     def clean_optional(cls, value: str | None) -> str | None:
         if value is None:
@@ -111,6 +122,10 @@ class VehicleSelectionNormalized(BaseModel):
     model: str
     trim: str | None
     generation: str | None
+    body_style: str | None = None
+    engine: str | None = None
+    transmission: str | None = None
+    drivetrain: str | None = None
 
 
 class VehicleSelectionResult(BaseModel):

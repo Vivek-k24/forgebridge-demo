@@ -8,10 +8,14 @@ from .models import VehicleConfiguration
 from .schemas import VehicleConfigurationInput, VehicleSelectionInput
 from .taxonomy import (
     CANONICALIZATION_VERSION,
+    canonical_body_style,
+    canonical_drivetrain,
+    canonical_engine,
     canonical_generation,
     canonical_make,
     canonical_market,
     canonical_model,
+    canonical_transmission,
     canonical_trim,
     canonicalize_fields,
     compact_key,
@@ -27,6 +31,7 @@ OPTIONAL_IDENTITY_FIELDS = (
     "drivetrain",
 )
 STRUCTURED_DETAIL_FIELDS = {"engine", "transmission"}
+SELECTION_DETAIL_FIELDS = ("body_style", "engine", "transmission", "drivetrain")
 
 
 class AmbiguousVehicleIdentityError(ValueError):
@@ -63,11 +68,7 @@ def _identity_hash(values: dict[str, int | str | None]) -> str:
 
 
 def _detail_tokens(field: str, value: str) -> set[str]:
-    return {
-        token
-        for token in comparison_key(field, value).split("|")
-        if token
-    }
+    return {token for token in comparison_key(field, value).split("|") if token}
 
 
 def _compatible(field: str, current: str | None, incoming: str | None) -> bool:
@@ -155,9 +156,7 @@ async def resolve_configuration(
     await _lock_base_identity(session, base_hash)
 
     exact = await session.scalar(
-        select(VehicleConfiguration).where(
-            VehicleConfiguration.identity_hash == fingerprint
-        )
+        select(VehicleConfiguration).where(VehicleConfiguration.identity_hash == fingerprint)
     )
     if exact is not None:
         return exact, "matched"
@@ -170,22 +169,13 @@ async def resolve_configuration(
         )
     )
     compatible = [
-        candidate
-        for candidate in candidates
-        if _candidate_is_compatible(candidate, incoming)
+        candidate for candidate in candidates if _candidate_is_compatible(candidate, incoming)
     ]
 
     if compatible:
-        scores = {
-            candidate.id: _candidate_score(candidate, incoming)
-            for candidate in compatible
-        }
+        scores = {candidate.id: _candidate_score(candidate, incoming) for candidate in compatible}
         best_score = max(scores.values())
-        best = [
-            candidate
-            for candidate in compatible
-            if scores[candidate.id] == best_score
-        ]
+        best = [candidate for candidate in compatible if scores[candidate.id] == best_score]
         if len(best) != 1:
             await session.rollback()
             raise AmbiguousVehicleIdentityError(
@@ -201,10 +191,7 @@ async def resolve_configuration(
                 "market": candidate.market,
                 "make": candidate.make,
                 "model": candidate.model,
-                **{
-                    field: getattr(candidate, field)
-                    for field in OPTIONAL_IDENTITY_FIELDS
-                },
+                **{field: getattr(candidate, field) for field in OPTIONAL_IDENTITY_FIELDS},
             }
             candidate.identity_hash = _identity_hash(values)
             candidate.canonicalization_version = CANONICALIZATION_VERSION
@@ -291,8 +278,7 @@ async def list_trim_options(
     values = {
         candidate.trim
         for candidate in candidates
-        if candidate.trim is not None
-        and comparison_key("model", candidate.model) == model_key
+        if candidate.trim is not None and comparison_key("model", candidate.model) == model_key
     }
     return _filter_query(values, query, limit)
 
@@ -336,7 +322,7 @@ async def resolve_selection(
     session: AsyncSession,
     payload: VehicleSelectionInput,
 ) -> tuple[str, dict[str, int | str | None], list[VehicleConfiguration]]:
-    """Resolve user text against canonical rows without mutating shared truth."""
+    """Resolve user/source text against canonical rows without mutating shared truth."""
     normalized = {
         "year": payload.year,
         "market": canonical_market(payload.market),
@@ -344,6 +330,10 @@ async def resolve_selection(
         "model": canonical_model(payload.model),
         "trim": canonical_trim(payload.trim),
         "generation": canonical_generation(payload.generation),
+        "body_style": canonical_body_style(payload.body_style),
+        "engine": canonical_engine(payload.engine),
+        "transmission": canonical_transmission(payload.transmission),
+        "drivetrain": canonical_drivetrain(payload.drivetrain),
     }
     candidates = await _selection_base_candidates(
         session,
@@ -365,6 +355,16 @@ async def resolve_selection(
             for candidate in matches
             if candidate.trim is not None
             and comparison_key("trim", candidate.trim) == trim_key
+        ]
+
+    for field in SELECTION_DETAIL_FIELDS:
+        incoming = normalized[field]
+        if not isinstance(incoming, str):
+            continue
+        matches = [
+            candidate
+            for candidate in matches
+            if _compatible(field, getattr(candidate, field), incoming)
         ]
 
     if not matches:
