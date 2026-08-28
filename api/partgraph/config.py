@@ -67,6 +67,7 @@ class Settings:
     vin_cache_hours: int
     nhtsa_base_url: str
     nhtsa_timeout_seconds: float
+    repair_edit_lease_seconds: int
 
 
 def _load_settings() -> Settings:
@@ -108,6 +109,9 @@ def _load_settings() -> Settings:
         ),
         nhtsa_timeout_seconds=_float_env(
             "PARTGRAPH_NHTSA_TIMEOUT_SECONDS", 4.0, minimum=0.5, maximum=8.0
+        ),
+        repair_edit_lease_seconds=_int_env(
+            "PARTGRAPH_REPAIR_EDIT_LEASE_SECONDS", 300, minimum=30, maximum=3_600
         ),
     )
 
