@@ -22,6 +22,9 @@ SessionEventType = Literal[
     "photo_evidence_deleted",
 ]
 LeaseStatus = Literal["available", "owned", "held_by_other"]
+ResumeAttentionKind = Literal["fastener", "inventory", "observation"]
+ResumeAttentionSeverity = Literal["attention", "waiting", "blocking"]
+NextVerifiedActionStatus = Literal["available", "unavailable"]
 
 
 class RepairSessionCreate(BaseModel):
@@ -64,11 +67,77 @@ class RepairSessionLeaseRead(BaseModel):
     expires_at: datetime | None
 
 
+class ResumeActivityRead(BaseModel):
+    sequence: int
+    event_type: SessionEventType
+    label: str
+    created_at: datetime
+
+
+class ResumeAttentionItemRead(BaseModel):
+    kind: ResumeAttentionKind
+    id: UUID
+    label: str
+    state: str
+    severity: ResumeAttentionSeverity
+    detail: str | None = None
+
+
+class ResumeStorageGroupRead(BaseModel):
+    storage_location_id: UUID
+    label: str
+    item_count: int
+
+
+class ResumeObservationRead(BaseModel):
+    id: UUID
+    category: str
+    text: str
+    fastener_id: UUID | None
+    created_at: datetime
+
+
+class ResumeEvidenceRead(BaseModel):
+    id: UUID
+    purpose: str
+    content_url: str
+    created_at: datetime
+
+
+class ResumeCountsRead(BaseModel):
+    fasteners_total: int
+    hardware_not_installed: int
+    hardware_stored: int
+    hardware_loose: int
+    inventory_total: int
+    procurement_blockers: int
+    observations_total: int
+    photos_total: int
+
+
+class ResumeNextVerifiedActionRead(BaseModel):
+    status: NextVerifiedActionStatus
+    label: str | None = None
+    reason: str | None = None
+
+
+class RepairSessionReorientationRead(BaseModel):
+    checkpoint: ResumeActivityRead
+    attention: list[ResumeAttentionItemRead]
+    storage_groups: list[ResumeStorageGroupRead]
+    recent_observations: list[ResumeObservationRead]
+    recent_evidence: list[ResumeEvidenceRead]
+    recent_activity: list[ResumeActivityRead]
+    counts: ResumeCountsRead
+    next_verified_action: ResumeNextVerifiedActionRead
+
+
 class RepairSessionResumeRead(BaseModel):
     session: RepairSessionRead
     vehicle: UserVehicleRead
     last_event: RepairSessionEventRead
     lease: RepairSessionLeaseRead
+    reorientation: RepairSessionReorientationRead
 
 
 class RepairSessionMutationRead(BaseModel):
