@@ -29,8 +29,12 @@ services:
       PARTGRAPH_VIN_CACHE_HOURS: ${PARTGRAPH_VIN_CACHE_HOURS:-720}
       PARTGRAPH_NHTSA_BASE_URL: ${PARTGRAPH_NHTSA_BASE_URL:-https://vpic.nhtsa.dot.gov/api/vehicles}
       PARTGRAPH_NHTSA_TIMEOUT_SECONDS: ${PARTGRAPH_NHTSA_TIMEOUT_SECONDS:-4.0}
+      PARTGRAPH_MEDIA_ROOT: /app/media
+      PARTGRAPH_PHOTO_MAX_BYTES: ${PARTGRAPH_PHOTO_MAX_BYTES:-15728640}
     ports:
       - "8000:8000"
+    volumes:
+      - partgraph_media:/app/media
     depends_on:
       postgres:
         condition: service_healthy
@@ -60,3 +64,4 @@ services:
 
 volumes:
   partgraph_postgres:
+  partgraph_media:
