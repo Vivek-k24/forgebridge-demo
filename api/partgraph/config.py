@@ -53,6 +53,13 @@ def _http_base_url(name: str, default: str) -> str:
     return value
 
 
+def _path_env(name: str, default: str) -> str:
+    value = getenv(name, default).strip()
+    if not value:
+        raise ValueError(f"{name} must not be empty")
+    return value
+
+
 @dataclass(frozen=True, slots=True)
 class Settings:
     database_url: str
@@ -69,6 +76,8 @@ class Settings:
     nhtsa_base_url: str
     nhtsa_timeout_seconds: float
     repair_edit_lease_seconds: int
+    media_root: str
+    photo_max_bytes: int
 
 
 def _load_settings() -> Settings:
@@ -114,6 +123,13 @@ def _load_settings() -> Settings:
         ),
         repair_edit_lease_seconds=_int_env(
             "PARTGRAPH_REPAIR_EDIT_LEASE_SECONDS", 300, minimum=30, maximum=3_600
+        ),
+        media_root=_path_env("PARTGRAPH_MEDIA_ROOT", "/tmp/partgraph-media"),
+        photo_max_bytes=_int_env(
+            "PARTGRAPH_PHOTO_MAX_BYTES",
+            15 * 1024 * 1024,
+            minimum=1024,
+            maximum=25 * 1024 * 1024,
         ),
     )
 
