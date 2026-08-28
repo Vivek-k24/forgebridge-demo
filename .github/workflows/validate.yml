@@ -82,7 +82,7 @@ jobs:
           AUTH_ME=$(curl --fail --silent --show-error \
             -b "$COOKIE_JAR" \
             http://127.0.0.1:5173/api/v1/auth/me)
-          python -c 'import json,sys; p=json.load(sys.stdin); assert p["username"] == sys.argv[1]' \
+          python -c 'import json,sys; p=json.load(sys.stdin); assert p["user"]["username"] == sys.argv[1]' \
             "$USERNAME" <<< "$AUTH_ME"
 
           MANUAL_VEHICLE=$(curl --fail --silent --show-error \
