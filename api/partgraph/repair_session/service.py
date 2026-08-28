@@ -253,6 +253,20 @@ def _reduce_status(events: list[RepairSessionEvent]) -> str:
     return current
 
 
+def _status_after_event(event_type: str) -> str:
+    if event_type in {"session_started", "session_resumed"}:
+        return "active"
+    if event_type == "session_paused":
+        return "paused"
+    if event_type == "session_archived":
+        return "archived"
+    raise PartGraphError(
+        code=ErrorCode.REPAIR_SESSION_STATE_CORRUPT,
+        message="Repair session contains an unsupported event type.",
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    )
+
+
 async def rebuild_projection(
     session: AsyncSession,
     *,
@@ -333,10 +347,12 @@ async def _ensure_projection_current(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
     projection = bundle.projection
+    expected_status = _status_after_event(latest.event_type)
     if (
         projection.projection_version == PROJECTION_VERSION
         and projection.current_sequence == latest.sequence
         and projection.last_event_id == latest.id
+        and projection.status == expected_status
     ):
         return bundle
     locked = await _bundle(
@@ -514,7 +530,9 @@ async def acquire_edit_lease(
             code=ErrorCode.REPAIR_SESSION_LEASE_HELD,
             message="This repair session is being edited on another device.",
             status_code=status.HTTP_409_CONFLICT,
-            details={"lease_expires_at": lease.expires_at.isoformat() if lease.expires_at else None},
+            details={
+                "lease_expires_at": lease.expires_at.isoformat() if lease.expires_at else None
+            },
         )
     bundle.projection.editor_device_id = device_id
     bundle.projection.editor_lease_expires_at = _lease_expiry(now)
@@ -547,7 +565,9 @@ def _require_edit_lease(
             code=ErrorCode.REPAIR_SESSION_LEASE_HELD,
             message="This repair session is being edited on another device.",
             status_code=status.HTTP_409_CONFLICT,
-            details={"lease_expires_at": lease.expires_at.isoformat() if lease.expires_at else None},
+            details={
+                "lease_expires_at": lease.expires_at.isoformat() if lease.expires_at else None
+            },
         )
 
 
