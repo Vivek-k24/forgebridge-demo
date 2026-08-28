@@ -1,14 +1,31 @@
 import { useState } from 'react'
 import App from './App'
+import { RepairSessionWorkspace } from './RepairSessions'
 import { UserVehicleWorkspace } from './UserVehicles'
 
 export default function Block5Shell() {
-  const [mode, setMode] = useState<'details' | 'vin'>('details')
+  const [mode, setMode] = useState<'repairs' | 'details' | 'vin'>('repairs')
 
   return (
     <>
       <div className="block5-mode-shell">
-        <nav className="block5-mode-tabs" aria-label="Vehicle identification method">
+        <nav className="block5-mode-tabs block5-mode-tabs--three" aria-label="PartGraph workspace">
+          <button
+            type="button"
+            aria-pressed={mode === 'repairs'}
+            className={mode === 'repairs' ? 'block5-mode-tab block5-mode-tab--active' : 'block5-mode-tab'}
+            onClick={() => setMode('repairs')}
+          >
+            Resume repair
+          </button>
+          <button
+            type="button"
+            aria-pressed={mode === 'vin'}
+            className={mode === 'vin' ? 'block5-mode-tab block5-mode-tab--active' : 'block5-mode-tab'}
+            onClick={() => setMode('vin')}
+          >
+            Garage & VIN
+          </button>
           <button
             type="button"
             aria-pressed={mode === 'details'}
@@ -17,18 +34,12 @@ export default function Block5Shell() {
           >
             Vehicle details
           </button>
-          <button
-            type="button"
-            aria-pressed={mode === 'vin'}
-            className={mode === 'vin' ? 'block5-mode-tab block5-mode-tab--active' : 'block5-mode-tab'}
-            onClick={() => setMode('vin')}
-          >
-            VIN & my vehicles
-          </button>
         </nav>
       </div>
 
-      {mode === 'details' ? (
+      {mode === 'repairs' ? (
+        <RepairSessionWorkspace onOpenGarage={() => setMode('vin')} />
+      ) : mode === 'details' ? (
         <div className="block5-details-host">
           <App />
         </div>
