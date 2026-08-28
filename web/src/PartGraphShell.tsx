@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import App from './App'
+import { RepairMemoryWorkspace } from './RepairMemory'
 import { RepairSessionWorkspace } from './RepairSessions'
 import { UserVehicleWorkspace } from './UserVehicles'
 import './partgraph-shell.css'
 
-type PageKey = 'resume' | 'garage' | 'details' | 'repair'
+type MemoryPageKey = 'fasteners' | 'evidence' | 'inventory'
+type PageKey = 'resume' | 'garage' | 'details' | 'repair' | MemoryPageKey
 
 type NavItem = {
   key: string
@@ -21,17 +23,29 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'repair', label: 'Repair session', group: 'repair', page: 'repair' },
   { key: 'assembly', label: 'Assembly', group: 'memory', pending: true },
   { key: 'parts', label: 'Parts', group: 'memory', pending: true },
-  { key: 'fasteners', label: 'Fasteners', group: 'memory', pending: true },
-  { key: 'evidence', label: 'Evidence', group: 'memory', pending: true },
-  { key: 'inventory', label: 'Inventory', group: 'memory', pending: true },
+  { key: 'fasteners', label: 'Fasteners', group: 'memory', page: 'fasteners' },
+  { key: 'evidence', label: 'Evidence', group: 'memory', page: 'evidence' },
+  { key: 'inventory', label: 'Inventory', group: 'memory', page: 'inventory' },
   { key: 'history', label: 'History', group: 'memory', pending: true },
 ]
 
-const PAGE_KEYS = new Set<PageKey>(['resume', 'garage', 'details', 'repair'])
+const PAGE_KEYS = new Set<PageKey>([
+  'resume',
+  'garage',
+  'details',
+  'repair',
+  'fasteners',
+  'evidence',
+  'inventory',
+])
 
 function pageFromHash(): PageKey {
   const value = window.location.hash.replace(/^#\/?/, '') as PageKey
   return PAGE_KEYS.has(value) ? value : 'resume'
+}
+
+function isMemoryPage(page: PageKey): page is MemoryPageKey {
+  return page === 'fasteners' || page === 'evidence' || page === 'inventory'
 }
 
 export default function PartGraphShell() {
@@ -109,10 +123,10 @@ export default function PartGraphShell() {
         <App />
       </div>
     )
+  } else if (isMemoryPage(page)) {
+    content = <RepairMemoryWorkspace initialView={page} />
   } else {
-    content = (
-      <RepairSessionWorkspace onOpenGarage={() => navigate('garage')} />
-    )
+    content = <RepairSessionWorkspace onOpenGarage={() => navigate('garage')} />
   }
 
   return (
