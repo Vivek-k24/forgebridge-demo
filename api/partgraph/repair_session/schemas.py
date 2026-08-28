@@ -12,6 +12,14 @@ SessionEventType = Literal[
     "session_paused",
     "session_resumed",
     "session_archived",
+    "storage_location_created",
+    "fastener_recorded",
+    "fastener_state_changed",
+    "inventory_item_recorded",
+    "inventory_state_changed",
+    "observation_recorded",
+    "photo_evidence_added",
+    "photo_evidence_deleted",
 ]
 LeaseStatus = Literal["available", "owned", "held_by_other"]
 
