@@ -187,13 +187,13 @@
 .account-strip {
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   min-height: 46px;
-  padding: 7px clamp(14px, 3vw, 30px);
+  padding: 7px clamp(14px, 3vw, 30px) 7px calc(238px + clamp(14px, 3vw, 30px));
   border-bottom: 1px solid rgba(89, 133, 120, 0.18);
   color: #a8bac1;
   background: rgba(7, 16, 23, 0.94);
@@ -240,6 +240,12 @@
   color: #cbd5d8;
   background: #101c23;
   font-size: 0.78rem;
+}
+
+@media (max-width: 820px) {
+  .account-strip {
+    padding-left: clamp(14px, 3vw, 30px);
+  }
 }
 
 @media (max-width: 560px) {
