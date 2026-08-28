@@ -5,6 +5,19 @@ import './repair-sessions.css'
 
 type SessionStatus = 'active' | 'paused' | 'archived'
 type LeaseStatus = 'available' | 'owned' | 'held_by_other'
+type RepairEventType =
+  | 'session_started'
+  | 'session_paused'
+  | 'session_resumed'
+  | 'session_archived'
+  | 'storage_location_created'
+  | 'fastener_recorded'
+  | 'fastener_state_changed'
+  | 'inventory_item_recorded'
+  | 'inventory_state_changed'
+  | 'observation_recorded'
+  | 'photo_evidence_added'
+  | 'photo_evidence_deleted'
 
 type VehicleIdentity = {
   year: number
@@ -42,7 +55,7 @@ type RepairEvent = {
   id: string
   session_id: string
   sequence: number
-  event_type: 'session_started' | 'session_paused' | 'session_resumed' | 'session_archived'
+  event_type: RepairEventType
   actor_device_id: string
   payload: Record<string, unknown>
   created_at: string
@@ -79,11 +92,19 @@ function vehicleName(vehicle: UserVehicle): string {
 }
 
 function eventLabel(event: RepairEvent): string {
-  const labels: Record<RepairEvent['event_type'], string> = {
+  const labels: Record<RepairEventType, string> = {
     session_started: 'Repair started',
     session_paused: 'Repair paused',
     session_resumed: 'Repair resumed',
     session_archived: 'Repair archived',
+    storage_location_created: 'Storage location recorded',
+    fastener_recorded: 'Fastener recorded',
+    fastener_state_changed: 'Fastener state changed',
+    inventory_item_recorded: 'Inventory item recorded',
+    inventory_state_changed: 'Inventory state changed',
+    observation_recorded: 'Observation recorded',
+    photo_evidence_added: 'Photo evidence added',
+    photo_evidence_deleted: 'Photo evidence deleted',
   }
   return labels[event.event_type]
 }

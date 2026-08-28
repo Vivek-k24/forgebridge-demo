@@ -28,6 +28,22 @@ from .schemas import (
 logger = logging.getLogger("partgraph.repair_session")
 PROJECTION_VERSION = 1
 PROJECTION_REBUILT_CODE = "REPAIR_SESSION_PROJECTION_REBUILT"
+LIFECYCLE_EVENT_TYPES = {
+    "session_started",
+    "session_paused",
+    "session_resumed",
+    "session_archived",
+}
+DOMAIN_EVENT_TYPES = {
+    "storage_location_created",
+    "fastener_recorded",
+    "fastener_state_changed",
+    "inventory_item_recorded",
+    "inventory_state_changed",
+    "observation_recorded",
+    "photo_evidence_added",
+    "photo_evidence_deleted",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -173,8 +189,6 @@ async def _repair_missing_projection(
     user_id: UUID,
     repair_session: RepairSession,
 ) -> SessionBundle:
-    # A missing projection is a recoverable read-model failure. Lock the source
-    # session before rebuilding so two resume requests cannot race the repair.
     locked = await session.scalar(
         select(RepairSession)
         .where(RepairSession.id == repair_session.id, RepairSession.user_id == user_id)
@@ -238,6 +252,13 @@ def _reduce_status(events: list[RepairSessionEvent]) -> str:
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
             current = "archived"
+        elif event.event_type in DOMAIN_EVENT_TYPES:
+            if current not in {"active", "paused"}:
+                raise PartGraphError(
+                    code=ErrorCode.REPAIR_SESSION_STATE_CORRUPT,
+                    message="Repair memory event occurred outside an editable session state.",
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
         else:
             raise PartGraphError(
                 code=ErrorCode.REPAIR_SESSION_STATE_CORRUPT,
@@ -262,7 +283,7 @@ def _status_after_event(event_type: str) -> str:
         return "archived"
     raise PartGraphError(
         code=ErrorCode.REPAIR_SESSION_STATE_CORRUPT,
-        message="Repair session contains an unsupported event type.",
+        message="Repair session contains an unsupported lifecycle event.",
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
     )
 
@@ -346,8 +367,24 @@ async def _ensure_projection_current(
             message="Repair session has no event history.",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
+    lifecycle = await session.scalar(
+        select(RepairSessionEvent)
+        .where(
+            RepairSessionEvent.session_id == bundle.repair_session.id,
+            RepairSessionEvent.user_id == user_id,
+            RepairSessionEvent.event_type.in_(LIFECYCLE_EVENT_TYPES),
+        )
+        .order_by(RepairSessionEvent.sequence.desc())
+        .limit(1)
+    )
+    if lifecycle is None:
+        raise PartGraphError(
+            code=ErrorCode.REPAIR_SESSION_STATE_CORRUPT,
+            message="Repair session has no lifecycle event history.",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
     projection = bundle.projection
-    expected_status = _status_after_event(latest.event_type)
+    expected_status = _status_after_event(lifecycle.event_type)
     if (
         projection.projection_version == PROJECTION_VERSION
         and projection.current_sequence == latest.sequence
@@ -593,6 +630,66 @@ async def _existing_idempotent_event(
             status_code=status.HTTP_409_CONFLICT,
         )
     return existing
+
+
+async def prepare_domain_mutation(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    session_id: UUID,
+    device_id: UUID,
+    idempotency_key: str,
+    event_type: str,
+) -> tuple[SessionBundle, RepairSessionEvent | None]:
+    if event_type not in DOMAIN_EVENT_TYPES:
+        raise ValueError(f"unsupported domain event type: {event_type}")
+    bundle = await _bundle(session, user_id=user_id, session_id=session_id, for_update=True)
+    existing = await _existing_idempotent_event(
+        session,
+        session_id=session_id,
+        user_id=user_id,
+        idempotency_key=idempotency_key,
+        event_type=event_type,
+    )
+    if existing is not None:
+        return bundle, existing
+    _require_edit_lease(bundle.projection, device_id=device_id, now=datetime.now(UTC))
+    return bundle, None
+
+
+async def append_domain_event(
+    session: AsyncSession,
+    *,
+    bundle: SessionBundle,
+    user_id: UUID,
+    device_id: UUID,
+    idempotency_key: str,
+    event_type: str,
+    payload: dict[str, object],
+) -> RepairSessionEvent:
+    if event_type not in DOMAIN_EVENT_TYPES:
+        raise ValueError(f"unsupported domain event type: {event_type}")
+    now = datetime.now(UTC)
+    event = RepairSessionEvent(
+        session_id=bundle.repair_session.id,
+        user_id=user_id,
+        sequence=bundle.projection.current_sequence + 1,
+        event_type=event_type,
+        idempotency_key=idempotency_key,
+        actor_device_id=device_id,
+        payload=payload,
+    )
+    session.add(event)
+    await session.flush()
+    bundle.projection.current_sequence = event.sequence
+    bundle.projection.last_event_id = event.id
+    bundle.projection.last_event_at = event.created_at
+    bundle.projection.editor_device_id = device_id
+    bundle.projection.editor_lease_expires_at = _lease_expiry(now)
+    bundle.projection.updated_at = now
+    bundle.repair_session.updated_at = now
+    await session.flush()
+    return event
 
 
 async def append_status_event(
