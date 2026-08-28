@@ -137,7 +137,7 @@ class RepairSessionResumeRead(BaseModel):
     vehicle: UserVehicleRead
     last_event: RepairSessionEventRead
     lease: RepairSessionLeaseRead
-    reorientation: RepairSessionReorientationRead
+    reorientation: RepairSessionReorientationRead | None = None
 
 
 class RepairSessionMutationRead(BaseModel):
