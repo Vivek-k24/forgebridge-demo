@@ -251,6 +251,14 @@ def create_bound_session(
     return session_id
 
 
+def progress_headers(device_id: str, key: str) -> dict[str, str]:
+    return {
+        **CSRF,
+        "X-PartGraph-Device-ID": device_id,
+        "Idempotency-Key": key,
+    }
+
+
 def test_guidance_selects_first_action_then_surfaces_inventory_blocker() -> None:
     selection, repair_key, tool_id, prepare_id, remove_id = seed_guidance_definition()
     device_id = str(uuid4())
@@ -374,3 +382,141 @@ def test_guidance_is_owner_scoped() -> None:
         response = stranger.get(f"/api/v1/repair-sessions/{session_id}/guidance")
         assert response.status_code == 404
         assert response.json()["error"]["code"] == "REPAIR_SESSION_NOT_FOUND"
+
+
+def test_action_mutation_is_lease_protected_idempotent_and_deterministic() -> None:
+    selection, repair_key, tool_id, prepare_id, remove_id = seed_guidance_definition()
+    device_a = str(uuid4())
+    device_b = str(uuid4())
+
+    with TestClient(app) as client:
+        register(client, "guided_mutation")
+        session_id = create_bound_session(
+            client,
+            selection=selection,
+            repair_key=repair_key,
+            device_id=device_a,
+        )
+
+        wrong_device = client.put(
+            f"/api/v1/repair-sessions/{session_id}/guidance/actions/{prepare_id}",
+            json={"progress_state": "completed"},
+            headers=progress_headers(device_b, "guided_wrong_device"),
+        )
+        assert wrong_device.status_code == 409
+        assert wrong_device.json()["error"]["code"] == "REPAIR_SESSION_LEASE_HELD"
+
+        not_current = client.put(
+            f"/api/v1/repair-sessions/{session_id}/guidance/actions/{remove_id}",
+            json={"progress_state": "completed"},
+            headers=progress_headers(device_a, "guided_not_current"),
+        )
+        assert not_current.status_code == 409
+        assert not_current.json()["error"]["code"] == "REPAIR_PROCEDURE_ACTION_NOT_CURRENT"
+
+        completed = client.put(
+            f"/api/v1/repair-sessions/{session_id}/guidance/actions/{prepare_id}",
+            json={"progress_state": "completed"},
+            headers=progress_headers(device_a, "guided_complete_prepare"),
+        )
+        assert completed.status_code == 200, completed.text
+        assert completed.json()["status"] == "inventory_blocked"
+        assert completed.json()["current_action"]["action_id"] == str(remove_id)
+
+        replay = client.put(
+            f"/api/v1/repair-sessions/{session_id}/guidance/actions/{prepare_id}",
+            json={"progress_state": "completed"},
+            headers=progress_headers(device_a, "guided_complete_prepare"),
+        )
+        assert replay.status_code == 200, replay.text
+
+        conflict = client.put(
+            f"/api/v1/repair-sessions/{session_id}/guidance/actions/{prepare_id}",
+            json={"progress_state": "blocked", "blocker_code": "different"},
+            headers=progress_headers(device_a, "guided_complete_prepare"),
+        )
+        assert conflict.status_code == 409
+        assert conflict.json()["error"]["code"] == "REPAIR_SESSION_IDEMPOTENCY_CONFLICT"
+
+        inventory_blocked = client.put(
+            f"/api/v1/repair-sessions/{session_id}/guidance/actions/{remove_id}",
+            json={"progress_state": "completed"},
+            headers=progress_headers(device_a, "guided_complete_blocked"),
+        )
+        assert inventory_blocked.status_code == 409
+        assert (
+            inventory_blocked.json()["error"]["code"]
+            == "REPAIR_PROCEDURE_ACTION_INVENTORY_BLOCKED"
+        )
+
+        have_tool = client.put(
+            f"/api/v1/repair-sessions/{session_id}/readiness/{tool_id}",
+            json={"readiness_state": "have"},
+            headers=progress_headers(device_a, "guided_have_tool"),
+        )
+        assert have_tool.status_code == 200, have_tool.text
+
+        finish = client.put(
+            f"/api/v1/repair-sessions/{session_id}/guidance/actions/{remove_id}",
+            json={"progress_state": "completed"},
+            headers=progress_headers(device_a, "guided_complete_remove"),
+        )
+        assert finish.status_code == 200, finish.text
+        assert finish.json()["status"] == "procedure_complete"
+        assert finish.json()["procedure_complete"] is True
+
+        history = client.get(f"/api/v1/repair-sessions/{session_id}/events?limit=100")
+        assert history.status_code == 200, history.text
+        procedure_events = [
+            item
+            for item in history.json()["items"]
+            if item["event_type"] == "procedure_action_state_changed"
+        ]
+        assert [item["payload"]["action_id"] for item in procedure_events] == [
+            str(prepare_id),
+            str(remove_id),
+        ]
+
+
+def test_action_can_be_blocked_then_completed_but_non_skippable_action_cannot_skip() -> None:
+    selection, repair_key, _, prepare_id, _ = seed_guidance_definition()
+    device_id = str(uuid4())
+
+    with TestClient(app) as client:
+        register(client, "guided_blocked")
+        session_id = create_bound_session(
+            client,
+            selection=selection,
+            repair_key=repair_key,
+            device_id=device_id,
+        )
+
+        skipped = client.put(
+            f"/api/v1/repair-sessions/{session_id}/guidance/actions/{prepare_id}",
+            json={"progress_state": "skipped"},
+            headers=progress_headers(device_id, "guided_skip_forbidden"),
+        )
+        assert skipped.status_code == 409
+        assert skipped.json()["error"]["code"] == "REPAIR_PROCEDURE_ACTION_NOT_SKIPPABLE"
+
+        blocked = client.put(
+            f"/api/v1/repair-sessions/{session_id}/guidance/actions/{prepare_id}",
+            json={
+                "progress_state": "blocked",
+                "blocker_code": "unexpected_condition",
+                "notes": "Need to inspect before continuing.",
+            },
+            headers=progress_headers(device_id, "guided_mark_blocked"),
+        )
+        assert blocked.status_code == 200, blocked.text
+        assert blocked.json()["status"] == "action_blocked"
+        assert blocked.json()["current_action"]["progress_state"] == "blocked"
+        assert blocked.json()["current_action"]["blocker_code"] == "unexpected_condition"
+
+        resumed = client.put(
+            f"/api/v1/repair-sessions/{session_id}/guidance/actions/{prepare_id}",
+            json={"progress_state": "completed"},
+            headers=progress_headers(device_id, "guided_resolve_blocked"),
+        )
+        assert resumed.status_code == 200, resumed.text
+        assert resumed.json()["current_action"]["action_key"] == "remove-cover"
