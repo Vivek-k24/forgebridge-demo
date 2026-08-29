@@ -26,22 +26,22 @@ def seed_verified_repair() -> tuple[UUID, str]:
         repair_key = f"cooling-system-service-{suffix}"
         now = datetime.now(UTC)
         async with session_factory() as session:
+            configuration, _ = await resolve_configuration(
+                session,
+                VehicleConfigurationInput(
+                    year=2009,
+                    market="US",
+                    make="Honda",
+                    model=f"Civic-{suffix}",
+                    generation="8",
+                    trim="Hybrid",
+                    body_style="Sedan",
+                    engine="1.3L I4 Hybrid",
+                    transmission="CVT",
+                    drivetrain="FWD",
+                ),
+            )
             async with session.begin():
-                configuration, _ = await resolve_configuration(
-                    session,
-                    VehicleConfigurationInput(
-                        year=2009,
-                        market="US",
-                        make="Honda",
-                        model=f"Civic-{suffix}",
-                        generation="8",
-                        trim="Hybrid",
-                        body_style="Sedan",
-                        engine="1.3L I4 Hybrid",
-                        transmission="CVT",
-                        drivetrain="FWD",
-                    ),
-                )
                 source = CatalogSource(
                     source_key=f"fixture-oem-{suffix}",
                     display_name="Deterministic OEM fixture",
