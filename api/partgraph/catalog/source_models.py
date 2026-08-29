@@ -46,15 +46,15 @@ class CatalogSource(Base):
 class MechanicalClaim(Base):
     """Normalized claim supported by immutable verified evidence.
 
-    A claim is still not a repair requirement until it is attached to a verified
-    repair definition through a requirement-use evidence link.
+    A claim becomes canonical repair truth only when attached to the exact
+    repair-definition structure that consumes it.
     """
 
     __tablename__ = "mechanical_claims"
     __table_args__ = (
         CheckConstraint(
             "claim_domain IN ('vehicle_identity', 'safety_campaign', "
-            "'repair_requirement', 'part_fitment')",
+            "'repair_requirement', 'repair_procedure', 'part_fitment')",
             name="ck_mechanical_claims_domain",
         ),
         CheckConstraint(
