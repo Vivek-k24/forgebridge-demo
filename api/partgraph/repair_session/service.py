@@ -41,6 +41,7 @@ DOMAIN_EVENT_TYPES = {
     "inventory_item_recorded",
     "inventory_state_changed",
     "readiness_state_changed",
+    "procedure_action_state_changed",
     "observation_recorded",
     "photo_evidence_added",
     "photo_evidence_deleted",
