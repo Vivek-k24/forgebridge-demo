@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth.dependencies import AuthSessionDep, CurrentUserDep, require_csrf
 from ..errors import ErrorCode, ErrorEnvelope, PartGraphError
+from ..repair_definition.models import RepairDefinition
 from ..repair_definition.service import verified_requirement_manifest
 from ..user_vehicle.models import UserVehicle
 from .models import RepairSession, RepairSessionProjection
@@ -17,6 +18,7 @@ from .service import lease_view, rebuild_projection
 DEVICE_HEADER = "X-PartGraph-Device-ID"
 REPAIR_DEFINITION_VEHICLE_UNRESOLVED = "REPAIR_DEFINITION_VEHICLE_UNRESOLVED"
 REPAIR_DEFINITION_BINDING_CONFLICT = "REPAIR_DEFINITION_BINDING_CONFLICT"
+REPAIR_DEFINITION_INTEGRITY_ERROR = "REPAIR_DEFINITION_INTEGRITY_ERROR"
 
 
 class RepairDefinitionBind(BaseModel):
@@ -40,6 +42,19 @@ class RepairDefinitionBindingRead(BaseModel):
     title: str
     version: int
     binding_state: Literal["bound", "already_bound"]
+
+
+class RepairDefinitionOptionRead(BaseModel):
+    repair_definition_id: UUID
+    repair_key: str
+    title: str
+    version: int
+
+
+class RepairDefinitionOptionsRead(BaseModel):
+    session_id: UUID
+    vehicle_resolution: Literal["exact", "unresolved"]
+    options: list[RepairDefinitionOptionRead]
 
 
 router = APIRouter(
@@ -72,6 +87,27 @@ def _parse_device_id(value: str | None) -> UUID:
             message=f"{DEVICE_HEADER} must be a UUID.",
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         ) from exc
+
+
+async def _owned_session(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    session_id: UUID,
+) -> RepairSession:
+    repair_session = await session.scalar(
+        select(RepairSession).where(
+            RepairSession.id == session_id,
+            RepairSession.user_id == user_id,
+        )
+    )
+    if repair_session is None:
+        raise PartGraphError(
+            code=ErrorCode.REPAIR_SESSION_NOT_FOUND,
+            message="Repair session not found.",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+    return repair_session
 
 
 async def _locked_session(
@@ -136,6 +172,70 @@ def _require_edit_lease(projection: RepairSessionProjection, *, device_id: UUID)
                 "lease_expires_at": lease.expires_at.isoformat() if lease.expires_at else None
             },
         )
+
+
+@router.get("/{session_id}/repair-options", response_model=RepairDefinitionOptionsRead)
+async def repair_options(
+    session_id: UUID,
+    user: CurrentUserDep,
+    db: AuthSessionDep,
+) -> RepairDefinitionOptionsRead:
+    repair_session = await _owned_session(db, user_id=user.id, session_id=session_id)
+    vehicle = await db.scalar(
+        select(UserVehicle).where(
+            UserVehicle.id == repair_session.user_vehicle_id,
+            UserVehicle.user_id == user.id,
+        )
+    )
+    if vehicle is None:
+        raise PartGraphError(
+            code=ErrorCode.REPAIR_SESSION_STATE_CORRUPT,
+            message="Repair session vehicle ownership is inconsistent.",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+    if vehicle.canonical_configuration_id is None:
+        return RepairDefinitionOptionsRead(
+            session_id=session_id,
+            vehicle_resolution="unresolved",
+            options=[],
+        )
+
+    definitions = list(
+        await db.scalars(
+            select(RepairDefinition)
+            .where(
+                RepairDefinition.vehicle_configuration_id == vehicle.canonical_configuration_id,
+                RepairDefinition.status == "verified",
+            )
+            .order_by(RepairDefinition.title, RepairDefinition.repair_key, RepairDefinition.version)
+        )
+    )
+    seen: set[str] = set()
+    options: list[RepairDefinitionOptionRead] = []
+    for definition in definitions:
+        if definition.repair_key in seen:
+            raise PartGraphError(
+                code=REPAIR_DEFINITION_INTEGRITY_ERROR,
+                message=(
+                    "Multiple current verified repair definitions exist for the same vehicle "
+                    "and repair."
+                ),
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        seen.add(definition.repair_key)
+        options.append(
+            RepairDefinitionOptionRead(
+                repair_definition_id=definition.id,
+                repair_key=definition.repair_key,
+                title=definition.title,
+                version=definition.version,
+            )
+        )
+    return RepairDefinitionOptionsRead(
+        session_id=session_id,
+        vehicle_resolution="exact",
+        options=options,
+    )
 
 
 @router.put(
