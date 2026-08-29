@@ -276,7 +276,7 @@ def test_readiness_is_aggregated_and_uses_garage_then_session_override() -> None
         }
         by_category = {item["category"]: item for item in body["requirements"]}
         assert by_category["tool"]["readiness_state"] == "missing"
-        assert by_category["tool"]["operation_keys"] == ["install", "remove"] or by_category["tool"]["operation_keys"] == ["remove", "install"]
+        assert by_category["tool"]["operation_keys"] == ["install", "remove"]
         assert by_category["fluid"]["readiness_state"] == "missing"
         assert by_category["hardware"]["readiness_state"] == "have"
         assert by_category["hardware"]["readiness_source"] == "existing_vehicle"
