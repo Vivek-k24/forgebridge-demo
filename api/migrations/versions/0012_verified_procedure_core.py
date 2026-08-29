@@ -1,6 +1,7 @@
 """Add capability policy and canonical verified procedure core."""
 
 from collections.abc import Sequence
+from uuid import UUID
 
 import sqlalchemy as sa
 from alembic import op
@@ -69,7 +70,7 @@ def upgrade() -> None:
         policies,
         [
             {
-                "id": "11111111-1111-4111-8111-111111111111",
+                "id": UUID("11111111-1111-4111-8111-111111111111"),
                 "policy_key": "diy_supported",
                 "title": "DIY guided workflow supported",
                 "guidance_state": "supported",
@@ -79,7 +80,7 @@ def upgrade() -> None:
                 ),
             },
             {
-                "id": "22222222-2222-4222-8222-222222222222",
+                "id": UUID("22222222-2222-4222-8222-222222222222"),
                 "policy_key": "professional_required",
                 "title": "Professional service required",
                 "guidance_state": "professional_required",
@@ -89,7 +90,7 @@ def upgrade() -> None:
                 ),
             },
             {
-                "id": "33333333-3333-4333-8333-333333333333",
+                "id": UUID("33333333-3333-4333-8333-333333333333"),
                 "policy_key": "guided_prohibited",
                 "title": "Guided workflow prohibited",
                 "guidance_state": "prohibited",
