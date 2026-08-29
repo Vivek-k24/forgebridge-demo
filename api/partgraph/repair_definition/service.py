@@ -135,7 +135,9 @@ async def _manifest_for_definition(
         )
 
     if definition.status not in {"verified", "superseded"}:
-        raise _integrity_error("Repair manifest was requested from a non-verifiable definition state.")
+        raise _integrity_error(
+            "Repair manifest was requested from a non-verifiable definition state."
+        )
 
     return RepairDefinitionManifestRead(
         repair_definition_id=definition.id,
