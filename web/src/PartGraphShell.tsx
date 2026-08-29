@@ -99,12 +99,7 @@ export default function PartGraphShell() {
   } else if (page === 'inventory') {
     content = <RepairMemoryWorkspace />
   } else if (page === 'repair') {
-    content = (
-      <div className="partgraph-repair-stack">
-        <GuidedRepairWorkspace />
-        <RepairSessionWorkspace onOpenGarage={() => navigate('garage')} />
-      </div>
-    )
+    content = <GuidedRepairWorkspace />
   } else {
     content = <RepairSessionWorkspace onOpenGarage={() => navigate('garage')} />
   }
