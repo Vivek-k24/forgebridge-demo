@@ -10,6 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+import partgraph.orm_registry  # noqa: F401
+
 from .auth.router import router as auth_router
 from .config import settings
 from .database import database_readiness, engine
