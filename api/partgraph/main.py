@@ -18,6 +18,7 @@ from .database import database_readiness, engine
 from .errors import ErrorCode, PartGraphError, error_response
 from .repair_definition.router import router as repair_definition_router
 from .repair_memory.router import router as repair_memory_router
+from .repair_session.repair_definition_binding import router as repair_definition_binding_router
 from .repair_session.router import router as repair_session_router
 from .user_vehicle.router import router as user_vehicle_router
 from .vehicle.router import router as vehicle_router
@@ -56,7 +57,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.web_origin],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PATCH", "DELETE"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=[
         "Content-Type",
         "X-PartGraph-CSRF",
@@ -72,6 +73,7 @@ app.include_router(user_vehicle_router)
 app.include_router(repair_session_router)
 app.include_router(repair_memory_router)
 app.include_router(repair_definition_router)
+app.include_router(repair_definition_binding_router)
 
 
 def _request_body_limit(request: Request) -> tuple[int, str] | None:
