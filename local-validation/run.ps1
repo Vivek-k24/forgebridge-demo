@@ -19,26 +19,41 @@ $env:PARTGRAPH_ACCEPTANCE_ALL_BRANDS = if ($AllBrands) { 'true' } else { 'false'
 
 Write-Host ''
 Write-Host 'PartGraph local acceptance harness' -ForegroundColor Cyan
-Write-Host "  cases: $Cases"
-Write-Host "  seed:  $Seed"
+Write-Host "  repair cases: $Cases"
+Write-Host "  seed:         $Seed"
 Write-Host "  all supported brands: $($AllBrands.IsPresent)"
 Write-Host '  database: isolated disposable PostgreSQL volume' -ForegroundColor DarkGray
 Write-Host ''
 
 $exitCode = 1
 try {
-    Write-Host '[1/4] Resetting disposable acceptance stack...' -ForegroundColor Yellow
+    Write-Host '[1/5] Resetting disposable acceptance stack...' -ForegroundColor Yellow
     docker compose -p $project -f $compose down -v --remove-orphans 2>$null | Out-Null
 
-    Write-Host '[2/4] Building and starting PostgreSQL + API...' -ForegroundColor Yellow
-    docker compose -p $project -f $compose up --build -d postgres api
+    Write-Host '[2/5] Building and starting PostgreSQL + VIN stub + API...' -ForegroundColor Yellow
+    docker compose -p $project -f $compose up --build -d postgres vin-stub api
     if ($LASTEXITCODE -ne 0) { throw 'Acceptance API stack failed to start.' }
 
-    Write-Host '[3/4] Running local-only acceptance scenarios...' -ForegroundColor Yellow
-    docker compose -p $project -f $compose --profile runner run --build --rm runner
+    Write-Host '[3/5] Running platform, auth, selector, and VIN probes...' -ForegroundColor Yellow
+    docker compose -p $project -f $compose --profile runner run --build --rm runner `
+        python local-validation/platform_acceptance.py
+    if ($LASTEXITCODE -ne 0) {
+        $exitCode = $LASTEXITCODE
+        throw "Platform/VIN acceptance probes failed with exit code $exitCode."
+    }
+
+    Write-Host '[4/5] Running cross-manufacturer repair workflow scenarios...' -ForegroundColor Yellow
+    docker compose -p $project -f $compose --profile runner run --rm runner `
+        python local-validation/acceptance_runner.py
     $exitCode = $LASTEXITCODE
 
-    Write-Host '[4/4] Acceptance runner finished.' -ForegroundColor Yellow
+    Write-Host '[5/5] Acceptance runners finished.' -ForegroundColor Yellow
+}
+catch {
+    if ($exitCode -eq 1 -and $LASTEXITCODE -ne 0) {
+        $exitCode = $LASTEXITCODE
+    }
+    Write-Host $_.Exception.Message -ForegroundColor Red
 }
 finally {
     if ($Keep) {
