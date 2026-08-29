@@ -4,7 +4,7 @@ from decimal import Decimal
 from uuid import UUID, uuid4
 
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from partgraph.catalog.models import CatalogVerifiedEvidence
 from partgraph.catalog.source_models import CatalogSource, MechanicalClaim
@@ -19,6 +19,7 @@ from partgraph.repair_definition.models import (
     RequirementUseEvidence,
     UserGarageInventoryItem,
 )
+from partgraph.repair_session.models import RepairSessionProjection
 from partgraph.vehicle.schemas import VehicleConfigurationInput
 from partgraph.vehicle.service import resolve_configuration
 
@@ -248,6 +249,14 @@ def bind(client: TestClient, session_id: str, device_id: str, repair_key: str) -
     assert response.status_code == 200, response.text
 
 
+def readiness_headers(device_id: str, key: str) -> dict[str, str]:
+    return {
+        **CSRF,
+        "X-PartGraph-Device-ID": device_id,
+        "Idempotency-Key": key,
+    }
+
+
 def test_readiness_is_aggregated_and_uses_garage_then_session_override() -> None:
     _, selection, repair_key, _, tool_id, fluid_id = seed_readiness_definition()
     device_id = str(uuid4())
@@ -364,3 +373,110 @@ def test_readiness_is_owner_scoped() -> None:
         response = stranger.get(f"/api/v1/repair-sessions/{session_id}/readiness")
         assert response.status_code == 404
         assert response.json()["error"]["code"] == "REPAIR_SESSION_NOT_FOUND"
+
+
+def test_readiness_mutation_is_idempotent_lease_protected_and_remembers_reusable_tools() -> None:
+    _, selection, repair_key, _, tool_id, fluid_id = seed_readiness_definition()
+    device_a = str(uuid4())
+    device_b = str(uuid4())
+
+    with TestClient(app) as client:
+        user_id = register(client, "readiness_mutation")
+        session_id = create_session(client, create_vehicle(client, selection), device_a)
+        bind(client, session_id, device_a, repair_key)
+
+        blocked = client.put(
+            f"/api/v1/repair-sessions/{session_id}/readiness/{tool_id}",
+            json={"readiness_state": "have"},
+            headers=readiness_headers(device_b, "readiness_wrong_device"),
+        )
+        assert blocked.status_code == 409
+        assert blocked.json()["error"]["code"] == "REPAIR_SESSION_LEASE_HELD"
+
+        have_tool = client.put(
+            f"/api/v1/repair-sessions/{session_id}/readiness/{tool_id}",
+            json={"readiness_state": "have"},
+            headers=readiness_headers(device_a, "readiness_tool_have"),
+        )
+        assert have_tool.status_code == 200, have_tool.text
+        tool = next(
+            item for item in have_tool.json()["requirements"] if item["category"] == "tool"
+        )
+        assert tool["readiness_state"] == "have"
+        assert tool["readiness_source"] == "session"
+        assert Decimal(tool["quantity_available"]) == Decimal("1")
+
+        repeated = client.put(
+            f"/api/v1/repair-sessions/{session_id}/readiness/{tool_id}",
+            json={"readiness_state": "have"},
+            headers=readiness_headers(device_a, "readiness_tool_have"),
+        )
+        assert repeated.status_code == 200, repeated.text
+
+        conflict = client.put(
+            f"/api/v1/repair-sessions/{session_id}/readiness/{tool_id}",
+            json={"readiness_state": "missing"},
+            headers=readiness_headers(device_a, "readiness_tool_have"),
+        )
+        assert conflict.status_code == 409
+        assert conflict.json()["error"]["code"] == "REPAIR_SESSION_IDEMPOTENCY_CONFLICT"
+
+        fluid = client.put(
+            f"/api/v1/repair-sessions/{session_id}/readiness/{fluid_id}",
+            json={"readiness_state": "have"},
+            headers=readiness_headers(device_a, "readiness_fluid_have"),
+        )
+        assert fluid.status_code == 200, fluid.text
+        assert fluid.json()["summary"]["blocked"] == 0
+
+        wrong_requirement = client.put(
+            f"/api/v1/repair-sessions/{session_id}/readiness/{uuid4()}",
+            json={"readiness_state": "have"},
+            headers=readiness_headers(device_a, "readiness_wrong_requirement"),
+        )
+        assert wrong_requirement.status_code == 404
+        assert (
+            wrong_requirement.json()["error"]["code"]
+            == "REPAIR_READINESS_REQUIREMENT_NOT_FOUND"
+        )
+
+        history = client.get(f"/api/v1/repair-sessions/{session_id}/events?limit=100")
+        assert history.status_code == 200, history.text
+        assert [item["event_type"] for item in history.json()["items"]] == [
+            "session_started",
+            "readiness_state_changed",
+            "readiness_state_changed",
+        ]
+
+        async def verify_garage_and_force_projection_rebuild() -> None:
+            async with session_factory() as session:
+                tool_row = await session.scalar(
+                    select(UserGarageInventoryItem).where(
+                        UserGarageInventoryItem.user_id == UUID(user_id),
+                        UserGarageInventoryItem.requirement_definition_id == tool_id,
+                    )
+                )
+                assert tool_row is not None
+                assert tool_row.quantity_available == Decimal("1")
+                fluid_row = await session.scalar(
+                    select(UserGarageInventoryItem).where(
+                        UserGarageInventoryItem.user_id == UUID(user_id),
+                        UserGarageInventoryItem.requirement_definition_id == fluid_id,
+                    )
+                )
+                assert fluid_row is None
+                await session.execute(
+                    delete(RepairSessionProjection).where(
+                        RepairSessionProjection.session_id == UUID(session_id)
+                    )
+                )
+                await session.commit()
+
+        asyncio.run(verify_garage_and_force_projection_rebuild())
+        resumed = client.get(
+            f"/api/v1/repair-sessions/{session_id}/resume",
+            headers={"X-PartGraph-Device-ID": device_a},
+        )
+        assert resumed.status_code == 200, resumed.text
+        assert resumed.json()["session"]["current_sequence"] == 3
+        assert resumed.json()["last_event"]["event_type"] == "readiness_state_changed"
