@@ -18,6 +18,11 @@ class RepairSession(Base):
     user_vehicle_id: Mapped[UUID] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("user_vehicles.id", ondelete="CASCADE"), nullable=False
     )
+    repair_definition_id: Mapped[UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("repair_definitions.id", ondelete="RESTRICT"),
+        index=True,
+    )
     title: Mapped[str] = mapped_column(String(160), nullable=False)
     creation_idempotency_key: Mapped[str] = mapped_column(String(64), nullable=False)
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
