@@ -1,12 +1,12 @@
 from collections import defaultdict
-from typing import Literal
+from typing import Annotated, Literal, cast
 from uuid import UUID
 
-from fastapi import APIRouter, status
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, Header, status
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 
-from ..auth.dependencies import AuthSessionDep, CurrentUserDep
+from ..auth.dependencies import AuthSessionDep, CurrentUserDep, require_csrf
 from ..errors import ErrorCode, ErrorEnvelope, PartGraphError
 from ..repair_definition.models import ProcedureAction, RepairDefinition, RequirementUse
 from ..repair_definition.procedure_service import (
@@ -15,10 +15,26 @@ from ..repair_definition.procedure_service import (
 )
 from ..user_vehicle.models import UserVehicle
 from .models import RepairProcedureActionState, RepairSession
-from .readiness import _readiness_view
+from .readiness import (
+    DEVICE_HEADER,
+    IDEMPOTENCY_HEADER,
+    _assert_replay,
+    _fingerprint,
+    _parse_device_id,
+    _parse_idempotency_key,
+    _readiness_view,
+)
+from .service import append_domain_event, prepare_domain_mutation
 
 ProgressState = Literal["pending", "completed", "skipped", "blocked"]
-GuidanceStatus = Literal["action_available", "inventory_blocked", "procedure_complete"]
+PersistedProgressState = Literal["completed", "skipped", "blocked"]
+GuidanceStatus = Literal[
+    "action_available",
+    "action_blocked",
+    "inventory_blocked",
+    "procedure_complete",
+]
+PROCEDURE_EVENT = "procedure_action_state_changed"
 
 
 class GuidanceInventoryBlockerRead(BaseModel):
@@ -74,6 +90,28 @@ class RepairGuidancePlanRead(RepairGuidanceRead):
     actions: list[GuidanceActionRead]
 
 
+class GuidanceActionUpdate(BaseModel):
+    progress_state: PersistedProgressState
+    blocker_code: str | None = Field(default=None, max_length=64)
+    notes: str | None = Field(default=None, max_length=500)
+
+    @field_validator("blocker_code")
+    @classmethod
+    def clean_blocker_code(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip().lower().replace(" ", "_")
+        return cleaned or None
+
+    @field_validator("notes")
+    @classmethod
+    def clean_notes(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = " ".join(value.split())
+        return cleaned or None
+
+
 router = APIRouter(
     prefix="/api/v1/repair-sessions",
     tags=["Guided Repair"],
@@ -82,9 +120,11 @@ router = APIRouter(
         403: {"model": ErrorEnvelope},
         404: {"model": ErrorEnvelope},
         409: {"model": ErrorEnvelope},
+        422: {"model": ErrorEnvelope},
         500: {"model": ErrorEnvelope},
     },
 )
+CsrfDep = Depends(require_csrf)
 
 
 def _integrity_error(message: str) -> PartGraphError:
@@ -164,9 +204,7 @@ async def _guidance_view(
 
     action_ids = [item.action_id for item in procedure.actions]
     action_rows = list(
-        await db.scalars(
-            select(ProcedureAction).where(ProcedureAction.id.in_(action_ids))
-        )
+        await db.scalars(select(ProcedureAction).where(ProcedureAction.id.in_(action_ids)))
     )
     action_models = {item.id: item for item in action_rows}
     if set(action_models) != set(action_ids):
@@ -208,12 +246,11 @@ async def _guidance_view(
     if set(use_by_id) != all_use_ids:
         raise _integrity_error("Guided action requirement identity is incomplete.")
 
-    action_by_key = {item.action_key: item for item in procedure.actions}
     state_by_key: dict[str, ProgressState] = {}
     details_by_action: dict[UUID, tuple[str | None, str | None]] = {}
     for item in procedure.actions:
         row = progress.get(item.action_id)
-        state: ProgressState = "pending" if row is None else row.progress_state  # type: ignore[assignment]
+        state = cast(ProgressState, "pending" if row is None else row.progress_state)
         if state == "skipped" and not action_models[item.action_id].skippable:
             raise _integrity_error("A non-skippable canonical action is recorded as skipped.")
         state_by_key[item.action_key] = state
@@ -307,11 +344,12 @@ async def _guidance_view(
             + ", ".join(unresolved)
         )
 
-    current_blocked = current is not None and bool(current.inventory_blockers)
     guidance_status: GuidanceStatus
     if procedure_complete:
         guidance_status = "procedure_complete"
-    elif current_blocked:
+    elif current is not None and current.progress_state == "blocked":
+        guidance_status = "action_blocked"
+    elif current is not None and current.inventory_blockers:
         guidance_status = "inventory_blocked"
     else:
         guidance_status = "action_available"
@@ -369,4 +407,145 @@ async def guidance_plan(
         include_plan=True,
     )
     assert isinstance(result, RepairGuidancePlanRead)
+    return result
+
+
+@router.put(
+    "/{session_id}/guidance/actions/{action_id}",
+    response_model=RepairGuidanceRead,
+    dependencies=[CsrfDep],
+)
+async def update_action_progress(
+    session_id: UUID,
+    action_id: UUID,
+    payload: GuidanceActionUpdate,
+    user: CurrentUserDep,
+    db: AuthSessionDep,
+    device_header: Annotated[str | None, Header(alias=DEVICE_HEADER)] = None,
+    idempotency_header: Annotated[str | None, Header(alias=IDEMPOTENCY_HEADER)] = None,
+) -> RepairGuidanceRead:
+    device_id = _parse_device_id(device_header)
+    idempotency_key = _parse_idempotency_key(idempotency_header)
+    request_data: dict[str, object] = {
+        "action_id": str(action_id),
+        **payload.model_dump(mode="json"),
+    }
+    fingerprint = _fingerprint(request_data)
+
+    bundle, existing_event = await prepare_domain_mutation(
+        db,
+        user_id=user.id,
+        session_id=session_id,
+        device_id=device_id,
+        idempotency_key=idempotency_key,
+        event_type=PROCEDURE_EVENT,
+    )
+    if existing_event is not None:
+        _assert_replay(existing_event, fingerprint)
+        replay = await _guidance_view(
+            db,
+            user_id=user.id,
+            session_id=session_id,
+            include_plan=False,
+        )
+        assert isinstance(replay, RepairGuidanceRead)
+        return replay
+
+    before = await _guidance_view(
+        db,
+        user_id=user.id,
+        session_id=session_id,
+        include_plan=False,
+    )
+    assert isinstance(before, RepairGuidanceRead)
+    current = before.current_action
+    if current is None or current.action_id != action_id:
+        raise PartGraphError(
+            code="REPAIR_PROCEDURE_ACTION_NOT_CURRENT",
+            message="Only the current deterministic guided action can be changed.",
+            status_code=status.HTTP_409_CONFLICT,
+        )
+
+    if payload.progress_state == "completed" and current.inventory_blockers:
+        raise PartGraphError(
+            code="REPAIR_PROCEDURE_ACTION_INVENTORY_BLOCKED",
+            message="Resolve required Inventory blockers before completing this action.",
+            status_code=status.HTTP_409_CONFLICT,
+            details={
+                "requirement_definition_ids": [
+                    str(item.requirement_definition_id)
+                    for item in current.inventory_blockers
+                ]
+            },
+        )
+    if payload.progress_state == "skipped" and not current.skippable:
+        raise PartGraphError(
+            code="REPAIR_PROCEDURE_ACTION_NOT_SKIPPABLE",
+            message="This verified action is not marked skippable.",
+            status_code=status.HTTP_409_CONFLICT,
+        )
+
+    state_row = await db.scalar(
+        select(RepairProcedureActionState)
+        .where(
+            RepairProcedureActionState.user_id == user.id,
+            RepairProcedureActionState.session_id == session_id,
+            RepairProcedureActionState.action_id == action_id,
+        )
+        .with_for_update()
+    )
+    previous_state: ProgressState = (
+        "pending" if state_row is None else cast(ProgressState, state_row.progress_state)
+    )
+    if previous_state in {"completed", "skipped"}:
+        raise PartGraphError(
+            code="REPAIR_PROCEDURE_ACTION_STATE_CONFLICT",
+            message="Completed or skipped actions require an explicit future undo workflow.",
+            status_code=status.HTTP_409_CONFLICT,
+        )
+
+    blocker_code = payload.blocker_code if payload.progress_state == "blocked" else None
+    notes = payload.notes
+    if state_row is None:
+        state_row = RepairProcedureActionState(
+            user_id=user.id,
+            session_id=session_id,
+            action_id=action_id,
+            progress_state=payload.progress_state,
+            blocker_code=blocker_code,
+            notes=notes,
+        )
+        db.add(state_row)
+    else:
+        state_row.progress_state = payload.progress_state
+        state_row.blocker_code = blocker_code
+        state_row.notes = notes
+    await db.flush()
+
+    await append_domain_event(
+        db,
+        bundle=bundle,
+        user_id=user.id,
+        device_id=device_id,
+        idempotency_key=idempotency_key,
+        event_type=PROCEDURE_EVENT,
+        payload={
+            "request_fingerprint": fingerprint,
+            "action_id": str(action_id),
+            "action_key": current.action_key,
+            "previous_state": previous_state,
+            "progress_state": payload.progress_state,
+            "blocker_code": blocker_code,
+            "notes": notes,
+        },
+    )
+    await db.flush()
+
+    result = await _guidance_view(
+        db,
+        user_id=user.id,
+        session_id=session_id,
+        include_plan=False,
+    )
+    assert isinstance(result, RepairGuidanceRead)
     return result
