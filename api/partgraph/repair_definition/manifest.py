@@ -86,7 +86,11 @@ def build_requirement_manifest(facts: list[RequirementFact]) -> tuple[ManifestIt
             )
 
         mode = next(iter(modes))
-        necessity = "required" if any(fact.necessity == "required" for fact in group) else "recommended"
+        necessity = (
+            "required"
+            if any(fact.necessity == "required" for fact in group)
+            else "recommended"
+        )
         operation_keys = tuple(
             sorted({fact.operation_key for fact in group if fact.operation_key is not None})
         )
