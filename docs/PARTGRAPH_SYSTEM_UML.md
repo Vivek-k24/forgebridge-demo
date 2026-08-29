@@ -46,7 +46,7 @@ flowchart TD
     RD -. provenance .-> CLAIMS[Verified mechanical claims]
     CLAIMS -. evidence .-> SOURCES[Source records / OEM / licensed evidence]
     OBSERVE -. future assist .-> AI[AI proposes explanation/observation only]
-    AI -. never canonical truth .-> OBSERVE
+    AI -. candidate only .-> OBSERVE
 ```
 
 ## 2. Canonical truth versus private owner state
@@ -184,8 +184,9 @@ flowchart LR
     R2 --> M2[Manifest B]
     R3 --> M3[Manifest C]
 
-    M1 -. must not fall back .-x M2
-    M2 -. must not fall back .-x M3
+    M1 -. protected by exact applicability .-> GUARD[No cross-configuration fallback]
+    M2 -. protected by exact applicability .-> GUARD
+    M3 -. protected by exact applicability .-> GUARD
 ```
 
 A shared `repair_key` identifies the type of repair; it does **not** make requirements interchangeable across vehicles. The canonical lookup key is effectively:
@@ -212,7 +213,7 @@ flowchart LR
     USE --> MANIFEST[Verified manifest]
 
     RETAIL[Retailer / marketplace] -. procurement only .-> BUY[Product candidate]
-    RETAIL -. cannot promote mechanical truth .-x CLAIM
+    RETAIL -. blocked from canonical promotion .-> PROMOTION_GUARD[Canonical promotion boundary]
     COMMUNITY[Community / video / forum] -. discovery/support only .-> EXTRACT
 ```
 
@@ -284,7 +285,7 @@ flowchart TB
     PROMOTE --> PG
 
     AI[Future AI/ML services] -. optional candidate/explanation .-> API
-    AI -. never required for core path .-x PG
+    AI -. never authoritative state .-> AI_GUARD[Candidate-only boundary]
 
     CI[GitHub Actions] --> TEST[Tests / migrations / security / containers]
     TEST --> GHCR[GHCR tested images]
