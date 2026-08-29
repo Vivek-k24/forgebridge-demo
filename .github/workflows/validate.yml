@@ -37,7 +37,7 @@ jobs:
       - name: Build and start PartGraph stack
         run: docker compose up -d --build
 
-      - name: Verify API, Web, auth, vehicle, repair-session, and repair-memory integration
+      - name: Verify full-stack repair and reorientation integration
         run: |
           for attempt in $(seq 1 45); do
             API_OK=0
@@ -70,18 +70,20 @@ jobs:
           DEVICE_A=$(python -c 'import uuid; print(uuid.uuid4())')
           DEVICE_B=$(python -c 'import uuid; print(uuid.uuid4())')
 
-          curl --fail --silent --show-error \
+          REGISTER=$(curl --fail --silent --show-error \
             -c "$COOKIE_JAR" \
             -H 'Content-Type: application/json' \
             -H 'X-PartGraph-CSRF: 1' \
             --data "{\"email\":\"$EMAIL\",\"username\":\"$USERNAME\",\"password\":\"$PASSWORD\"}" \
-            http://127.0.0.1:5173/api/v1/auth/register \
-            | grep -q "\"username\":\"$USERNAME\""
+            http://127.0.0.1:5173/api/v1/auth/register)
+          python -c 'import json,sys; p=json.load(sys.stdin); assert p["user"]["username"] == sys.argv[1]' \
+            "$USERNAME" <<< "$REGISTER"
 
-          curl --fail --silent --show-error \
+          AUTH_ME=$(curl --fail --silent --show-error \
             -b "$COOKIE_JAR" \
-            http://127.0.0.1:5173/api/v1/auth/me \
-            | grep -q "\"username\":\"$USERNAME\""
+            http://127.0.0.1:5173/api/v1/auth/me)
+          python -c 'import json,sys; p=json.load(sys.stdin); assert p["user"]["username"] == sys.argv[1]' \
+            "$USERNAME" <<< "$AUTH_ME"
 
           MANUAL_VEHICLE=$(curl --fail --silent --show-error \
             -b "$COOKIE_JAR" \
@@ -89,14 +91,15 @@ jobs:
             -H 'X-PartGraph-CSRF: 1' \
             --data '{"nickname":"CI garage car","selection":{"year":2009,"market":"US","make":"Honda","model":"Civic","trim":"Hybrid"}}' \
             http://127.0.0.1:5173/api/v1/user-vehicles/manual)
-          echo "$MANUAL_VEHICLE" | grep -q '"identity_source":"manual"'
-          echo "$MANUAL_VEHICLE" | grep -q '"identity_resolution":"manual_candidate"'
+          python -c 'import json,sys; p=json.load(sys.stdin); assert p["identity_source"] == "manual"; assert p["identity_resolution"] == "manual_candidate"' \
+            <<< "$MANUAL_VEHICLE"
           VEHICLE_ID=$(python -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<< "$MANUAL_VEHICLE")
 
-          curl --fail --silent --show-error \
+          VEHICLES=$(curl --fail --silent --show-error \
             -b "$COOKIE_JAR" \
-            http://127.0.0.1:5173/api/v1/user-vehicles \
-            | grep -q "\"id\":\"$VEHICLE_ID\""
+            http://127.0.0.1:5173/api/v1/user-vehicles)
+          python -c 'import json,sys; rows=json.load(sys.stdin); assert any(row["id"] == sys.argv[1] for row in rows)' \
+            "$VEHICLE_ID" <<< "$VEHICLES"
 
           VIN_STATUS=$(curl --silent --output /tmp/partgraph-vin-error.json --write-out '%{http_code}' \
             -b "$COOKIE_JAR" \
@@ -105,7 +108,7 @@ jobs:
             --data '{"market":"US","vin":"1HGCM82643A004352"}' \
             http://127.0.0.1:5173/api/v1/user-vehicles/vin/decode)
           test "$VIN_STATUS" = "422"
-          grep -q 'VIN_CHECK_DIGIT_INVALID' /tmp/partgraph-vin-error.json
+          python -c 'import json; p=json.load(open("/tmp/partgraph-vin-error.json")); assert p["error"]["code"] == "VIN_CHECK_DIGIT_INVALID"'
 
           REPAIR=$(curl --fail --silent --show-error \
             -b "$COOKIE_JAR" \
@@ -115,15 +118,16 @@ jobs:
             -H 'Idempotency-Key: ci_repair_create_01' \
             --data "{\"user_vehicle_id\":\"$VEHICLE_ID\",\"title\":\"CI radiator repair\"}" \
             http://127.0.0.1:5173/api/v1/repair-sessions)
-          echo "$REPAIR" | grep -q '"status":"active"'
-          echo "$REPAIR" | grep -q '"event_type":"session_started"'
+          python -c 'import json,sys; p=json.load(sys.stdin); assert p["session"]["status"] == "active"; assert p["last_event"]["event_type"] == "session_started"; r=p["reorientation"]; assert r["checkpoint"]["event_type"] == "session_started"; assert r["next_verified_action"]["status"] == "unavailable"; assert r["next_verified_action"]["reason"] == "repair_plan_not_available"' \
+            <<< "$REPAIR"
           SESSION_ID=$(python -c 'import json,sys; print(json.load(sys.stdin)["session"]["id"])' <<< "$REPAIR")
 
-          curl --fail --silent --show-error \
+          VIEWER_RESUME=$(curl --fail --silent --show-error \
             -b "$COOKIE_JAR" \
             -H "X-PartGraph-Device-ID: $DEVICE_B" \
-            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/resume" \
-            | grep -q '"status":"held_by_other"'
+            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/resume")
+          python -c 'import json,sys; p=json.load(sys.stdin); assert p["lease"]["status"] == "held_by_other"; assert p["lease"]["can_edit"] is False; assert p["reorientation"] is not None' \
+            <<< "$VIEWER_RESUME"
 
           LEASE_STATUS=$(curl --silent --output /tmp/partgraph-lease-error.json --write-out '%{http_code}' \
             -b "$COOKIE_JAR" \
@@ -132,15 +136,16 @@ jobs:
             -H "X-PartGraph-Device-ID: $DEVICE_B" \
             "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/lease/acquire")
           test "$LEASE_STATUS" = "409"
-          grep -q 'REPAIR_SESSION_LEASE_HELD' /tmp/partgraph-lease-error.json
+          python -c 'import json; p=json.load(open("/tmp/partgraph-lease-error.json")); assert p["error"]["code"] == "REPAIR_SESSION_LEASE_HELD"'
 
-          curl --fail --silent --show-error \
+          TAKEOVER=$(curl --fail --silent --show-error \
             -b "$COOKIE_JAR" \
             -X POST \
             -H 'X-PartGraph-CSRF: 1' \
             -H "X-PartGraph-Device-ID: $DEVICE_B" \
-            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/lease/takeover" \
-            | grep -q '"status":"owned"'
+            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/lease/takeover")
+          python -c 'import json,sys; p=json.load(sys.stdin); assert p["lease"]["status"] == "owned"' \
+            <<< "$TAKEOVER"
 
           STORAGE=$(curl --fail --silent --show-error \
             -b "$COOKIE_JAR" \
@@ -160,7 +165,8 @@ jobs:
             -H 'Idempotency-Key: ci_memory_fastener_01' \
             --data "{\"label\":\"CI upper support bolt\",\"origin\":\"radiator support\",\"position\":\"driver side\",\"physical_state\":\"stored\",\"storage_location_id\":\"$STORAGE_ID\"}" \
             "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/fasteners")
-          echo "$FASTENER" | grep -q '"physical_state":"stored"'
+          python -c 'import json,sys; p=json.load(sys.stdin); assert p["physical_state"] == "stored"' \
+            <<< "$FASTENER"
           FASTENER_ID=$(python -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<< "$FASTENER")
 
           INVENTORY=$(curl --fail --silent --show-error \
@@ -173,7 +179,7 @@ jobs:
             "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/inventory")
           INVENTORY_ID=$(python -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<< "$INVENTORY")
 
-          curl --fail --silent --show-error \
+          INVENTORY_AVAILABLE=$(curl --fail --silent --show-error \
             -b "$COOKIE_JAR" \
             -X PATCH \
             -H 'Content-Type: application/json' \
@@ -181,8 +187,9 @@ jobs:
             -H "X-PartGraph-Device-ID: $DEVICE_B" \
             -H 'Idempotency-Key: ci_memory_inventory_02' \
             --data '{"procurement_state":"available","quantity":1}' \
-            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/inventory/$INVENTORY_ID" \
-            | grep -q '"procurement_state":"available"'
+            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/inventory/$INVENTORY_ID")
+          python -c 'import json,sys; p=json.load(sys.stdin); assert p["procurement_state"] == "available"' \
+            <<< "$INVENTORY_AVAILABLE"
 
           OBSERVATION=$(curl --fail --silent --show-error \
             -b "$COOKIE_JAR" \
@@ -192,7 +199,8 @@ jobs:
             -H 'Idempotency-Key: ci_memory_observation_01' \
             --data "{\"category\":\"condition\",\"text\":\"CI threads appear reusable.\",\"fastener_id\":\"$FASTENER_ID\"}" \
             "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/observations")
-          echo "$OBSERVATION" | grep -q '"source":"user"'
+          python -c 'import json,sys; p=json.load(sys.stdin); assert p["source"] == "user"; assert p["review_state"] == "confirmed"' \
+            <<< "$OBSERVATION"
           OBSERVATION_ID=$(python -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<< "$OBSERVATION")
 
           printf '\x89PNG\r\n\x1a\nPartGraph-CI' > /tmp/partgraph-ci.png
@@ -206,7 +214,8 @@ jobs:
             -F "observation_id=$OBSERVATION_ID" \
             -F 'photo=@/tmp/partgraph-ci.png;type=image/png' \
             "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/photos")
-          echo "$PHOTO" | grep -q '"purpose":"fastener"'
+          python -c 'import json,sys; p=json.load(sys.stdin); assert p["purpose"] == "fastener"' \
+            <<< "$PHOTO"
           PHOTO_ID=$(python -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<< "$PHOTO")
 
           curl --fail --silent --show-error \
@@ -215,100 +224,103 @@ jobs:
             --output /tmp/partgraph-ci-downloaded.png
           cmp /tmp/partgraph-ci.png /tmp/partgraph-ci-downloaded.png
 
-          curl --fail --silent --show-error \
+          MEMORY_RESUME=$(curl --fail --silent --show-error \
             -b "$COOKIE_JAR" \
             -H "X-PartGraph-Device-ID: $DEVICE_B" \
-            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/resume" \
-            | grep -q '"event_type":"photo_evidence_added"'
+            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/resume")
+          python -c 'import json,sys; p=json.load(sys.stdin); r=p["reorientation"]; assert p["last_event"]["event_type"] == "photo_evidence_added"; assert r["checkpoint"]["event_type"] == "photo_evidence_added"; assert r["counts"]["fasteners_total"] == 1; assert r["counts"]["hardware_stored"] == 1; assert r["counts"]["procurement_blockers"] == 0; assert r["storage_groups"][0]["label"] == "CI magnetic tray"; assert any(item["id"] == sys.argv[1] for item in r["recent_evidence"]); assert r["attention"] == []' \
+            "$PHOTO_ID" <<< "$MEMORY_RESUME"
 
-          curl --fail --silent --show-error \
+          PHOTO_DELETE=$(curl --fail --silent --show-error \
             -b "$COOKIE_JAR" \
             -X DELETE \
             -H 'X-PartGraph-CSRF: 1' \
             -H "X-PartGraph-Device-ID: $DEVICE_B" \
             -H 'Idempotency-Key: ci_memory_photo_delete_01' \
-            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/photos/$PHOTO_ID" \
-            | grep -q "\"id\":\"$PHOTO_ID\""
+            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/photos/$PHOTO_ID")
+          python -c 'import json,sys; p=json.load(sys.stdin); assert p["id"] == sys.argv[1]' \
+            "$PHOTO_ID" <<< "$PHOTO_DELETE"
 
           PHOTO_STATUS=$(curl --silent --output /tmp/partgraph-photo-error.json --write-out '%{http_code}' \
             -b "$COOKIE_JAR" \
             "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/photos/$PHOTO_ID/content")
           test "$PHOTO_STATUS" = "404"
-          grep -q 'PHOTO_EVIDENCE_NOT_FOUND' /tmp/partgraph-photo-error.json
+          python -c 'import json; p=json.load(open("/tmp/partgraph-photo-error.json")); assert p["error"]["code"] == "PHOTO_EVIDENCE_NOT_FOUND"'
 
-          curl --fail --silent --show-error \
+          PAUSED=$(curl --fail --silent --show-error \
             -b "$COOKIE_JAR" \
             -X POST \
             -H 'X-PartGraph-CSRF: 1' \
             -H "X-PartGraph-Device-ID: $DEVICE_B" \
             -H 'Idempotency-Key: ci_repair_pause_01' \
-            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/pause" \
-            | grep -q '"event_type":"session_paused"'
+            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/pause")
+          python -c 'import json,sys; p=json.load(sys.stdin); assert p["event"]["event_type"] == "session_paused"; assert p["session"]["status"] == "paused"' \
+            <<< "$PAUSED"
 
-          curl --fail --silent --show-error \
+          PAUSED_SNAPSHOT=$(curl --fail --silent --show-error \
+            -b "$COOKIE_JAR" \
+            -H "X-PartGraph-Device-ID: $DEVICE_B" \
+            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/resume")
+          python -c 'import json,sys; p=json.load(sys.stdin); assert p["last_event"]["event_type"] == "session_paused"; assert p["session"]["status"] == "paused"; assert p["reorientation"]["next_verified_action"]["reason"] == "repair_plan_not_available"' \
+            <<< "$PAUSED_SNAPSHOT"
+
+          RESUMED=$(curl --fail --silent --show-error \
             -b "$COOKIE_JAR" \
             -X POST \
             -H 'X-PartGraph-CSRF: 1' \
             -H "X-PartGraph-Device-ID: $DEVICE_B" \
             -H 'Idempotency-Key: ci_repair_resume_01' \
-            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/resume" \
-            | grep -q '"event_type":"session_resumed"'
+            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/resume")
+          python -c 'import json,sys; p=json.load(sys.stdin); assert p["event"]["event_type"] == "session_resumed"; assert p["session"]["status"] == "active"' \
+            <<< "$RESUMED"
 
           HISTORY=$(curl --fail --silent --show-error \
             -b "$COOKIE_JAR" \
             "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/events?after_sequence=0&limit=50")
-          echo "$HISTORY" | grep -q 'session_started'
-          echo "$HISTORY" | grep -q 'storage_location_created'
-          echo "$HISTORY" | grep -q 'fastener_recorded'
-          echo "$HISTORY" | grep -q 'inventory_item_recorded'
-          echo "$HISTORY" | grep -q 'inventory_state_changed'
-          echo "$HISTORY" | grep -q 'observation_recorded'
-          echo "$HISTORY" | grep -q 'photo_evidence_added'
-          echo "$HISTORY" | grep -q 'photo_evidence_deleted'
-          echo "$HISTORY" | grep -q 'session_paused'
-          echo "$HISTORY" | grep -q 'session_resumed'
+          python -c 'import json,sys; p=json.load(sys.stdin); kinds={item["event_type"] for item in p["items"]}; required={"session_started","storage_location_created","fastener_recorded","inventory_item_recorded","inventory_state_changed","observation_recorded","photo_evidence_added","photo_evidence_deleted","session_paused","session_resumed"}; assert required <= kinds' \
+            <<< "$HISTORY"
 
-          curl --fail --silent --show-error \
+          ARCHIVED=$(curl --fail --silent --show-error \
             -b "$COOKIE_JAR" \
             -X PATCH \
             -H 'X-PartGraph-CSRF: 1' \
             -H "X-PartGraph-Device-ID: $DEVICE_B" \
             -H 'Idempotency-Key: ci_repair_archive_01' \
-            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/archive" \
-            | grep -q '"event_type":"session_archived"'
+            "http://127.0.0.1:5173/api/v1/repair-sessions/$SESSION_ID/archive")
+          python -c 'import json,sys; p=json.load(sys.stdin); assert p["event"]["event_type"] == "session_archived"; assert p["session"]["status"] == "archived"' \
+            <<< "$ARCHIVED"
 
-          if curl --fail --silent --show-error \
+          ACTIVE_SESSIONS=$(curl --fail --silent --show-error \
             -b "$COOKIE_JAR" \
-            http://127.0.0.1:5173/api/v1/repair-sessions \
-            | grep -q "\"id\":\"$SESSION_ID\""; then
-            echo "Archived repair leaked into the default active list."
-            exit 1
-          fi
+            http://127.0.0.1:5173/api/v1/repair-sessions)
+          python -c 'import json,sys; rows=json.load(sys.stdin); assert all(row["id"] != sys.argv[1] for row in rows)' \
+            "$SESSION_ID" <<< "$ACTIVE_SESSIONS"
 
-          curl --fail --silent --show-error \
+          ALL_SESSIONS=$(curl --fail --silent --show-error \
             -b "$COOKIE_JAR" \
-            'http://127.0.0.1:5173/api/v1/repair-sessions?include_archived=true' \
-            | grep -q "\"id\":\"$SESSION_ID\""
+            'http://127.0.0.1:5173/api/v1/repair-sessions?include_archived=true')
+          python -c 'import json,sys; rows=json.load(sys.stdin); assert any(row["id"] == sys.argv[1] for row in rows)' \
+            "$SESSION_ID" <<< "$ALL_SESSIONS"
 
-          curl --fail --silent --show-error \
+          ARCHIVED_VEHICLE=$(curl --fail --silent --show-error \
             -b "$COOKIE_JAR" \
             -X PATCH \
             -H 'X-PartGraph-CSRF: 1' \
-            "http://127.0.0.1:5173/api/v1/user-vehicles/$VEHICLE_ID/archive" \
-            | grep -q '"archived_at"'
+            "http://127.0.0.1:5173/api/v1/user-vehicles/$VEHICLE_ID/archive")
+          python -c 'import json,sys; p=json.load(sys.stdin); assert p["archived_at"] is not None' \
+            <<< "$ARCHIVED_VEHICLE"
 
-          if curl --fail --silent --show-error \
+          ACTIVE_VEHICLES=$(curl --fail --silent --show-error \
             -b "$COOKIE_JAR" \
-            http://127.0.0.1:5173/api/v1/user-vehicles \
-            | grep -q "\"id\":\"$VEHICLE_ID\""; then
-            echo "Archived vehicle leaked into the default active list."
-            exit 1
-          fi
+            http://127.0.0.1:5173/api/v1/user-vehicles)
+          python -c 'import json,sys; rows=json.load(sys.stdin); assert all(row["id"] != sys.argv[1] for row in rows)' \
+            "$VEHICLE_ID" <<< "$ACTIVE_VEHICLES"
 
-          curl --fail --silent --show-error \
+          ALL_VEHICLES=$(curl --fail --silent --show-error \
             -b "$COOKIE_JAR" \
-            'http://127.0.0.1:5173/api/v1/user-vehicles?include_archived=true' \
-            | grep -q "\"id\":\"$VEHICLE_ID\""
+            'http://127.0.0.1:5173/api/v1/user-vehicles?include_archived=true')
+          python -c 'import json,sys; rows=json.load(sys.stdin); assert any(row["id"] == sys.argv[1] for row in rows)' \
+            "$VEHICLE_ID" <<< "$ALL_VEHICLES"
 
           curl --fail --silent --show-error \
             -b "$COOKIE_JAR" \
@@ -317,21 +329,22 @@ jobs:
             -H 'X-PartGraph-CSRF: 1' \
             http://127.0.0.1:5173/api/v1/auth/logout >/dev/null
 
-          curl --fail --silent --show-error \
+          LOGIN=$(curl --fail --silent --show-error \
             -b "$COOKIE_JAR" \
             -c "$COOKIE_JAR" \
             -H 'Content-Type: application/json' \
             -H 'X-PartGraph-CSRF: 1' \
             --data "{\"identifier\":\"$USERNAME\",\"password\":\"$PASSWORD\"}" \
-            http://127.0.0.1:5173/api/v1/auth/login \
-            | grep -q "\"username\":\"$USERNAME\""
+            http://127.0.0.1:5173/api/v1/auth/login)
+          python -c 'import json,sys; p=json.load(sys.stdin); assert p["user"]["username"] == sys.argv[1]' \
+            "$USERNAME" <<< "$LOGIN"
 
           CSRF_STATUS=$(curl --silent --output /tmp/partgraph-csrf-error.json --write-out '%{http_code}' \
             -H 'Content-Type: application/json' \
             --data "{\"identifier\":\"$USERNAME\",\"password\":\"$PASSWORD\"}" \
             http://127.0.0.1:5173/api/v1/auth/login)
           test "$CSRF_STATUS" = "403"
-          grep -q 'AUTH_CSRF_FAILED' /tmp/partgraph-csrf-error.json
+          python -c 'import json; p=json.load(open("/tmp/partgraph-csrf-error.json")); assert p["error"]["code"] == "AUTH_CSRF_FAILED"'
 
       - name: Stop PartGraph stack
         if: always()

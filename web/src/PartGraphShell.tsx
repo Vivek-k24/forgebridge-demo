@@ -5,28 +5,20 @@ import { RepairSessionWorkspace } from './RepairSessions'
 import { UserVehicleWorkspace } from './UserVehicles'
 import './partgraph-shell.css'
 
-type MemoryPageKey = 'fasteners' | 'evidence' | 'inventory'
-type PageKey = 'resume' | 'garage' | 'details' | 'repair' | MemoryPageKey
+type PageKey = 'resume' | 'garage' | 'details' | 'repair' | 'inventory'
 
 type NavItem = {
-  key: string
+  key: PageKey
   label: string
-  group: 'repair' | 'memory'
-  page?: PageKey
-  pending?: boolean
+  group: 'repair' | 'readiness'
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { key: 'resume', label: 'Resume', group: 'repair', page: 'resume' },
-  { key: 'garage', label: 'Garage & VIN', group: 'repair', page: 'garage' },
-  { key: 'details', label: 'Vehicle details', group: 'repair', page: 'details' },
-  { key: 'repair', label: 'Repair session', group: 'repair', page: 'repair' },
-  { key: 'assembly', label: 'Assembly', group: 'memory', pending: true },
-  { key: 'parts', label: 'Parts', group: 'memory', pending: true },
-  { key: 'fasteners', label: 'Fasteners', group: 'memory', page: 'fasteners' },
-  { key: 'evidence', label: 'Evidence', group: 'memory', page: 'evidence' },
-  { key: 'inventory', label: 'Inventory', group: 'memory', page: 'inventory' },
-  { key: 'history', label: 'History', group: 'memory', pending: true },
+  { key: 'resume', label: 'Resume', group: 'repair' },
+  { key: 'garage', label: 'Garage & VIN', group: 'repair' },
+  { key: 'details', label: 'Vehicle details', group: 'repair' },
+  { key: 'repair', label: 'Repair session', group: 'repair' },
+  { key: 'inventory', label: 'Inventory', group: 'readiness' },
 ]
 
 const PAGE_KEYS = new Set<PageKey>([
@@ -34,18 +26,12 @@ const PAGE_KEYS = new Set<PageKey>([
   'garage',
   'details',
   'repair',
-  'fasteners',
-  'evidence',
   'inventory',
 ])
 
 function pageFromHash(): PageKey {
   const value = window.location.hash.replace(/^#\/?/, '') as PageKey
   return PAGE_KEYS.has(value) ? value : 'resume'
-}
-
-function isMemoryPage(page: PageKey): page is MemoryPageKey {
-  return page === 'fasteners' || page === 'evidence' || page === 'inventory'
 }
 
 export default function PartGraphShell() {
@@ -65,30 +51,16 @@ export default function PartGraphShell() {
 
   const navigation = (group: NavItem['group']) => (
     <>
-      <p>{group === 'repair' ? 'Repair' : 'Memory'}</p>
+      <p>{group === 'repair' ? 'Repair' : 'Readiness'}</p>
       {NAV_ITEMS.filter((item) => item.group === group).map((item) => {
-        const active = item.page === page
-        if (item.pending || !item.page) {
-          return (
-            <button
-              key={item.key}
-              type="button"
-              className="partgraph-nav-item partgraph-nav-item--pending"
-              disabled
-              title="Backend contract not implemented yet"
-            >
-              <span>{item.label}</span>
-              <small>pending</small>
-            </button>
-          )
-        }
+        const active = item.key === page
         return (
           <button
             key={item.key}
             type="button"
             className={active ? 'partgraph-nav-item partgraph-nav-item--active' : 'partgraph-nav-item'}
             aria-current={active ? 'page' : undefined}
-            onClick={() => navigate(item.page!)}
+            onClick={() => navigate(item.key)}
           >
             <span>{item.label}</span>
           </button>
@@ -123,8 +95,8 @@ export default function PartGraphShell() {
         <App />
       </div>
     )
-  } else if (isMemoryPage(page)) {
-    content = <RepairMemoryWorkspace initialView={page} />
+  } else if (page === 'inventory') {
+    content = <RepairMemoryWorkspace />
   } else {
     content = <RepairSessionWorkspace onOpenGarage={() => navigate('garage')} />
   }
@@ -141,7 +113,7 @@ export default function PartGraphShell() {
         </div>
         <nav className="partgraph-nav">
           {navigation('repair')}
-          {navigation('memory')}
+          {navigation('readiness')}
         </nav>
       </aside>
       <div className="partgraph-main">{content}</div>

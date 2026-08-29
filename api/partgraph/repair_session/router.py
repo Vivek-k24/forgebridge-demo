@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Header, Query, status
 
 from ..auth.dependencies import AuthSessionDep, CurrentUserDep, require_csrf
 from ..errors import ErrorCode, ErrorEnvelope, PartGraphError
+from .reorientation import build_reorientation
 from .schemas import (
     RepairSessionCreate,
     RepairSessionEventPage,
@@ -76,6 +77,21 @@ def _parse_idempotency_key(value: str | None) -> str:
     return value
 
 
+async def _complete_resume_snapshot(
+    snapshot: RepairSessionResumeRead,
+    *,
+    user_id: UUID,
+    db: AuthSessionDep,
+) -> RepairSessionResumeRead:
+    reorientation = await build_reorientation(
+        db,
+        user_id=user_id,
+        session_id=snapshot.session.id,
+        last_event=snapshot.last_event,
+    )
+    return snapshot.model_copy(update={"reorientation": reorientation})
+
+
 @router.get("", response_model=list[RepairSessionRead])
 async def sessions(
     user: CurrentUserDep,
@@ -118,12 +134,13 @@ async def create_session(
         device_id=device_id,
         idempotency_key=idempotency_key,
     )
-    return await resume_repair_session(
+    snapshot = await resume_repair_session(
         db,
         user_id=user.id,
         session_id=bundle.repair_session.id,
         device_id=device_id,
     )
+    return await _complete_resume_snapshot(snapshot, user_id=user.id, db=db)
 
 
 @router.get("/{session_id}/resume", response_model=RepairSessionResumeRead)
@@ -134,12 +151,13 @@ async def resume_snapshot(
     device_header: Annotated[str | None, Header(alias=DEVICE_HEADER)] = None,
 ) -> RepairSessionResumeRead:
     device_id = _parse_device_id(device_header, required=False)
-    return await resume_repair_session(
+    snapshot = await resume_repair_session(
         db,
         user_id=user.id,
         session_id=session_id,
         device_id=device_id,
     )
+    return await _complete_resume_snapshot(snapshot, user_id=user.id, db=db)
 
 
 @router.get("/{session_id}/events", response_model=RepairSessionEventPage)

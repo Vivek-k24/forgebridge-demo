@@ -67,11 +67,75 @@ type Lease = {
   expires_at: string | null
 }
 
+type ResumeActivity = {
+  sequence: number
+  event_type: RepairEventType
+  label: string
+  created_at: string
+}
+
+type ResumeAttention = {
+  kind: 'fastener' | 'inventory' | 'observation'
+  id: string
+  label: string
+  state: string
+  severity: 'attention' | 'waiting' | 'blocking'
+  detail: string | null
+}
+
+type ResumeStorageGroup = {
+  storage_location_id: string
+  label: string
+  item_count: number
+}
+
+type ResumeObservation = {
+  id: string
+  category: string
+  text: string
+  fastener_id: string | null
+  created_at: string
+}
+
+type ResumeEvidence = {
+  id: string
+  purpose: string
+  content_url: string
+  created_at: string
+}
+
+type ResumeCounts = {
+  fasteners_total: number
+  hardware_not_installed: number
+  hardware_stored: number
+  hardware_loose: number
+  inventory_total: number
+  procurement_blockers: number
+  observations_total: number
+  photos_total: number
+}
+
+type Reorientation = {
+  checkpoint: ResumeActivity
+  attention: ResumeAttention[]
+  storage_groups: ResumeStorageGroup[]
+  recent_observations: ResumeObservation[]
+  recent_evidence: ResumeEvidence[]
+  recent_activity: ResumeActivity[]
+  counts: ResumeCounts
+  next_verified_action: {
+    status: 'available' | 'unavailable'
+    label: string | null
+    reason: string | null
+  }
+}
+
 type ResumeSnapshot = {
   session: RepairSession
   vehicle: UserVehicle
   last_event: RepairEvent
   lease: Lease
+  reorientation: Reorientation
 }
 
 type MutationResult = {
@@ -80,33 +144,10 @@ type MutationResult = {
   lease: Lease
 }
 
-type EventPage = {
-  items: RepairEvent[]
-  next_after_sequence: number | null
-}
-
 function vehicleName(vehicle: UserVehicle): string {
   const identity = vehicle.identity
   const detail = [identity.year, identity.make, identity.model, identity.trim].filter(Boolean).join(' ')
   return vehicle.nickname ? `${vehicle.nickname} · ${detail}` : detail
-}
-
-function eventLabel(event: RepairEvent): string {
-  const labels: Record<RepairEventType, string> = {
-    session_started: 'Repair started',
-    session_paused: 'Repair paused',
-    session_resumed: 'Repair resumed',
-    session_archived: 'Repair archived',
-    storage_location_created: 'Storage location recorded',
-    fastener_recorded: 'Fastener recorded',
-    fastener_state_changed: 'Fastener state changed',
-    inventory_item_recorded: 'Inventory item recorded',
-    inventory_state_changed: 'Inventory state changed',
-    observation_recorded: 'Observation recorded',
-    photo_evidence_added: 'Photo evidence added',
-    photo_evidence_deleted: 'Photo evidence deleted',
-  }
-  return labels[event.event_type]
 }
 
 function requestHeaders(deviceId: string, idempotencyKey?: string): Record<string, string> {
@@ -117,13 +158,20 @@ function requestHeaders(deviceId: string, idempotencyKey?: string): Record<strin
   }
 }
 
+function stateLabel(value: string): string {
+  return value.replaceAll('_', ' ')
+}
+
+function plural(value: number, singular: string, pluralValue = `${singular}s`): string {
+  return `${value} ${value === 1 ? singular : pluralValue}`
+}
+
 export function RepairSessionWorkspace({ onOpenGarage }: { onOpenGarage: () => void }) {
   const deviceId = useMemo(() => partGraphDeviceId(), [])
   const [vehicles, setVehicles] = useState<UserVehicle[]>([])
   const [sessions, setSessions] = useState<RepairSession[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [snapshot, setSnapshot] = useState<ResumeSnapshot | null>(null)
-  const [history, setHistory] = useState<RepairEvent[]>([])
   const [vehicleId, setVehicleId] = useState('')
   const [title, setTitle] = useState('')
   const [loading, setLoading] = useState(true)
@@ -144,21 +192,13 @@ export function RepairSessionWorkspace({ onOpenGarage }: { onOpenGarage: () => v
 
   const loadSession = useCallback(
     async (sessionId: string) => {
-      const [resume, events] = await Promise.all([
-        apiRequest<ResumeSnapshot>(
-          `/api/v1/repair-sessions/${sessionId}/resume`,
-          { headers: { 'X-PartGraph-Device-ID': deviceId } },
-          { retryIdempotent: true },
-        ),
-        apiRequest<EventPage>(
-          `/api/v1/repair-sessions/${sessionId}/events?after_sequence=0&limit=100`,
-          {},
-          { retryIdempotent: true },
-        ),
-      ])
+      const resume = await apiRequest<ResumeSnapshot>(
+        `/api/v1/repair-sessions/${sessionId}/resume`,
+        { headers: { 'X-PartGraph-Device-ID': deviceId } },
+        { retryIdempotent: true },
+      )
       setSelectedId(sessionId)
       setSnapshot(resume)
-      setHistory(events.items)
     },
     [deviceId],
   )
@@ -199,9 +239,10 @@ export function RepairSessionWorkspace({ onOpenGarage }: { onOpenGarage: () => v
         body: JSON.stringify({ user_vehicle_id: vehicleId, title: title.trim() }),
       })
       setTitle('')
+      setSnapshot(created)
+      setSelectedId(created.session.id)
       setMessage('Repair session started and saved to PartGraph.')
       await refreshLists()
-      await loadSession(created.session.id)
     } catch (failure) {
       setError(formatApiFailure(failure, 'Could not start the repair session.'))
     } finally {
@@ -234,7 +275,7 @@ export function RepairSessionWorkspace({ onOpenGarage }: { onOpenGarage: () => v
       setError(null)
       setMessage(null)
       const method = action === 'archive' ? 'PATCH' : 'POST'
-      const result = await apiRequest<MutationResult>(
+      await apiRequest<MutationResult>(
         `/api/v1/repair-sessions/${selectedId}/${action}`,
         {
           method,
@@ -250,12 +291,10 @@ export function RepairSessionWorkspace({ onOpenGarage }: { onOpenGarage: () => v
       )
       if (action === 'archive') {
         setSnapshot(null)
-        setHistory([])
         setSelectedId(null)
         const rows = await refreshLists()
         if (rows[0]) await loadSession(rows[0].id)
       } else {
-        setSnapshot({ ...snapshot!, session: result.session, last_event: result.event, lease: result.lease })
         await loadSession(selectedId)
         await refreshLists()
       }
@@ -267,7 +306,7 @@ export function RepairSessionWorkspace({ onOpenGarage }: { onOpenGarage: () => v
   }
 
   if (loading) {
-    return <p className="repair-loading">Loading your repair state…</p>
+    return <p className="repair-loading">Reconstructing your repair state…</p>
   }
 
   return (
@@ -275,10 +314,10 @@ export function RepairSessionWorkspace({ onOpenGarage }: { onOpenGarage: () => v
       <header className="repair-heading">
         <div>
           <p className="eyebrow">PARTGRAPH · RESUME</p>
-          <h1>Return to the same repair state.</h1>
+          <h1>See where the repair actually stopped.</h1>
           <p className="lede">
-            Repair sessions remember what PartGraph has actually recorded. Guidance, parts, and
-            fasteners appear only after those verified domains exist.
+            PartGraph reconstructs what was recorded so you can look at the car and continue without
+            maintaining a separate repair log.
           </p>
         </div>
         <span className="repair-device">device {deviceId.slice(0, 8)}</span>
@@ -358,76 +397,224 @@ export function RepairSessionWorkspace({ onOpenGarage }: { onOpenGarage: () => v
               <p>Select an active repair or start one. PartGraph will not fabricate a resume point.</p>
             </div>
           ) : (
-            <>
-              <div className="repair-current-head">
-                <div>
-                  <p className="eyebrow">CURRENT STATE · EVENT {snapshot.session.current_sequence}</p>
-                  <h2>{snapshot.session.title}</h2>
-                  <p>{vehicleName(snapshot.vehicle)}</p>
-                </div>
-                <span className={`repair-status repair-status--${snapshot.session.status}`}>{snapshot.session.status}</span>
-              </div>
-
-              <div className="repair-facts">
-                <div>
-                  <span>Last recorded event</span>
-                  <strong>{eventLabel(snapshot.last_event)}</strong>
-                  <small>{new Date(snapshot.last_event.created_at).toLocaleString()}</small>
-                </div>
-                <div>
-                  <span>Editing control</span>
-                  <strong>{snapshot.lease.status.replaceAll('_', ' ')}</strong>
-                  <small>{snapshot.lease.can_edit ? 'This device may change state.' : 'Viewing is read-only.'}</small>
-                </div>
-                <div>
-                  <span>Next verified action</span>
-                  <strong>Not available yet</strong>
-                  <small>A verified repair plan/dependency domain has not been implemented.</small>
-                </div>
-              </div>
-
-              <div className="repair-actions">
-                {snapshot.lease.status === 'available' && snapshot.session.status !== 'archived' && (
-                  <button disabled={busy} onClick={() => void leaseAction(false)}>Take editing control</button>
-                )}
-                {snapshot.lease.status === 'held_by_other' && snapshot.session.status !== 'archived' && (
-                  <button disabled={busy} onClick={() => void leaseAction(true)}>Take over session</button>
-                )}
-                {snapshot.lease.can_edit && snapshot.session.status === 'active' && (
-                  <button disabled={busy} onClick={() => void stateAction('pause')}>Pause repair</button>
-                )}
-                {snapshot.lease.can_edit && snapshot.session.status === 'paused' && (
-                  <button disabled={busy} onClick={() => void stateAction('resume')}>Resume work</button>
-                )}
-                {snapshot.lease.can_edit && snapshot.session.status !== 'archived' && (
-                  <button className="secondary" disabled={busy} onClick={() => void stateAction('archive')}>Archive</button>
-                )}
-              </div>
-
-              <section className="repair-history">
-                <div className="repair-section-title">
-                  <div>
-                    <p className="eyebrow">IMMUTABLE HISTORY</p>
-                    <h3>Recorded events</h3>
-                  </div>
-                  <span>{history.length}</span>
-                </div>
-                <ol>
-                  {history.map((event) => (
-                    <li key={event.id}>
-                      <span>{event.sequence}</span>
-                      <div>
-                        <strong>{eventLabel(event)}</strong>
-                        <small>{new Date(event.created_at).toLocaleString()}</small>
-                      </div>
-                    </li>
-                  ))}
-                </ol>
-              </section>
-            </>
+            <ResumeState
+              snapshot={snapshot}
+              busy={busy}
+              onLease={leaseAction}
+              onState={stateAction}
+            />
           )}
         </section>
       </div>
     </div>
+  )
+}
+
+function ResumeState({
+  snapshot,
+  busy,
+  onLease,
+  onState,
+}: {
+  snapshot: ResumeSnapshot
+  busy: boolean
+  onLease: (takeover: boolean) => Promise<void>
+  onState: (action: 'pause' | 'resume' | 'archive') => Promise<void>
+}) {
+  const resume = snapshot.reorientation
+  const counts = resume.counts
+
+  return (
+    <>
+      <div className="repair-current-head">
+        <div>
+          <p className="eyebrow">CURRENT STATE · EVENT {snapshot.session.current_sequence}</p>
+          <h2>{snapshot.session.title}</h2>
+          <p>{vehicleName(snapshot.vehicle)}</p>
+        </div>
+        <span className={`repair-status repair-status--${snapshot.session.status}`}>{snapshot.session.status}</span>
+      </div>
+
+      <section className="resume-glance" aria-label="Repair reorientation">
+        <article className="resume-checkpoint">
+          <span>Where you left it</span>
+          <strong>{resume.checkpoint.label}</strong>
+          <small>{new Date(resume.checkpoint.created_at).toLocaleString()}</small>
+        </article>
+        <article>
+          <span>Hardware apart</span>
+          <strong>{plural(counts.hardware_not_installed, 'item')} not installed</strong>
+          <small>
+            {plural(counts.hardware_stored, 'item')} grouped · {plural(counts.hardware_loose, 'item')} loose
+          </small>
+        </article>
+        <article>
+          <span>Waiting on parts</span>
+          <strong>{plural(counts.procurement_blockers, 'record')} blocking or waiting</strong>
+          <small>{plural(counts.inventory_total, 'inventory record')} total</small>
+        </article>
+      </section>
+
+      <section className="resume-attention">
+        <div className="repair-section-title">
+          <div>
+            <p className="eyebrow">LOOK FIRST</p>
+            <h3>Recorded exceptions</h3>
+          </div>
+          <span>{resume.attention.length}</span>
+        </div>
+        {resume.attention.length === 0 ? (
+          <div className="resume-clear">
+            <strong>No recorded blockers or damage.</strong>
+            <span>PartGraph has no missing/damaged hardware or procurement blocker recorded.</span>
+          </div>
+        ) : (
+          <div className="resume-attention-list">
+            {resume.attention.map((item) => (
+              <article key={`${item.kind}-${item.id}`} className={`resume-attention-item resume-attention-item--${item.severity}`}>
+                <div>
+                  <span>{item.kind}</span>
+                  <strong>{item.label}</strong>
+                  {item.detail && <small>{item.detail}</small>}
+                </div>
+                <b>{stateLabel(item.state)}</b>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {(resume.storage_groups.length > 0 || counts.hardware_loose > 0) && (
+        <section className="resume-hardware">
+          <div className="repair-section-title">
+            <div>
+              <p className="eyebrow">HARDWARE AT A GLANCE</p>
+              <h3>Where things were left</h3>
+            </div>
+            <span>{counts.fasteners_total}</span>
+          </div>
+          <div className="resume-storage-list">
+            {resume.storage_groups.map((group) => (
+              <article key={group.storage_location_id}>
+                <strong>{group.label}</strong>
+                <span>{plural(group.item_count, 'item')} grouped here</span>
+              </article>
+            ))}
+            {counts.hardware_loose > 0 && (
+              <article>
+                <strong>Visible / not assigned to storage</strong>
+                <span>{plural(counts.hardware_loose, 'removed item')} recorded loose</span>
+              </article>
+            )}
+          </div>
+        </section>
+      )}
+
+      {(resume.recent_observations.length > 0 || resume.recent_evidence.length > 0) && (
+        <section className="resume-context-grid">
+          <div className="resume-context-card">
+            <div className="repair-section-title">
+              <div>
+                <p className="eyebrow">NOTES</p>
+                <h3>Recent observations</h3>
+              </div>
+              <span>{counts.observations_total}</span>
+            </div>
+            {resume.recent_observations.length === 0 ? (
+              <p className="resume-muted">No confirmed observations recorded.</p>
+            ) : (
+              <div className="resume-note-list">
+                {resume.recent_observations.map((item) => (
+                  <article key={item.id}>
+                    <span>{stateLabel(item.category)}</span>
+                    <p>{item.text}</p>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="resume-context-card">
+            <div className="repair-section-title">
+              <div>
+                <p className="eyebrow">VISUAL MEMORY</p>
+                <h3>Recent evidence</h3>
+              </div>
+              <span>{counts.photos_total}</span>
+            </div>
+            {resume.recent_evidence.length === 0 ? (
+              <p className="resume-muted">No photo evidence recorded.</p>
+            ) : (
+              <div className="resume-photo-strip">
+                {resume.recent_evidence.map((item) => (
+                  <figure key={item.id}>
+                    <img src={item.content_url} alt={`${stateLabel(item.purpose)} repair evidence`} />
+                    <figcaption>{stateLabel(item.purpose)}</figcaption>
+                  </figure>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      <section className="resume-next-action">
+        <div>
+          <span>Next verified action</span>
+          <strong>
+            {resume.next_verified_action.status === 'available'
+              ? resume.next_verified_action.label
+              : 'Not available yet'}
+          </strong>
+        </div>
+        {resume.next_verified_action.status === 'unavailable' && (
+          <small>
+            PartGraph will not guess the next mechanical step. Verified repair-plan guidance arrives in the guidance domain.
+          </small>
+        )}
+      </section>
+
+      <div className="repair-actions">
+        {snapshot.lease.status === 'available' && snapshot.session.status !== 'archived' && (
+          <button disabled={busy} onClick={() => void onLease(false)}>Take editing control</button>
+        )}
+        {snapshot.lease.status === 'held_by_other' && snapshot.session.status !== 'archived' && (
+          <button disabled={busy} onClick={() => void onLease(true)}>Take over session</button>
+        )}
+        {snapshot.lease.can_edit && snapshot.session.status === 'active' && (
+          <button disabled={busy} onClick={() => void onState('pause')}>Pause repair</button>
+        )}
+        {snapshot.lease.can_edit && snapshot.session.status === 'paused' && (
+          <button disabled={busy} onClick={() => void onState('resume')}>Resume work</button>
+        )}
+        {snapshot.lease.can_edit && snapshot.session.status !== 'archived' && (
+          <button className="secondary" disabled={busy} onClick={() => void onState('archive')}>Archive</button>
+        )}
+        <span className="resume-lease-note">
+          {snapshot.lease.can_edit ? 'Editing on this device.' : `View only · ${stateLabel(snapshot.lease.status)}`}
+        </span>
+      </div>
+
+      <section className="resume-activity">
+        <div className="repair-section-title">
+          <div>
+            <p className="eyebrow">RECENT ACTIVITY</p>
+            <h3>Last recorded changes</h3>
+          </div>
+          <span>{resume.recent_activity.length}</span>
+        </div>
+        <ol>
+          {[...resume.recent_activity].reverse().map((item) => (
+            <li key={`${item.sequence}-${item.event_type}`}>
+              <span>{item.sequence}</span>
+              <div>
+                <strong>{item.label}</strong>
+                <small>{new Date(item.created_at).toLocaleString()}</small>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
+    </>
   )
 }
