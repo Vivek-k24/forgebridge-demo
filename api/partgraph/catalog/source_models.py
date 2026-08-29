@@ -6,6 +6,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..database import Base
+from .models import CatalogVerifiedEvidence
 
 
 class CatalogSource(Base):
@@ -73,7 +74,7 @@ class MechanicalClaim(Base):
     )
     verified_evidence_id: Mapped[UUID] = mapped_column(
         Uuid(as_uuid=True),
-        ForeignKey("catalog_verified_evidence.id", ondelete="RESTRICT"),
+        ForeignKey(CatalogVerifiedEvidence.id, ondelete="RESTRICT"),
         nullable=False,
     )
     vehicle_configuration_id: Mapped[UUID | None] = mapped_column(
