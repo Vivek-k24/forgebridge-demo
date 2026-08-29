@@ -9,6 +9,7 @@ from sqlalchemy import (
     Integer,
     Numeric,
     String,
+    Text,
     UniqueConstraint,
     Uuid,
     func,
@@ -16,6 +17,25 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..database import Base
+
+
+class RepairCapabilityPolicy(Base):
+    __tablename__ = "repair_capability_policies"
+    __table_args__ = (
+        CheckConstraint(
+            "guidance_state IN ('supported', 'professional_required', 'prohibited')",
+            name="ck_repair_capability_policies_guidance_state",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
+    policy_key: Mapped[str] = mapped_column(String(120), nullable=False, unique=True)
+    title: Mapped[str] = mapped_column(String(180), nullable=False)
+    guidance_state: Mapped[str] = mapped_column(String(32), nullable=False)
+    rationale: Mapped[str] = mapped_column(String(500), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
 
 
 class RepairDefinition(Base):
@@ -38,6 +58,11 @@ class RepairDefinition(Base):
         Uuid(as_uuid=True),
         ForeignKey("vehicle_configurations.id", ondelete="RESTRICT"),
         nullable=False,
+        index=True,
+    )
+    capability_policy_id: Mapped[UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("repair_capability_policies.id", ondelete="RESTRICT"),
         index=True,
     )
     repair_key: Mapped[str] = mapped_column(String(120), nullable=False)
@@ -159,6 +184,91 @@ class RequirementUseEvidence(Base):
     requirement_use_id: Mapped[UUID] = mapped_column(
         Uuid(as_uuid=True),
         ForeignKey("requirement_uses.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    mechanical_claim_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("mechanical_claims.id", ondelete="RESTRICT"),
+        primary_key=True,
+    )
+
+
+class ProcedureAction(Base):
+    __tablename__ = "procedure_actions"
+    __table_args__ = (
+        CheckConstraint("position >= 0", name="ck_procedure_actions_position"),
+        UniqueConstraint(
+            "repair_definition_id",
+            "action_key",
+            name="uq_procedure_actions_definition_key",
+        ),
+        UniqueConstraint(
+            "repair_definition_id",
+            "position",
+            name="uq_procedure_actions_definition_position",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
+    repair_definition_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("repair_definitions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    action_key: Mapped[str] = mapped_column(String(120), nullable=False)
+    title: Mapped[str] = mapped_column(String(180), nullable=False)
+    instruction: Mapped[str] = mapped_column(Text, nullable=False)
+    warning_text: Mapped[str | None] = mapped_column(Text)
+    workspace_note: Mapped[str | None] = mapped_column(Text)
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class ProcedureActionDependency(Base):
+    __tablename__ = "procedure_action_dependencies"
+    __table_args__ = (
+        CheckConstraint(
+            "action_id <> prerequisite_action_id",
+            name="ck_procedure_action_dependencies_not_self",
+        ),
+    )
+
+    action_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("procedure_actions.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    prerequisite_action_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("procedure_actions.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+
+
+class ProcedureActionRequirementUse(Base):
+    __tablename__ = "procedure_action_requirement_uses"
+
+    action_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("procedure_actions.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    requirement_use_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("requirement_uses.id", ondelete="RESTRICT"),
+        primary_key=True,
+    )
+
+
+class ProcedureActionEvidence(Base):
+    __tablename__ = "procedure_action_evidence"
+
+    action_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("procedure_actions.id", ondelete="CASCADE"),
         primary_key=True,
     )
     mechanical_claim_id: Mapped[UUID] = mapped_column(
