@@ -1,4 +1,5 @@
 from collections import defaultdict
+from collections.abc import Collection
 from uuid import UUID
 
 from fastapi import status
@@ -19,6 +20,7 @@ from .schemas import RepairDefinitionManifestRead, RequirementManifestItemRead
 
 REPAIR_DEFINITION_NOT_FOUND = "REPAIR_DEFINITION_NOT_FOUND"
 REPAIR_DEFINITION_INTEGRITY_ERROR = "REPAIR_DEFINITION_INTEGRITY_ERROR"
+REPAIR_DEFINITION_BINDING_INVALID = "REPAIR_DEFINITION_BINDING_INVALID"
 
 
 def _integrity_error(message: str) -> PartGraphError:
@@ -26,6 +28,123 @@ def _integrity_error(message: str) -> PartGraphError:
         code=REPAIR_DEFINITION_INTEGRITY_ERROR,
         message=message,
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    )
+
+
+async def _manifest_for_definition(
+    session: AsyncSession,
+    *,
+    definition: RepairDefinition,
+    allowed_claim_states: Collection[str],
+) -> RepairDefinitionManifestRead:
+    rows = (
+        await session.execute(
+            select(RequirementUse, RequirementDefinition, RepairOperation.operation_key)
+            .join(
+                RequirementDefinition,
+                RequirementDefinition.id == RequirementUse.requirement_definition_id,
+            )
+            .outerjoin(RepairOperation, RepairOperation.id == RequirementUse.operation_id)
+            .where(RequirementUse.repair_definition_id == definition.id)
+            .order_by(RequirementDefinition.requirement_key, RequirementUse.id)
+        )
+    ).all()
+
+    use_ids = [row[0].id for row in rows]
+    claims_by_use: dict[UUID, set[UUID]] = defaultdict(set)
+    if use_ids:
+        evidence_rows = (
+            await session.execute(
+                select(RequirementUseEvidence.requirement_use_id, MechanicalClaim.id)
+                .join(
+                    MechanicalClaim,
+                    MechanicalClaim.id == RequirementUseEvidence.mechanical_claim_id,
+                )
+                .where(
+                    RequirementUseEvidence.requirement_use_id.in_(use_ids),
+                    MechanicalClaim.promotion_state.in_(allowed_claim_states),
+                    MechanicalClaim.claim_domain == "repair_requirement",
+                    MechanicalClaim.exact_applicability.is_(True),
+                    MechanicalClaim.vehicle_configuration_id == definition.vehicle_configuration_id,
+                    MechanicalClaim.repair_key == definition.repair_key,
+                )
+            )
+        ).all()
+        for use_id, claim_id in evidence_rows:
+            claims_by_use[use_id].add(claim_id)
+
+    missing_evidence = [use_id for use_id in use_ids if not claims_by_use[use_id]]
+    if missing_evidence:
+        raise _integrity_error(
+            "Repair definition contains requirement uses without exact verified evidence."
+        )
+
+    facts = [
+        RequirementFact(
+            use_id=requirement_use.id,
+            requirement_key=requirement.requirement_key,
+            category=requirement.category,
+            display_name=requirement.display_name,
+            quantity=requirement_use.quantity,
+            unit=requirement_use.unit,
+            necessity=requirement_use.necessity,
+            fulfillment_mode=requirement_use.fulfillment_mode,
+            timing=requirement_use.timing,
+            operation_key=operation_key,
+        )
+        for requirement_use, requirement, operation_key in rows
+    ]
+    try:
+        manifest = build_requirement_manifest(facts)
+    except ManifestConflict as exc:
+        raise _integrity_error(
+            "Repair requirements conflict and require canonical review."
+        ) from exc
+
+    requirement_ids = {
+        requirement.requirement_key: requirement.id
+        for _, requirement, _ in rows
+    }
+    items: list[RequirementManifestItemRead] = []
+    for item in manifest:
+        requirement_definition_id = requirement_ids.get(item.requirement_key)
+        if requirement_definition_id is None:
+            raise _integrity_error("Repair manifest lost its canonical requirement identity.")
+        supporting_claim_ids = sorted(
+            {
+                claim_id
+                for use_id in item.supporting_use_ids
+                for claim_id in claims_by_use[use_id]
+            },
+            key=str,
+        )
+        items.append(
+            RequirementManifestItemRead(
+                requirement_definition_id=requirement_definition_id,
+                requirement_key=item.requirement_key,
+                category=item.category,
+                display_name=item.display_name,
+                required_quantity=item.required_quantity,
+                unit=item.unit,
+                necessity=item.necessity,
+                fulfillment_mode=item.fulfillment_mode,
+                operation_keys=list(item.operation_keys),
+                supporting_use_ids=list(item.supporting_use_ids),
+                supporting_claim_ids=supporting_claim_ids,
+            )
+        )
+
+    if definition.status not in {"verified", "superseded"}:
+        raise _integrity_error("Repair manifest was requested from a non-verifiable definition state.")
+
+    return RepairDefinitionManifestRead(
+        repair_definition_id=definition.id,
+        vehicle_configuration_id=definition.vehicle_configuration_id,
+        repair_key=definition.repair_key,
+        title=definition.title,
+        version=definition.version,
+        definition_status=definition.status,
+        requirements=items,
     )
 
 
@@ -57,102 +176,33 @@ async def verified_requirement_manifest(
         raise _integrity_error(
             "Multiple current verified repair definitions exist for the same vehicle and repair."
         )
-    definition = definitions[0]
+    return await _manifest_for_definition(
+        session,
+        definition=definitions[0],
+        allowed_claim_states={"verified"},
+    )
 
-    rows = (
-        await session.execute(
-            select(RequirementUse, RequirementDefinition, RepairOperation.operation_key)
-            .join(
-                RequirementDefinition,
-                RequirementDefinition.id == RequirementUse.requirement_definition_id,
-            )
-            .outerjoin(RepairOperation, RepairOperation.id == RequirementUse.operation_id)
-            .where(RequirementUse.repair_definition_id == definition.id)
-            .order_by(RequirementDefinition.requirement_key, RequirementUse.id)
+
+async def bound_requirement_manifest(
+    session: AsyncSession,
+    *,
+    repair_definition_id: UUID,
+    vehicle_configuration_id: UUID,
+) -> RepairDefinitionManifestRead:
+    definition = await session.scalar(
+        select(RepairDefinition).where(
+            RepairDefinition.id == repair_definition_id,
+            RepairDefinition.vehicle_configuration_id == vehicle_configuration_id,
         )
-    ).all()
-
-    use_ids = [row[0].id for row in rows]
-    claims_by_use: dict[UUID, set[UUID]] = defaultdict(set)
-    if use_ids:
-        evidence_rows = (
-            await session.execute(
-                select(RequirementUseEvidence.requirement_use_id, MechanicalClaim.id)
-                .join(
-                    MechanicalClaim,
-                    MechanicalClaim.id == RequirementUseEvidence.mechanical_claim_id,
-                )
-                .where(
-                    RequirementUseEvidence.requirement_use_id.in_(use_ids),
-                    MechanicalClaim.promotion_state == "verified",
-                    MechanicalClaim.claim_domain == "repair_requirement",
-                    MechanicalClaim.exact_applicability.is_(True),
-                    MechanicalClaim.vehicle_configuration_id == vehicle_configuration_id,
-                    MechanicalClaim.repair_key == repair_key,
-                )
-            )
-        ).all()
-        for use_id, claim_id in evidence_rows:
-            claims_by_use[use_id].add(claim_id)
-
-    missing_evidence = [use_id for use_id in use_ids if not claims_by_use[use_id]]
-    if missing_evidence:
-        raise _integrity_error(
-            "Verified repair definition contains requirement uses without exact verified evidence."
+    )
+    if definition is None or definition.status not in {"verified", "superseded"}:
+        raise PartGraphError(
+            code=REPAIR_DEFINITION_BINDING_INVALID,
+            message="Bound repair definition no longer matches the session vehicle configuration.",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
-
-    facts = [
-        RequirementFact(
-            use_id=requirement_use.id,
-            requirement_key=requirement.requirement_key,
-            category=requirement.category,
-            display_name=requirement.display_name,
-            quantity=requirement_use.quantity,
-            unit=requirement_use.unit,
-            necessity=requirement_use.necessity,
-            fulfillment_mode=requirement_use.fulfillment_mode,
-            timing=requirement_use.timing,
-            operation_key=operation_key,
-        )
-        for requirement_use, requirement, operation_key in rows
-    ]
-    try:
-        manifest = build_requirement_manifest(facts)
-    except ManifestConflict as exc:
-        raise _integrity_error(
-            "Verified repair requirements conflict and require canonical review."
-        ) from exc
-
-    items: list[RequirementManifestItemRead] = []
-    for item in manifest:
-        supporting_claim_ids = sorted(
-            {
-                claim_id
-                for use_id in item.supporting_use_ids
-                for claim_id in claims_by_use[use_id]
-            },
-            key=str,
-        )
-        items.append(
-            RequirementManifestItemRead(
-                requirement_key=item.requirement_key,
-                category=item.category,
-                display_name=item.display_name,
-                required_quantity=item.required_quantity,
-                unit=item.unit,
-                necessity=item.necessity,
-                fulfillment_mode=item.fulfillment_mode,
-                operation_keys=list(item.operation_keys),
-                supporting_use_ids=list(item.supporting_use_ids),
-                supporting_claim_ids=supporting_claim_ids,
-            )
-        )
-
-    return RepairDefinitionManifestRead(
-        repair_definition_id=definition.id,
-        vehicle_configuration_id=definition.vehicle_configuration_id,
-        repair_key=definition.repair_key,
-        title=definition.title,
-        version=definition.version,
-        requirements=items,
+    return await _manifest_for_definition(
+        session,
+        definition=definition,
+        allowed_claim_states={"verified", "superseded"},
     )
