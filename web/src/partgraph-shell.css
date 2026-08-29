@@ -2,6 +2,25 @@
   min-height: 100vh;
 }
 
+.partgraph-pages-preview-strip {
+  position: fixed;
+  inset: 0 0 auto 238px;
+  z-index: 40;
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  border-bottom: 1px solid rgba(95, 157, 124, 0.28);
+  background: #162328;
+  color: #9eb1aa;
+  font: 700 0.66rem/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: 0.08em;
+}
+
+.partgraph-pages-preview .partgraph-main {
+  padding-top: 46px;
+}
+
 .partgraph-sidebar {
   position: fixed;
   inset: 0 auto 0 0;
@@ -144,6 +163,12 @@
 }
 
 @media (max-width: 900px) {
+  .partgraph-pages-preview-strip {
+    inset-inline: 0;
+    padding-inline: 12px;
+    font-size: 0.6rem;
+  }
+
   .partgraph-sidebar {
     position: sticky;
     top: 46px;
