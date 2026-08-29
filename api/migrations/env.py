@@ -3,6 +3,11 @@ from sqlalchemy import create_engine, pool
 
 import partgraph.auth.models  # noqa: F401
 import partgraph.catalog.models  # noqa: F401
+import partgraph.catalog.source_models  # noqa: F401
+import partgraph.repair_definition.models  # noqa: F401
+import partgraph.repair_memory.models  # noqa: F401
+import partgraph.repair_session.models  # noqa: F401
+import partgraph.user_vehicle.models  # noqa: F401
 import partgraph.vehicle.models  # noqa: F401
 from partgraph.config import settings
 from partgraph.database import Base
