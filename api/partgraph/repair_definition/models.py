@@ -218,8 +218,8 @@ class RepairRequirementState(Base):
         UniqueConstraint(
             "user_id",
             "session_id",
-            "requirement_use_id",
-            name="uq_repair_requirement_states_session_requirement",
+            "requirement_definition_id",
+            name="uq_repair_requirement_states_session_requirement_definition",
         ),
     )
 
@@ -230,9 +230,9 @@ class RepairRequirementState(Base):
     session_id: Mapped[UUID] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("repair_sessions.id", ondelete="CASCADE"), nullable=False
     )
-    requirement_use_id: Mapped[UUID] = mapped_column(
+    requirement_definition_id: Mapped[UUID] = mapped_column(
         Uuid(as_uuid=True),
-        ForeignKey("requirement_uses.id", ondelete="CASCADE"),
+        ForeignKey("requirement_definitions.id", ondelete="CASCADE"),
         nullable=False,
     )
     quantity_available: Mapped[Decimal] = mapped_column(
