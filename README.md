@@ -1,83 +1,163 @@
 # PartGraph
 
-PartGraph is a stateful AI-assisted repair companion that reconstructs the exact vehicle assembly, tracks every part and repair action as work progresses, and lets a repair resume from the same physical state after a pause.
+PartGraph is a stateful AI-assisted automotive repair companion. It identifies the exact vehicle configuration, keeps a durable record of the physical repair, determines verified repair requirements, tracks readiness, and lets the owner resume from the same recorded state after a pause.
+
+The product is organized around three questions:
+
+1. **What do I need?** — verified repair requirements and Inventory readiness.
+2. **How do I do it?** — verified procedure guidance and capability safety.
+3. **Where am I now?** — RepairSession state, physical repair memory, and Resume/reorientation.
+
+Honda and the 2009 Civic Hybrid are real-world validation cases, not product boundaries. PartGraph is designed for every manufacturer/model/trim/configuration represented by its supported vehicle taxonomy when verified repair data exists for that exact configuration.
 
 ## Current architecture
 
 ```text
-web (React / TypeScript / Nginx)
-        ↓
-api (Python / FastAPI modular monolith)
-        ↓
-PostgreSQL
+React / TypeScript / Vite
+          │
+          ▼
+ FastAPI modular monolith
+          │
+          ▼
+ PostgreSQL authoritative state
 
-collector (separate service, not implemented yet)
+future collector ──staging only──► catalog_staging
 ```
 
-The collector remains outside the interactive user path. No catalog collection runs in the current application.
+- `web` — React 19, TypeScript 6, Vite 8; production image served by Nginx.
+- `api` — Python 3.14, FastAPI, SQLAlchemy 2, Alembic.
+- PostgreSQL 18 — authoritative canonical and private repair state.
+- `collector` — intentionally not implemented until an approved real ingestion source exists.
+- AI/ML — optional future assistance; never canonical mechanical truth and never required for core repair readiness/resume.
 
-## Security and private ownership boundary
+PartGraph is server-authoritative rather than offline-first. Redis, Kafka, Kubernetes, Neo4j, and similar infrastructure are not introduced without a measured need.
 
-PartGraph establishes user ownership before storing private vehicle identity.
+## Vehicle coverage and applicability
 
-- Registration uses email + username + password; login accepts username or email.
-- Passwords are hashed with Argon2id.
-- Authentication uses opaque server-side sessions in an HttpOnly cookie rather than browser-stored bearer tokens.
-- State-changing browser requests require PartGraph CSRF validation and an accepted Origin.
-- PostgreSQL row-level security (RLS) is defense in depth for user-owned tables.
-- Authentication attempts use PostgreSQL-backed rate-limit state that is committed independently from failed request transactions.
-- API failures use stable machine-readable codes, request IDs, and an API-version header.
-- Private account and vehicle endpoints are `Cache-Control: no-store`.
+Current product market scope is the United States and Canada, model years 1996 through the current calendar year.
 
-## Vehicle identity foundation
+The safety-critical applicability boundary is an exact `VehicleConfiguration`, which can include year, market, manufacturer, model, generation, trim, body style, engine, transmission, and drivetrain as available.
 
-PartGraph is multi-brand from the skeleton onward. Current market scope is the United States and Canada, with supported model years from 1996 through the current calendar year.
+A shared repair name does not make requirements interchangeable. Canonical repair lookup is effectively:
 
-The shared vehicle selector is read-only against canonical data:
+```text
+exact VehicleConfiguration + repair_key + verified/current definition version
+```
 
-1. market and make are controlled by the supported taxonomy;
-2. year, model, trim, and optional generation are used to search known configurations;
-3. model/trim wording is normalized deterministically for comparison;
-4. generation is supporting metadata and is not required to establish a fitment match;
-5. ambiguous variants are surfaced instead of guessed;
-6. unknown manual model/trim text remains a candidate and does not create shared canonical truth.
+A Honda requirement cannot fall back to a Toyota; a Civic Hybrid requirement cannot silently fall back to another Civic trim or powertrain merely because names look similar. Ambiguous identities remain ambiguous rather than being guessed.
 
-## Private UserVehicle and VIN boundary
+## UserVehicle and VIN
 
-A `UserVehicle` is the private owner-specific vehicle record. It may point at one known canonical configuration or retain an unresolved normalized identity snapshot without changing shared vehicle truth.
+`UserVehicle` is the private owner-specific record. It may resolve to a shared canonical `VehicleConfiguration` or retain an unresolved identity snapshot without creating shared truth.
 
-VIN handling is deliberately stricter than ordinary vehicle text:
+VIN handling includes:
 
-- the 17-character VIN syntax and check digit are validated before an external request;
-- full VINs are encrypted at rest with AES-GCM and an explicit key version;
-- duplicate lookup uses an owner-scoped keyed HMAC rather than plaintext VIN;
-- encryption authentication data is also bound to the owner ID;
-- normal API/UI output exposes only a masked VIN / last six characters;
-- runtime encryption and lookup keys are never committed to the repository;
-- NHTSA vPIC `DecodeVinValuesExtended` is the first VIN identity provider;
-- provider output is normalized through PartGraph's vehicle rules and used only as identity evidence;
-- ambiguous or unknown provider results never create canonical vehicle configurations;
-- successful provider observations are cached per owner with RLS and expiry, then re-resolved against current canonical data on reuse;
-- provider timeout/unavailability never removes the manual Vehicle Details path;
-- saved vehicles are archived rather than hard-deleted so later repair history can retain a stable owner vehicle reference.
+- 17-character syntax and check-digit validation;
+- AES-GCM encryption of the full VIN at rest with explicit key versioning;
+- owner-scoped keyed HMAC for duplicate lookup;
+- masked VIN / last-six output in normal API and UI surfaces;
+- NHTSA vPIC as identity evidence, not automatic canonical truth;
+- owner-scoped provider cache with expiry and re-resolution against current canonical identity;
+- manual Vehicle Details as a permanent fallback when the provider is unavailable or ambiguous.
 
-## Catalog trust boundary
+## RepairSession and repair memory
 
-Catalog collection is not implemented or invoked yet. PostgreSQL contains a separate `catalog_staging` schema for future collector output.
+A private `RepairSession` belongs to one owner and one `UserVehicle`.
 
-- `catalog_staging.ingestion_batches` records source and ingestion-run provenance.
-- `catalog_staging.source_records` preserves raw evidence, normalized candidate data, vehicle context, extraction method, confidence, timestamps, review state, and deterministic deduplication.
-- `public.catalog_verified_evidence` is an immutable snapshot created only by an explicit verification/promotion operation. It is evidence for future canonical catalog entities; it is not itself a claim that a part or fitment is mechanically correct.
-- the database group role `partgraph_collector` can write the staging schema but has no write privilege on canonical vehicle data or verified evidence.
-- rejected staging records cannot be promoted in place, and identical source evidence is idempotently deduplicated.
+- immutable, ordered repair-session events record lifecycle and physical-state mutations;
+- a rebuildable projection provides current state;
+- V1 permits one active editing device while other devices may read;
+- mutations are lease-protected and idempotent;
+- sessions can pause, resume, and archive without rewriting history;
+- physical memory includes exceptional fasteners/small parts, storage locations, confirmed observations, photos, and manual inventory fallback;
+- Resume/reorientation is a purpose-built read model and does not require a frontend event-history waterfall.
 
-There is intentionally no public staging/promotion API before administrative authorization exists. The preserved historical catalog artifact is not imported or modified by this block.
+Fasteners and Evidence are backend capabilities, not primary DIY navigation destinations. Ordinary hardware stays in the repair context unless an exception such as missing/damaged hardware needs explicit memory.
+
+## Verified repair definition and readiness
+
+Repair requirements are modeled independently of retailer listings and independently of private possession state.
+
+Canonical relationship:
+
+```text
+VehicleConfiguration
+  -> RepairDefinition
+  -> RepairOperation
+  -> RequirementUse
+  -> RequirementDefinition
+```
+
+Requirements can represent tools, equipment, replacement parts, fluids, consumables, hardware, workspace/setup needs, and safety prerequisites.
+
+A key modeling rule is **not** to model `part -> tool`. A radiator does not inherently require a 10 mm socket; a verified radiator-replacement operation on a specific vehicle configuration may require one.
+
+The repair-level manifest deterministically aggregates verified requirement uses. Reusable items are not multiplied because several operations use them; consumed/replacement quantities aggregate only when the evidence establishes quantity; unknown stays unknown; conflicting semantics fail closed.
+
+A RepairSession can bind once to an exact verified RepairDefinition. The binding is derived from the session's saved vehicle configuration, not from free text, and is version-pinned so a later definition revision cannot silently change an in-progress repair.
+
+### Inventory readiness
+
+Inventory is the primary user-facing readiness workspace. It combines:
+
+```text
+verified repair manifest
++ reusable Garage inventory
++ repair-specific readiness state
+```
+
+The owner reconciles an aggregated requirement once using `have`, `missing`, `ordered`, or `unavailable`. Reusable tools/equipment/workspace capability can carry forward into Garage inventory; consumables and replacement parts do not automatically become permanent stock. The older manual inventory remains an explicit fallback/exception path when verified repair data is not available.
+
+## Mechanical truth and provenance
+
+PartGraph does not infer mechanical truth from an LLM, retailer listing, similarity, image, or part-number pattern.
+
+Evidence flows through:
+
+```text
+source record
+-> extracted claim
+-> normalized candidate
+-> applicability/conflict validation
+-> review/promotion
+-> MechanicalClaim
+-> RequirementUseEvidence
+-> canonical requirement
+```
+
+Source authority is evaluated separately from parser/model confidence. OEM service information and properly licensed OEM-derived data are the preferred authority for explicit procedure requirements; OEM parts data establishes parts/assembly facts within its scope; retailers are procurement sources after fitment/specification truth exists; community material is discovery/supporting evidence only.
+
+No real catalog/service-data collection, licensing acceptance, paid source activation, or promotion is triggered by normal application use, CI, or deployment. The first real collection run is an explicit project gate.
+
+## Safety boundary
+
+Verified data does not automatically mean PartGraph should guide every procedure. Guided V1 capability excludes or restricts safety/professional-only work such as high-voltage battery/internal inverter service, airbags/SRS/pyrotechnics, immobilizer/security programming, ADAS calibration, structural collision/frame repair guidance, and other explicitly unsupported safety-critical procedures.
+
+## Visual architecture
+
+The living end-to-end visual map is:
+
+[`docs/PARTGRAPH_SYSTEM_UML.md`](docs/PARTGRAPH_SYSTEM_UML.md)
+
+It contains Mermaid diagrams for the product loop, canonical/private data model, manufacturer applicability, evidence promotion, readiness reconciliation, pause/resume flow, components, and block dependencies. GitHub issues/PRs remain the execution source of truth; the UML is the visual architecture map rather than a separate Scrum/Kanban storyboard.
+
+## Current roadmap
+
+- Blocks 2–5: vehicle identity, trust boundary, authentication/isolation, UserVehicle/VIN — complete.
+- Block 6 collector — deferred until an approved real ingestion source exists.
+- Blocks 7–9: RepairSession, physical repair memory, Resume/reorientation — complete.
+- Block 10: verified repair definition and readiness manifest — current implementation block.
+- Block 11: verified procedure guidance and capability safety — next.
+- Block 12: learning, ranking, and AI assistance — later.
+- Cross-cutting security/performance/mobile/end-to-end quality gates apply continuously.
+
+See GitHub issues `#38` (V1 roadmap), `#34` (Block 10), `#48` (procedure/safety), and `#35` (AI/ranking).
 
 ## Run locally
 
 Requirements: Docker Desktop with Docker Compose.
 
-PartGraph can start without VIN secrets, but VIN operations intentionally fail closed until runtime keys are supplied. For a Block 5 VIN test on Windows PowerShell, generate temporary 256-bit keys in the current terminal:
+PartGraph starts without VIN secrets, but VIN operations fail closed until runtime keys are supplied. For Windows PowerShell:
 
 ```powershell
 $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
@@ -107,8 +187,6 @@ export PARTGRAPH_VIN_LOOKUP_KEY="${VIN_LOOKUP_KEY}"
 docker compose up --build
 ```
 
-These commands create local test secrets only; do not commit them. Keep the same keys for as long as you need to decrypt VIN rows created with them. Production key rotation belongs in runtime secret management, not Git history.
-
 Open:
 
 - Web: `http://localhost:5173`
@@ -116,101 +194,59 @@ Open:
 - Supported brands: `http://localhost:8000/api/v1/vehicle-brands`
 - API docs: `http://localhost:8000/docs`
 
-The production Web container serves the built React application through Nginx. Browser `/api/...` requests are reverse-proxied to the API container, while direct local API access remains available on port 8000.
-
 Stop with:
 
 ```bash
 docker compose down
 ```
 
-The PostgreSQL volume is retained between runs. Use `docker compose down -v` only when intentionally deleting local database data.
+The PostgreSQL volume is retained. Use `docker compose down -v` only when intentionally deleting local database data. Keep VIN keys stable for as long as rows encrypted by those keys need to remain decryptable.
+
+## Public preview
+
+The read-only/static current-main frontend preview is published through GitHub Pages:
+
+https://vivek-k24.github.io/forgebridge-demo/
+
+GitHub Pages does not host FastAPI or PostgreSQL. A full public PartGraph application still requires runtime hosting for the API and database.
 
 ## CI/CD
 
-GitHub Actions is the automated quality and delivery system.
+GitHub Actions validates the real runtime boundaries before merge:
 
-### API
+- **API CI/CD** — dependency integrity, `pip-audit`, Ruff, Alembic upgrade/downgrade/re-upgrade and persisted-history upgrade, PostgreSQL/API/RLS/adversarial tests, API image build and readiness smoke.
+- **Web CI/CD** — locked Node install/audit, TypeScript, Vite production build, Nginx image and HTTP/security-header smoke.
+- **Integration CI** — real Compose stack, API readiness, Web availability, reverse proxy, and authenticated browser-facing flows.
+- **Pages** — builds the static current-main preview.
 
-Workflow: https://github.com/Vivek-k24/forgebridge-demo/actions/workflows/api.yml
-
-On a pull request the API workflow:
-
-- installs the pinned Python test environment and verifies dependency integrity;
-- runs `pip-audit` and Ruff;
-- applies Alembic migrations and verifies downgrade/re-upgrade behavior;
-- runs API, authentication, RLS, VIN, and PostgreSQL boundary tests with warnings treated as failures;
-- builds the API Docker image;
-- starts the built container and verifies `/api/v1/health/ready`.
-
-After a successful merge to `main`, the same tested source is published as:
-
-- `ghcr.io/vivek-k24/partgraph-api:<commit-sha>`
-- `ghcr.io/vivek-k24/partgraph-api:main`
-
-Package: https://github.com/users/Vivek-k24/packages/container/package/partgraph-api
-
-### Web
-
-Workflow: https://github.com/Vivek-k24/forgebridge-demo/actions/workflows/web.yml
-
-On a pull request the Web workflow:
-
-- installs the locked Node dependencies and audits them;
-- runs TypeScript type checking;
-- performs the production Vite build;
-- builds the production Nginx container;
-- starts it and verifies HTTP/security headers.
-
-After a successful merge to `main`, the Web image is published as:
-
-- `ghcr.io/vivek-k24/partgraph-web:<commit-sha>`
-- `ghcr.io/vivek-k24/partgraph-web:main`
-
-Package: https://github.com/users/Vivek-k24/packages/container/package/partgraph-web
-
-### Full-stack integration
-
-Workflow: https://github.com/Vivek-k24/forgebridge-demo/actions/workflows/validate.yml
-
-The integration workflow builds the real Compose stack and verifies direct API readiness, Web availability, the Web-to-API reverse proxy, and authenticated browser-facing integration flows.
-
-A future Collector will receive its own workflow and GHCR package when the service actually exists.
-
-The pipeline currently provides continuous integration and tested container delivery. A public full-stack PartGraph URL requires a runtime host for the API and PostgreSQL; GitHub Actions/GHCR are not themselves an application host.
+Successful `main` delivery publishes tested images as `ghcr.io/vivek-k24/partgraph-api:<sha>` / `:main` and `ghcr.io/vivek-k24/partgraph-web:<sha>` / `:main`.
 
 ## Merge discipline
 
-For implementation PRs:
-
-1. define scope in a GitHub issue;
-2. branch from current `main`;
-3. create the PR as work-in-progress when useful for CI feedback;
-4. wait for all applicable Actions workflows to pass;
-5. pull and run the block locally;
-6. obtain explicit approval to merge;
-7. verify GitHub reports the PR mergeable / ready;
-8. merge;
-9. verify `main` delivery workflows publish the tested images.
+1. GitHub issue defines scope and acceptance boundary.
+2. Work proceeds in a coherent runnable branch/PR.
+3. Applied migration history is preserved; use a forward migration instead of rewriting a migration that may exist on persistent developer volumes.
+4. All applicable CI checks must pass on the final changed head.
+5. GitHub must report the PR mergeable/ready.
+6. User-facing changes receive the required local/runtime verification before the final merge boundary.
+7. Red, incomplete, knowingly unverified, or gated work is not merged merely to advance the roadmap.
+8. After merge, verify `main` delivery/public-preview behavior where applicable.
 
 ## Performance contract
 
-Normal interactive work should remain comfortably below the 10-second hard blocking boundary. Current quality targets include searchable dropdown p95 under 250 ms, normal API p95 under 1 second, and repair resume p95 under 2 seconds once those workflows exist. VIN provider calls have their own shorter timeout so an external service cannot occupy the full application boundary. Collector work, model training, deployments, and LLM calls never belong on the repair-session critical path.
+- UI acknowledgment target: under 100 ms where practical.
+- searchable selector p95: under 250 ms.
+- normal API p95: under 1 second.
+- repair Resume p95: under 2 seconds.
+- ten seconds: hard blocking boundary.
 
-PartGraph is server-authoritative rather than offline-first. Small transient client caches may improve responsiveness or survive short network interruptions, but private repair truth remains in PostgreSQL and the application does not promise full offline repair operation.
+Collector work, LLM calls, model training, and deployments never belong on the repair-session critical path.
 
-## Current technology baseline
+## Technology baseline
 
-- React 19
-- Vite 8
-- TypeScript 6
-- Nginx 1.29
-- Python 3.14
-- FastAPI
-- SQLAlchemy 2
-- Alembic
+- React 19 / TypeScript 6 / Vite 8 / Nginx 1.29
+- Python 3.14 / FastAPI / SQLAlchemy 2 / Alembic
 - PostgreSQL 18
-- Argon2id
-- AES-GCM VIN protection
+- Argon2id / AES-GCM VIN protection
 - Docker / Docker Compose
-- GitHub Actions / GitHub Container Registry
+- GitHub Actions / GitHub Container Registry / GitHub Pages

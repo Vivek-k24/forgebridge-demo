@@ -1,140 +1,251 @@
 # PartGraph Engineering Guide
 
-## Product
+This file defines durable engineering constraints for PartGraph. GitHub issues and pull requests define the current execution state; `docs/PARTGRAPH_SYSTEM_UML.md` is the living visual architecture map.
 
-PartGraph maintains a trustworthy digital representation of a physical repair as it changes over time. It must know what the exact vehicle assembly should contain, what the user has observed, what has already changed during the repair, and what can safely happen next.
+## Product center
 
-> PartGraph is a stateful AI-assisted repair companion that reconstructs the exact vehicle assembly, tracks every part and repair action as work progresses, and lets a repair resume from the same physical state after a pause.
+PartGraph is a stateful AI-assisted automotive repair companion. The private `RepairSession` is the center of the product, not chat, search, a retailer catalog, or an LLM.
 
-The private `RepairSession` is the product center. Vehicle identification is an entry point; chat, AI, catalog ingestion, and diagnosis are supporting capabilities rather than the primary state container.
+The user-facing loop is:
 
-## System architecture
+1. **What do I need?** — verified repair definition + Inventory readiness.
+2. **How do I do it?** — verified procedure guidance + capability safety.
+3. **Where am I now?** — RepairSession + physical repair memory + Resume/reorientation.
 
-PartGraph is distributed at the top-level service boundary but deliberately not microservice-heavy.
+Never fabricate records, requirements, steps, parts, blockers, observations, or next actions simply to make a screen look complete.
 
-- `web` — React + TypeScript client.
-- `api` — Python/FastAPI deployable containing the modular monolith.
-- `collector` — separate Python ingestion service when implemented.
-- PostgreSQL — shared physical database infrastructure with explicit logical ownership boundaries.
+## Vehicle coverage invariant
 
-Inside `api`, domain modules remain in-process until measured scale or team ownership justifies extraction. A container is a deployment unit, not a reason to create a microservice.
+1. PartGraph is multi-manufacturer, multi-model, and multi-trim. Honda is a validation case, not a privileged architecture path.
+2. Current market scope is the United States and Canada, model years 1996 through the current calendar year, constrained by the supported taxonomy in `api/partgraph/vehicle/taxonomy.py`.
+3. Exact `VehicleConfiguration` is the mechanical applicability boundary.
+4. Similar names, shared platforms, shared repair keys, or fuzzy matches never authorize cross-configuration repair truth.
+5. If vehicle identity or applicability is ambiguous, preserve ambiguity and fail closed instead of guessing.
+6. Manufacturer-specific business logic belongs behind an explicit adapter/policy only when the manufacturer actually requires a distinct rule. Generic repair/readiness services stay manufacturer-neutral.
 
-Do not create an empty collector implementation. Add its container only when the real ingestion capability is built.
+## Current architecture
 
-## Vehicle scope
+- `web` — React + TypeScript + Vite; Nginx production container.
+- `api` — Python/FastAPI modular monolith.
+- PostgreSQL — authoritative canonical and private state.
+- `collector` — separate future Python service only when an approved real ingestion source exists.
+- GitHub Actions — CI/CD and container delivery.
+- GitHub Pages — static/read-only current-main frontend preview only.
 
-1. PartGraph is multi-brand. Honda is not a privileged architecture path.
-2. Initial market scope is the United States and Canada.
-3. Supported model years are 1996 through the current calendar year.
-4. The supported-brand registry is maintained in `api/partgraph/vehicle/taxonomy.py`.
-5. European premium/luxury brands are outside the current product scope except Volvo, which is explicitly supported.
-6. Mainstream, domestic premium, Japanese/Korean premium, and meaningful legacy North-American used-fleet brands may be supported.
-7. Brand support is an explicit product decision, not inferred from arbitrary user input.
+Do not add Redis, Kafka, Kubernetes, Neo4j, Celery, another database, or a new deployable without a demonstrated requirement. A container boundary is not a reason to create a microservice.
 
-## Trust rules
+## Canonical truth vs private owner state
 
-1. Never invent OEM numbers, fitment, torque values, fluids, procedures, fastener specifications, interchange, or safety facts.
-2. Mechanical truth comes from versioned structured evidence with provenance, not from an LLM.
-3. Collector output is staging evidence only and cannot automatically become canonical catalog or service truth.
-4. Preserve source identity, source record identity, URL, observed vehicle context, timestamps, raw content hash/payload, extraction method, provenance, confidence, and review state for staging evidence.
-5. The collector database role may write only the `catalog_staging` boundary and operational telemetry. It must not write canonical vehicle data or verified catalog evidence.
-6. Promotion from staging is an explicit verified operation. Rejected evidence cannot be promoted in place.
-7. A promoted `catalog_verified_evidence` row is an immutable verified evidence snapshot; future canonical part/fitment entities still require their own domain validation.
-8. Seller data never overrides verified identity or fitment.
-9. LLM output may interpret ambiguous language but is never authoritative mechanical truth.
-10. Prefer deterministic extraction and lookup for alphanumeric OEM/catalog data.
-11. ML training and evaluation are offline. Promote a model only after measurable evaluation against the current baseline.
-12. Raw vehicle wording is canonicalized before canonical configuration persistence.
-13. Case, punctuation, spacing, safe synonyms, and notation variants must not create duplicate configurations.
-14. Compatible partial identities may enrich one canonical record; conflicting facts remain distinct.
-15. If more than one canonical configuration is compatible, reject the write as ambiguous instead of guessing.
-16. Do not use fuzzy string similarity to merge safety-relevant vehicle variants such as trims, engines, transmissions, or drivetrains.
-17. Ordinary user input and future collector output never create shared canonical truth directly.
-18. VIN decoders and other external identity providers produce observations, not canonical truth. Cache their observation if useful, but re-resolve it against current canonical data rather than freezing a provider result as authority.
+Shared canonical truth includes vehicle configurations, verified repair definitions, requirement definitions/uses, and verified mechanical claims.
 
-## Runtime performance rules
+Private owner state includes `UserVehicle`, VIN material, `RepairSession`, Garage inventory, repair readiness, observations, photos, storage locations, exceptional hardware memory, and session event history.
 
-1. Catalog collection, training, deployment work, and LLM calls are never on the repair-session resume critical path.
-2. Interactive server-backed workflow retrieval targets p95 under 3 seconds; the purpose-built repair-session Resume read targets p95 under 2 seconds.
-3. Ten seconds is the hard blocking boundary. The UI must stop blocking and render a useful failure/fallback state rather than spin indefinitely.
-4. PostgreSQL is authoritative for private repair state. PartGraph does not promise full offline repair operation.
-5. Small transient client caches are acceptable for responsiveness and brief connectivity interruptions, but they are not a second authoritative database.
-6. Prefer purpose-built read models/endpoints over frontend request waterfalls.
-7. Instrument latency before adding caches or infrastructure.
+Canonical truth and private readiness/possession state must never be collapsed into one table or one mutable concept.
 
-## User isolation
+## Repair definition model
 
-1. V1 is one owner account with many vehicles.
-2. Sign-up uses email, username, and password. Sign-in accepts username or email.
-3. Usernames are case-insensitive, 3–32 characters, and contain only ASCII letters, digits, or underscore.
-4. Private data must be user-scoped before `UserVehicle`, VIN, photos, repair sessions, inventory, or fastener state are released.
-5. PostgreSQL row-level security is required once private user tables exist.
-6. V1 permits one active editing device per repair session; other devices may be read-only until control transfers.
-7. Full VIN values must never appear in application logs, analytics, exception messages, cache keys, or LLM prompts.
-8. Full VIN values stored by PartGraph require authenticated encryption with explicit key versioning; encryption keys come only from runtime secret configuration.
-9. Deterministic VIN duplicate detection uses a keyed, owner-scoped fingerprint rather than plaintext or a bare unsalted hash. Different owners must not be able to infer one another's VIN presence from duplicate behavior.
-10. Normal API/UI representations expose a masked VIN only. Decryption is not part of ordinary list/read rendering.
-11. Passwords, password hashes, raw session tokens, CSRF material, VIN cryptographic keys, and other secrets must never be logged.
+Canonical relationship:
+
+```text
+VehicleConfiguration
+  -> RepairDefinition
+  -> RepairOperation
+  -> RequirementUse
+  -> RequirementDefinition
+```
+
+The repair-level readiness manifest is a deterministic aggregation over requirement uses for one exact repair definition.
+
+Requirements may represent:
+
+- tool
+- equipment
+- replacement part
+- fluid
+- consumable
+- hardware
+- workspace/setup
+- safety prerequisite
+
+### Non-negotiable modeling rule
+
+Do not model `part -> tool` as mechanical truth. A part does not inherently require a socket/wrench/tool; a verified repair operation for an exact vehicle configuration may require it.
+
+Reusable requirements use maximum/simultaneous need semantics; consumed/replacement requirements aggregate explicit quantities. Unknown quantity remains unknown. Conflicting units or fulfillment semantics require explicit canonical review rather than silent conversion.
+
+## RepairSession binding and versioning
+
+1. A session may bind once to an exact verified `RepairDefinition` for its own saved vehicle's canonical configuration.
+2. Never infer binding from the free-text session title.
+3. The client must not independently supply a different vehicle configuration for binding.
+4. Do not silently rebind an existing session.
+5. Existing sessions without verified definitions remain valid and can use manual/exception memory.
+6. Bound sessions are version-pinned. A later canonical definition may supersede the definition, but an in-progress historical session must remain reconstructable from the definition/evidence it was bound to.
+7. Binding metadata is not physical repair progress; do not advance the physical checkpoint merely because canonical repair metadata was attached.
+
+## Inventory/readiness rules
+
+Inventory is the single primary user-facing repair-readiness surface.
+
+1. Verified requirements auto-populate when a session is bound.
+2. The user reconciles an aggregated manifest requirement once, even if several operations use it.
+3. Readiness states are `have`, `missing`, `ordered`, and `unavailable`.
+4. Private session state overrides reusable Garage defaults for that session.
+5. Reusable tools/equipment/workspace capability may carry forward into Garage inventory.
+6. Consumables, fluids, replacement parts, and repair-specific consumed stock do not automatically become permanent Garage inventory.
+7. `reuse_existing` / conditional existing hardware may default from the vehicle only where the verified requirement semantics explicitly support that interpretation.
+8. Manual Block 8 inventory is a fallback/exception mechanism, not the primary verified-requirement workflow.
+9. Fasteners and Evidence are not primary top-level navigation destinations. Preserve backend capability for exceptional missing/damaged hardware and inline observations/photos.
 
 ## Repair-session state rules
 
-1. A `RepairSession` belongs to exactly one user-owned `UserVehicle`. It is private and covered by the same application user filter plus PostgreSQL RLS defense in depth.
-2. Repair-session event history is append-only from the application role. Never update or delete an event to make current state look correct.
-3. Current repair state is a disposable projection/read model. If it is missing or stale, rebuild it deterministically from the immutable ordered event history.
-4. Every physical-state mutation requires the active edit lease for that session and a stable idempotency key. Viewing/resume reads do not require editing control.
-5. V1 has one active editing device per repair session. A second device may read; mutation is rejected until the lease expires or the user explicitly takes over the session.
-6. Event sequence and idempotency uniqueness are database-enforced. Concurrent requests must serialize or fail with a deterministic coded conflict rather than depend on Python timing.
-7. Pausing, resuming, archiving, and future repair-state transitions append events first and advance the projection transactionally in the same database transaction.
-8. Repair sessions are archived rather than hard-deleted once history exists.
-9. A Resume response may report only state PartGraph has actually recorded. Never populate missing parts, fasteners, observations, blockers, plan steps, or actions just to make the UI look complete.
-10. A “next safe action” requires verified repair-plan/dependency truth plus current physical state. Until that domain exists, the product must explicitly say the action is unavailable rather than infer one from an LLM or a generic procedure.
+1. A `RepairSession` belongs to exactly one user and one `UserVehicle`.
+2. Event history is immutable and ordered. Never edit/delete events to make the projection look correct.
+3. Current state is rebuildable from immutable history.
+4. Physical/readiness mutations require the active edit lease and a stable idempotency key.
+5. V1 allows one active editing device; other devices may read until takeover/expiry.
+6. Event sequence and idempotency uniqueness must be database-enforced.
+7. Pausing/resuming/archiving and domain mutations advance history and projection transactionally.
+8. Sessions archive rather than hard-delete once history exists.
+9. Resume may report only recorded state.
+10. A verified next action requires Block 11 procedure/dependency truth. Until then, explicitly return unavailable rather than asking an LLM to invent a next step.
 
-## Reliability and error contract
+## Mechanical truth and source authority
 
-1. A failure class must be prevented structurally, caught in CI, or produce a visible coded fallback/degraded state. Silent failure is not acceptable.
-2. Every non-success API response must use the versioned PartGraph error envelope with a stable `code`, user-safe `message`, `request_id`, `retryable` flag, and appropriate HTTP status.
-3. Every warning/error log entry must carry a stable code and correlation/request ID where a request exists. Never log request bodies merely to diagnose an error.
-4. API paths, schemas, and API-version headers are contracts. Client/API version mismatch must fail visibly instead of being silently deserialized.
-5. Validate user input independently at browser, API, and database boundaries where integrity matters. Browser validation is UX, never the security boundary.
-6. Bound payload/file sizes before expensive parsing, hashing, AI, or storage work.
-7. Use UTC-aware server timestamps and explicit wire formats. Do not depend on machine-local timezone or locale.
-8. Automatic retries must be bounded and limited to safe/idempotent work unless an explicit idempotency key/protocol exists for the state-changing action.
-9. A network timeout or unavailable dependency may not be converted into a successful state transition. Preserve known server-authoritative state and show degraded/retry UX.
-10. Cache use requires user/tenant scope, version/invalidation semantics, TTL, and authoritative fallback before adoption. A cache must never become an undocumented second database.
-11. Identity creation, event/state transitions, deduplication, and other concurrent writes require race-condition tests and database-enforced invariants.
-12. CORS, CSRF, cookie flags, reverse-proxy behavior, security headers, and Content Security Policy must be integration-tested whenever those boundaries change.
-13. New capabilities such as uploads, WebSockets, or webhooks require their own size/handshake/signature/replay/error tests before they ship; do not add placeholder infrastructure merely to satisfy this rule.
+Never invent OEM numbers, fitment, torque, fluids, tool sizes, fastener specs, interchange, procedures, safety facts, or compatibility.
 
-## Dependency and runtime compatibility
+Evidence pipeline:
 
-1. Supported runtimes are explicit. Current baseline is Python 3.14 and Node.js 24; a runtime-major change is an intentional migration, not ambient CI drift.
-2. Direct dependencies use exact versions. JavaScript transitive dependencies use a committed lockfile and `npm ci`.
-3. Use one package manager/lock strategy per deployable. Do not mix npm/yarn/pnpm or Poetry/Pipenv state.
-4. CI runs dependency-integrity and security checks (`pip check`, `pip-audit`, `npm audit`) and type/build/container smoke tests.
-5. React and React-DOM versions must match. Vite/plugins, TypeScript/type packages, and framework peers must resolve without `--force` or `--legacy-peer-deps`.
-6. Reversible Alembic migrations must be downgrade/upgrade tested in CI before merge. Destructive migrations require an explicit data-preservation/migration plan instead of a fake rollback.
-7. Production containers must not depend on global developer packages or mutable host environments.
-8. Native/C-extension or multi-architecture support must be tested on every claimed architecture before ARM64/x86 portability is stated.
-9. Do not accept a dependency warning as harmless by default. Resolve it, pin around it with documented evidence, or fail the build.
+```text
+source_record
+-> extracted_claim
+-> normalized_candidate
+-> applicability/conflict validation
+-> review/promotion
+-> MechanicalClaim
+-> RequirementUseEvidence
+-> canonical requirement
+```
 
-## Repair capability boundary
+Source authority and extraction confidence are different dimensions.
 
-Guided V1 workflows exclude high-voltage EV/hybrid battery work, airbags/SRS and pyrotechnic pretensioners, immobilizer/security programming, ADAS calibration, structural collision/frame repair, high-voltage inverter/internal battery service, and other procedures explicitly classified as professional/information-only.
+- Government/open authority: identity, recalls, safety/context within its actual scope.
+- OEM service information: highest authority for explicit applicable procedures/specifications/special tools, subject to licensing/terms.
+- Licensed OEM-derived structured repair data: scalable option only when product-use/redistribution rights permit.
+- OEM parts/licensed parts data: assembly/part identity/applicability/supersession within scope; not automatic procedure/tool truth.
+- Industry standards such as ACES/PIES: normalization/exchange semantics, not fitment truth by themselves.
+- Retailers/marketplaces: procurement candidates after canonical truth exists.
+- Community/forums/videos: discovery/supporting evidence only.
 
-## Collector boundary
+Conflicts never silently overwrite. Unsupported inference stays unverified.
 
-The collector is separate because crawling is long-running, retry-heavy, externally rate-limited, and failure-prone. It may write only staging data and operational telemetry. It must not directly write canonical PartGraph truth.
+## Collection/licensing gate
 
-The collector is never invoked by a normal user workflow. Do not run production collection from CI or deployment. CI will test the collector against deterministic fixtures when that block exists.
+The collector is not part of the interactive repair path and is not implemented until real ingestion is approved.
 
-No catalog collection occurs merely because staging tables, migrations, tests, or delivery workflows run.
+Do not:
+
+- run production collection from CI, deployment, page load, or a normal repair session;
+- scrape or ingest a new source merely because staging tables exist;
+- accept licensing terms, activate a paid source, spend money, or start real collection without explicit approval;
+- let the collector write canonical truth directly.
+
+Collector writes, when implemented, are staging-only with provenance and deterministic fixtures for CI.
+
+## AI boundary
+
+1. AI can explain, rank, summarize, or propose structured observations.
+2. AI does not silently change vehicle identity, mechanical truth, repair requirements, procedure truth, readiness, or safety policy.
+3. AI is never required for page load, Resume, readiness, or deterministic next-safe-action evaluation.
+4. Training/evaluation/deployment is offline from the repair critical path.
+5. Prefer deterministic lookup/extraction for alphanumeric OEM/catalog facts.
+
+## Safety/capability boundary
+
+Guided V1 excludes or restricts professional/safety-critical work including high-voltage EV/hybrid battery internals, airbags/SRS/pyrotechnics, immobilizer/security programming, ADAS calibration, structural collision/frame repair guidance, high-voltage inverter/internal battery work, and other explicitly unsupported procedures.
+
+Do not bypass a deterministic capability restriction with an LLM explanation.
+
+## Security and privacy
+
+- Registration: email + username + password; login accepts username or email.
+- Argon2id password hashing.
+- Opaque server-side session cookie; no browser bearer token storage.
+- CSRF + accepted Origin for state-changing browser requests.
+- PostgreSQL RLS for private owner tables.
+- Full VIN encrypted at rest with AES-GCM and explicit key version.
+- Owner-scoped keyed HMAC for VIN duplicate lookup.
+- Full VIN never enters normal logs, analytics, exception text, cache keys, or LLM prompts.
+- API errors use stable machine-readable codes, user-safe messages, request IDs, retryability, and correct HTTP status.
+- Private account/vehicle/repair endpoints use `Cache-Control: no-store`.
+- Cross-user IDOR tests are mandatory for private capabilities.
+
+## Performance/reliability contract
+
+- UI acknowledgment target: <100 ms where practical.
+- searchable selector p95: <250 ms.
+- normal API p95: <1 s.
+- RepairSession Resume p95: <2 s.
+- hard blocking boundary: 10 s.
+
+Collector/model-training/deployment/LLM work never belongs on the critical repair path. Prefer purpose-built read models over frontend waterfalls. Instrument before adding caches or infrastructure.
+
+Failures must be either structurally prevented, caught by tests, or represented as a visible coded degraded/fallback state. Never turn a timeout or dependency failure into a successful state transition.
+
+## Migration discipline
+
+Persistent developer PostgreSQL volumes are part of the compatibility contract.
+
+1. Never rewrite an Alembic migration that may already be stamped/applied merely to fix a later defect.
+2. Add a forward migration and provide a truthful downgrade when feasible.
+3. CI must test fresh upgrade, downgrade/re-upgrade, and known persisted-history upgrade paths.
+4. Destructive migrations require an explicit data-preservation plan.
+5. Never suggest `docker compose down -v` as a routine fix; it intentionally destroys local database data.
+
+## Dependencies/runtime
+
+- Python 3.14 and Node.js 24 are the current runtime majors.
+- Direct dependencies are pinned; JavaScript uses committed lockfile + `npm ci`.
+- Do not use `--force`, `--legacy-peer-deps`, mixed package managers, or ambient global dependencies to hide incompatibility.
+- CI includes `pip check`, `pip-audit`, Ruff, PostgreSQL tests, migration tests, TypeScript/build, npm audit, container smoke, and full Compose integration as applicable.
+
+## UI/product discipline
+
+1. Mobile first, tablet second, desktop supported.
+2. Do not expose internal domain tables as navigation merely because they exist.
+3. Preserve the simple DIY mental model: requirement/readiness, procedure, current state.
+4. No fake/sample mechanical records in production UI.
+5. The static GitHub Pages preview is read-only/current-main frontend presentation; it is not the full API runtime.
+6. `docs/PARTGRAPH_SYSTEM_UML.md` is the visual architecture reference. Do not create a parallel storyboard/Kanban/Scrum artifact just to track architecture.
+
+## Block discipline and “move forward” execution
+
+Work in coherent runnable blocks. Sub-blocks are allowed when they clarify dependencies/testing/rollback, but they are not a separate project-management system.
+
+When continuing an existing block:
+
+1. Inspect current `main`, branch/PR head, issue scope, migrations, and CI before editing.
+2. Continue the current block instead of inventing a new direction.
+3. Make routine implementation decisions autonomously.
+4. Diagnose and fix red checks; do not merge around them.
+5. Preserve architecture/truth/security gates.
+6. Do not cross collection/licensing/spending/safety gates without explicit authorization.
+7. Update the relevant issue/roadmap/UML when the architecture or completion boundary materially changes.
+
+## Merge/validation discipline
+
+Before merge:
+
+1. final changed head passes every applicable GitHub Actions workflow;
+2. GitHub reports mergeable/ready;
+3. API changes pass lint, dependency/security checks, migration roundtrip/persisted-history tests, PostgreSQL/RLS/adversarial tests, and container smoke;
+4. Web changes pass locked install/audit, TypeScript/build, Nginx/container/security smoke;
+5. full-stack changes pass Compose integration;
+6. meaningful user-facing behavior receives the required local/runtime verification;
+7. red, incomplete, knowingly unverified, or gated work remains unmerged.
+
+After merge, verify `main` delivery and the public preview/runtime surface where applicable.
 
 ## Scope discipline
 
-Implement one product block at a time. Keep each block understandable and backed by automated CI/CD checks before merge.
-
-Do not reintroduce retired prototype pages, committed browser catalog dumps, duplicate scripts/tool directories, or infrastructure added only for résumé value.
-
-## Validation
-
-Before merging a block, verify applicable GitHub Actions workflows are green and GitHub reports the PR mergeable/ready. API work must include Ruff, dependency integrity/security checks, reversible migration checks, PostgreSQL tests, container build/smoke; Web work must include locked dependency install, dependency audit, TypeScript/build/container smoke; full-stack changes must pass Compose integration and relevant adversarial user-flow checks.
+Do not reintroduce retired ForgeBridge/export-platform concepts, stale blueprint navigation, committed browser catalog dumps, duplicate tool directories, or infrastructure added only for appearance. Current `main`, active issues, and the living UML supersede old prototype assumptions.

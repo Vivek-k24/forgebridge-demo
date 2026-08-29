@@ -17,6 +17,7 @@ SessionEventType = Literal[
     "fastener_state_changed",
     "inventory_item_recorded",
     "inventory_state_changed",
+    "readiness_state_changed",
     "observation_recorded",
     "photo_evidence_added",
     "photo_evidence_deleted",
