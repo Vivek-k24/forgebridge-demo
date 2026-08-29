@@ -19,8 +19,13 @@ $env:PARTGRAPH_ACCEPTANCE_ALL_BRANDS = if ($AllBrands) { 'true' } else { 'false'
 
 Write-Host ''
 Write-Host 'PartGraph local acceptance harness' -ForegroundColor Cyan
-Write-Host "  repair cases: $Cases"
-Write-Host "  seed:         $Seed"
+if ($AllBrands) {
+    Write-Host "  case mode:     all supported/legacy makes (Cases=$Cases is the normal-run minimum)"
+}
+else {
+    Write-Host "  repair cases:  $Cases"
+}
+Write-Host "  seed:          $Seed"
 Write-Host "  all supported brands: $($AllBrands.IsPresent)"
 Write-Host '  database: isolated disposable PostgreSQL volume' -ForegroundColor DarkGray
 Write-Host ''
