@@ -1,5 +1,5 @@
 param(
-    [ValidateRange(1, 200)]
+    [ValidateRange(20, 200)]
     [int]$Cases = 20,
 
     [int]$Seed = 20260829,
