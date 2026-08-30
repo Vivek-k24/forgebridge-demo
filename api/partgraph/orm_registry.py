@@ -8,10 +8,8 @@ maintain independent lists of domain-model imports.
 import partgraph.auth.models  # noqa: F401
 import partgraph.intelligence.models  # noqa: F401
 import partgraph.knowledge.models  # noqa: F401
-
-# PR 2/5 leaves private readiness tables in the legacy module for PR 3/5.
-import partgraph.repair_definition.models  # noqa: F401
-import partgraph.repair_memory.models  # noqa: F401
-import partgraph.repair_session.models  # noqa: F401
+import partgraph.repair_experience.memory_models  # noqa: F401
+import partgraph.repair_experience.models  # noqa: F401
+import partgraph.repair_experience.readiness_models  # noqa: F401
 import partgraph.user_vehicle.models  # noqa: F401
 import partgraph.vehicle.models  # noqa: F401

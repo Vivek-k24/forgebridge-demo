@@ -1,6 +1,6 @@
-"""Compatibility imports for repair-experience memory ORM models."""
+"""Compatibility imports for repair-experience memory models."""
 
-from ..repair_experience.memory_models import (
+from ..memory_models import (
     RepairFastener,
     RepairInventoryItem,
     RepairObservation,
