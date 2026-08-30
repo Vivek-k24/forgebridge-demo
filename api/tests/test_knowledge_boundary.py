@@ -6,6 +6,7 @@ from partgraph.repair_definition.models import (
     RepairRequirementState,
     UserGarageInventoryItem,
 )
+from partgraph.repair_experience import readiness_models
 
 
 def test_legacy_paths_reexport_the_same_canonical_orm_classes() -> None:
@@ -21,8 +22,10 @@ def test_legacy_paths_reexport_the_same_canonical_orm_classes() -> None:
 def test_private_readiness_state_is_not_owned_by_knowledge() -> None:
     assert not hasattr(knowledge_models, "UserGarageInventoryItem")
     assert not hasattr(knowledge_models, "RepairRequirementState")
-    assert UserGarageInventoryItem.__module__ == "partgraph.repair_definition.models"
-    assert RepairRequirementState.__module__ == "partgraph.repair_definition.models"
+    assert UserGarageInventoryItem is readiness_models.UserGarageInventoryItem
+    assert RepairRequirementState is readiness_models.RepairRequirementState
+    assert UserGarageInventoryItem.__module__ == "partgraph.repair_experience.readiness_models"
+    assert RepairRequirementState.__module__ == "partgraph.repair_experience.readiness_models"
 
 
 def test_compatibility_paths_do_not_duplicate_sqlalchemy_tables() -> None:
