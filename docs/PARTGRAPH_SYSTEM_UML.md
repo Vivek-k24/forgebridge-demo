@@ -45,8 +45,10 @@ flowchart TD
 
     RD -. provenance .-> CLAIMS[Verified mechanical claims]
     CLAIMS -. evidence .-> SOURCES[Source records / OEM / licensed evidence]
-    OBSERVE -. future assist .-> AI[AI proposes explanation/observation only]
-    AI -. candidate only .-> OBSERVE
+    ACTION -. explain current verified state .-> ASSIST[Deterministic assistance]
+    ASSIST -. current mode: no model call .-> U
+    OBSERVE -. future assist .-> INTEL[Optional intelligence proposal]
+    INTEL -. candidate only .-> OBSERVE
 ```
 
 ## 2. Canonical truth versus private owner state
@@ -141,7 +143,7 @@ classDiagram
       +UUID id
       +UUID user_id
       +UUID session_id
-      +UUID requirement_use_id
+      +UUID requirement_definition_id
       +readiness_state
       +quantity_available
     }
@@ -160,7 +162,7 @@ classDiagram
     User "1" --> "many" UserGarageInventoryItem
     RequirementDefinition "1" <-- "many" UserGarageInventoryItem
     RepairSession "1" --> "many" RepairRequirementState
-    RequirementUse "1" <-- "many" RepairRequirementState
+    RequirementDefinition "1" <-- "many" RepairRequirementState
 ```
 
 The key boundary is deliberate:
@@ -280,17 +282,24 @@ flowchart TB
     API --> MEDIA[Private photo storage adapter]
     API -->|user initiated VIN only| NHTSA[NHTSA vPIC]
 
+    API --> ASSIST[Assistance domain]
+    ASSIST --> VERIFIED[Version-pinned verified guidance snapshot]
+    ASSIST -. future optional request only .-> GATEWAY[Intelligence ModelGateway]
+    GATEWAY --> DISABLED[DisabledModelGateway - current default]
+    GATEWAY -. future adapters .-> MODELS[Hosted/local model adapters]
+    MODELS -. candidate/explanation only .-> API
+    GATEWAY --> AUDIT[(AIInvocation audit)]
+
     COLLECTOR[Future collector service] -->|staging-only DB role| STAGING[(catalog_staging)]
     STAGING --> PROMOTE[Explicit review/promotion]
     PROMOTE --> PG
-
-    AI[Future AI/ML services] -. optional candidate/explanation .-> API
-    AI -. never authoritative state .-> AI_GUARD[Candidate-only boundary]
 
     CI[GitHub Actions] --> TEST[Tests / migrations / security / containers]
     TEST --> GHCR[GHCR tested images]
     MAIN[GitHub main] --> PAGES[GitHub Pages static UI preview]
 ```
+
+`assistance` owns the owner-facing explanation feature. `intelligence` owns provider-neutral model contracts and invocation auditing. The current application is deterministic-only: `DisabledModelGateway` is the default and no model provider is wired. Future intelligence remains downstream of deterministic safety and verified-state reconstruction and cannot become authoritative state.
 
 The future collector is intentionally separate from the interactive repair path. GitHub Pages is only a static frontend preview; a full public application still requires runtime hosting for FastAPI and PostgreSQL.
 
@@ -309,7 +318,7 @@ flowchart LR
     B7 --> B10
     B10 --> B11[Block 11 Verified procedure + safety]
     B9 --> B11
-    B11 --> B12[Block 12 AI/ranking assistance]
+    B11 --> B12[Block 12 assistance/intelligence]
     B3 -. activate only when approved real ingestion exists .-> B6[Block 6 Collector]
     B6 -. supplies staged evidence .-> B10
 ```
@@ -331,15 +340,34 @@ flowchart LR
 
 Sub-blocks are explanatory implementation structure, not Scrum stories. A sub-block can remain inside the same issue/PR unless isolation materially improves review, testing, or rollback safety.
 
-## 10. Non-negotiable truth rules
+## 10. Five-PR restructuring ownership target
+
+The bounded restructuring tracked by issue #62 reorganizes only capabilities that already exist or were already started. Future collector, autonomous research/QA agents, broad ingestion, embeddings and model training stay deferred.
+
+```mermaid
+flowchart LR
+    ID[Identity\nVehicleConfiguration / UserVehicle / VIN] --> APP[Application boundary]
+    K[Knowledge\nClaims / evidence / repair definitions / procedures] --> APP
+    R[Repair experience\nSession / readiness / progress / memory / Resume] --> APP
+    I[Intelligence\nAssistance / ModelGateway / AI audit] --> APP
+
+    I -. proposals/explanations only .-> K
+    I -. proposals/explanations only .-> R
+    K --> R
+```
+
+PR 1/5 establishes the assistance/intelligence boundary. Later restructuring PRs consolidate knowledge, repair experience, identity/application seams, then finish with parity cutover and compatibility hardening.
+
+## 11. Non-negotiable truth rules
 
 1. Vehicle applicability is exact and explicit; similarity is not fitment.
 2. Honda is a validation case, not an architectural special case.
 3. Repair requirements belong to repair definitions/operations, not globally to a part.
 4. Canonical mechanical truth is separate from private user state.
 5. Retailer links are procurement candidates after fitment/specification truth exists.
-6. AI may propose, rank, explain, or summarize; it does not silently create mechanical truth.
+6. AI may propose, rank, explain, classify, or extract candidates; it does not silently create mechanical truth.
 7. Unknown stays unknown; conflicts stay explicit.
 8. Core readiness/resume/next-action paths do not depend on collectors or AI being online.
 9. Ordinary users should reconcile a requirement once, not maintain duplicate operation-level bookkeeping.
 10. Safety/capability policy may restrict guided procedures even when informational repair data exists.
+11. Provider/model infrastructure belongs to the intelligence boundary; owner-facing assistance remains independently usable without it.
