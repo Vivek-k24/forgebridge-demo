@@ -14,6 +14,8 @@ __all__ = [
     "REPAIR_DEFINITION_NOT_FOUND",
     "REPAIR_DEFINITION_INTEGRITY_ERROR",
     "REPAIR_DEFINITION_BINDING_INVALID",
+    "_integrity_error",
+    "_manifest_for_definition",
     "verified_requirement_manifest",
     "bound_requirement_manifest",
 ]
