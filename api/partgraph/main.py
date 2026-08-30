@@ -13,18 +13,18 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 import partgraph.orm_registry  # noqa: F401
 
 from .assistance.router import router as assistance_router
-from .auth.router import router as auth_router
 from .config import settings
 from .database import database_readiness, engine
 from .errors import ErrorCode, PartGraphError, error_response
+from .identity.auth.router import router as auth_router
+from .identity.user_vehicle.router import router as user_vehicle_router
+from .identity.vehicle.router import router as vehicle_router
 from .knowledge.router import router as repair_definition_router
 from .repair_memory.router import router as repair_memory_router
 from .repair_session.guidance import router as repair_guidance_router
 from .repair_session.readiness import router as repair_readiness_router
 from .repair_session.repair_definition_binding import router as repair_definition_binding_router
 from .repair_session.router import router as repair_session_router
-from .user_vehicle.router import router as user_vehicle_router
-from .vehicle.router import router as vehicle_router
 
 logger = logging.getLogger("partgraph.api")
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
