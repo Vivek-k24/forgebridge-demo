@@ -1,4 +1,4 @@
-from ..repair_session.guidance import RepairGuidanceRead
+from ..repair_experience.guidance import RepairGuidanceRead
 from .schemas import (
     AssistanceActionReference,
     AssistanceExplanationRead,
