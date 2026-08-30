@@ -4,7 +4,7 @@ Block 12 adds assistance only after PartGraph has exact vehicle identity, verifi
 
 The governing rule is:
 
-> AI may explain, rank, extract, or propose. It may not become mechanical truth or silently mutate repair state.
+> AI may explain, rank, extract, classify, or propose. It may not become mechanical truth or silently mutate repair state.
 
 ## 1. End-to-end assistance decision
 
@@ -17,7 +17,8 @@ flowchart TD
     P -- Yes --> D{Deterministic state sufficient?}
     D -- Yes --> E[Deterministic explanation]
     E --> R[Return explanation with ai_invoked=false]
-    D -- No, future slice --> A[Optional AI adapter]
+    D -- No, future slice --> M[ModelGateway]
+    M --> A[Optional hosted/local model adapter]
     A --> I[AIInvocation audit record]
     I --> C{Confidence and contract valid?}
     C -- No --> F[Explicit degraded/fallback response]
@@ -28,7 +29,7 @@ flowchart TD
     R2 -. never silently mutates .-> T
 ```
 
-Block 12A implements the deterministic path and the audit persistence boundary. It does **not** implement `A`, call a model provider, add embeddings, or collect repair content.
+Block 12A implements the deterministic path, the provider-neutral gateway contract, and the audit persistence boundary. It does **not** wire a model provider, add embeddings, collect repair content, or perform model training.
 
 ## 2. Truth and assistance separation
 
@@ -56,15 +57,46 @@ flowchart LR
     G --> DX[Deterministic AssistanceExplanation]
     DX --> UI[Why this step?]
 
-    AI[Future AIInvocation] -. may explain/propose .-> UI
-    AI -. cannot write .-> VC
-    AI -. cannot write .-> RD
-    AI -. cannot write .-> PS
-    AI -. cannot write .-> RR
-    AI -. cannot bypass .-> RP
+    MG[Future ModelGateway invocation] -. may explain/propose .-> UI
+    MG -. cannot write .-> VC
+    MG -. cannot write .-> RD
+    MG -. cannot write .-> PS
+    MG -. cannot write .-> RR
+    MG -. cannot bypass .-> RP
 ```
 
-## 3. AI invocation audit boundary
+## 3. Code ownership boundary
+
+The five-PR restructuring tracked by issue #62 makes assistance and intelligence different responsibilities.
+
+```text
+partgraph.assistance
+    owner-facing deterministic feature
+    verified guidance -> explanation
+
+partgraph.intelligence
+    ModelGateway protocol
+    ModelRequest / ModelResult
+    candidate-only result kinds
+    AIInvocation audit state
+    DisabledModelGateway current default
+```
+
+`assistance` is independently useful without a model provider. `intelligence` cannot own canonical mechanical data or RepairSession mutations.
+
+During the restructuring sequence, `partgraph.assistance.models.AIInvocation` remains a compatibility import of `partgraph.intelligence.models.AIInvocation`. The physical PostgreSQL table and migration history do not move or reset; only code ownership changes.
+
+The provider-neutral result kinds currently permitted by the intelligence contract are:
+
+- `explanation`
+- `proposal`
+- `classification`
+- `ranking`
+- `extraction`
+
+There is intentionally no `canonical_truth` or state-mutation result kind.
+
+## 4. AI invocation audit boundary
 
 Every future production AI invocation must be attributable without storing raw private prompt text as the audit primitive.
 
@@ -102,7 +134,7 @@ classDiagram
 
 `ai_invocations` is private owner state protected by PostgreSQL row-level security (RLS). The application role receives select/insert/update only; no cross-owner visibility is allowed.
 
-## 4. Deterministic explanation contract
+## 5. Deterministic explanation contract
 
 `GET /api/v1/repair-sessions/{session_id}/assistance/explanation`
 
@@ -117,7 +149,7 @@ The endpoint consumes the exact same guidance snapshot already used by Guided Re
 
 The response always reports `mode=deterministic` and `ai_invoked=false` in Block 12A.
 
-## 5. Safety inheritance
+## 6. Safety inheritance
 
 The assistance endpoint delegates current-state reconstruction to the existing verified guidance engine. Therefore the same capability gate executes **before** assistance can access procedure action text:
 
@@ -133,7 +165,28 @@ flowchart TD
 
 There is no separate AI safety override. An optional future model adapter sits downstream of this deterministic gate.
 
-## 6. Failure behavior
+## 7. Provider-neutral gateway contract
+
+The current gateway is deliberately disabled:
+
+```text
+Assistance / future intelligence request
+        |
+        v
+ModelGateway protocol
+        |
+        +--> DisabledModelGateway  [current default]
+        |
+        +--> hosted provider adapter  [future]
+        |
+        +--> local model adapter      [future]
+```
+
+`DisabledModelGateway.invoke()` fails closed with `MODEL_GATEWAY_DISABLED`. Core PartGraph behavior does not catch that failure and silently invent an answer; deterministic repair state remains usable without the model path.
+
+A future provider adapter receives a bounded `ModelRequest` and returns a `ModelResult`. Provider-specific SDK objects do not leak into repair-domain services. This allows hosted or local providers to change later without rewriting the authoritative repair workflow.
+
+## 8. Failure behavior
 
 - deterministic assistance has no network/model dependency;
 - model/provider outage cannot affect page load, readiness, Resume, or next-action computation;
@@ -141,7 +194,7 @@ There is no separate AI safety override. An optional future model adapter sits d
 - AI results may become proposals, never automatic readiness/progress/fitment/safety mutations;
 - full VINs, session tokens, passwords, and other secrets must never be written to AI audit metadata or prompts.
 
-## 7. Local acceptance contract
+## 9. Local acceptance contract
 
 `local-validation/assistance_acceptance.py` proves through the running API and disposable PostgreSQL state that:
 
@@ -154,3 +207,14 @@ There is no separate AI safety override. An optional future model adapter sits d
 7. `guided_prohibited` remains a 403 boundary through the assistance endpoint.
 
 The randomized acceptance harness remains local-only and outside GitHub Actions/deployment.
+
+## 10. Deferred agent boundary
+
+The external PartGraph Research Agent and synthetic PartGraph QA Agent discussed for future work are **not implemented in this block**.
+
+This restructuring only establishes a stable intelligence seam so those systems do not need direct database access or provider-specific coupling later. When implemented under their future roadmap blocks:
+
+- a Research Agent must behave as a restricted external contributor and submit provenance-backed candidates to staging, never canonical truth;
+- a QA Agent must behave as a synthetic owner through supported application boundaries and its synthetic sessions must never contaminate real observational/training/canonical data.
+
+Those future actors do not change the current Block 12A runtime behavior.
