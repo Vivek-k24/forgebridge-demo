@@ -10,6 +10,10 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# Keep Python/Docker UTF-8 output readable in Windows PowerShell 5.1.
+$utf8 = New-Object System.Text.UTF8Encoding($false)
+[Console]::OutputEncoding = $utf8
+$OutputEncoding = $utf8
 $compose = Join-Path $PSScriptRoot 'compose.acceptance.yaml'
 $project = 'partgraph-acceptance'
 
