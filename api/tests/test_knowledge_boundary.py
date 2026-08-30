@@ -1,8 +1,8 @@
 from partgraph.catalog.models import CatalogVerifiedEvidence as LegacyCatalogVerifiedEvidence
 from partgraph.catalog.source_models import MechanicalClaim as LegacyMechanicalClaim
 from partgraph.knowledge import models as knowledge_models
+from partgraph.repair_definition.models import RepairDefinition as LegacyRepairDefinition
 from partgraph.repair_definition.models import (
-    RepairDefinition as LegacyRepairDefinition,
     RepairRequirementState,
     UserGarageInventoryItem,
 )
@@ -26,6 +26,9 @@ def test_private_readiness_state_is_not_owned_by_knowledge() -> None:
 
 
 def test_compatibility_paths_do_not_duplicate_sqlalchemy_tables() -> None:
-    assert LegacyCatalogVerifiedEvidence.__table__ is knowledge_models.CatalogVerifiedEvidence.__table__
+    assert (
+        LegacyCatalogVerifiedEvidence.__table__
+        is knowledge_models.CatalogVerifiedEvidence.__table__
+    )
     assert LegacyMechanicalClaim.__table__ is knowledge_models.MechanicalClaim.__table__
     assert LegacyRepairDefinition.__table__ is knowledge_models.RepairDefinition.__table__
