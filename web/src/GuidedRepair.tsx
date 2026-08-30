@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { AssistanceExplanation } from './AssistanceExplanation'
 import { ApiFailure, apiRequest, CSRF_HEADERS, formatApiFailure } from './api'
 import { newIdempotencyKey, partGraphDeviceId } from './device'
 import './guided-repair.css'
@@ -388,6 +389,8 @@ export function GuidedRepairWorkspace() {
               onSkip={() => void updateProgress('skipped')}
             />
           ) : null}
+
+          <AssistanceExplanation sessionId={selectedId} />
 
           <div className="guided-controls">
             {lease?.status === 'available' && (
