@@ -12,6 +12,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 import partgraph.orm_registry  # noqa: F401
 
+from .assistance.router import router as assistance_router
 from .auth.router import router as auth_router
 from .config import settings
 from .database import database_readiness, engine
@@ -52,7 +53,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="PartGraph API",
-    version="0.7.0",
+    version="0.8.0",
     lifespan=lifespan,
 )
 app.add_middleware(
@@ -78,6 +79,7 @@ app.include_router(repair_definition_router)
 app.include_router(repair_definition_binding_router)
 app.include_router(repair_readiness_router)
 app.include_router(repair_guidance_router)
+app.include_router(assistance_router)
 
 
 def _request_body_limit(request: Request) -> tuple[int, str] | None:
