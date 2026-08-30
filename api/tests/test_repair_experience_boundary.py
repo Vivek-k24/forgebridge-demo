@@ -1,12 +1,13 @@
 from partgraph.repair_definition.models import (
     RepairRequirementState as LegacyRequirementState,
+)
+from partgraph.repair_definition.models import (
     UserGarageInventoryItem as LegacyGarageItem,
 )
+from partgraph.repair_experience import memory_models, readiness_models
 from partgraph.repair_experience import models as experience_models
-from partgraph.repair_experience import readiness_models
-from partgraph.repair_experience.memory import service as experience_memory_service
 from partgraph.repair_experience import service as experience_service
-from partgraph.repair_experience import memory_models
+from partgraph.repair_experience.memory import service as experience_memory_service
 from partgraph.repair_memory.models import RepairObservation as LegacyObservation
 from partgraph.repair_memory.service import create_observation as legacy_create_observation
 from partgraph.repair_session.models import RepairSession as LegacyRepairSession
