@@ -108,7 +108,7 @@ try {
     $dockerExit = Invoke-DockerCommand -Arguments @(
         'compose', '-p', $project, '-f', $compose, '--profile', 'runner',
         'run', '--build', '--rm', 'runner',
-        'python', 'local-validation/acceptance_runner.py'
+        'python', 'local-validation/run_repair_acceptance.py'
     )
     $exitCode = $dockerExit
     if ($dockerExit -ne 0) {
