@@ -1,0 +1,2 @@
+This directory is intentionally not referenced by GitHub Actions or production deployment workflows.
+Local acceptance is owner-invoked through run.ps1.

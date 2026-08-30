@@ -1,0 +1,79 @@
+name: partgraph-acceptance
+
+services:
+  postgres:
+    image: postgres:18.6-alpine
+    environment:
+      POSTGRES_DB: partgraph_acceptance
+      POSTGRES_USER: partgraph
+      POSTGRES_PASSWORD: partgraph
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U partgraph -d partgraph_acceptance"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - acceptance_postgres:/var/lib/postgresql
+
+  vin-stub:
+    image: python:3.14.7-slim
+    working_dir: /stub
+    command: ["python", "vin_stub.py"]
+    volumes:
+      - ./vin_stub.py:/stub/vin_stub.py:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/health', timeout=2)"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: ../api
+    environment:
+      PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@postgres:5432/partgraph_acceptance
+      PARTGRAPH_WEB_ORIGIN: http://localhost:15173
+      PARTGRAPH_VIN_ENCRYPTION_KEYS: '{"1":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="}'
+      PARTGRAPH_VIN_ACTIVE_KEY_VERSION: 1
+      PARTGRAPH_VIN_LOOKUP_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      PARTGRAPH_VIN_CACHE_HOURS: 1
+      PARTGRAPH_NHTSA_BASE_URL: http://vin-stub:8081/api/vehicles
+      PARTGRAPH_NHTSA_TIMEOUT_SECONDS: 1.0
+      PARTGRAPH_MEDIA_ROOT: /app/media
+    ports:
+      - "18000:8000"
+    volumes:
+      - acceptance_media:/app/media
+    depends_on:
+      postgres:
+        condition: service_healthy
+      vin-stub:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/ready', timeout=2)"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  runner:
+    build:
+      context: ..
+      dockerfile: local-validation/Dockerfile
+    environment:
+      PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@postgres:5432/partgraph_acceptance
+      PARTGRAPH_ACCEPTANCE_API_URL: http://api:8000
+      PARTGRAPH_ACCEPTANCE_CASES: ${PARTGRAPH_ACCEPTANCE_CASES:-20}
+      PARTGRAPH_ACCEPTANCE_SEED: ${PARTGRAPH_ACCEPTANCE_SEED:-20260829}
+      PARTGRAPH_ACCEPTANCE_ALL_BRANDS: ${PARTGRAPH_ACCEPTANCE_ALL_BRANDS:-false}
+      PARTGRAPH_ACCEPTANCE_TRACEBACK: ${PARTGRAPH_ACCEPTANCE_TRACEBACK:-false}
+      PARTGRAPH_MEDIA_ROOT: /acceptance-media
+    volumes:
+      - acceptance_media:/acceptance-media
+    depends_on:
+      api:
+        condition: service_healthy
+    profiles: ["runner"]
+
+volumes:
+  acceptance_postgres:
+  acceptance_media:
