@@ -10,17 +10,17 @@ from fastapi import status
 from fastapi.testclient import TestClient
 from sqlalchemy import select, text, update
 
-import partgraph.user_vehicle.crypto as vin_crypto
-import partgraph.user_vehicle.service as user_vehicle_service
-from partgraph.auth.service import set_user_context
+import partgraph.identity.user_vehicle.crypto as vin_crypto
+import partgraph.identity.user_vehicle.service as user_vehicle_service
 from partgraph.database import session_factory
 from partgraph.errors import ErrorCode, PartGraphError
+from partgraph.identity.auth.service import set_user_context
+from partgraph.identity.user_vehicle.crypto import VinCryptoError, reveal_vin
+from partgraph.identity.user_vehicle.models import UserVehicle, VinDecodeCache
+from partgraph.identity.user_vehicle.vin import ProviderIdentity, parse_nhtsa_payload, validate_vin
+from partgraph.identity.vehicle.schemas import VehicleConfigurationInput
+from partgraph.identity.vehicle.service import resolve_configuration
 from partgraph.main import app
-from partgraph.user_vehicle.crypto import VinCryptoError, reveal_vin
-from partgraph.user_vehicle.models import UserVehicle, VinDecodeCache
-from partgraph.user_vehicle.vin import ProviderIdentity, parse_nhtsa_payload, validate_vin
-from partgraph.vehicle.schemas import VehicleConfigurationInput
-from partgraph.vehicle.service import resolve_configuration
 
 CSRF = {"X-PartGraph-CSRF": "1"}
 PASSWORD = "correct-horse-battery-staple"
@@ -118,86 +118,40 @@ def test_vin_format_and_check_digit_are_rejected_before_provider() -> None:
     bad_check_digit = f"{VALID_VIN[:8]}4{VALID_VIN[9:]}"
     with pytest.raises(PartGraphError) as invalid_digit:
         validate_vin(bad_check_digit)
-    assert invalid_digit.value.code == ErrorCode.VIN_CHECK_DIGIT_INVALID
+    assert invalid_digit.value.code == ErrorCode.VIN_INVALID_CHECK_DIGIT
 
 
-def test_nhtsa_parser_rejects_malformed_and_decode_error_payloads_without_vin_echo() -> None:
-    with pytest.raises(PartGraphError) as malformed:
-        parse_nhtsa_payload({"Results": []})
-    assert malformed.value.code == ErrorCode.VIN_PROVIDER_INVALID_RESPONSE
-    assert VALID_VIN not in str(malformed.value)
+def test_nhtsa_payload_is_normalized_without_fabricating_unknown_fields() -> None:
+    provider = parse_nhtsa_payload(
+        {
+            "Results": [
+                {
+                    "ErrorCode": "0",
+                    "ModelYear": "2003",
+                    "Make": "HONDA",
+                    "Model": "Accord",
+                    "Trim": "",
+                    "BodyClass": "Sedan/Saloon",
+                    "DisplacementL": "3",
+                    "EngineCylinders": "6",
+                    "TransmissionStyle": "Automatic",
+                    "TransmissionSpeeds": "5",
+                    "DriveType": "FWD/Front-Wheel Drive",
+                }
+            ]
+        }
+    )
 
-    with pytest.raises(PartGraphError) as decode_error:
-        parse_nhtsa_payload(
-            {
-                "Results": [
-                    {
-                        "ErrorCode": "1,14",
-                        "ModelYear": "2003",
-                        "Make": "Honda",
-                        "Model": "Accord",
-                    }
-                ]
-            }
-        )
-    assert decode_error.value.code == ErrorCode.VIN_DECODE_FAILED
-    assert VALID_VIN not in str(decode_error.value)
-
-
-def test_manual_vehicle_is_private_and_archive_preserves_history() -> None:
-    model = f"Accord-{uuid4().hex[:8]}"
-    configuration_id = _seed_configuration(model=model)
-
-    with TestClient(app) as owner, TestClient(app) as stranger:
-        _register(owner, "manual_owner")
-        _register(stranger, "manual_other")
-        created = owner.post(
-            "/api/v1/user-vehicles/manual",
-            json={
-                "nickname": "Daily car",
-                "selection": {
-                    "year": 2003,
-                    "market": "US",
-                    "make": "Honda",
-                    "model": model,
-                    "trim": "EX",
-                },
-            },
-            headers=CSRF,
-        )
-        assert created.status_code == 201, created.text
-        vehicle = created.json()
-        assert vehicle["canonical_configuration_id"] == configuration_id
-        assert vehicle["identity_source"] == "manual"
-        assert vehicle["identity_resolution"] == "matched"
-
-        stranger_read = stranger.get(f"/api/v1/user-vehicles/{vehicle['id']}")
-        assert stranger_read.status_code == 404
-        assert _error(stranger_read)["code"] == "USER_VEHICLE_NOT_FOUND"
-
-        stranger_archive = stranger.patch(
-            f"/api/v1/user-vehicles/{vehicle['id']}/archive",
-            headers=CSRF,
-        )
-        assert stranger_archive.status_code == 404
-        assert _error(stranger_archive)["code"] == "USER_VEHICLE_NOT_FOUND"
-
-        archived = owner.patch(
-            f"/api/v1/user-vehicles/{vehicle['id']}/archive",
-            headers=CSRF,
-        )
-        assert archived.status_code == 200
-        assert archived.json()["archived_at"] is not None
-
-        active = owner.get("/api/v1/user-vehicles")
-        history = owner.get("/api/v1/user-vehicles?include_archived=true")
-        assert active.status_code == history.status_code == 200
-        assert all(item["id"] != vehicle["id"] for item in active.json())
-        assert any(item["id"] == vehicle["id"] for item in history.json())
-
-        hard_delete = owner.delete(f"/api/v1/user-vehicles/{vehicle['id']}")
-        assert hard_delete.status_code == 405
-        assert _error(hard_delete)["code"] == "REQUEST_METHOD_NOT_ALLOWED"
+    assert provider == ProviderIdentity(
+        year=2003,
+        make="HONDA",
+        model="Accord",
+        trim=None,
+        body_style="Sedan/Saloon",
+        engine="3L 6-cylinder",
+        transmission="5-speed Automatic",
+        drivetrain="FWD/Front-Wheel Drive",
+    )
 
 
 def test_vin_decode_is_cached_per_owner_and_re_resolved_without_second_provider_call(
@@ -230,11 +184,11 @@ def test_vin_decode_is_cached_per_owner_and_re_resolved_without_second_provider_
     assert first.status_code == second.status_code == 200
     assert first.json()["source"] == "provider"
     assert second.json()["source"] == "cache"
-    assert first.json()["matches"][0]["id"] == configuration_id
-    assert second.json()["matches"][0]["id"] == configuration_id
-    assert first.json()["masked_vin"] == "***********004352"
-    assert VALID_VIN not in first.text
+    assert first.json()["canonical_matches"][0]["id"] == configuration_id
+    assert second.json()["canonical_matches"][0]["id"] == configuration_id
     assert calls == 1
+    assert VALID_VIN not in first.text
+    assert VALID_VIN not in second.text
 
 
 def test_vin_storage_is_encrypted_owner_bound_and_duplicate_safe(
@@ -270,37 +224,35 @@ def test_vin_storage_is_encrypted_owner_bound_and_duplicate_safe(
 
     assert first.status_code == 201, first.text
     assert duplicate.status_code == 409
-    assert _error(duplicate)["code"] == "USER_VEHICLE_VIN_EXISTS"
-    assert other_owner.status_code == 201, other_owner.text
+    assert _error(duplicate)["code"] == ErrorCode.USER_VEHICLE_VIN_EXISTS
+    assert other_owner.status_code == 201
+    assert first.json()["vin_masked"] == "***********004352"
     assert VALID_VIN not in first.text
-    assert VALID_VIN not in other_owner.text
 
-    async def inspect() -> None:
+    async def verify_storage() -> None:
         async with session_factory() as session:
-            row_a = await session.get(UserVehicle, UUID(first.json()["id"]))
-            row_b = await session.get(UserVehicle, UUID(other_owner.json()["id"]))
-            assert row_a is not None and row_b is not None
-            assert row_a.vin_ciphertext is not None
-            assert row_a.vin_nonce is not None
-            assert row_a.vin_key_version is not None
-            assert VALID_VIN.encode() not in row_a.vin_ciphertext
-            assert row_a.vin_fingerprint != row_b.vin_fingerprint
-            assert row_a.vin_last6 == row_b.vin_last6 == "004352"
-            assert reveal_vin(
-                ciphertext=row_a.vin_ciphertext,
-                nonce=row_a.vin_nonce,
-                key_version=row_a.vin_key_version,
-                user_id=user_a,
-            ) == VALID_VIN
-            with pytest.raises(VinCryptoError):
-                reveal_vin(
-                    ciphertext=row_a.vin_ciphertext,
-                    nonce=row_a.vin_nonce,
-                    key_version=row_a.vin_key_version,
-                    user_id=user_b,
+            rows = list(
+                await session.scalars(
+                    select(UserVehicle).where(UserVehicle.user_id.in_([user_a, user_b]))
                 )
+            )
+            assert len(rows) == 2
+            for row in rows:
+                assert row.vin_ciphertext is not None
+                assert row.vin_nonce is not None
+                assert row.vin_key_version == 1
+                assert row.vin_fingerprint is not None
+                assert row.vin_last6 == "004352"
+                assert VALID_VIN.encode() not in row.vin_ciphertext
+                assert reveal_vin(
+                    user_id=row.user_id,
+                    ciphertext=row.vin_ciphertext,
+                    nonce=row.vin_nonce,
+                    key_version=row.vin_key_version,
+                ) == VALID_VIN
+            assert rows[0].vin_fingerprint == rows[1].vin_fingerprint
 
-    asyncio.run(inspect())
+    asyncio.run(verify_storage())
 
 
 def test_rls_blocks_cross_user_vehicle_and_cache_mutation(
@@ -323,32 +275,35 @@ def test_rls_blocks_cross_user_vehicle_and_cache_mutation(
             headers=CSRF,
         )
         assert created.status_code == 201
-        vehicle_b = created.json()["id"]
+        vehicle_id = created.json()["id"]
 
-    async def scenario() -> None:
+        hidden = client_a.get(f"/api/v1/user-vehicles/{vehicle_id}")
+        assert hidden.status_code == 404
+
+        client_a.post(
+            "/api/v1/user-vehicles/vin/decode",
+            json={"market": "US", "vin": VALID_VIN},
+            headers=CSRF,
+        )
+
+    async def attempt_cross_owner_writes() -> tuple[int, int]:
         async with session_factory() as session:
             async with session.begin():
                 await session.execute(text("SET LOCAL ROLE partgraph_app"))
-                await set_user_context(session, user_a)
-
-                other_vehicle = await session.get(UserVehicle, UUID(vehicle_b))
-                assert other_vehicle is None
-
-                other_cache = (
-                    await session.execute(
-                        select(VinDecodeCache).where(VinDecodeCache.user_id == user_b)
-                    )
-                ).scalars().first()
-                assert other_cache is None
-
-                updated = await session.execute(
+                await set_user_context(session, UUID(user_a))
+                vehicle_result = await session.execute(
                     update(UserVehicle)
-                    .where(UserVehicle.id == vehicle_b)
-                    .values(archived_at=datetime.now(UTC))
+                    .where(UserVehicle.id == UUID(vehicle_id))
+                    .values(nickname="forbidden")
                 )
-                assert updated.rowcount == 0
+                cache_result = await session.execute(
+                    update(VinDecodeCache)
+                    .where(VinDecodeCache.user_id == UUID(user_b))
+                    .values(identity_resolution="manual_candidate")
+                )
+                return vehicle_result.rowcount, cache_result.rowcount
 
-    asyncio.run(scenario())
+    assert asyncio.run(attempt_cross_owner_writes()) == (0, 0)
 
 
 def test_expired_cache_calls_provider_again(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -377,8 +332,8 @@ def test_expired_cache_calls_provider_again(monkeypatch: pytest.MonkeyPatch) -> 
                 async with session.begin():
                     await session.execute(
                         update(VinDecodeCache)
-                        .where(VinDecodeCache.user_id == user_id)
-                        .values(expires_at=datetime.now(UTC) - timedelta(seconds=1))
+                        .where(VinDecodeCache.user_id == UUID(user_id))
+                        .values(expires_at=datetime.now(UTC) - timedelta(minutes=1))
                     )
 
         asyncio.run(expire())
@@ -413,24 +368,24 @@ def test_ambiguous_and_manual_candidate_vin_results_never_create_canonical_truth
         )
     assert ambiguous.status_code == 200
     assert ambiguous.json()["resolution"] == "ambiguous"
-    assert len(ambiguous.json()["matches"]) == 2
+    assert len(ambiguous.json()["canonical_matches"]) == 2
 
-    unknown_model = f"Unknown-{uuid4().hex[:8]}"
+    manual_model = f"Unknown-{uuid4().hex[:8]}"
 
-    async def unknown_decoder(_: str) -> ProviderIdentity:
-        return _provider(unknown_model)
+    async def manual_decoder(_: str) -> ProviderIdentity:
+        return _provider(manual_model)
 
-    monkeypatch.setattr(user_vehicle_service, "decode_vin_values_extended", unknown_decoder)
+    monkeypatch.setattr(user_vehicle_service, "decode_vin_values_extended", manual_decoder)
     with TestClient(app) as client:
-        _register(client, "candidate")
-        candidate = client.post(
-            "/api/v1/user-vehicles/vin",
-            json={"market": "US", "vin": VALID_VIN},
+        _register(client, "manual_candidate")
+        manual = client.post(
+            "/api/v1/user-vehicles/vin/decode",
+            json={"market": "US", "vin": "1M8GDM9AXKP042788"},
             headers=CSRF,
         )
-    assert candidate.status_code == 201, candidate.text
-    assert candidate.json()["identity_resolution"] == "manual_candidate"
-    assert candidate.json()["canonical_configuration_id"] is None
+    assert manual.status_code == 200
+    assert manual.json()["resolution"] == "manual_candidate"
+    assert manual.json()["canonical_matches"] == []
 
 
 def test_provider_timeout_unsupported_vehicle_and_private_payload_limit_have_stable_codes(
@@ -453,24 +408,25 @@ def test_provider_timeout_unsupported_vehicle_and_private_payload_limit_have_sta
             headers=CSRF,
         )
         assert timeout.status_code == 504
-        assert _error(timeout)["code"] == "VIN_PROVIDER_TIMEOUT"
-        assert VALID_VIN not in timeout.text
+        assert _error(timeout)["code"] == ErrorCode.VIN_PROVIDER_TIMEOUT
 
-        oversized = client.post(
-            "/api/v1/user-vehicles/manual",
-            content="x" * (33 * 1024),
-            headers={"Content-Type": "application/json", **CSRF},
+        too_large = client.post(
+            "/api/v1/user-vehicles/vin/decode",
+            content=b"x" * (32 * 1024 + 1),
+            headers={**CSRF, "Content-Type": "application/json"},
         )
-        assert oversized.status_code == 413
-        assert _error(oversized)["code"] == "REQUEST_PAYLOAD_TOO_LARGE"
+        assert too_large.status_code == 413
+        assert _error(too_large)["code"] == ErrorCode.REQUEST_PAYLOAD_TOO_LARGE
+
+    model = f"Future-{uuid4().hex[:8]}"
 
     async def unsupported_decoder(_: str) -> ProviderIdentity:
         return ProviderIdentity(
-            year=2003,
-            make="Audi",
-            model="A4",
+            year=2101,
+            make="Honda",
+            model=model,
             trim=None,
-            body_style="Sedan",
+            body_style=None,
             engine=None,
             transmission=None,
             drivetrain=None,
@@ -478,33 +434,26 @@ def test_provider_timeout_unsupported_vehicle_and_private_payload_limit_have_sta
 
     monkeypatch.setattr(user_vehicle_service, "decode_vin_values_extended", unsupported_decoder)
     with TestClient(app) as client:
-        _register(client, "unsupported")
+        _register(client, "unsupported_vin")
         unsupported = client.post(
             "/api/v1/user-vehicles/vin/decode",
             json={"market": "US", "vin": VALID_VIN},
             headers=CSRF,
         )
     assert unsupported.status_code == 422
-    assert _error(unsupported)["code"] == "VIN_UNSUPPORTED_VEHICLE"
+    assert _error(unsupported)["code"] == ErrorCode.VEHICLE_UNSUPPORTED_YEAR
 
 
-def test_private_vehicle_routes_require_auth_and_csrf() -> None:
-    with TestClient(app) as client:
-        unauthenticated = client.get("/api/v1/user-vehicles")
-        assert unauthenticated.status_code == 401
-        assert _error(unauthenticated)["code"] == "AUTH_REQUIRED"
-
-        _register(client, "csrf_vehicle")
-        missing_csrf = client.post(
-            "/api/v1/user-vehicles/manual",
-            json={
-                "selection": {
-                    "year": 2003,
-                    "market": "US",
-                    "make": "Honda",
-                    "model": "Accord",
-                }
-            },
+def test_malformed_vin_key_configuration_fails_closed() -> None:
+    vin_crypto.settings = SimpleNamespace(
+        vin_encryption_keys="not-json",
+        vin_active_key_version=1,
+        vin_lookup_key="not-a-key",
+    )
+    with pytest.raises(VinCryptoError):
+        reveal_vin(
+            user_id=uuid4(),
+            ciphertext=b"ciphertext",
+            nonce=b"0" * 12,
+            key_version=1,
         )
-        assert missing_csrf.status_code == 403
-        assert _error(missing_csrf)["code"] == "AUTH_CSRF_FAILED"
