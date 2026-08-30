@@ -3,7 +3,6 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-
 AssistanceReason = Literal[
     "next_verified_action",
     "current_action_inventory_blocked",
