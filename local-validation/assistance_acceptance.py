@@ -24,8 +24,8 @@ from acceptance_runner import (
     seed_definition,
     truth,
 )
-from partgraph.assistance.models import AIInvocation
 from partgraph.database import session_factory
+from partgraph.intelligence.models import AIInvocation
 
 CONTRACT = "deterministic_assistance"
 
