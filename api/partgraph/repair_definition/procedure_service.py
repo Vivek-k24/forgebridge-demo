@@ -17,5 +17,9 @@ __all__ = [
     "REPAIR_PROCEDURE_INTEGRITY_ERROR",
     "REPAIR_GUIDANCE_PROFESSIONAL_REQUIRED",
     "REPAIR_GUIDANCE_PROHIBITED",
+    "_integrity_error",
+    "_policy_error",
+    "_validate_dependency_graph",
+    "_procedure_for_definition",
     "verified_procedure_plan",
 ]
