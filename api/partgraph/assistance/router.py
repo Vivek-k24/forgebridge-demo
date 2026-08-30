@@ -2,9 +2,9 @@ from uuid import UUID
 
 from fastapi import APIRouter
 
-from ..auth.dependencies import AuthSessionDep, CurrentUserDep
 from ..errors import ErrorEnvelope
-from ..repair_session.guidance import RepairGuidanceRead, _guidance_view
+from ..identity.actors import AuthSessionDep, CurrentUserDep
+from ..repair_experience.guidance import RepairGuidanceRead, _guidance_view
 from .schemas import AssistanceExplanationRead
 from .service import explain_guidance
 
