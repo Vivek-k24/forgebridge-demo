@@ -9,16 +9,16 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 
-import partgraph.user_vehicle.crypto as vin_crypto
-import partgraph.user_vehicle.service as user_vehicle_service
-import partgraph.user_vehicle.vin as vin_provider
-from partgraph.auth.service import set_user_context
+import partgraph.identity.user_vehicle.crypto as vin_crypto
+import partgraph.identity.user_vehicle.service as user_vehicle_service
+import partgraph.identity.user_vehicle.vin as vin_provider
 from partgraph.database import session_factory
 from partgraph.errors import ErrorCode, PartGraphError
+from partgraph.identity.auth.service import set_user_context
+from partgraph.identity.user_vehicle.schemas import VinUserVehicleCreate
+from partgraph.identity.user_vehicle.service import create_vin_user_vehicle
+from partgraph.identity.user_vehicle.vin import ProviderIdentity
 from partgraph.main import app
-from partgraph.user_vehicle.schemas import VinUserVehicleCreate
-from partgraph.user_vehicle.service import create_vin_user_vehicle
-from partgraph.user_vehicle.vin import ProviderIdentity
 
 CSRF = {"X-PartGraph-CSRF": "1"}
 PASSWORD = "correct-horse-battery-staple"
