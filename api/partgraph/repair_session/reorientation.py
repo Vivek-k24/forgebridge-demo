@@ -6,6 +6,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..errors import PartGraphError
 from ..repair_memory.models import (
     RepairFastener,
     RepairInventoryItem,
@@ -13,6 +14,7 @@ from ..repair_memory.models import (
     RepairPhotoEvidence,
     RepairStorageLocation,
 )
+from .guidance import RepairGuidanceRead, _guidance_view
 from .models import RepairSessionEvent
 from .schemas import (
     RepairSessionReorientationRead,
@@ -31,6 +33,7 @@ DOMAIN_EVENT_TYPES = {
     "fastener_state_changed",
     "inventory_item_recorded",
     "inventory_state_changed",
+    "procedure_action_state_changed",
     "observation_recorded",
     "photo_evidence_added",
     "photo_evidence_deleted",
@@ -78,6 +81,10 @@ def _activity_label(
             return "Parts readiness updated"
         state = row.procurement_state.replace("_", " ")
         return f"{row.name} · {state}"
+    if event.event_type == "procedure_action_state_changed":
+        action_key = str(event.payload.get("action_key") or "guided action").replace("-", " ")
+        progress = str(event.payload.get("progress_state") or "updated").replace("_", " ")
+        return f"{action_key} · {progress}"
     if event.event_type == "observation_recorded":
         row = observations.get(_payload_uuid(event, "observation_id"))
         return f"Observation · {row.text}" if row else "Observation recorded"
@@ -108,6 +115,57 @@ def _activity(
             observations=observations,
         ),
         created_at=event.created_at,
+    )
+
+
+async def _resume_next_verified_action(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    session_id: UUID,
+) -> ResumeNextVerifiedActionRead:
+    try:
+        guidance = await _guidance_view(
+            session,
+            user_id=user_id,
+            session_id=session_id,
+            include_plan=False,
+        )
+    except PartGraphError as exc:
+        reason = (
+            "repair_plan_not_available"
+            if exc.code == "REPAIR_PROCEDURE_NOT_AVAILABLE"
+            else str(exc.code).lower()
+        )
+        return ResumeNextVerifiedActionRead(status="unavailable", reason=reason)
+
+    assert isinstance(guidance, RepairGuidanceRead)
+    if guidance.procedure_complete:
+        return ResumeNextVerifiedActionRead(
+            status="unavailable",
+            reason="procedure_complete",
+        )
+    current = guidance.current_action
+    if current is None:
+        return ResumeNextVerifiedActionRead(
+            status="unavailable",
+            reason="repair_plan_not_available",
+        )
+    if guidance.status == "action_available":
+        return ResumeNextVerifiedActionRead(
+            status="available",
+            label=current.title,
+        )
+    if guidance.status == "inventory_blocked":
+        return ResumeNextVerifiedActionRead(
+            status="unavailable",
+            label=current.title,
+            reason="inventory_blocked",
+        )
+    return ResumeNextVerifiedActionRead(
+        status="unavailable",
+        label=current.title,
+        reason=current.blocker_code or "action_blocked",
     )
 
 
@@ -280,6 +338,11 @@ async def build_reorientation(
     procurement_blockers = sum(
         row.procurement_state in {"needed", "ordered", "unavailable"} for row in inventory_rows
     )
+    next_verified_action = await _resume_next_verified_action(
+        session,
+        user_id=user_id,
+        session_id=session_id,
+    )
 
     return RepairSessionReorientationRead(
         checkpoint=_activity(
@@ -332,8 +395,5 @@ async def build_reorientation(
             observations_total=len(observation_rows),
             photos_total=len(photo_rows),
         ),
-        next_verified_action=ResumeNextVerifiedActionRead(
-            status="unavailable",
-            reason="repair_plan_not_available",
-        ),
+        next_verified_action=next_verified_action,
     )

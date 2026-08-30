@@ -18,6 +18,7 @@ from .database import database_readiness, engine
 from .errors import ErrorCode, PartGraphError, error_response
 from .repair_definition.router import router as repair_definition_router
 from .repair_memory.router import router as repair_memory_router
+from .repair_session.guidance import router as repair_guidance_router
 from .repair_session.readiness import router as repair_readiness_router
 from .repair_session.repair_definition_binding import router as repair_definition_binding_router
 from .repair_session.router import router as repair_session_router
@@ -51,7 +52,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="PartGraph API",
-    version="0.6.0",
+    version="0.7.0",
     lifespan=lifespan,
 )
 app.add_middleware(
@@ -76,6 +77,7 @@ app.include_router(repair_memory_router)
 app.include_router(repair_definition_router)
 app.include_router(repair_definition_binding_router)
 app.include_router(repair_readiness_router)
+app.include_router(repair_guidance_router)
 
 
 def _request_body_limit(request: Request) -> tuple[int, str] | None:

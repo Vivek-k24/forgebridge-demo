@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import App from './App'
+import { GuidedRepairWorkspace } from './GuidedRepair'
 import { RepairMemoryWorkspace } from './RepairMemory'
 import { RepairSessionWorkspace } from './RepairSessions'
 import { UserVehicleWorkspace } from './UserVehicles'
@@ -97,6 +98,8 @@ export default function PartGraphShell() {
     )
   } else if (page === 'inventory') {
     content = <RepairMemoryWorkspace />
+  } else if (page === 'repair') {
+    content = <GuidedRepairWorkspace />
   } else {
     content = <RepairSessionWorkspace onOpenGarage={() => navigate('garage')} />
   }

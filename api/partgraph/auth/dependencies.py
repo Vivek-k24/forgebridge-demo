@@ -19,7 +19,14 @@ async def get_auth_session() -> AsyncIterator[AsyncSession]:
             yield session
 
 
-AuthSessionDep = Annotated[AsyncSession, Depends(get_auth_session)]
+# The transaction must finish before FastAPI sends the response. With the default
+# request scope, yield-dependency cleanup happens after the response is sent, so a
+# client can issue an immediate follow-up request before the previous mutation is
+# committed and observe a false not-found. Function scope closes that visibility gap.
+AuthSessionDep = Annotated[
+    AsyncSession,
+    Depends(get_auth_session, scope="function"),
+]
 
 
 def require_csrf(request: Request) -> None:
