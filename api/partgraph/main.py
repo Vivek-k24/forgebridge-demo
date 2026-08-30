@@ -17,7 +17,7 @@ from .auth.router import router as auth_router
 from .config import settings
 from .database import database_readiness, engine
 from .errors import ErrorCode, PartGraphError, error_response
-from .repair_definition.router import router as repair_definition_router
+from .knowledge.router import router as repair_definition_router
 from .repair_memory.router import router as repair_memory_router
 from .repair_session.guidance import router as repair_guidance_router
 from .repair_session.readiness import router as repair_readiness_router
