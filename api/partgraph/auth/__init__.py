@@ -1,1 +1,1 @@
-"""Authentication and user-isolation boundary."""
+"""Compatibility package for identity-owned authentication."""

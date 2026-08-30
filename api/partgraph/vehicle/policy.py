@@ -1,17 +1,6 @@
-from datetime import date
+"""Compatibility bridge to identity-owned vehicle policy."""
 
-MIN_SUPPORTED_YEAR = 1996
+from ..identity.vehicle import policy as _implementation
 
-
-def max_supported_year() -> int:
-    """Return the current calendar year used as PartGraph's upper vehicle boundary."""
-    return date.today().year
-
-
-def validate_supported_year(year: int) -> int:
-    maximum = max_supported_year()
-    if year < MIN_SUPPORTED_YEAR or year > maximum:
-        raise ValueError(
-            f"PartGraph supports model years {MIN_SUPPORTED_YEAR} through {maximum}."
-        )
-    return year
+__all__ = [name for name in dir(_implementation) if not name.startswith("__")]
+globals().update({name: getattr(_implementation, name) for name in __all__})

@@ -1,1 +1,1 @@
-"""Private user-owned vehicle and VIN identification domain."""
+"""Compatibility package for identity-owned user vehicles and VIN handling."""
