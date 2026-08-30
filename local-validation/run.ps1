@@ -67,7 +67,7 @@ Write-Host ''
 
 $exitCode = 1
 try {
-    Write-Host '[1/6] Resetting disposable acceptance stack...' -ForegroundColor Yellow
+    Write-Host '[1/7] Resetting disposable acceptance stack...' -ForegroundColor Yellow
     $dockerExit = Invoke-DockerCommand -Quiet -Arguments @(
         'compose', '-p', $project, '-f', $compose,
         'down', '-v', '--remove-orphans'
@@ -76,7 +76,7 @@ try {
         throw "Could not reset the disposable acceptance stack (docker exit $dockerExit)."
     }
 
-    Write-Host '[2/6] Building and starting PostgreSQL + VIN stub + API...' -ForegroundColor Yellow
+    Write-Host '[2/7] Building and starting PostgreSQL + VIN stub + API...' -ForegroundColor Yellow
     $dockerExit = Invoke-DockerCommand -Arguments @(
         'compose', '-p', $project, '-f', $compose,
         'up', '--build', '-d', 'postgres', 'vin-stub', 'api'
@@ -86,7 +86,7 @@ try {
         throw "Acceptance API stack failed to start (docker exit $dockerExit)."
     }
 
-    Write-Host '[3/6] Seeding synthetic canonical vehicle configurations...' -ForegroundColor Yellow
+    Write-Host '[3/7] Seeding synthetic canonical vehicle configurations...' -ForegroundColor Yellow
     $dockerExit = Invoke-DockerCommand -Arguments @(
         'compose', '-p', $project, '-f', $compose, '--profile', 'runner',
         'run', '--build', '--rm', 'runner',
@@ -97,7 +97,7 @@ try {
         throw "Acceptance vehicle seed failed with exit code $dockerExit."
     }
 
-    Write-Host '[4/6] Running platform, auth, selector, and VIN probes...' -ForegroundColor Yellow
+    Write-Host '[4/7] Running platform, auth, selector, and VIN probes...' -ForegroundColor Yellow
     $dockerExit = Invoke-DockerCommand -Arguments @(
         'compose', '-p', $project, '-f', $compose, '--profile', 'runner',
         'run', '--build', '--rm', 'runner',
@@ -108,7 +108,18 @@ try {
         throw "Platform/VIN acceptance probes failed with exit code $dockerExit."
     }
 
-    Write-Host '[5/6] Running cross-manufacturer repair workflow scenarios...' -ForegroundColor Yellow
+    Write-Host '[5/7] Running deterministic assistance contract...' -ForegroundColor Yellow
+    $dockerExit = Invoke-DockerCommand -Arguments @(
+        'compose', '-p', $project, '-f', $compose, '--profile', 'runner',
+        'run', '--build', '--rm', 'runner',
+        'python', 'local-validation/assistance_acceptance.py'
+    )
+    if ($dockerExit -ne 0) {
+        $exitCode = $dockerExit
+        throw "Deterministic assistance acceptance failed with exit code $dockerExit."
+    }
+
+    Write-Host '[6/7] Running cross-manufacturer repair workflow scenarios...' -ForegroundColor Yellow
     $dockerExit = Invoke-DockerCommand -Arguments @(
         'compose', '-p', $project, '-f', $compose, '--profile', 'runner',
         'run', '--build', '--rm', 'runner',
@@ -119,7 +130,7 @@ try {
         throw "Cross-manufacturer repair scenarios failed with exit code $dockerExit."
     }
 
-    Write-Host '[6/6] Acceptance runners finished.' -ForegroundColor Yellow
+    Write-Host '[7/7] Acceptance runners finished.' -ForegroundColor Yellow
 }
 catch {
     Write-Host $_.Exception.Message -ForegroundColor Red
