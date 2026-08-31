@@ -111,7 +111,8 @@ def _load_settings() -> Settings:
     database_url = _database_url()
 
     web_origin = _web_origin()
-    cookie_secure = _bool_env("PARTGRAPH_COOKIE_SECURE", False)
+    running_on_vercel = os.getenv("VERCEL") == "1"
+    cookie_secure = _bool_env("PARTGRAPH_COOKIE_SECURE", running_on_vercel)
     if web_origin.startswith("https://") and not cookie_secure:
         raise ValueError("PARTGRAPH_COOKIE_SECURE must be enabled for an HTTPS web origin")
 
