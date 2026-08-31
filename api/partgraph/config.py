@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from urllib.parse import urlparse
 
 DEFAULT_DATABASE_URL = "postgresql+psycopg://partgraph:partgraph@localhost:5432/partgraph"
+DEFAULT_WEB_ORIGIN = "http://localhost:5173"
 
 
 def _bool_env(name: str, default: bool = False) -> bool:
@@ -54,7 +55,17 @@ def _database_url() -> str:
 
 
 def _web_origin() -> str:
-    value = os.getenv("PARTGRAPH_WEB_ORIGIN", "http://localhost:5173").strip().rstrip("/")
+    explicit_origin = os.getenv("PARTGRAPH_WEB_ORIGIN")
+    if explicit_origin is not None:
+        value = explicit_origin.strip().rstrip("/")
+    else:
+        vercel_production_host = os.getenv("VERCEL_PROJECT_PRODUCTION_URL")
+        value = (
+            f"https://{vercel_production_host.strip().rstrip('/')}"
+            if vercel_production_host
+            else DEFAULT_WEB_ORIGIN
+        )
+
     parsed = urlparse(value)
     if parsed.scheme not in {"http", "https"} or not parsed.netloc or parsed.path:
         raise ValueError("PARTGRAPH_WEB_ORIGIN must be one exact http(s) origin without a path")
@@ -100,7 +111,8 @@ def _load_settings() -> Settings:
     database_url = _database_url()
 
     web_origin = _web_origin()
-    cookie_secure = _bool_env("PARTGRAPH_COOKIE_SECURE", False)
+    running_on_vercel = os.getenv("VERCEL") == "1"
+    cookie_secure = _bool_env("PARTGRAPH_COOKIE_SECURE", running_on_vercel)
     if web_origin.startswith("https://") and not cookie_secure:
         raise ValueError("PARTGRAPH_COOKIE_SECURE must be enabled for an HTTPS web origin")
 
