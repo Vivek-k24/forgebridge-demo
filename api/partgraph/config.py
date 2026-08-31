@@ -2,7 +2,6 @@ import os
 from dataclasses import dataclass
 from urllib.parse import urlparse
 
-
 DEFAULT_DATABASE_URL = "postgresql+psycopg://partgraph:partgraph@localhost:5432/partgraph"
 
 
