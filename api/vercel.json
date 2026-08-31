@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": ["iad1"],
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "https://vivek-k24.github.io/forgebridge-demo/"
+    },
+    {
+      "source": "/forgebridge-demo/:path*",
+      "destination": "https://vivek-k24.github.io/forgebridge-demo/:path*"
+    }
+  ]
+}
