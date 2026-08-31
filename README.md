@@ -10,23 +10,41 @@ The product is organized around three questions:
 
 Honda and the 2009 Civic Hybrid are real-world validation cases, not product boundaries. PartGraph is designed for every manufacturer/model/trim/configuration represented by its supported vehicle taxonomy when verified repair data exists for that exact configuration.
 
+## Live application
+
+The authenticated production workspace is:
+
+https://partgraph-main.vercel.app/
+
+That URL is the application entry point. Vercel keeps browser requests on one origin: the React/Vite frontend bundle is proxied from the current-main GitHub Pages artifact, while `/api/*` stays on the production FastAPI service and Neon PostgreSQL database. This lets the existing HttpOnly `SameSite=Lax` session cookie remain first-party instead of weakening authentication for a cross-site frontend/API split.
+
+The GitHub Pages URL remains a static current-main presentation and handoff surface:
+
+https://vivek-k24.github.io/forgebridge-demo/
+
+Direct Pages visits point users to the live Vercel workspace. Pages does not become an authenticated backend host.
+
 ## Current architecture
 
 ```text
-React / TypeScript / Vite
-          │
-          ▼
- FastAPI modular monolith
-          │
-          ▼
- PostgreSQL authoritative state
+Browser
+  │
+  ▼
+Vercel production origin
+  ├── / and /forgebridge-demo/* ──proxy──► GitHub Pages current-main Vite assets
+  └── /api/* ────────────────────────────► FastAPI modular monolith
+                                                   │
+                                                   ▼
+                                          Neon PostgreSQL 18
 
 future collector ──staging only──► catalog_staging
 ```
 
-- `web` — React 19, TypeScript 6, Vite 8; production image served by Nginx.
-- `api` — Python 3.14, FastAPI, SQLAlchemy 2, Alembic.
-- PostgreSQL 18 — authoritative canonical and private repair state.
+- `web` — React 19, TypeScript 6, Vite 8; Nginx production container remains tested/published, while the public browser bundle is also published to GitHub Pages.
+- `api` — Python 3.14, FastAPI, SQLAlchemy 2, Alembic; hosted on Vercel.
+- PostgreSQL 18 — authoritative canonical and private repair state; hosted in Neon for production.
+- GitHub Pages — current-main static UI artifact and direct-preview/handoff surface.
+- Vercel — same-origin public application entry point and FastAPI runtime.
 - `collector` — intentionally not implemented until an approved real ingestion source exists.
 - AI/ML — optional future assistance; never canonical mechanical truth and never required for core repair readiness/resume.
 
@@ -127,7 +145,7 @@ source record
 
 Source authority is evaluated separately from parser/model confidence. OEM service information and properly licensed OEM-derived data are the preferred authority for explicit procedure requirements; OEM parts data establishes parts/assembly facts within its scope; retailers are procurement sources after fitment/specification truth exists; community material is discovery/supporting evidence only.
 
-No real catalog/service-data collection, licensing acceptance, paid source activation, or promotion is triggered by normal application use, CI, or deployment. The first real collection run is an explicit project gate.
+No real catalog/service-data collection, licensing acceptance, paid source activation, or promotion is triggered by normal application use, CI, or deployment. The first real repair-data ingestion remains an explicit licensing/governance gate tracked by issue `#71`.
 
 ## Safety boundary
 
@@ -146,12 +164,12 @@ It contains Mermaid diagrams for the product loop, canonical/private data model,
 - Blocks 2–5: vehicle identity, trust boundary, authentication/isolation, UserVehicle/VIN — complete.
 - Block 6 collector — deferred until an approved real ingestion source exists.
 - Blocks 7–9: RepairSession, physical repair memory, Resume/reorientation — complete.
-- Block 10: verified repair definition and readiness manifest — current implementation block.
-- Block 11: verified procedure guidance and capability safety — next.
-- Block 12: learning, ranking, and AI assistance — later.
+- Blocks 10–11: deterministic verified repair/readiness/procedure foundations — implemented; production repair content remains fail-closed until licensed source approval and exact applicability are available.
+- Block 12: deterministic assistance/intelligence boundary is established; external model providers, training, embeddings, and autonomous agents remain deferred.
+- Production runtime: Vercel FastAPI + Neon PostgreSQL + same-origin web entry point — active.
 - Cross-cutting security/performance/mobile/end-to-end quality gates apply continuously.
 
-See GitHub issues `#38` (V1 roadmap), `#34` (Block 10), `#48` (procedure/safety), and `#35` (AI/ranking).
+See GitHub issue `#71` for the repair-data licensing gate and `docs/PARTGRAPH_SYSTEM_UML.md` for the current bounded architecture.
 
 ## Run locally
 
@@ -194,6 +212,8 @@ Open:
 - Supported brands: `http://localhost:8000/api/v1/vehicle-brands`
 - API docs: `http://localhost:8000/docs`
 
+The Vite development server proxies `/api/*` to `http://localhost:8000`, matching the same-origin browser contract used in production.
+
 Stop with:
 
 ```bash
@@ -202,13 +222,14 @@ docker compose down
 
 The PostgreSQL volume is retained. Use `docker compose down -v` only when intentionally deleting local database data. Keep VIN keys stable for as long as rows encrypted by those keys need to remain decryptable.
 
-## Public preview
+## Public surfaces
 
-The read-only/static current-main frontend preview is published through GitHub Pages:
+- **Live authenticated application:** https://partgraph-main.vercel.app/
+- **Static current-main preview / handoff:** https://vivek-k24.github.io/forgebridge-demo/
+- **API readiness:** https://partgraph-main.vercel.app/api/v1/health/ready
+- **API docs:** https://partgraph-main.vercel.app/docs
 
-https://vivek-k24.github.io/forgebridge-demo/
-
-GitHub Pages does not host FastAPI or PostgreSQL. A full public PartGraph application still requires runtime hosting for the API and database.
+The live browser app and `/api/*` share the Vercel production origin. GitHub Pages remains static and does not receive private session cookies.
 
 ## CI/CD
 
@@ -217,7 +238,8 @@ GitHub Actions validates the real runtime boundaries before merge:
 - **API CI/CD** — dependency integrity, `pip-audit`, Ruff, Alembic upgrade/downgrade/re-upgrade and persisted-history upgrade, PostgreSQL/API/RLS/adversarial tests, API image build and readiness smoke.
 - **Web CI/CD** — locked Node install/audit, TypeScript, Vite production build, Nginx image and HTTP/security-header smoke.
 - **Integration CI** — real Compose stack, API readiness, Web availability, reverse proxy, and authenticated browser-facing flows.
-- **Pages** — builds the static current-main preview.
+- **Pages** — builds the static current-main web artifact used for direct preview/handoff and by the Vercel same-origin frontend rewrite.
+- **Vercel** — deploys the FastAPI project from `api/`, runs Alembic against the connected Neon database, and proxies the production frontend routes to the current-main Pages artifact.
 
 Successful `main` delivery publishes tested images as `ghcr.io/vivek-k24/partgraph-api:<sha>` / `:main` and `ghcr.io/vivek-k24/partgraph-web:<sha>` / `:main`.
 
@@ -246,7 +268,8 @@ Collector work, LLM calls, model training, and deployments never belong on the r
 
 - React 19 / TypeScript 6 / Vite 8 / Nginx 1.29
 - Python 3.14 / FastAPI / SQLAlchemy 2 / Alembic
-- PostgreSQL 18
+- PostgreSQL 18 / Neon production hosting
 - Argon2id / AES-GCM VIN protection
 - Docker / Docker Compose
 - GitHub Actions / GitHub Container Registry / GitHub Pages
+- Vercel production runtime and same-origin frontend entry point
