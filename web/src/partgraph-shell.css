@@ -7,6 +7,8 @@
   inset: 0 auto 0 0;
   z-index: 70;
   width: 238px;
+  display: flex;
+  flex-direction: column;
   padding: 20px 16px 24px;
   border-right: 1px solid rgba(100, 140, 127, 0.2);
   background:
@@ -57,9 +59,10 @@
 
 .partgraph-nav {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: 4px;
-  max-height: calc(100vh - 88px);
+  min-height: 0;
   overflow-y: auto;
   padding: 0 2px 20px;
 }
@@ -116,6 +119,40 @@
   text-transform: uppercase;
 }
 
+.partgraph-runtime-note {
+  flex: 0 0 auto;
+  margin-top: 12px;
+  padding: 14px 12px;
+  border: 1px solid rgba(100, 140, 127, 0.18);
+  border-radius: 12px;
+  background: rgba(21, 39, 44, 0.72);
+}
+
+.partgraph-runtime-note span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #a7b8bd;
+  font: 720 0.62rem/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.partgraph-runtime-note i {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #78d6a6;
+  box-shadow: 0 0 0 4px rgba(120, 214, 166, 0.08);
+}
+
+.partgraph-runtime-note p {
+  margin: 9px 0 0;
+  color: #71868d;
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+
 .partgraph-main {
   min-height: 100vh;
   margin-left: 238px;
@@ -150,13 +187,15 @@
     inset-inline: 0;
     z-index: 70;
     width: 100%;
+    display: block;
     padding: 8px;
     border-right: 0;
     border-bottom: 1px solid rgba(100, 140, 127, 0.2);
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.14);
   }
 
-  .partgraph-brand {
+  .partgraph-brand,
+  .partgraph-runtime-note {
     display: none;
   }
 
