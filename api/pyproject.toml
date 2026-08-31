@@ -38,3 +38,9 @@ line-length = 101
 
 [tool.ruff.lint]
 select = ["B", "E", "F", "I", "UP"]
+
+[tool.vercel]
+entrypoint = "partgraph.main:app"
+
+[tool.vercel.scripts]
+build = "alembic -c alembic.ini upgrade head"
