@@ -3,6 +3,9 @@ from os import getenv
 from urllib.parse import urlparse
 
 
+DEFAULT_DATABASE_URL = "postgresql+psycopg://partgraph:partgraph@localhost:5432/partgraph"
+
+
 def _bool_env(name: str, default: bool = False) -> bool:
     value = getenv(name)
     if value is None:
@@ -35,6 +38,20 @@ def _float_env(name: str, default: float, *, minimum: float, maximum: float) -> 
     if not minimum <= value <= maximum:
         raise ValueError(f"{name} must be between {minimum} and {maximum}")
     return value
+
+
+def _database_url() -> str:
+    partgraph_value = getenv("PARTGRAPH_DATABASE_URL")
+    value = partgraph_value if partgraph_value is not None else getenv("DATABASE_URL")
+    database_url = (value if value is not None else DEFAULT_DATABASE_URL).strip()
+    if not database_url:
+        raise ValueError("PARTGRAPH_DATABASE_URL/DATABASE_URL must not be empty")
+
+    if database_url.startswith("postgres://"):
+        return f"postgresql+psycopg://{database_url[len('postgres://') :]}"
+    if database_url.startswith("postgresql://"):
+        return f"postgresql+psycopg://{database_url[len('postgresql://') :]}"
+    return database_url
 
 
 def _web_origin() -> str:
@@ -81,12 +98,7 @@ class Settings:
 
 
 def _load_settings() -> Settings:
-    database_url = getenv(
-        "PARTGRAPH_DATABASE_URL",
-        "postgresql+psycopg://partgraph:partgraph@localhost:5432/partgraph",
-    ).strip()
-    if not database_url:
-        raise ValueError("PARTGRAPH_DATABASE_URL must not be empty")
+    database_url = _database_url()
 
     web_origin = _web_origin()
     cookie_secure = _bool_env("PARTGRAPH_COOKIE_SECURE", False)
