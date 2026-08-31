@@ -7,20 +7,27 @@ import { UserVehicleWorkspace } from './UserVehicles'
 import './partgraph-shell.css'
 
 type PageKey = 'resume' | 'garage' | 'details' | 'repair' | 'inventory'
+type NavGroup = 'workspace' | 'vehicle' | 'repair'
 
 type NavItem = {
   key: PageKey
   label: string
-  group: 'repair' | 'readiness'
+  group: NavGroup
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { key: 'resume', label: 'Resume', group: 'repair' },
-  { key: 'garage', label: 'Garage & VIN', group: 'repair' },
-  { key: 'details', label: 'Vehicle details', group: 'repair' },
-  { key: 'repair', label: 'Repair session', group: 'repair' },
-  { key: 'inventory', label: 'Inventory', group: 'readiness' },
+  { key: 'resume', label: 'Resume', group: 'workspace' },
+  { key: 'garage', label: 'Garage & VIN', group: 'vehicle' },
+  { key: 'details', label: 'Vehicle identity', group: 'vehicle' },
+  { key: 'repair', label: 'Guided repair', group: 'repair' },
+  { key: 'inventory', label: 'Inventory', group: 'repair' },
 ]
+
+const GROUP_LABELS: Record<NavGroup, string> = {
+  workspace: 'Workspace',
+  vehicle: 'Vehicle',
+  repair: 'Repair',
+}
 
 const PAGE_KEYS = new Set<PageKey>([
   'resume',
@@ -50,9 +57,9 @@ export default function PartGraphShell() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const navigation = (group: NavItem['group']) => (
+  const navigation = (group: NavGroup) => (
     <>
-      <p>{group === 'repair' ? 'Repair' : 'Readiness'}</p>
+      <p>{GROUP_LABELS[group]}</p>
       {NAV_ITEMS.filter((item) => item.group === group).map((item) => {
         const active = item.key === page
         return (
@@ -115,9 +122,14 @@ export default function PartGraphShell() {
           </div>
         </div>
         <nav className="partgraph-nav">
+          {navigation('workspace')}
+          {navigation('vehicle')}
           {navigation('repair')}
-          {navigation('readiness')}
         </nav>
+        <div className="partgraph-runtime-note" aria-label="Production truth policy">
+          <span><i aria-hidden="true" /> live workspace</span>
+          <p>Verified data only. Unsupported repair guidance stays unavailable.</p>
+        </div>
       </aside>
       <div className="partgraph-main">{content}</div>
     </div>
