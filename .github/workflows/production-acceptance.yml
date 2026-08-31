@@ -1,0 +1,28 @@
+name: Production Acceptance Probe
+
+on:
+  push:
+    branches:
+      - partgraph-production-acceptance-run
+
+permissions:
+  contents: read
+
+jobs:
+  production-acceptance:
+    if: github.repository == 'Vivek-k24/forgebridge-demo'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PARTGRAPH_PRODUCTION_URL: https://partgraph-main.vercel.app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      - name: Run hosted owner journey
+        run: python scripts/production_acceptance.py
