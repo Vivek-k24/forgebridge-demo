@@ -277,8 +277,10 @@ stateDiagram-v2
 
 ```mermaid
 flowchart TB
-    BROWSER[React / TypeScript web] -->|HTTPS / JSON| API[FastAPI modular monolith]
-    API --> PG[(PostgreSQL authoritative state)]
+    BROWSER[Browser · partgraph-main.vercel.app] --> VERCEL[Vercel production origin]
+    VERCEL -->|/ and /forgebridge-demo/* external rewrite| PAGES[GitHub Pages current-main Vite assets]
+    VERCEL -->|/api/* same origin| API[FastAPI modular monolith]
+    API --> PG[(Neon PostgreSQL authoritative state)]
     API --> MEDIA[Private photo storage adapter]
     API -->|user initiated VIN only| NHTSA[NHTSA vPIC]
 
@@ -296,12 +298,15 @@ flowchart TB
 
     CI[GitHub Actions] --> TEST[Tests / migrations / security / containers]
     TEST --> GHCR[GHCR tested images]
-    MAIN[GitHub main] --> PAGES[GitHub Pages static UI preview]
+    MAIN[GitHub main] --> PAGES
+    MAIN --> VERCEL
 ```
+
+The public browser contract is intentionally same-origin: the Vercel domain is the application URL, static React/Vite assets are proxied from the current-main GitHub Pages artifact, and `/api/*` remains on the FastAPI runtime. The browser therefore keeps the opaque HttpOnly `SameSite=Lax` session cookie first-party instead of relying on cross-site cookies between `github.io` and `vercel.app`.
 
 `assistance` owns the owner-facing explanation feature. `intelligence` owns provider-neutral model contracts and invocation auditing. The current application is deterministic-only: `DisabledModelGateway` is the default and no model provider is wired. Future intelligence remains downstream of deterministic safety and verified-state reconstruction and cannot become authoritative state.
 
-The future collector is intentionally separate from the interactive repair path. GitHub Pages is only a static frontend preview; a full public application still requires runtime hosting for FastAPI and PostgreSQL.
+The future collector is intentionally separate from the interactive repair path. GitHub Pages remains a static current-main artifact/direct-preview surface; the full public application is the Vercel FastAPI origin backed by Neon PostgreSQL.
 
 ## 8. Block dependency map
 
