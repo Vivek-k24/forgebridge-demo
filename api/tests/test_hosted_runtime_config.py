@@ -59,6 +59,32 @@ def test_local_web_origin_remains_default_without_vercel(monkeypatch) -> None:
     assert config._web_origin() == "http://localhost:5173"
 
 
+def test_vercel_defaults_session_cookie_to_secure(monkeypatch) -> None:
+    monkeypatch.delenv("PARTGRAPH_WEB_ORIGIN", raising=False)
+    monkeypatch.delenv("PARTGRAPH_COOKIE_SECURE", raising=False)
+    monkeypatch.setenv("VERCEL", "1")
+    monkeypatch.setenv("VERCEL_PROJECT_PRODUCTION_URL", "partgraph-main.vercel.app")
+
+    settings = config._load_settings()
+
+    assert settings.web_origin == "https://partgraph-main.vercel.app"
+    assert settings.cookie_secure is True
+
+
+def test_explicit_insecure_cookie_is_still_rejected_on_vercel(monkeypatch) -> None:
+    monkeypatch.delenv("PARTGRAPH_WEB_ORIGIN", raising=False)
+    monkeypatch.setenv("PARTGRAPH_COOKIE_SECURE", "false")
+    monkeypatch.setenv("VERCEL", "1")
+    monkeypatch.setenv("VERCEL_PROJECT_PRODUCTION_URL", "partgraph-main.vercel.app")
+
+    try:
+        config._load_settings()
+    except ValueError as exc:
+        assert str(exc) == "PARTGRAPH_COOKIE_SECURE must be enabled for an HTTPS web origin"
+    else:
+        raise AssertionError("Vercel HTTPS origin accepted an explicitly insecure cookie")
+
+
 def test_vercel_uses_single_fastapi_framework_entrypoint() -> None:
     config_path = Path(__file__).resolve().parents[1] / "vercel.json"
     deployment_config = json.loads(config_path.read_text(encoding="utf-8"))
