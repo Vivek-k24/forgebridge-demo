@@ -15,7 +15,7 @@ from uuid import UUID
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0016_curated_vehicle_identity_bootstrap"
+revision: str = "0016_vehicle_identity_bootstrap"
 down_revision: str | None = "0015_runtime_role_membership"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
