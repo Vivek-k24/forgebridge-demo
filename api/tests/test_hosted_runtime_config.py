@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 from partgraph import config
 
 
@@ -33,3 +36,12 @@ def test_legacy_postgres_scheme_is_normalized_for_psycopg(monkeypatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "postgres://user:secret@host/database")
 
     assert config._database_url() == "postgresql+psycopg://user:secret@host/database"
+
+
+def test_vercel_uses_single_fastapi_framework_entrypoint() -> None:
+    config_path = Path(__file__).resolve().parents[1] / "vercel.json"
+    deployment_config = json.loads(config_path.read_text(encoding="utf-8"))
+
+    assert deployment_config["framework"] == "fastapi"
+    assert deployment_config["regions"] == ["iad1"]
+    assert deployment_config["functions"] == {"partgraph/main.py": {"maxDuration": 60}}
