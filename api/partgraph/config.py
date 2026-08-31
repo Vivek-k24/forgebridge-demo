@@ -1,10 +1,12 @@
+import os
 from dataclasses import dataclass
-from os import getenv
 from urllib.parse import urlparse
+
+DEFAULT_DATABASE_URL = "postgresql+psycopg://partgraph:partgraph@localhost:5432/partgraph"
 
 
 def _bool_env(name: str, default: bool = False) -> bool:
-    value = getenv(name)
+    value = os.getenv(name)
     if value is None:
         return default
     normalized = value.strip().casefold()
@@ -16,7 +18,7 @@ def _bool_env(name: str, default: bool = False) -> bool:
 
 
 def _int_env(name: str, default: int, *, minimum: int, maximum: int) -> int:
-    raw = getenv(name)
+    raw = os.getenv(name)
     try:
         value = default if raw is None else int(raw)
     except ValueError as exc:
@@ -27,7 +29,7 @@ def _int_env(name: str, default: int, *, minimum: int, maximum: int) -> int:
 
 
 def _float_env(name: str, default: float, *, minimum: float, maximum: float) -> float:
-    raw = getenv(name)
+    raw = os.getenv(name)
     try:
         value = default if raw is None else float(raw)
     except ValueError as exc:
@@ -37,8 +39,22 @@ def _float_env(name: str, default: float, *, minimum: float, maximum: float) -> 
     return value
 
 
+def _database_url() -> str:
+    partgraph_value = os.getenv("PARTGRAPH_DATABASE_URL")
+    value = partgraph_value if partgraph_value is not None else os.getenv("DATABASE_URL")
+    database_url = (value if value is not None else DEFAULT_DATABASE_URL).strip()
+    if not database_url:
+        raise ValueError("PARTGRAPH_DATABASE_URL/DATABASE_URL must not be empty")
+
+    if database_url.startswith("postgres://"):
+        return f"postgresql+psycopg://{database_url[len('postgres://') :]}"
+    if database_url.startswith("postgresql://"):
+        return f"postgresql+psycopg://{database_url[len('postgresql://') :]}"
+    return database_url
+
+
 def _web_origin() -> str:
-    value = getenv("PARTGRAPH_WEB_ORIGIN", "http://localhost:5173").strip().rstrip("/")
+    value = os.getenv("PARTGRAPH_WEB_ORIGIN", "http://localhost:5173").strip().rstrip("/")
     parsed = urlparse(value)
     if parsed.scheme not in {"http", "https"} or not parsed.netloc or parsed.path:
         raise ValueError("PARTGRAPH_WEB_ORIGIN must be one exact http(s) origin without a path")
@@ -46,7 +62,7 @@ def _web_origin() -> str:
 
 
 def _http_base_url(name: str, default: str) -> str:
-    value = getenv(name, default).strip().rstrip("/")
+    value = os.getenv(name, default).strip().rstrip("/")
     parsed = urlparse(value)
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
         raise ValueError(f"{name} must be an http(s) URL")
@@ -54,7 +70,7 @@ def _http_base_url(name: str, default: str) -> str:
 
 
 def _path_env(name: str, default: str) -> str:
-    value = getenv(name, default).strip()
+    value = os.getenv(name, default).strip()
     if not value:
         raise ValueError(f"{name} must not be empty")
     return value
@@ -81,20 +97,15 @@ class Settings:
 
 
 def _load_settings() -> Settings:
-    database_url = getenv(
-        "PARTGRAPH_DATABASE_URL",
-        "postgresql+psycopg://partgraph:partgraph@localhost:5432/partgraph",
-    ).strip()
-    if not database_url:
-        raise ValueError("PARTGRAPH_DATABASE_URL must not be empty")
+    database_url = _database_url()
 
     web_origin = _web_origin()
     cookie_secure = _bool_env("PARTGRAPH_COOKIE_SECURE", False)
     if web_origin.startswith("https://") and not cookie_secure:
         raise ValueError("PARTGRAPH_COOKIE_SECURE must be enabled for an HTTPS web origin")
 
-    vin_encryption_keys = getenv("PARTGRAPH_VIN_ENCRYPTION_KEYS")
-    vin_lookup_key = getenv("PARTGRAPH_VIN_LOOKUP_KEY")
+    vin_encryption_keys = os.getenv("PARTGRAPH_VIN_ENCRYPTION_KEYS")
+    vin_lookup_key = os.getenv("PARTGRAPH_VIN_LOOKUP_KEY")
 
     return Settings(
         database_url=database_url,
