@@ -25,4 +25,4 @@ jobs:
           python-version: '3.14'
 
       - name: Run hosted owner journey
-        run: python scripts/production_acceptance.py
+        run: python scripts/production_acceptance_v2.py
