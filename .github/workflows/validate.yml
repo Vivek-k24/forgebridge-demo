@@ -91,7 +91,7 @@ jobs:
             -H 'X-PartGraph-CSRF: 1' \
             --data '{"nickname":"CI garage car","selection":{"year":2009,"market":"US","make":"Honda","model":"Civic","trim":"Hybrid"}}' \
             http://127.0.0.1:5173/api/v1/user-vehicles/manual)
-          python -c 'import json,sys; p=json.load(sys.stdin); assert p["identity_source"] == "manual"; assert p["identity_resolution"] == "manual_candidate"' \
+          python -c 'import json,sys; p=json.load(sys.stdin); assert p["identity_source"] == "manual"; assert p["identity_resolution"] == "matched"; assert p["canonical_configuration_id"] == "7feb13e9-bca0-5d8b-b701-f0260cce5da1"' \
             <<< "$MANUAL_VEHICLE"
           VEHICLE_ID=$(python -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<< "$MANUAL_VEHICLE")
 
