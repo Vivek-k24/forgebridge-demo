@@ -21,9 +21,9 @@ def _fetch_sync(*, year: int, make: str) -> object:
 async def raw_canadian_models(*, year: int, make: str) -> list[str]:
     payload = await asyncio.to_thread(_fetch_sync, year=year, make=make)
     if not isinstance(payload, dict) or not isinstance(payload.get("Results"), list):
-        return []
-    values: list[str] = []
-    for row in payload["Results"]:
-        if isinstance(row, dict) and isinstance(row.get("MODEL"), str):
-            values.append(row["MODEL"])
-    return values
+        return [json.dumps(payload, sort_keys=True)[:2000]]
+    return [
+        json.dumps(row, sort_keys=True)
+        for row in payload["Results"][:25]
+        if isinstance(row, dict)
+    ]
