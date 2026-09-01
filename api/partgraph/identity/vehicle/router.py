@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_session
+from .canada_probe import raw_canadian_models
 from .policy import validate_supported_year
 from .schemas import (
     VehicleBrandRead,
@@ -47,6 +48,14 @@ def _validated_year(year: int) -> int:
 @router.get("/vehicle-brands", response_model=list[VehicleBrandRead])
 async def vehicle_brands() -> list[VehicleBrandRead]:
     return [VehicleBrandRead.model_validate(item) for item in supported_brand_records()]
+
+
+@router.get("/vehicle-options/_probe-canada-models", response_model=list[str])
+async def probe_canada_models(
+    year: int,
+    make: Annotated[str, Query(min_length=1, max_length=64)],
+) -> list[str]:
+    return await raw_canadian_models(year=_validated_year(year), make=make)
 
 
 @router.get("/vehicle-options/models", response_model=list[str])
