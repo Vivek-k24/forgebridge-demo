@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from threading import Lock
 from time import monotonic
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
@@ -19,7 +20,7 @@ MODEL_CACHE_TTL_SECONDS = 24 * 60 * 60
 _ModelCacheKey = tuple[int, str]
 _ModelCacheValue = tuple[float, tuple[str, ...]]
 _model_cache: dict[_ModelCacheKey, _ModelCacheValue] = {}
-_model_cache_lock = asyncio.Lock()
+_model_cache_lock = Lock()
 
 
 def parse_nhtsa_model_catalog(payload: object, *, expected_make: str) -> tuple[str, ...]:
@@ -146,7 +147,7 @@ async def models_for_make_year(*, year: int, make: str) -> tuple[str, ...]:
     cache_key = (year, normalized_make)
     now = monotonic()
 
-    async with _model_cache_lock:
+    with _model_cache_lock:
         cached = _model_cache.get(cache_key)
         if cached is not None:
             cached_at, models = cached
@@ -157,7 +158,7 @@ async def models_for_make_year(*, year: int, make: str) -> tuple[str, ...]:
     payload = await asyncio.to_thread(_fetch_sync, year=year, make=normalized_make)
     models = parse_nhtsa_model_catalog(payload, expected_make=normalized_make)
 
-    async with _model_cache_lock:
+    with _model_cache_lock:
         _model_cache[cache_key] = (monotonic(), models)
 
     return models
@@ -165,5 +166,5 @@ async def models_for_make_year(*, year: int, make: str) -> tuple[str, ...]:
 
 async def clear_model_catalog_cache() -> None:
     """Test/support seam; production cache entries expire automatically."""
-    async with _model_cache_lock:
+    with _model_cache_lock:
         _model_cache.clear()
