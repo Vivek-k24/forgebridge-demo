@@ -3,10 +3,16 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
+import partgraph.identity.vehicle.service as vehicle_service
 from partgraph.database import session_factory
 from partgraph.main import app
 from partgraph.vehicle.schemas import VehicleConfigurationInput
 from partgraph.vehicle.service import resolve_configuration
+
+
+async def no_provider_models(*, year: int, make: str) -> tuple[str, ...]:
+    del year, make
+    return ()
 
 
 def seed_configuration(payload: dict[str, object]) -> str:
@@ -37,7 +43,8 @@ def test_public_api_does_not_create_canonical_vehicle_truth() -> None:
     assert response.status_code == 405
 
 
-def test_vehicle_options_are_read_from_known_canonical_rows() -> None:
+def test_vehicle_options_are_read_from_known_canonical_rows(monkeypatch) -> None:
+    monkeypatch.setattr(vehicle_service, "models_for_make_year", no_provider_models)
     suffix = uuid4().hex[:8]
     model = f"Civic-{suffix}"
     seed_configuration(
@@ -171,7 +178,10 @@ def test_selection_surfaces_ambiguity_instead_of_guessing() -> None:
     assert len(body["matches"]) == 2
 
 
-def test_unknown_manual_text_is_candidate_only_and_does_not_write_canonical_db() -> None:
+def test_unknown_manual_text_is_candidate_only_and_does_not_write_canonical_db(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(vehicle_service, "models_for_make_year", no_provider_models)
     suffix = uuid4().hex[:8]
     unknown_model = f"Garage-Special-{suffix}"
 
