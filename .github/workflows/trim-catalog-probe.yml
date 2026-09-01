@@ -1,0 +1,148 @@
+name: Trim Catalog Probe
+
+on:
+  push:
+    branches:
+      - partgraph-trim-catalog-probe
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: trimprobe
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d trimprobe"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download official NHTSA vPIC PostgreSQL database
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 \
+            --output /tmp/vpic.zip \
+            https://vpic.nhtsa.dot.gov/downloads/vPICList_lite_2026_08.custom.zip
+          unzip -o /tmp/vpic.zip -d /tmp/vpic
+          find /tmp/vpic -maxdepth 2 -type f -printf '%p %s bytes\n'
+
+      - name: Restore vPIC database
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          DUMP="$(find /tmp/vpic -type f | head -n 1)"
+          pg_restore \
+            --host localhost \
+            --port 5432 \
+            --username postgres \
+            --dbname trimprobe \
+            --no-owner \
+            --no-privileges \
+            "$DUMP"
+
+      - name: Inspect trim and series elements
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d trimprobe -v ON_ERROR_STOP=1 <<'SQL'
+          SELECT id, name, datatype
+          FROM vpic.element
+          WHERE lower(name) LIKE '%trim%'
+             OR lower(name) LIKE '%series%'
+          ORDER BY id;
+          SQL
+
+      - name: Inspect 2009 Honda Civic vehicle-spec trim candidates
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d trimprobe -v ON_ERROR_STOP=1 <<'SQL'
+          WITH target AS (
+            SELECT mk.id AS make_id, mo.id AS model_id
+            FROM vpic.make_model mm
+            JOIN vpic.make mk ON mk.id = mm.makeid
+            JOIN vpic.model mo ON mo.id = mm.modelid
+            WHERE upper(mk.name) = 'HONDA'
+              AND upper(mo.name) = 'CIVIC'
+          )
+          SELECT DISTINCT
+            e.name AS element,
+            vsp.attributeid,
+            vsp.iskey,
+            vssy.year,
+            s.vehicletypeid,
+            s.id AS vehicle_spec_schema_id,
+            vsp.vspecschemapatternid
+          FROM vpic.vehiclespecschema s
+          JOIN target t ON t.make_id = s.makeid
+          JOIN vpic.vehiclespecschema_model vssm
+            ON vssm.vehiclespecschemaid = s.id
+           AND vssm.modelid = t.model_id
+          LEFT JOIN vpic.vehiclespecschema_year vssy
+            ON vssy.vehiclespecschemaid = s.id
+          JOIN vpic.vspecschemapattern vssp
+            ON vssp.schemaid = s.id
+          JOIN vpic.vehiclespecpattern vsp
+            ON vsp.vspecschemapatternid = vssp.id
+          JOIN vpic.element e
+            ON e.id = vsp.elementid
+          WHERE (vssy.year = 2009 OR vssy.id IS NULL)
+            AND (
+              lower(e.name) LIKE '%trim%'
+              OR lower(e.name) LIKE '%series%'
+            )
+          ORDER BY element, attributeid, vsp.iskey, vssy.year NULLS FIRST;
+          SQL
+
+      - name: Inspect 2009 Honda Civic schema keys and model/trim/series values
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d trimprobe -v ON_ERROR_STOP=1 <<'SQL'
+          WITH target AS (
+            SELECT mk.id AS make_id, mo.id AS model_id
+            FROM vpic.make_model mm
+            JOIN vpic.make mk ON mk.id = mm.makeid
+            JOIN vpic.model mo ON mo.id = mm.modelid
+            WHERE upper(mk.name) = 'HONDA'
+              AND upper(mo.name) = 'CIVIC'
+          ), schemas AS (
+            SELECT DISTINCT s.id
+            FROM vpic.vehiclespecschema s
+            JOIN target t ON t.make_id = s.makeid
+            JOIN vpic.vehiclespecschema_model sm
+              ON sm.vehiclespecschemaid = s.id
+             AND sm.modelid = t.model_id
+            LEFT JOIN vpic.vehiclespecschema_year sy
+              ON sy.vehiclespecschemaid = s.id
+            WHERE sy.year = 2009 OR sy.id IS NULL
+          )
+          SELECT
+            s.id AS schema_id,
+            p.vspecschemapatternid AS pattern_group,
+            p.iskey,
+            e.name AS element,
+            p.attributeid
+          FROM schemas s
+          JOIN vpic.vspecschemapattern sp ON sp.schemaid = s.id
+          JOIN vpic.vehiclespecpattern p ON p.vspecschemapatternid = sp.id
+          JOIN vpic.element e ON e.id = p.elementid
+          WHERE p.iskey = 1
+             OR lower(e.name) LIKE '%trim%'
+             OR lower(e.name) LIKE '%series%'
+          ORDER BY schema_id, pattern_group, p.iskey DESC, element, attributeid
+          LIMIT 500;
+          SQL
