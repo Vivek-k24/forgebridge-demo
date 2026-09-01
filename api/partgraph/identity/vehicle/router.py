@@ -77,7 +77,6 @@ async def vehicle_trims(
     make: Annotated[str, Query(min_length=1, max_length=64)],
     model: Annotated[str, Query(min_length=1, max_length=96)],
     q: Annotated[str | None, Query(max_length=128)] = None,
-    limit: Annotated[int, Query(ge=1, le=50)] = 20,
 ) -> list[str]:
     try:
         return await list_trim_options(
@@ -87,7 +86,6 @@ async def vehicle_trims(
             make=make,
             model=model,
             query=q,
-            limit=limit,
         )
     except VehicleIdentityError as exc:
         raise _vehicle_error(exc) from exc
