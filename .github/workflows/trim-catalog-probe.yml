@@ -47,168 +47,92 @@ jobs:
             pg_restore --username postgres --dbname trimprobe \
               --no-owner --no-privileges /tmp/vpic.backup
 
-      - name: Inspect trim element definitions
+      - name: Compare trim and series fields across representative models
         run: |
           set -euo pipefail
           CID="${{ job.services.postgres.id }}"
           docker exec -i -e PGPASSWORD=postgres "$CID" \
             psql -U postgres -d trimprobe -v ON_ERROR_STOP=1 <<'SQL'
-          SELECT id, name, datatype
-          FROM vpic.element
-          WHERE id IN (28, 34, 38, 109, 110)
-          ORDER BY id;
-          SQL
-
-      - name: Inspect 2009 Honda Civic vehicle-spec rows
-        run: |
-          set -euo pipefail
-          CID="${{ job.services.postgres.id }}"
-          docker exec -i -e PGPASSWORD=postgres "$CID" \
-            psql -U postgres -d trimprobe -v ON_ERROR_STOP=1 <<'SQL'
-          WITH target AS (
-            SELECT mk.id AS make_id, mo.id AS model_id
-            FROM vpic.make_model mm
-            JOIN vpic.make mk ON mk.id = mm.makeid
+          WITH targets(label, yr, make_name, model_name) AS (
+            VALUES
+              ('2009 Honda Civic', 2009, 'HONDA', 'CIVIC'),
+              ('2015 Ford F-150', 2015, 'FORD', 'F-150'),
+              ('2023 Toyota Camry', 2023, 'TOYOTA', 'CAMRY'),
+              ('2022 Hyundai Tucson', 2022, 'HYUNDAI', 'TUCSON'),
+              ('2021 Mazda CX-5', 2021, 'MAZDA', 'CX-5'),
+              ('2019 Infiniti QX60', 2019, 'INFINITI', 'QX60'),
+              ('2020 Volvo XC60', 2020, 'VOLVO', 'XC60'),
+              ('2020 Lincoln Corsair', 2020, 'LINCOLN', 'CORSAIR'),
+              ('2020 Subaru Outback', 2020, 'SUBARU', 'OUTBACK'),
+              ('2010 Volkswagen Jetta', 2010, 'VOLKSWAGEN', 'JETTA'),
+              ('2010 Suzuki SX4', 2010, 'SUZUKI', 'SX4'),
+              ('2006 Scion xB', 2006, 'SCION', 'XB'),
+              ('2009 Pontiac G6', 2009, 'PONTIAC', 'G6')
+          ), target_ids AS (
+            SELECT t.*, mk.id AS make_id, mo.id AS model_id
+            FROM targets t
+            JOIN vpic.make mk ON upper(mk.name) = t.make_name
+            JOIN vpic.make_model mm ON mm.makeid = mk.id
             JOIN vpic.model mo ON mo.id = mm.modelid
-            WHERE upper(mk.name) = 'HONDA'
-              AND upper(mo.name) = 'CIVIC'
-          )
-          SELECT DISTINCT
-            e.name AS element,
-            vsp.attributeid,
-            vsp.iskey,
-            vssy.year,
-            s.id AS vehicle_spec_schema_id,
-            vsp.vspecschemapatternid
-          FROM vpic.vehiclespecschema s
-          JOIN target t ON t.make_id = s.makeid
-          JOIN vpic.vehiclespecschema_model vssm
-            ON vssm.vehiclespecschemaid = s.id
-           AND vssm.modelid = t.model_id
-          LEFT JOIN vpic.vehiclespecschema_year vssy
-            ON vssy.vehiclespecschemaid = s.id
-          JOIN vpic.vspecschemapattern vssp ON vssp.schemaid = s.id
-          JOIN vpic.vehiclespecpattern vsp
-            ON vsp.vspecschemapatternid = vssp.id
-          JOIN vpic.element e ON e.id = vsp.elementid
-          WHERE (vssy.year = 2009 OR vssy.id IS NULL)
-            AND e.id IN (34, 38, 109, 110)
-          ORDER BY element, attributeid, vsp.iskey, vssy.year NULLS FIRST;
-          SQL
-
-      - name: Inspect exact-key Civic VIN-pattern trims
-        run: |
-          set -euo pipefail
-          CID="${{ job.services.postgres.id }}"
-          docker exec -i -e PGPASSWORD=postgres "$CID" \
-            psql -U postgres -d trimprobe -v ON_ERROR_STOP=1 <<'SQL'
-          WITH target AS (
-            SELECT mk.id AS make_id, mo.id AS model_id
-            FROM vpic.make_model mm
-            JOIN vpic.make mk ON mk.id = mm.makeid
-            JOIN vpic.model mo ON mo.id = mm.modelid
-            WHERE upper(mk.name) = 'HONDA'
-              AND upper(mo.name) = 'CIVIC'
-          ), model_patterns AS (
-            SELECT DISTINCT p.vinschemaid, p.keys, p.attributeid AS model_attribute
-            FROM vpic.pattern p
-            JOIN target t ON p.elementid = 28
-                         AND p.attributeid::text = t.model_id::text
+                              AND upper(mo.name) = t.model_name
+          ), model_schemas AS (
+            SELECT DISTINCT
+              t.label,
+              t.yr,
+              t.make_id,
+              t.model_id,
+              p.vinschemaid
+            FROM target_ids t
+            JOIN vpic.pattern p ON p.elementid = 28
+                               AND p.attributeid::text = t.model_id::text
             JOIN vpic.wmi_vinschema wvs ON wvs.vinschemaid = p.vinschemaid
             JOIN vpic.wmi w ON w.id = wvs.wmiid
             JOIN vpic.wmi_make wm ON wm.wmiid = w.id
-            JOIN target t2 ON t2.make_id = wm.makeid
-            WHERE 2009 BETWEEN wvs.yearfrom AND COALESCE(wvs.yearto, 2999)
+                                 AND wm.makeid = t.make_id
+            WHERE t.yr BETWEEN wvs.yearfrom AND COALESCE(wvs.yearto, 2999)
+          ), candidates AS (
+            SELECT DISTINCT
+              ms.label,
+              e.name AS element,
+              p.attributeid AS value
+            FROM model_schemas ms
+            JOIN vpic.pattern p ON p.vinschemaid = ms.vinschemaid
+                               AND p.elementid IN (34, 38, 109, 110)
+            JOIN vpic.element e ON e.id = p.elementid
+            WHERE NULLIF(btrim(p.attributeid::text), '') IS NOT NULL
           )
-          SELECT DISTINCT
-            mp.vinschemaid,
-            mp.keys AS model_keys,
-            e.name AS element,
-            tp.keys AS trim_keys,
-            tp.attributeid AS trim_value
-          FROM model_patterns mp
-          JOIN vpic.pattern tp
-            ON tp.vinschemaid = mp.vinschemaid
-           AND tp.keys = mp.keys
-           AND tp.elementid IN (34, 38, 109, 110)
-          JOIN vpic.element e ON e.id = tp.elementid
-          ORDER BY mp.vinschemaid, model_keys, element, trim_value;
+          SELECT label,
+                 element,
+                 string_agg(DISTINCT value::text, ' | ' ORDER BY value::text) AS values
+          FROM candidates
+          GROUP BY label, element
+          ORDER BY label, element;
           SQL
 
-      - name: Inspect all trim patterns in Civic VIN schemas
+      - name: Count model schemas and direct trim coverage
         run: |
           set -euo pipefail
           CID="${{ job.services.postgres.id }}"
           docker exec -i -e PGPASSWORD=postgres "$CID" \
             psql -U postgres -d trimprobe -v ON_ERROR_STOP=1 <<'SQL'
-          WITH target AS (
-            SELECT mk.id AS make_id, mo.id AS model_id
-            FROM vpic.make_model mm
-            JOIN vpic.make mk ON mk.id = mm.makeid
-            JOIN vpic.model mo ON mo.id = mm.modelid
-            WHERE upper(mk.name) = 'HONDA'
-              AND upper(mo.name) = 'CIVIC'
-          ), model_patterns AS (
-            SELECT DISTINCT p.vinschemaid, p.keys
-            FROM vpic.pattern p
-            JOIN target t ON p.elementid = 28
-                         AND p.attributeid::text = t.model_id::text
-            JOIN vpic.wmi_vinschema wvs ON wvs.vinschemaid = p.vinschemaid
-            JOIN vpic.wmi w ON w.id = wvs.wmiid
-            JOIN vpic.wmi_make wm ON wm.wmiid = w.id
-            JOIN target t2 ON t2.make_id = wm.makeid
-            WHERE 2009 BETWEEN wvs.yearfrom AND COALESCE(wvs.yearto, 2999)
+          WITH supported(make_name) AS (
+            VALUES
+              ('ACURA'),('BUICK'),('CADILLAC'),('CHEVROLET'),('CHRYSLER'),('DODGE'),
+              ('FORD'),('GENESIS'),('GMC'),('HONDA'),('HYUNDAI'),('INFINITI'),('JEEP'),
+              ('KIA'),('LEXUS'),('LINCOLN'),('MAZDA'),('MITSUBISHI'),('NISSAN'),('RAM'),
+              ('SUBARU'),('TOYOTA'),('VOLKSWAGEN'),('VOLVO'),('HUMMER'),('ISUZU'),
+              ('MERCURY'),('PONTIAC'),('SATURN'),('SCION'),('SUZUKI')
           )
-          SELECT DISTINCT
-            mp.vinschemaid,
-            mp.keys AS model_keys,
-            e.name AS element,
-            tp.keys AS trim_keys,
-            tp.attributeid AS trim_value
-          FROM model_patterns mp
-          JOIN vpic.pattern tp
-            ON tp.vinschemaid = mp.vinschemaid
-           AND tp.elementid IN (34, 38, 109, 110)
-          JOIN vpic.element e ON e.id = tp.elementid
-          ORDER BY mp.vinschemaid, model_keys, element, trim_keys, trim_value
-          LIMIT 1000;
-          SQL
-
-      - name: Inspect Civic vehicle-spec schema keys
-        run: |
-          set -euo pipefail
-          CID="${{ job.services.postgres.id }}"
-          docker exec -i -e PGPASSWORD=postgres "$CID" \
-            psql -U postgres -d trimprobe -v ON_ERROR_STOP=1 <<'SQL'
-          WITH target AS (
-            SELECT mk.id AS make_id, mo.id AS model_id
-            FROM vpic.make_model mm
-            JOIN vpic.make mk ON mk.id = mm.makeid
-            JOIN vpic.model mo ON mo.id = mm.modelid
-            WHERE upper(mk.name) = 'HONDA'
-              AND upper(mo.name) = 'CIVIC'
-          ), schemas AS (
-            SELECT DISTINCT s.id
-            FROM vpic.vehiclespecschema s
-            JOIN target t ON t.make_id = s.makeid
-            JOIN vpic.vehiclespecschema_model sm
-              ON sm.vehiclespecschemaid = s.id
-             AND sm.modelid = t.model_id
-            LEFT JOIN vpic.vehiclespecschema_year sy
-              ON sy.vehiclespecschemaid = s.id
-            WHERE sy.year = 2009 OR sy.id IS NULL
-          )
-          SELECT s.id AS schema_id,
-                 p.vspecschemapatternid AS pattern_group,
-                 p.iskey,
-                 e.name AS element,
-                 p.attributeid
-          FROM schemas s
-          JOIN vpic.vspecschemapattern sp ON sp.schemaid = s.id
-          JOIN vpic.vehiclespecpattern p ON p.vspecschemapatternid = sp.id
-          JOIN vpic.element e ON e.id = p.elementid
-          WHERE p.iskey IS TRUE
-             OR e.id IN (34, 38, 109, 110)
-          ORDER BY schema_id, pattern_group, p.iskey DESC, element, attributeid
-          LIMIT 500;
+          SELECT mk.name AS make,
+                 count(DISTINCT p.vinschemaid) FILTER (WHERE p.elementid = 28) AS model_schemas,
+                 count(DISTINCT p.vinschemaid) FILTER (WHERE p.elementid IN (34,38,109,110)) AS trim_series_schemas,
+                 count(DISTINCT p.attributeid) FILTER (WHERE p.elementid = 38) AS trim_values,
+                 count(DISTINCT p.attributeid) FILTER (WHERE p.elementid = 34) AS series_values
+          FROM supported s
+          JOIN vpic.make mk ON upper(mk.name) = s.make_name
+          JOIN vpic.wmi_make wm ON wm.makeid = mk.id
+          JOIN vpic.wmi_vinschema wvs ON wvs.wmiid = wm.wmiid
+          JOIN vpic.pattern p ON p.vinschemaid = wvs.vinschemaid
+          GROUP BY mk.name
+          ORDER BY mk.name;
           SQL
