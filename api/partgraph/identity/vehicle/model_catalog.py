@@ -16,6 +16,14 @@ from .taxonomy import canonical_make, canonical_model, compact_key
 
 MAX_PROVIDER_BYTES = 512 * 1024
 MODEL_CACHE_TTL_SECONDS = 24 * 60 * 60
+# vPIC accepts partial vehicle-type names. "passenger" covers Passenger Car and
+# Multipurpose Passenger Vehicle (MPV); "truck" covers the light-truck catalog.
+MODEL_VEHICLE_TYPE_QUERIES = ("passenger", "truck")
+ALLOWED_VEHICLE_TYPES = {
+    "passenger car",
+    "multipurpose passenger vehicle (mpv)",
+    "truck",
+}
 
 _ModelCacheKey = tuple[int, str]
 _ModelCacheValue = tuple[float, tuple[str, ...]]
@@ -24,7 +32,7 @@ _model_cache_lock = Lock()
 
 
 def parse_nhtsa_model_catalog(payload: object, *, expected_make: str) -> tuple[str, ...]:
-    """Parse vPIC model discovery without promoting it into canonical vehicle truth."""
+    """Parse vPIC light-vehicle model discovery without creating canonical truth."""
     if not isinstance(payload, dict):
         raise PartGraphError(
             code=ErrorCode.VEHICLE_MODEL_PROVIDER_INVALID_RESPONSE,
@@ -50,11 +58,20 @@ def parse_nhtsa_model_catalog(payload: object, *, expected_make: str) -> tuple[s
 
         make_name = row.get("Make_Name")
         model_name = row.get("Model_Name")
-        if not isinstance(make_name, str) or not isinstance(model_name, str):
+        vehicle_type = row.get("VehicleTypeName")
+        if (
+            not isinstance(make_name, str)
+            or not isinstance(model_name, str)
+            or not isinstance(vehicle_type, str)
+        ):
             continue
         if compact_key(make_name) != expected_make_key:
             # The vPIC endpoint accepts partial make names. PartGraph does not allow
             # a partial match to contaminate a supported make's model selector.
+            continue
+        if vehicle_type.strip().casefold() not in ALLOWED_VEHICLE_TYPES:
+            # Honda and some other makes also have motorcycles/ATVs in vPIC. Those
+            # products are outside PartGraph's current passenger/light-vehicle scope.
             continue
 
         try:
@@ -66,10 +83,11 @@ def parse_nhtsa_model_catalog(payload: object, *, expected_make: str) -> tuple[s
     return tuple(sorted(models.values(), key=str.casefold))
 
 
-def _fetch_sync(*, year: int, make: str) -> object:
+def _fetch_sync(*, year: int, make: str, vehicle_type: str) -> object:
     endpoint = (
         f"{settings.nhtsa_base_url}/GetModelsForMakeYear/"
-        f"make/{quote(make, safe='')}/modelyear/{year}?format=json"
+        f"make/{quote(make, safe='')}/modelyear/{year}/"
+        f"vehicletype/{quote(vehicle_type, safe='')}?format=json"
     )
     request = Request(
         endpoint,
@@ -155,13 +173,26 @@ async def models_for_make_year(*, year: int, make: str) -> tuple[str, ...]:
                 return models
             _model_cache.pop(cache_key, None)
 
-    payload = await asyncio.to_thread(_fetch_sync, year=year, make=normalized_make)
-    models = parse_nhtsa_model_catalog(payload, expected_make=normalized_make)
+    payloads = await asyncio.gather(
+        *(
+            asyncio.to_thread(
+                _fetch_sync,
+                year=year,
+                make=normalized_make,
+                vehicle_type=vehicle_type,
+            )
+            for vehicle_type in MODEL_VEHICLE_TYPE_QUERIES
+        )
+    )
+    models: set[str] = set()
+    for payload in payloads:
+        models.update(parse_nhtsa_model_catalog(payload, expected_make=normalized_make))
+    result = tuple(sorted(models, key=str.casefold))
 
     with _model_cache_lock:
-        _model_cache[cache_key] = (monotonic(), models)
+        _model_cache[cache_key] = (monotonic(), result)
 
-    return models
+    return result
 
 
 async def clear_model_catalog_cache() -> None:
