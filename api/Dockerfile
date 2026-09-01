@@ -9,6 +9,7 @@ WORKDIR /app
 
 COPY pyproject.toml alembic.ini ./
 COPY migrations ./migrations
+COPY data ./data
 COPY partgraph ./partgraph
 
 RUN python -m pip install --upgrade pip && \
