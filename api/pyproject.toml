@@ -43,4 +43,4 @@ select = ["B", "E", "F", "I", "UP"]
 entrypoint = "partgraph.main:app"
 
 [tool.vercel.scripts]
-build = "alembic -c alembic.ini upgrade head"
+build = "alembic -c alembic.ini upgrade head && python -m partgraph.identity.vehicle.canada_probe"
