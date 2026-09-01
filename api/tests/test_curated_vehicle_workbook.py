@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import pathlib
 import xml.etree.ElementTree as ET
 import zipfile
-from pathlib import Path
 
 
-WORKBOOK = Path(__file__).resolve().parents[1] / "data" / "Selected_Asian_Brands_1996_2000.xlsx"
+WORKBOOK = (
+    pathlib.Path(__file__).resolve().parents[1] / "data" / "Selected_Asian_Brands_1996_2000.xlsx"
+)
 XML_NS = {"x": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 EXPECTED_HEADERS = (
     "Year",
