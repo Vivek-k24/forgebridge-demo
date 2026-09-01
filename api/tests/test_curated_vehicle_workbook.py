@@ -4,7 +4,6 @@ import pathlib
 import xml.etree.ElementTree as ET
 import zipfile
 
-
 WORKBOOK = (
     pathlib.Path(__file__).resolve().parents[1] / "data" / "Selected_Asian_Brands_1996_2000.xlsx"
 )
