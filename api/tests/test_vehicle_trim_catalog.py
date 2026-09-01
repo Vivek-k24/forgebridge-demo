@@ -211,7 +211,7 @@ def test_provider_discovery_trim_does_not_become_canonical_vehicle_truth(monkeyp
         assert year == 2020
         assert make == "Mazda"
         assert model == "CX-5"
-        return (discovered_trim,)
+        return (discovered_trim.upper(),)
 
     monkeypatch.setattr(vehicle_service, "trims_for_vehicle", fake_trims)
 
