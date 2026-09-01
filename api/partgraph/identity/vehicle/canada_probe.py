@@ -27,3 +27,10 @@ async def raw_canadian_models(*, year: int, make: str) -> list[str]:
         for row in payload["Results"][:25]
         if isinstance(row, dict)
     ]
+
+
+if __name__ == "__main__":
+    sample = _fetch_sync(year=2009, make="Acura")
+    print("PARTGRAPH_CANADA_MODEL_PROBE_START")
+    print(json.dumps(sample, sort_keys=True))
+    print("PARTGRAPH_CANADA_MODEL_PROBE_END")
