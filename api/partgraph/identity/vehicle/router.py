@@ -56,7 +56,6 @@ async def vehicle_models(
     market: Annotated[str, Query(min_length=1, max_length=64)],
     make: Annotated[str, Query(min_length=1, max_length=64)],
     q: Annotated[str | None, Query(max_length=96)] = None,
-    limit: Annotated[int, Query(ge=1, le=50)] = 20,
 ) -> list[str]:
     try:
         return await list_model_options(
@@ -65,7 +64,6 @@ async def vehicle_models(
             market=market,
             make=make,
             query=q,
-            limit=limit,
         )
     except VehicleIdentityError as exc:
         raise _vehicle_error(exc) from exc
