@@ -22,6 +22,7 @@ from .taxonomy import (
     compact_key,
     comparison_key,
 )
+from .trim_catalog import trims_for_vehicle
 
 OPTIONAL_IDENTITY_FIELDS = (
     "generation",
@@ -279,21 +280,36 @@ async def list_trim_options(
     make: str,
     model: str,
     query: str | None,
-    limit: int,
 ) -> list[str]:
+    # CarsXE is used only for consumer-facing trim discovery. PartGraph's market
+    # boundary is still validated here, and provider values never create shared
+    # VehicleConfiguration rows.
+    canonical_market(market)
+    normalized_make = canonical_make(make)
+    normalized_model = canonical_model(model)
+    values = set(
+        await trims_for_vehicle(
+            year=year,
+            make=normalized_make,
+            model=normalized_model,
+        )
+    )
+
+    # Preserve reviewed canonical labels as a union so a verified PartGraph trim
+    # is never hidden when an external catalog omits or names it differently.
     candidates = await _selection_base_candidates(
         session,
         year=year,
         market=market,
-        make=make,
+        make=normalized_make,
     )
-    model_key = comparison_key("model", canonical_model(model))
-    values = {
+    model_key = comparison_key("model", normalized_model)
+    values.update(
         candidate.trim
         for candidate in candidates
         if candidate.trim is not None and comparison_key("model", candidate.model) == model_key
-    }
-    return _filter_query(values, query, limit)
+    )
+    return _filter_values(values, query)
 
 
 async def list_generation_options(
