@@ -10,22 +10,61 @@ from partgraph.errors import ErrorCode, PartGraphError
 from partgraph.main import app
 
 
-def test_nhtsa_model_catalog_filters_exact_make_normalizes_and_deduplicates() -> None:
+def test_nhtsa_model_catalog_filters_make_type_normalizes_and_deduplicates() -> None:
     payload = {
         "Results": [
-            {"Make_Name": "HONDA", "Model_Name": "Accord"},
-            {"Make_Name": "Honda", "Model_Name": " civic "},
-            {"Make_Name": "HONDA", "Model_Name": "ACCORD"},
-            {"Make_Name": "Honda Power Equipment", "Model_Name": "Generator"},
-            {"Make_Name": "TOYOTA", "Model_Name": "Camry"},
-            {"Make_Name": "HONDA", "Model_Name": ""},
-            {"Make_Name": None, "Model_Name": "Pilot"},
+            {
+                "Make_Name": "HONDA",
+                "Model_Name": "Accord",
+                "VehicleTypeName": "Passenger Car",
+            },
+            {
+                "Make_Name": "Honda",
+                "Model_Name": " civic ",
+                "VehicleTypeName": "Passenger Car",
+            },
+            {
+                "Make_Name": "HONDA",
+                "Model_Name": "ACCORD",
+                "VehicleTypeName": "Passenger Car",
+            },
+            {
+                "Make_Name": "HONDA",
+                "Model_Name": "CR-V",
+                "VehicleTypeName": "Multipurpose Passenger Vehicle (MPV)",
+            },
+            {
+                "Make_Name": "HONDA",
+                "Model_Name": "Ridgeline",
+                "VehicleTypeName": "Truck",
+            },
+            {
+                "Make_Name": "HONDA",
+                "Model_Name": "CBR600RR",
+                "VehicleTypeName": "Motorcycle",
+            },
+            {
+                "Make_Name": "Honda Power Equipment",
+                "Model_Name": "Generator",
+                "VehicleTypeName": "Truck",
+            },
+            {
+                "Make_Name": "TOYOTA",
+                "Model_Name": "Camry",
+                "VehicleTypeName": "Passenger Car",
+            },
+            {
+                "Make_Name": "HONDA",
+                "Model_Name": "",
+                "VehicleTypeName": "Passenger Car",
+            },
+            {"Make_Name": None, "Model_Name": "Pilot", "VehicleTypeName": "MPV"},
         ]
     }
 
     models = model_catalog.parse_nhtsa_model_catalog(payload, expected_make="honda")
 
-    assert models == ("ACCORD", "CIVIC")
+    assert models == ("ACCORD", "CIVIC", "CR-V", "RIDGELINE")
 
 
 def test_nhtsa_model_catalog_rejects_malformed_response() -> None:
@@ -38,14 +77,32 @@ def test_nhtsa_model_catalog_rejects_malformed_response() -> None:
 
 
 def test_model_catalog_caches_successful_year_make_lookup(monkeypatch) -> None:
-    calls: list[tuple[int, str]] = []
+    calls: list[tuple[int, str, str]] = []
 
-    def fake_fetch(*, year: int, make: str) -> object:
-        calls.append((year, make))
+    def fake_fetch(*, year: int, make: str, vehicle_type: str) -> object:
+        calls.append((year, make, vehicle_type))
+        if vehicle_type == "truck":
+            return {
+                "Results": [
+                    {
+                        "Make_Name": "Honda",
+                        "Model_Name": "Ridgeline",
+                        "VehicleTypeName": "Truck",
+                    }
+                ]
+            }
         return {
             "Results": [
-                {"Make_Name": "Honda", "Model_Name": "Accord"},
-                {"Make_Name": "Honda", "Model_Name": "Civic"},
+                {
+                    "Make_Name": "Honda",
+                    "Model_Name": "Accord",
+                    "VehicleTypeName": "Passenger Car",
+                },
+                {
+                    "Make_Name": "Honda",
+                    "Model_Name": "Civic",
+                    "VehicleTypeName": "Passenger Car",
+                },
             ]
         }
 
@@ -59,9 +116,13 @@ def test_model_catalog_caches_successful_year_make_lookup(monkeypatch) -> None:
 
     first, second = asyncio.run(exercise())
 
-    assert first == ("ACCORD", "CIVIC")
+    assert first == ("ACCORD", "CIVIC", "RIDGELINE")
     assert second == first
-    assert calls == [(2009, "Honda")]
+    assert len(calls) == 2
+    assert set(calls) == {
+        (2009, "Honda", "passenger"),
+        (2009, "Honda", "truck"),
+    }
 
 
 def test_model_endpoint_returns_every_provider_model_without_old_twenty_item_cap(
