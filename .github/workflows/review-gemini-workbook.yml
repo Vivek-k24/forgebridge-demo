@@ -1,0 +1,22 @@
+name: Review Gemini workbook
+
+on:
+  push:
+    branches: [partgraph-review-gemini-workbook]
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Upload workbook
+        uses: actions/upload-artifact@v4
+        with:
+          name: selected-asian-brands-workbook
+          path: docs/Selected_Asian_Brands_1996_2000.xlsx
+          if-no-files-found: error
+          retention-days: 1
