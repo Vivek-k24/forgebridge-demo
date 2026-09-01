@@ -14,7 +14,7 @@ jobs:
     timeout-minutes: 30
     services:
       postgres:
-        image: postgres:17
+        image: postgres:18
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: trimprobe
@@ -38,26 +38,28 @@ jobs:
           unzip -o /tmp/vpic.zip -d /tmp/vpic
           find /tmp/vpic -maxdepth 2 -type f -printf '%p %s bytes\n'
 
-      - name: Restore vPIC database
-        env:
-          PGPASSWORD: postgres
+      - name: Restore vPIC database with PostgreSQL 18 client
         run: |
           set -euo pipefail
           DUMP="$(find /tmp/vpic -type f | head -n 1)"
-          pg_restore \
-            --host localhost \
-            --port 5432 \
-            --username postgres \
-            --dbname trimprobe \
-            --no-owner \
-            --no-privileges \
-            "$DUMP"
+          CID="${{ job.services.postgres.id }}"
+          docker cp "$DUMP" "$CID:/tmp/vpic.backup"
+          docker exec \
+            -e PGPASSWORD=postgres \
+            "$CID" \
+            pg_restore \
+              --username postgres \
+              --dbname trimprobe \
+              --no-owner \
+              --no-privileges \
+              /tmp/vpic.backup
 
       - name: Inspect trim and series elements
-        env:
-          PGPASSWORD: postgres
         run: |
-          psql -h localhost -U postgres -d trimprobe -v ON_ERROR_STOP=1 <<'SQL'
+          set -euo pipefail
+          CID="${{ job.services.postgres.id }}"
+          docker exec -i -e PGPASSWORD=postgres "$CID" \
+            psql -U postgres -d trimprobe -v ON_ERROR_STOP=1 <<'SQL'
           SELECT id, name, datatype
           FROM vpic.element
           WHERE lower(name) LIKE '%trim%'
@@ -66,10 +68,11 @@ jobs:
           SQL
 
       - name: Inspect 2009 Honda Civic vehicle-spec trim candidates
-        env:
-          PGPASSWORD: postgres
         run: |
-          psql -h localhost -U postgres -d trimprobe -v ON_ERROR_STOP=1 <<'SQL'
+          set -euo pipefail
+          CID="${{ job.services.postgres.id }}"
+          docker exec -i -e PGPASSWORD=postgres "$CID" \
+            psql -U postgres -d trimprobe -v ON_ERROR_STOP=1 <<'SQL'
           WITH target AS (
             SELECT mk.id AS make_id, mo.id AS model_id
             FROM vpic.make_model mm
@@ -107,11 +110,12 @@ jobs:
           ORDER BY element, attributeid, vsp.iskey, vssy.year NULLS FIRST;
           SQL
 
-      - name: Inspect 2009 Honda Civic schema keys and model/trim/series values
-        env:
-          PGPASSWORD: postgres
+      - name: Inspect 2009 Honda Civic schema keys and model trim series values
         run: |
-          psql -h localhost -U postgres -d trimprobe -v ON_ERROR_STOP=1 <<'SQL'
+          set -euo pipefail
+          CID="${{ job.services.postgres.id }}"
+          docker exec -i -e PGPASSWORD=postgres "$CID" \
+            psql -U postgres -d trimprobe -v ON_ERROR_STOP=1 <<'SQL'
           WITH target AS (
             SELECT mk.id AS make_id, mo.id AS model_id
             FROM vpic.make_model mm
