@@ -4,6 +4,7 @@ from uuid import UUID
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from .model_catalog import models_for_make_year
 from .models import VehicleConfiguration
 from .schemas import VehicleConfigurationInput, VehicleSelectionInput
 from .taxonomy import (
@@ -233,11 +234,15 @@ async def _selection_base_candidates(
     return list(rows)
 
 
-def _filter_query(values: set[str], query: str | None, limit: int) -> list[str]:
+def _filter_values(values: set[str], query: str | None) -> list[str]:
     if query:
         query_key = compact_key(query)
         values = {value for value in values if query_key in compact_key(value)}
-    return sorted(values, key=str.casefold)[:limit]
+    return sorted(values, key=str.casefold)
+
+
+def _filter_query(values: set[str], query: str | None, limit: int) -> list[str]:
+    return _filter_values(values, query)[:limit]
 
 
 async def list_model_options(
@@ -247,15 +252,23 @@ async def list_model_options(
     market: str,
     make: str,
     query: str | None,
-    limit: int,
 ) -> list[str]:
+    # Validate the PartGraph market/make boundary first. vPIC is used only as a
+    # complete model discovery source; these values do not become canonical rows.
+    canonical_market(market)
+    normalized_make = canonical_make(make)
+    models = set(await models_for_make_year(year=year, make=normalized_make))
+
+    # Keep already-reviewed/private-test canonical model labels discoverable too,
+    # while never writing provider discovery values into VehicleConfiguration.
     candidates = await _selection_base_candidates(
         session,
         year=year,
         market=market,
-        make=make,
+        make=normalized_make,
     )
-    return _filter_query({candidate.model for candidate in candidates}, query, limit)
+    models.update(candidate.model for candidate in candidates)
+    return _filter_values(models, query)
 
 
 async def list_trim_options(
