@@ -13,13 +13,14 @@ import os
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from typing import Any
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from .staging import CandidateType
 
 JsonDict = dict[str, Any]
-Transport = Callable[[str, str, dict[str, str], bytes | None], JsonDict]
+Transport = Callable[[str, str, dict[str, str], bytes | None], Any]
 
 
 class EbayCatalogError(RuntimeError):
@@ -72,30 +73,52 @@ def _default_transport(
     url: str,
     headers: dict[str, str],
     body: bytes | None,
-) -> JsonDict:
+) -> Any:
     request = Request(url, data=body, headers=headers, method=method)
-    with urlopen(request, timeout=45) as response:  # noqa: S310 - fixed trusted API hosts
-        return json.loads(response.read().decode("utf-8"))
+    try:
+        with urlopen(request, timeout=45) as response:  # noqa: S310 - fixed trusted API hosts
+            raw = response.read()
+    except HTTPError as error:
+        raise EbayCatalogError(f"eBay request failed with HTTP {error.code}") from None
+    except (URLError, TimeoutError, OSError):
+        raise EbayCatalogError("eBay request failed before a response was received") from None
+
+    try:
+        return json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        raise EbayCatalogError("eBay response was not valid JSON") from None
+
+
+def _array_field(payload: JsonDict, name: str, *, context: str) -> list[Any]:
+    value = payload.get(name)
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        raise EbayCatalogError(f"eBay {context} response field '{name}' was not an array")
+    return value
 
 
 def _property_values(payload: JsonDict) -> list[str]:
     values: list[str] = []
-    for value in payload.get("propertyValues", []):
+    for value in _array_field(payload, "propertyValues", context="metadata"):
         if isinstance(value, str):
-            values.append(value)
+            if value:
+                values.append(value)
             continue
         if isinstance(value, dict):
             candidate = value.get("value") or value.get("propertyValue")
             if isinstance(candidate, str) and candidate:
                 values.append(candidate)
+            continue
+        raise EbayCatalogError("eBay metadata propertyValues contained an unsupported value")
     return sorted(set(values))
 
 
 def _localized_aspects(item: JsonDict) -> dict[str, str]:
     aspects: dict[str, str] = {}
-    for aspect in item.get("localizedAspects", []):
+    for aspect in _array_field(item, "localizedAspects", context="Browse item"):
         if not isinstance(aspect, dict):
-            continue
+            raise EbayCatalogError("eBay Browse localizedAspects contained a non-object")
         name = aspect.get("name")
         value = aspect.get("value")
         if isinstance(name, str) and isinstance(value, str):
@@ -128,6 +151,18 @@ class EbayCatalogClient:
         self.browse_marketplace = browse_marketplace
         self.transport = transport or _default_transport
 
+    def _request_json(
+        self,
+        method: str,
+        url: str,
+        headers: dict[str, str],
+        body: bytes | None,
+    ) -> JsonDict:
+        response = self.transport(method, url, headers, body)
+        if not isinstance(response, dict):
+            raise EbayCatalogError("eBay response root was not a JSON object")
+        return response
+
     def _token(self) -> str:
         if self.access_token:
             return self.access_token
@@ -144,7 +179,7 @@ class EbayCatalogClient:
                 "scope": "https://api.ebay.com/oauth/api_scope",
             }
         ).encode("ascii")
-        response = self.transport(
+        response = self._request_json(
             "POST",
             self.TOKEN_URL,
             {
@@ -182,7 +217,7 @@ class EbayCatalogClient:
                 {"propertyName": name, "propertyValue": value} for name, value in filters
             ],
         }
-        return self.transport(
+        return self._request_json(
             "POST",
             self.METADATA_VALUES_URL,
             self._headers(marketplace=self.metadata_marketplace),
@@ -261,7 +296,7 @@ class EbayCatalogClient:
                 "limit": str(limit),
             }
         )
-        return self.transport(
+        return self._request_json(
             "GET",
             f"{self.BROWSE_SEARCH_URL}?{params}",
             self._headers(marketplace=self.browse_marketplace),
@@ -284,9 +319,10 @@ class EbayCatalogClient:
         )
         observations: list[CollectedObservation] = []
         identity = vehicle.as_dict()
-        for item in response.get("itemSummaries", []):
+        items = _array_field(response, "itemSummaries", context="Browse")
+        for item in items[:limit]:
             if not isinstance(item, dict):
-                continue
+                raise EbayCatalogError("eBay Browse itemSummaries contained a non-object")
             item_id = item.get("itemId")
             if not isinstance(item_id, str) or not item_id:
                 continue
@@ -359,13 +395,19 @@ class EbayCatalogClient:
                 )
             )
 
-            compatibility = item.get("compatibilityProperties")
-            if isinstance(compatibility, list) and compatibility:
-                returned = {
-                    str(prop.get("name")): prop.get("value")
-                    for prop in compatibility
-                    if isinstance(prop, dict) and prop.get("name")
-                }
+            compatibility = _array_field(
+                item, "compatibilityProperties", context="Browse item"
+            )
+            if compatibility:
+                returned: dict[str, Any] = {}
+                for prop in compatibility:
+                    if not isinstance(prop, dict):
+                        raise EbayCatalogError(
+                            "eBay Browse compatibilityProperties contained a non-object"
+                        )
+                    name = prop.get("name")
+                    if name:
+                        returned[str(name)] = prop.get("value")
                 observations.append(
                     CollectedObservation(
                         source_record_id=f"item:{item_id}:fitment",
