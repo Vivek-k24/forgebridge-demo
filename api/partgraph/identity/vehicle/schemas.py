@@ -115,6 +115,20 @@ class VehicleConfigurationResult(BaseModel):
     configuration: VehicleConfigurationRead
 
 
+class VehicleSpecificationProfileRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    vehicle_configuration_id: UUID
+    profile_version: int
+    verification_status: str
+    source_match_count: int
+    profile: dict[str, object]
+    source_matrix: dict[str, object]
+    created_at: datetime
+    updated_at: datetime
+
+
 class VehicleSelectionNormalized(BaseModel):
     year: int
     market: str
