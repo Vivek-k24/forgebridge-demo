@@ -1,0 +1,87 @@
+/*
+ * PartGraph uses a dark application shell with a few intentionally light
+ * workspaces. Those light panels must opt into a dark foreground instead of
+ * inheriting the shell's light text color.
+ */
+.garage-workspace .panel,
+.repair-workspace-shell .panel {
+  color: #17202a;
+  color-scheme: light;
+}
+
+.garage-workspace .panel h3,
+.garage-workspace .panel h4,
+.repair-workspace-shell .panel h3,
+.repair-workspace-shell .panel h4 {
+  color: #17202a;
+}
+
+.garage-workspace .panel p,
+.garage-workspace .panel label,
+.garage-workspace .panel .empty-state,
+.garage-workspace .panel .inline-check,
+.repair-workspace-shell .panel p,
+.repair-workspace-shell .panel label,
+.repair-workspace-shell .panel .repair-empty {
+  color: #334155;
+}
+
+.garage-workspace .panel .eyebrow {
+  color: #4f806b;
+  opacity: 1;
+}
+
+.garage-workspace .panel .muted,
+.repair-workspace-shell .panel .muted {
+  color: #64748b;
+  opacity: 1;
+}
+
+.garage-workspace .garage-form label span,
+.garage-workspace .resolution-card label span,
+.repair-workspace-shell .start-repair-form label > span {
+  color: #334155;
+}
+
+.garage-workspace .garage-form input,
+.garage-workspace .garage-form select,
+.garage-workspace .resolution-card input,
+.repair-workspace-shell .start-repair-form input,
+.repair-workspace-shell .start-repair-form select,
+.repair-workspace-shell .compact-form input,
+.repair-workspace-shell .compact-form select,
+.repair-workspace-shell .compact-form textarea,
+.repair-workspace-shell .repair-panel select {
+  background: #ffffff;
+  color: #17202a;
+  -webkit-text-fill-color: #17202a;
+}
+
+.garage-workspace input::placeholder,
+.garage-workspace textarea::placeholder,
+.repair-workspace-shell input::placeholder,
+.repair-workspace-shell textarea::placeholder {
+  color: #64748b;
+  opacity: 1;
+}
+
+.garage-workspace input:disabled,
+.garage-workspace select:disabled,
+.garage-workspace textarea:disabled,
+.repair-workspace-shell input:disabled,
+.repair-workspace-shell select:disabled,
+.repair-workspace-shell textarea:disabled {
+  background: #f1f5f9;
+  color: #475569;
+  -webkit-text-fill-color: #475569;
+  opacity: 1;
+}
+
+.garage-workspace .secondary,
+.repair-workspace-shell .text-button {
+  color: #334155 !important;
+}
+
+.garage-workspace .empty-state {
+  color: #475569;
+}
