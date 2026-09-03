@@ -67,7 +67,12 @@ class CollectedObservation:
     extraction_method: str
 
 
-def _default_transport(method: str, url: str, headers: dict[str, str], body: bytes | None) -> JsonDict:
+def _default_transport(
+    method: str,
+    url: str,
+    headers: dict[str, str],
+    body: bytes | None,
+) -> JsonDict:
     request = Request(url, data=body, headers=headers, method=method)
     with urlopen(request, timeout=45) as response:  # noqa: S310 - fixed trusted API hosts
         return json.loads(response.read().decode("utf-8"))
@@ -131,7 +136,7 @@ class EbayCatalogClient:
                 "configure EBAY_ACCESS_TOKEN or EBAY_CLIENT_ID + EBAY_CLIENT_SECRET"
             )
         basic = base64.b64encode(
-            f"{self.client_id}:{self.client_secret}".encode("utf-8")
+            f"{self.client_id}:{self.client_secret}".encode()
         ).decode("ascii")
         body = urlencode(
             {
@@ -286,7 +291,11 @@ class EbayCatalogClient:
             if not isinstance(item_id, str) or not item_id:
                 continue
             item_url = item.get("itemWebUrl")
-            source_url = item_url if isinstance(item_url, str) and item_url else self.BROWSE_SEARCH_URL
+            source_url = (
+                item_url
+                if isinstance(item_url, str) and item_url
+                else self.BROWSE_SEARCH_URL
+            )
             common_raw = {
                 "search": {
                     "query": query,
