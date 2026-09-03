@@ -5,7 +5,7 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .model_catalog import models_for_make_year
-from .models import VehicleConfiguration
+from .models import VehicleConfiguration, VehicleSpecificationProfile
 from .schemas import VehicleConfigurationInput, VehicleSelectionInput
 from .taxonomy import (
     CANONICALIZATION_VERSION,
@@ -392,6 +392,17 @@ async def get_configuration(
     configuration_id: UUID,
 ) -> VehicleConfiguration | None:
     return await session.get(VehicleConfiguration, configuration_id)
+
+
+async def get_specification_profile(
+    session: AsyncSession,
+    configuration_id: UUID,
+) -> VehicleSpecificationProfile | None:
+    return await session.scalar(
+        select(VehicleSpecificationProfile).where(
+            VehicleSpecificationProfile.vehicle_configuration_id == configuration_id
+        )
+    )
 
 
 async def list_configurations(
