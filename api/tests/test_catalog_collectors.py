@@ -2,7 +2,13 @@ import asyncio
 import json
 from uuid import uuid4
 
-from partgraph.collectors.ebay import EbayCatalogClient, VehicleApplication
+import pytest
+
+from partgraph.collectors.ebay import (
+    EbayCatalogClient,
+    EbayCatalogError,
+    VehicleApplication,
+)
 from partgraph.collectors.staging import (
     CandidateType,
     observation_dedupe_key,
@@ -88,6 +94,77 @@ def test_trim_observations_expand_trim_and_engine_taxonomy():
     assert {record.candidate_payload["engine"] for record in observations} == {
         "1.8L I4",
         "2.0L I4",
+    }
+
+
+def test_metadata_rejects_non_array_property_values():
+    client = EbayCatalogClient(
+        access_token="test-token",
+        transport=lambda method, url, headers, body: {
+            "propertyValues": {"value": "EX"}
+        },
+    )
+
+    with pytest.raises(EbayCatalogError, match="propertyValues"):
+        client.trim_observations(
+            category_id="33707", year=2012, make="Honda", model="Civic"
+        )
+
+
+def test_provider_rejects_non_object_json_root():
+    client = EbayCatalogClient(
+        access_token="test-token",
+        transport=lambda method, url, headers, body: ["not", "an", "object"],
+    )
+
+    with pytest.raises(EbayCatalogError, match="root was not a JSON object"):
+        client.search_parts(
+            query="brake pads",
+            category_id="33559",
+            vehicle=VehicleApplication(2012, "Honda", "Civic"),
+        )
+
+
+def test_inventory_rejects_non_array_item_summaries():
+    client = EbayCatalogClient(
+        access_token="test-token",
+        transport=lambda method, url, headers, body: {
+            "itemSummaries": {"itemId": "v1|123|0"}
+        },
+    )
+
+    with pytest.raises(EbayCatalogError, match="itemSummaries"):
+        client.inventory_observations(
+            query="brake pads",
+            category_id="33559",
+            vehicle=VehicleApplication(2012, "Honda", "Civic"),
+        )
+
+
+def test_inventory_observations_enforce_requested_limit_when_provider_over_returns():
+    def item(item_id: str) -> dict[str, object]:
+        return {
+            "itemId": item_id,
+            "title": f"Part {item_id}",
+            "itemWebUrl": f"https://example.test/item/{item_id}",
+        }
+
+    client = EbayCatalogClient(
+        access_token="test-token",
+        transport=lambda method, url, headers, body: {
+            "itemSummaries": [item("first"), item("second")]
+        },
+    )
+    observations = client.inventory_observations(
+        query="brake pads",
+        category_id="33559",
+        vehicle=VehicleApplication(2012, "Honda", "Civic"),
+        limit=1,
+    )
+
+    assert len(observations) == 2
+    assert {record.candidate_payload["provider_item_id"] for record in observations} == {
+        "first"
     }
 
 
