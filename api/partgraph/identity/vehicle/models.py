@@ -1,7 +1,17 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import CheckConstraint, DateTime, Index, SmallInteger, String, Uuid, func
+from sqlalchemy import (
+    JSON,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    SmallInteger,
+    String,
+    Uuid,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..database import Base
@@ -48,6 +58,48 @@ class VehicleConfiguration(Base):
         nullable=False,
         default="unverified",
     )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class VehicleSpecificationProfile(Base):
+    __tablename__ = "vehicle_specification_profiles"
+    __table_args__ = (
+        CheckConstraint(
+            "profile_version >= 1",
+            name="ck_vehicle_specification_profiles_version",
+        ),
+        CheckConstraint(
+            "source_match_count >= 1",
+            name="ck_vehicle_specification_profiles_source_match_count",
+        ),
+        CheckConstraint(
+            "verification_status IN ('candidate', 'verified', 'superseded')",
+            name="ck_vehicle_specification_profiles_status",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
+    vehicle_configuration_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("vehicle_configurations.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
+    profile_version: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1)
+    verification_status: Mapped[str] = mapped_column(String(32), nullable=False)
+    source_match_count: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    profile: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False)
+    source_matrix: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
