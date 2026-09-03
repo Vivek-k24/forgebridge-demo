@@ -87,7 +87,7 @@ export default function PartGraphShell() {
   } else if (page === 'start') {
     content = (
       <StartRepairWorkspace
-        preferredVehicleId={preferredVehicleId}
+        preferredVehicleId={preferredVehicleId ?? ''}
         onOpenGarage={() => navigate('garage')}
         onCreated={() => {
           setPreferredVehicleId(null)
