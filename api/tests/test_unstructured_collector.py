@@ -28,3 +28,30 @@ def test_unstructured_document_preserves_source_and_extraction_separately():
     assert observation.vehicle_identity["model"] == "Civic"
     assert observation.provenance == {"provider": "example", "dataset": "parts_pages"}
     assert observation.extraction_method == "parser-v1"
+
+
+def test_unstructured_document_keeps_collector_source_identity_authoritative():
+    document = SourceDocument(
+        source_record_id="page-456",
+        source_url="https://example.test/parts/456",
+        content="raw source",
+    )
+
+    observation = source_document_observation(
+        document,
+        provider="trusted-provider",
+        dataset="trusted-dataset",
+        provenance={
+            "provider": "spoofed-provider",
+            "dataset": "spoofed-dataset",
+            "http_status": 200,
+        },
+        extracted_candidate={},
+    )
+
+    assert observation.provenance == {
+        "provider": "trusted-provider",
+        "dataset": "trusted-dataset",
+        "http_status": 200,
+    }
+    assert observation.candidate_payload == {}
