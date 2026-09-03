@@ -13,8 +13,10 @@ from decimal import Decimal
 from enum import StrEnum
 from hashlib import sha256
 from typing import Any
+from uuid import uuid4
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..knowledge.models import CatalogIngestionBatch, CatalogSourceRecord
@@ -108,6 +110,10 @@ async def stage_observation(
     therefore be observed again when its price, availability, fitment, or
     other source payload changes without overwriting prior evidence. An
     unchanged observation is idempotently reused instead of failing the batch.
+
+    The unique ``dedupe_key`` write is atomic. Concurrent collectors may race
+    on the same unchanged observation, but PostgreSQL keeps one immutable row
+    and every loser reuses that row instead of failing its ingestion batch.
     """
 
     raw_hash = raw_payload_sha256(raw_payload)
@@ -116,29 +122,41 @@ async def stage_observation(
         source_record_id=source_record_id,
         raw_sha256=raw_hash,
     )
-    existing = await session.scalar(
-        select(CatalogSourceRecord).where(CatalogSourceRecord.dedupe_key == dedupe_key)
+    record_id = uuid4()
+    statement = (
+        insert(CatalogSourceRecord)
+        .values(
+            id=record_id,
+            batch_id=batch.id,
+            source_record_id=source_record_id,
+            source_url=source_url,
+            fetched_at=fetched_at or datetime.now(UTC),
+            observed_at=observed_at,
+            candidate_type=str(candidate_type),
+            raw_sha256=raw_hash,
+            raw_payload=raw_payload,
+            candidate_payload=candidate_payload,
+            vehicle_identity=vehicle_identity,
+            provenance=provenance,
+            extraction_method=extraction_method,
+            confidence=Decimal(str(confidence)) if confidence is not None else None,
+            review_status="pending",
+            dedupe_key=dedupe_key,
+        )
+        .on_conflict_do_nothing(index_elements=[CatalogSourceRecord.dedupe_key])
+        .returning(CatalogSourceRecord.id)
     )
-    if existing is not None:
+    inserted_id = await session.scalar(statement)
+
+    if inserted_id is None:
+        existing = await session.scalar(
+            select(CatalogSourceRecord).where(CatalogSourceRecord.dedupe_key == dedupe_key)
+        )
+        if existing is None:
+            raise RuntimeError("deduplicated staging record was not visible after conflict")
         return StageResult(record=existing, inserted=False)
 
-    record = CatalogSourceRecord(
-        batch_id=batch.id,
-        source_record_id=source_record_id,
-        source_url=source_url,
-        fetched_at=fetched_at or datetime.now(UTC),
-        observed_at=observed_at,
-        candidate_type=str(candidate_type),
-        raw_sha256=raw_hash,
-        raw_payload=raw_payload,
-        candidate_payload=candidate_payload,
-        vehicle_identity=vehicle_identity,
-        provenance=provenance,
-        extraction_method=extraction_method,
-        confidence=Decimal(str(confidence)) if confidence is not None else None,
-        review_status="pending",
-        dedupe_key=dedupe_key,
-    )
-    session.add(record)
-    await session.flush()
+    record = await session.get(CatalogSourceRecord, inserted_id)
+    if record is None:
+        raise RuntimeError("inserted staging record could not be reloaded")
     return StageResult(record=record, inserted=True)
