@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { activeRepairSessionId, preferredRepairSessionId, setActiveRepairSessionId } from './active-repair'
 import { AssistanceExplanation } from './AssistanceExplanation'
 import { ApiFailure, apiRequest, CSRF_HEADERS, formatApiFailure } from './api'
 import { newIdempotencyKey, partGraphDeviceId } from './device'
@@ -124,10 +125,16 @@ function quantityLabel(blocker: InventoryBlocker): string {
   return `${human(blocker.readiness_state)} · need ${blocker.required_quantity}${unit}`
 }
 
-export function GuidedRepairWorkspace() {
+export function GuidedRepairWorkspace({
+  onOpenReadiness,
+  onStartRepair,
+}: {
+  onOpenReadiness: () => void
+  onStartRepair: () => void
+}) {
   const deviceId = useMemo(() => partGraphDeviceId(), [])
   const [sessions, setSessions] = useState<RepairSession[]>([])
-  const [selectedId, setSelectedId] = useState<string>('')
+  const [selectedId, setSelectedId] = useState(() => activeRepairSessionId() || '')
   const [lease, setLease] = useState<Lease | null>(null)
   const [guidance, setGuidance] = useState<Guidance | null>(null)
   const [plan, setPlan] = useState<GuidancePlan | null>(null)
@@ -145,12 +152,19 @@ export function GuidedRepairWorkspace() {
     setPlan(null)
     setShowPlan(false)
 
+    if (!sessionId) {
+      setLease(null)
+      setActiveRepairSessionId(null)
+      return
+    }
+
     const resume = await apiRequest<ResumeSnapshot>(
       `/api/v1/repair-sessions/${sessionId}/resume`,
       { headers: { 'X-PartGraph-Device-ID': deviceId } },
       { retryIdempotent: true },
     )
     setLease(resume.lease)
+    setActiveRepairSessionId(sessionId)
 
     try {
       const current = await apiRequest<Guidance>(
@@ -181,16 +195,9 @@ export function GuidedRepairWorkspace() {
       { retryIdempotent: true },
     )
     setSessions(rows)
-    const nextId = preferredId && rows.some((item) => item.id === preferredId)
-      ? preferredId
-      : rows[0]?.id ?? ''
+    const nextId = preferredRepairSessionId(rows, preferredId)
     setSelectedId(nextId)
-    if (nextId) await loadSession(nextId)
-    else {
-      setLease(null)
-      setGuidance(null)
-      setBoundary(null)
-    }
+    await loadSession(nextId)
   }, [loadSession])
 
   useEffect(() => {
@@ -198,7 +205,7 @@ export function GuidedRepairWorkspace() {
     async function initialize() {
       try {
         setLoading(true)
-        await refresh()
+        await refresh(activeRepairSessionId() || undefined)
       } catch (failure) {
         if (active) setError(formatApiFailure(failure, 'Could not load guided repair.'))
       } finally {
@@ -213,6 +220,7 @@ export function GuidedRepairWorkspace() {
 
   async function chooseSession(sessionId: string) {
     setSelectedId(sessionId)
+    setActiveRepairSessionId(sessionId)
     setMessage(null)
     try {
       setLoading(true)
@@ -314,7 +322,7 @@ export function GuidedRepairWorkspace() {
           <h1>Do the next verified action, not a guessed one.</h1>
           <p className="lede">
             PartGraph combines the exact repair definition, verified procedure evidence, dependencies,
-            Inventory readiness, and your saved progress before it shows an action.
+            readiness, and your saved progress before it shows an action.
           </p>
         </div>
         {sessions.length > 0 && (
@@ -339,7 +347,8 @@ export function GuidedRepairWorkspace() {
       {sessions.length === 0 ? (
         <div className="guided-boundary guided-boundary--neutral">
           <strong>No active repair session.</strong>
-          <p>Start a repair session first. PartGraph will not create procedure context without one.</p>
+          <p>Start a repair first. PartGraph will not create procedure context without one.</p>
+          <button type="button" onClick={onStartRepair}>Start repair</button>
         </div>
       ) : boundary ? (
         <div className={`guided-boundary guided-boundary--${boundary.severity}`}>
@@ -347,7 +356,10 @@ export function GuidedRepairWorkspace() {
           <strong>{boundary.title}</strong>
           <p>{boundary.detail}</p>
           {boundary.code === 'REPAIR_PROCEDURE_NOT_AVAILABLE' && (
-            <small>Bind an exact verified repair in Inventory when one is available for this vehicle.</small>
+            <div className="guided-controls">
+              <button type="button" onClick={onOpenReadiness}>Open readiness</button>
+              <small>New sessions offer verified repair binding during Start Repair. Existing unbound sessions can still be connected in Readiness.</small>
+            </div>
           )}
         </div>
       ) : guidance ? (
@@ -384,6 +396,7 @@ export function GuidedRepairWorkspace() {
               guidanceStatus={guidance.status}
               canEdit={lease?.can_edit ?? false}
               busy={busy}
+              onOpenReadiness={onOpenReadiness}
               onComplete={() => void updateProgress('completed')}
               onBlocked={() => void updateProgress('blocked')}
               onSkip={() => void updateProgress('skipped')}
@@ -406,9 +419,7 @@ export function GuidedRepairWorkspace() {
             <button type="button" className="secondary" disabled={busy} onClick={() => void togglePlan()}>
               {showPlan ? 'Hide full plan' : 'View full verified plan'}
             </button>
-            <span>
-              {lease?.can_edit ? 'Editing on this device.' : `View only · ${human(lease?.status ?? 'available')}`}
-            </span>
+            <span>{lease?.can_edit ? 'Editing on this device.' : `View only · ${human(lease?.status ?? 'available')}`}</span>
           </div>
 
           {showPlan && plan && <VerifiedPlan plan={plan} />}
@@ -423,6 +434,7 @@ function CurrentAction({
   guidanceStatus,
   canEdit,
   busy,
+  onOpenReadiness,
   onComplete,
   onBlocked,
   onSkip,
@@ -431,6 +443,7 @@ function CurrentAction({
   guidanceStatus: GuidanceStatus
   canEdit: boolean
   busy: boolean
+  onOpenReadiness: () => void
   onComplete: () => void
   onBlocked: () => void
   onSkip: () => void
@@ -450,30 +463,15 @@ function CurrentAction({
 
       <p className="guided-instruction">{action.instruction}</p>
 
-      {action.warning_text && (
-        <div className="guided-warning">
-          <strong>Warning</strong>
-          <p>{action.warning_text}</p>
-        </div>
-      )}
-      {action.workspace_note && (
-        <div className="guided-workspace-note">
-          <strong>Before this action</strong>
-          <p>{action.workspace_note}</p>
-        </div>
-      )}
-
-      {action.dependency_action_keys.length > 0 && (
-        <p className="guided-dependencies">
-          Prerequisites complete: {action.dependency_action_keys.map(human).join(', ')}
-        </p>
-      )}
+      {action.warning_text && <div className="guided-warning"><strong>Warning</strong><p>{action.warning_text}</p></div>}
+      {action.workspace_note && <div className="guided-workspace-note"><strong>Before this action</strong><p>{action.workspace_note}</p></div>}
+      {action.dependency_action_keys.length > 0 && <p className="guided-dependencies">Prerequisites complete: {action.dependency_action_keys.map(human).join(', ')}</p>}
 
       {action.inventory_blockers.length > 0 && (
         <div className="guided-blockers">
           <div>
-            <strong>Inventory must be resolved before this action can complete.</strong>
-            <a href="#/inventory">Open Inventory</a>
+            <strong>Readiness must be resolved before this action can complete.</strong>
+            <button type="button" className="secondary" onClick={onOpenReadiness}>Open readiness</button>
           </div>
           <ul>
             {action.inventory_blockers.map((item) => (
@@ -495,23 +493,11 @@ function CurrentAction({
       )}
 
       <div className="guided-action-buttons">
-        <button
-          type="button"
-          disabled={busy || !canEdit || inventoryBlocked}
-          onClick={onComplete}
-        >
+        <button type="button" disabled={busy || !canEdit || inventoryBlocked} onClick={onComplete}>
           {actionBlocked ? 'Problem resolved · complete action' : 'Complete action'}
         </button>
-        {!actionBlocked && (
-          <button type="button" className="secondary" disabled={busy || !canEdit} onClick={onBlocked}>
-            Problem / blocked
-          </button>
-        )}
-        {action.skippable && !actionBlocked && (
-          <button type="button" className="secondary" disabled={busy || !canEdit} onClick={onSkip}>
-            Skip verified optional action
-          </button>
-        )}
+        {!actionBlocked && <button type="button" className="secondary" disabled={busy || !canEdit} onClick={onBlocked}>Problem / blocked</button>}
+        {action.skippable && !actionBlocked && <button type="button" className="secondary" disabled={busy || !canEdit} onClick={onSkip}>Skip verified optional action</button>}
       </div>
       {!canEdit && <small className="guided-edit-note">Take editing control to record physical progress.</small>}
     </article>
@@ -522,10 +508,7 @@ function VerifiedPlan({ plan }: { plan: GuidancePlan }) {
   return (
     <section className="guided-plan">
       <div className="guided-plan-head">
-        <div>
-          <p className="eyebrow">FULL VERIFIED PLAN</p>
-          <h3>{plan.repair_title}</h3>
-        </div>
+        <div><p className="eyebrow">FULL VERIFIED PLAN</p><h3>{plan.repair_title}</h3></div>
         <span>{plan.actions.length} actions</span>
       </div>
       <ol>
@@ -536,7 +519,7 @@ function VerifiedPlan({ plan }: { plan: GuidancePlan }) {
               <strong>{action.title}</strong>
               <small>
                 {human(action.progress_state)}
-                {action.inventory_blockers.length > 0 ? ` · ${action.inventory_blockers.length} inventory blocker(s)` : ''}
+                {action.inventory_blockers.length > 0 ? ` · ${action.inventory_blockers.length} readiness blocker(s)` : ''}
                 {action.dependency_action_keys.length > 0 ? ` · after ${action.dependency_action_keys.map(human).join(', ')}` : ''}
               </small>
             </div>
