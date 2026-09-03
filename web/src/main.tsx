@@ -4,6 +4,7 @@ import AuthGate from './AuthGate'
 import PartGraphShell from './PartGraphShell'
 import ProductionLaunch from './ProductionLaunch'
 import './app.css'
+import './light-panel-contrast.css'
 
 const app = <PartGraphShell />
 const directPagesPreview = import.meta.env.MODE === 'pages'
