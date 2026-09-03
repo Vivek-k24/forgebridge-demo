@@ -16,19 +16,30 @@ from __future__ import annotations
 import argparse
 import asyncio
 from collections.abc import Iterable
+from uuid import UUID
 
 from ..database import session_factory
+from ..knowledge.models import CatalogIngestionBatch
 from .ebay import CollectedObservation, EbayCatalogClient, VehicleApplication
 from .staging import finish_ingestion_batch, stage_observation, start_ingestion_batch
 
 COLLECTOR_VERSION = "ebay-v1"
 
 
+async def _mark_batch_failed(batch_id: UUID) -> None:
+    async with session_factory() as session:
+        batch = await session.get(CatalogIngestionBatch, batch_id)
+        if batch is None:
+            return
+        await finish_ingestion_batch(session, batch, status="failed")
+        await session.commit()
+
+
 async def _persist(
     observations: Iterable[CollectedObservation],
     *,
     source_name: str,
-) -> int:
+) -> tuple[int, int]:
     async with session_factory() as session:
         batch = await start_ingestion_batch(
             session,
@@ -36,11 +47,13 @@ async def _persist(
             source_type="retailer",
             collector_version=COLLECTOR_VERSION,
         )
+        batch_id = batch.id
         await session.commit()
-        count = 0
+        inserted = 0
+        unchanged = 0
         try:
             for observation in observations:
-                await stage_observation(
+                result = await stage_observation(
                     session,
                     batch=batch,
                     source_record_id=observation.source_record_id,
@@ -52,15 +65,16 @@ async def _persist(
                     provenance=observation.provenance,
                     extraction_method=observation.extraction_method,
                 )
-                count += 1
+                if result.inserted:
+                    inserted += 1
+                else:
+                    unchanged += 1
             await finish_ingestion_batch(session, batch)
             await session.commit()
-            return count
+            return inserted, unchanged
         except Exception:
             await session.rollback()
-            batch.status = "failed"
-            await finish_ingestion_batch(session, batch, status="failed")
-            await session.commit()
+            await _mark_batch_failed(batch_id)
             raise
 
 
@@ -73,8 +87,10 @@ async def _run(args: argparse.Namespace) -> int:
             make=args.make,
             model=args.model,
         )
-        count = await _persist(observations, source_name="ebay_motors_metadata")
-        print(f"staged {count} trim/engine candidates")
+        inserted, unchanged = await _persist(
+            observations, source_name="ebay_motors_metadata"
+        )
+        print(f"inserted {inserted} trim/engine candidates; {unchanged} unchanged")
         return 0
 
     vehicle = VehicleApplication(
@@ -90,8 +106,13 @@ async def _run(args: argparse.Namespace) -> int:
         vehicle=vehicle,
         limit=args.limit,
     )
-    count = await _persist(observations, source_name="ebay_motors_browse")
-    print(f"staged {count} inventory/part/fitment observations")
+    inserted, unchanged = await _persist(
+        observations, source_name="ebay_motors_browse"
+    )
+    print(
+        f"inserted {inserted} inventory/part/fitment observations; "
+        f"{unchanged} unchanged"
+    )
     return 0
 
 
