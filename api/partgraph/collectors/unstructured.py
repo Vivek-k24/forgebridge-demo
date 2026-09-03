@@ -33,7 +33,9 @@ def source_document_observation(
 
     Purifiers can later derive structured candidates from this record while
     referring back to its staging record through provenance. The source text
-    is never replaced by the normalized result.
+    is never replaced by the normalized result. ``provider`` and ``dataset``
+    are trusted collector identity fields and cannot be overridden through
+    supplemental provenance.
     """
 
     raw_payload: dict[str, Any] = {
@@ -42,16 +44,17 @@ def source_document_observation(
         "title": document.title,
         "metadata": document.metadata or {},
     }
-    candidate_payload = extracted_candidate or {
-        "document_type": document.content_type,
-        "title": document.title,
-    }
-    source_provenance: dict[str, Any] = {
-        "provider": provider,
-        "dataset": dataset,
-    }
-    if provenance:
-        source_provenance.update(provenance)
+    candidate_payload = (
+        extracted_candidate
+        if extracted_candidate is not None
+        else {
+            "document_type": document.content_type,
+            "title": document.title,
+        }
+    )
+    source_provenance: dict[str, Any] = dict(provenance or {})
+    source_provenance["provider"] = provider
+    source_provenance["dataset"] = dataset
 
     return CollectedObservation(
         source_record_id=document.source_record_id,
