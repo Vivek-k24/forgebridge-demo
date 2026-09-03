@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { apiRequest, CSRF_HEADERS, formatApiFailure } from './api'
+import { YearWheel } from './YearWheel'
 import './garage-workspace.css'
 
 type Resolution = 'matched' | 'ambiguous' | 'manual_candidate'
@@ -363,13 +364,26 @@ export function GarageWorkspace({
 
         {mode === 'manual' ? (
           <form className="garage-form" onSubmit={(event) => void resolveManual(event)}>
-            <div className="garage-form-grid">
-              <label><span>Year</span><input type="number" min={MIN_YEAR} max={MAX_YEAR} value={year} onChange={(event) => { setYear(Number(event.target.value)); setSelection(null) }} /></label>
-              <label><span>Market</span><select value={market} onChange={(event) => { setMarket(event.target.value as 'US' | 'CA'); setSelection(null) }}><option value="US">United States</option><option value="CA">Canada</option></select></label>
-              <label><span>Make</span><input list="garage-makes" value={make} onChange={(event) => { setMake(event.target.value); setSelection(null) }} /><datalist id="garage-makes">{knownMakes.map((item) => <option key={item} value={item} />)}</datalist></label>
-              <label><span>Model</span><input list="garage-models" value={model} onChange={(event) => { setModel(event.target.value); setSelection(null) }} /><datalist id="garage-models">{models.map((item) => <option key={item} value={item} />)}</datalist></label>
-              <label><span>Trim <small>optional</small></span><input list="garage-trims" value={trim} onChange={(event) => { setTrim(event.target.value); setSelection(null) }} /><datalist id="garage-trims">{trims.map((item) => <option key={item} value={item} />)}</datalist></label>
-              <label><span>Generation <small>optional</small></span><input list="garage-generations" value={generation} onChange={(event) => { setGeneration(event.target.value); setSelection(null) }} /><datalist id="garage-generations">{generations.map((item) => <option key={item} value={item} />)}</datalist></label>
+            <div className="garage-vehicle-selector">
+              <div className="garage-year-field">
+                <div className="garage-field-label"><span>Year</span><small>scroll · drag · arrows</small></div>
+                <YearWheel
+                  value={year}
+                  min={MIN_YEAR}
+                  max={MAX_YEAR}
+                  onChange={(nextYear) => {
+                    setYear(nextYear)
+                    setSelection(null)
+                  }}
+                />
+              </div>
+              <div className="garage-detail-fields">
+                <label><span>Market</span><select value={market} onChange={(event) => { setMarket(event.target.value as 'US' | 'CA'); setSelection(null) }}><option value="US">United States</option><option value="CA">Canada</option></select></label>
+                <label><span>Make</span><input list="garage-makes" value={make} onChange={(event) => { setMake(event.target.value); setSelection(null) }} /><datalist id="garage-makes">{knownMakes.map((item) => <option key={item} value={item} />)}</datalist></label>
+                <label><span>Model</span><input list="garage-models" value={model} onChange={(event) => { setModel(event.target.value); setSelection(null) }} /><datalist id="garage-models">{models.map((item) => <option key={item} value={item} />)}</datalist></label>
+                <label><span>Trim <small>optional</small></span><input list="garage-trims" value={trim} onChange={(event) => { setTrim(event.target.value); setSelection(null) }} /><datalist id="garage-trims">{trims.map((item) => <option key={item} value={item} />)}</datalist></label>
+                <label><span>Generation <small>optional</small></span><input list="garage-generations" value={generation} onChange={(event) => { setGeneration(event.target.value); setSelection(null) }} /><datalist id="garage-generations">{generations.map((item) => <option key={item} value={item} />)}</datalist></label>
+              </div>
             </div>
             <button type="submit" disabled={manualBusy}>{manualBusy ? 'Resolving…' : 'Resolve vehicle'}</button>
             {manualError && <div className="workspace-alert workspace-alert--error">{manualError}</div>}
