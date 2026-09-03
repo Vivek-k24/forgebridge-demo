@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { activeRepairSessionId, preferredRepairSessionId, setActiveRepairSessionId } from './active-repair'
 import { apiRequest, formatApiFailure } from './api'
 import { repairMutationHeaders } from './repair-client'
 import './repair-workspaces.css'
@@ -50,16 +51,18 @@ function vehicleLabel(snapshot: ResumeSnapshot) {
 export function ResumeRepairWorkspace({
   onStartRepair,
   onOpenGarage,
+  onOpenReadiness,
   onOpenGuidance,
   onOpenLog,
 }: {
   onStartRepair: () => void
   onOpenGarage: () => void
+  onOpenReadiness: () => void
   onOpenGuidance: () => void
   onOpenLog: () => void
 }) {
   const [sessions, setSessions] = useState<RepairSession[]>([])
-  const [selectedId, setSelectedId] = useState(() => window.sessionStorage.getItem('partgraph:active-repair-session') || '')
+  const [selectedId, setSelectedId] = useState(() => activeRepairSessionId() || '')
   const [snapshot, setSnapshot] = useState<ResumeSnapshot | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -71,10 +74,7 @@ export function ResumeRepairWorkspace({
     try {
       const rows = await apiRequest<RepairSession[]>('/api/v1/repair-sessions', undefined, { retryIdempotent: true })
       setSessions(rows)
-      setSelectedId((current) => {
-        if (current && rows.some((row) => row.id === current)) return current
-        return rows[0]?.id || ''
-      })
+      setSelectedId((current) => preferredRepairSessionId(rows, current))
     } catch (failure) {
       setSessions([])
       setError(formatApiFailure(failure, 'Could not load repair sessions.'))
@@ -86,13 +86,14 @@ export function ResumeRepairWorkspace({
   const loadSnapshot = useCallback(async (sessionId: string) => {
     if (!sessionId) {
       setSnapshot(null)
+      setActiveRepairSessionId(null)
       return
     }
     setError(null)
     try {
       const value = await apiRequest<ResumeSnapshot>(`/api/v1/repair-sessions/${sessionId}/resume`, undefined, { retryIdempotent: true })
       setSnapshot(value)
-      window.sessionStorage.setItem('partgraph:active-repair-session', sessionId)
+      setActiveRepairSessionId(sessionId)
     } catch (failure) {
       setSnapshot(null)
       setError(formatApiFailure(failure, 'Could not build the repair resume view.'))
@@ -170,6 +171,7 @@ export function ResumeRepairWorkspace({
               {snapshot.session.status === 'active' && <button type="button" className="secondary" disabled={busy || !snapshot.lease.can_edit} onClick={() => void mutateSession('pause')}>Pause repair</button>}
               {snapshot.session.status === 'paused' && <button type="button" disabled={busy || !snapshot.lease.can_edit} onClick={() => void mutateSession('resume')}>Resume repair</button>}
               {snapshot.session.status !== 'archived' && <button type="button" className="secondary" disabled={busy || !snapshot.lease.can_edit} onClick={() => void mutateSession('archive')}>Archive repair</button>}
+              <button type="button" onClick={onOpenReadiness}>Open readiness</button>
               <button type="button" onClick={onOpenGuidance}>Open guided repair</button>
               <button type="button" className="secondary" onClick={onOpenLog}>Open repair log</button>
             </div>
