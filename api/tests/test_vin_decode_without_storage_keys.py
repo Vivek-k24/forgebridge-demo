@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 
 import partgraph.identity.user_vehicle.crypto as vin_crypto
@@ -28,7 +29,7 @@ def _register(client: TestClient) -> None:
 
 
 def test_decode_only_vin_works_without_storage_keys_but_save_remains_protected(
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
         vin_crypto,
