@@ -1,11 +1,16 @@
+import asyncio
 import json
+from uuid import uuid4
 
 from partgraph.collectors.ebay import EbayCatalogClient, VehicleApplication
 from partgraph.collectors.staging import (
     CandidateType,
     observation_dedupe_key,
     raw_payload_sha256,
+    stage_observation,
+    start_ingestion_batch,
 )
+from partgraph.database import session_factory
 
 
 def test_raw_hash_and_dedupe_are_deterministic():
@@ -22,6 +27,36 @@ def test_raw_hash_and_dedupe_are_deterministic():
         source_record_id="record-1",
         raw_sha256=first_hash,
     )
+
+
+def test_stage_observation_reuses_atomic_duplicate():
+    async def exercise() -> None:
+        async with session_factory() as session:
+            batch = await start_ingestion_batch(
+                session,
+                source_name=f"collector-test-{uuid4()}",
+                source_type="retailer",
+                collector_version="test-v1",
+            )
+            common = {
+                "batch": batch,
+                "source_record_id": "record-1",
+                "source_url": "https://example.test/record-1",
+                "candidate_type": CandidateType.PART,
+                "raw_payload": {"id": "record-1", "price": "29.99"},
+                "candidate_payload": {"part_number": "BP-123"},
+                "provenance": {"provider": "test"},
+                "extraction_method": "test_fixture",
+            }
+            first = await stage_observation(session, **common)
+            second = await stage_observation(session, **common)
+
+            assert first.inserted is True
+            assert second.inserted is False
+            assert second.record.id == first.record.id
+            await session.rollback()
+
+    asyncio.run(exercise())
 
 
 def test_trim_observations_expand_trim_and_engine_taxonomy():
