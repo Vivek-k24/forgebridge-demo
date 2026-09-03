@@ -15,12 +15,18 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import sys
 from collections.abc import Iterable
 from uuid import UUID
 
 from ..database import session_factory
 from ..knowledge.models import CatalogIngestionBatch
-from .ebay import CollectedObservation, EbayCatalogClient, VehicleApplication
+from .ebay import (
+    CollectedObservation,
+    EbayCatalogClient,
+    EbayCatalogError,
+    VehicleApplication,
+)
 from .staging import finish_ingestion_batch, stage_observation, start_ingestion_batch
 
 COLLECTOR_VERSION = "ebay-v1"
@@ -141,7 +147,12 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
-    return asyncio.run(_run(_parser().parse_args()))
+    args = _parser().parse_args()
+    try:
+        return asyncio.run(_run(args))
+    except (EbayCatalogError, ValueError) as error:
+        print(f"collector error: {error}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":
