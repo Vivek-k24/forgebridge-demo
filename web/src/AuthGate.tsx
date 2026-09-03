@@ -3,6 +3,7 @@ import { ApiFailure, CSRF_HEADERS, apiRequest } from './api'
 import './auth.css'
 
 const USERNAME_PATTERN = /^[A-Za-z0-9_]{3,32}$/
+const SESSION_FAILURE_CODES = ['AUTH_REQUIRED', 'AUTH_SESSION_EXPIRED', 'AUTH_SESSION_REVOKED']
 
 type User = {
   id: string
@@ -12,6 +13,8 @@ type User = {
 }
 
 type AuthResult = { user: User }
+type UnitPreference = 'us_customary' | 'metric'
+type PreferenceRead = { units: UnitPreference }
 
 type AuthState =
   | { status: 'checking' }
@@ -28,6 +31,14 @@ function FailureNotice({ failure }: { failure: ApiFailure }) {
   )
 }
 
+function asApiFailure(error: unknown, message: string, code: string): ApiFailure {
+  return error instanceof ApiFailure ? error : new ApiFailure(message, { code })
+}
+
+function isSessionFailure(failure: ApiFailure): boolean {
+  return SESSION_FAILURE_CODES.includes(failure.code)
+}
+
 export default function AuthGate({ children }: { children: ReactNode }) {
   const [auth, setAuth] = useState<AuthState>({ status: 'checking' })
   const [mode, setMode] = useState<'login' | 'register'>('login')
@@ -37,6 +48,9 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [failure, setFailure] = useState<ApiFailure | null>(null)
+  const [units, setUnits] = useState<UnitPreference | null>(null)
+  const [preferenceBusy, setPreferenceBusy] = useState(false)
+  const [preferenceFailure, setPreferenceFailure] = useState<ApiFailure | null>(null)
 
   const loadSession = useCallback(async () => {
     setAuth({ status: 'checking' })
@@ -44,10 +58,12 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       const result = await apiRequest<AuthResult>('/api/v1/auth/me')
       setAuth({ status: 'signed-in', user: result.user })
     } catch (error) {
-      const apiFailure = error instanceof ApiFailure
-        ? error
-        : new ApiFailure('Could not verify session.', { code: 'CLIENT_SESSION_CHECK_FAILED' })
-      if (['AUTH_REQUIRED', 'AUTH_SESSION_EXPIRED', 'AUTH_SESSION_REVOKED'].includes(apiFailure.code)) {
+      const apiFailure = asApiFailure(
+        error,
+        'Could not verify session.',
+        'CLIENT_SESSION_CHECK_FAILED',
+      )
+      if (isSessionFailure(apiFailure)) {
         setAuth({ status: 'signed-out' })
       } else {
         setAuth({ status: 'unavailable', failure: apiFailure })
@@ -58,6 +74,47 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     void loadSession()
   }, [loadSession])
+
+  useEffect(() => {
+    let active = true
+
+    if (auth.status !== 'signed-in') {
+      setUnits(null)
+      setPreferenceBusy(false)
+      setPreferenceFailure(null)
+      return () => {
+        active = false
+      }
+    }
+
+    async function loadPreferences() {
+      setPreferenceBusy(true)
+      setPreferenceFailure(null)
+      try {
+        const result = await apiRequest<PreferenceRead>('/api/v1/account/preferences')
+        if (active) setUnits(result.units)
+      } catch (error) {
+        const apiFailure = asApiFailure(
+          error,
+          'Could not load account preferences.',
+          'CLIENT_PREFERENCES_LOAD_FAILED',
+        )
+        if (!active) return
+        if (isSessionFailure(apiFailure)) {
+          setAuth({ status: 'signed-out' })
+        } else {
+          setPreferenceFailure(apiFailure)
+        }
+      } finally {
+        if (active) setPreferenceBusy(false)
+      }
+    }
+
+    void loadPreferences()
+    return () => {
+      active = false
+    }
+  }, [auth.status])
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -93,11 +150,40 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       setFailure(null)
       setAuth({ status: 'signed-in', user: result.user })
     } catch (error) {
-      setFailure(error instanceof ApiFailure
-        ? error
-        : new ApiFailure('Authentication failed.', { code: 'CLIENT_AUTH_UNKNOWN_FAILURE' }))
+      setFailure(asApiFailure(
+        error,
+        'Authentication failed.',
+        'CLIENT_AUTH_UNKNOWN_FAILURE',
+      ))
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  async function changeUnits(nextUnits: UnitPreference) {
+    if (nextUnits === units) return
+    setPreferenceBusy(true)
+    setPreferenceFailure(null)
+    try {
+      const result = await apiRequest<PreferenceRead>('/api/v1/account/preferences', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...CSRF_HEADERS },
+        body: JSON.stringify({ units: nextUnits }),
+      })
+      setUnits(result.units)
+    } catch (error) {
+      const apiFailure = asApiFailure(
+        error,
+        'Could not save account preferences.',
+        'CLIENT_PREFERENCES_SAVE_FAILED',
+      )
+      if (isSessionFailure(apiFailure)) {
+        setAuth({ status: 'signed-out' })
+      } else {
+        setPreferenceFailure(apiFailure)
+      }
+    } finally {
+      setPreferenceBusy(false)
     }
   }
 
@@ -109,12 +195,16 @@ export default function AuthGate({ children }: { children: ReactNode }) {
         method: 'POST',
         headers: CSRF_HEADERS,
       })
+      setUnits(null)
+      setPreferenceFailure(null)
       setAuth({ status: 'signed-out' })
       setPassword('')
     } catch (error) {
-      setFailure(error instanceof ApiFailure
-        ? error
-        : new ApiFailure('Logout could not be confirmed.', { code: 'CLIENT_LOGOUT_UNKNOWN_FAILURE' }))
+      setFailure(asApiFailure(
+        error,
+        'Logout could not be confirmed.',
+        'CLIENT_LOGOUT_UNKNOWN_FAILURE',
+      ))
     } finally {
       setSubmitting(false)
     }
@@ -237,15 +327,35 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   return (
     <div className="authenticated-shell">
       <div className="account-strip">
-        <div>
+        <div className="account-identity">
           <span className="account-dot" aria-hidden="true" />
           <span className="account-status">PRIVATE SESSION</span>
           <span className="account-email">@{auth.user.username} · {auth.user.email}</span>
         </div>
-        {failure && <span className="account-warning">{failure.code}</span>}
-        <button type="button" onClick={() => void logout()} disabled={submitting}>
-          {submitting ? 'Working…' : 'Sign out'}
-        </button>
+        <div className="account-actions">
+          <label className="account-units">
+            <span>Units</span>
+            <select
+              aria-label="Measurement units"
+              value={units ?? ''}
+              disabled={preferenceBusy}
+              onChange={(event) => void changeUnits(event.target.value as UnitPreference)}
+            >
+              {units === null && <option value="">Unavailable</option>}
+              <option value="us_customary">US customary</option>
+              <option value="metric">Metric</option>
+            </select>
+          </label>
+          {preferenceFailure && (
+            <span className="account-warning" title={preferenceFailure.message}>
+              {preferenceFailure.code}
+            </span>
+          )}
+          {failure && <span className="account-warning">{failure.code}</span>}
+          <button type="button" onClick={() => void logout()} disabled={submitting}>
+            {submitting ? 'Working…' : 'Sign out'}
+          </button>
+        </div>
       </div>
       {children}
     </div>
