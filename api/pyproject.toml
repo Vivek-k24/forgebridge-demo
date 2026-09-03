@@ -43,4 +43,4 @@ select = ["B", "E", "F", "I", "UP"]
 entrypoint = "partgraph.main:app"
 
 [tool.vercel.scripts]
-build = "alembic -c alembic.ini upgrade head"
+build = "sh -c 'if [ \"$VERCEL_ENV\" = \"production\" ]; then alembic -c alembic.ini upgrade head; else echo Skipping database migrations for Vercel preview; fi'"
