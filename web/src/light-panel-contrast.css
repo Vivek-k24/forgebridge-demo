@@ -1,87 +1,150 @@
 /*
- * PartGraph uses a dark application shell with a few intentionally light
- * workspaces. Those light panels must opt into a dark foreground instead of
- * inheriting the shell's light text color.
+ * Repair workspaces share the same dark slate / matrix-green visual language as
+ * the Garage. This replaces the temporary light-panel contrast patch from PR #80.
  */
-.garage-workspace .panel,
 .repair-workspace-shell .panel {
-  color: #17202a;
-  color-scheme: light;
+  color: #edf3f4;
+  color-scheme: dark;
+  background:
+    linear-gradient(rgba(77, 128, 99, .035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(77, 128, 99, .03) 1px, transparent 1px),
+    #142129;
+  background-size: 28px 28px;
+  border-color: #30444a;
+  box-shadow: 0 18px 52px rgba(0, 0, 0, .2);
 }
 
-.garage-workspace .panel h3,
-.garage-workspace .panel h4,
+.repair-workspace-shell .panel h2 {
+  color: #6fa88a;
+}
+
 .repair-workspace-shell .panel h3,
 .repair-workspace-shell .panel h4 {
-  color: #17202a;
+  color: #f1f5f4;
 }
 
-.garage-workspace .panel p,
-.garage-workspace .panel label,
-.garage-workspace .panel .empty-state,
-.garage-workspace .panel .inline-check,
 .repair-workspace-shell .panel p,
 .repair-workspace-shell .panel label,
 .repair-workspace-shell .panel .repair-empty {
-  color: #334155;
+  color: #d7e1e4;
 }
 
-.garage-workspace .panel .eyebrow {
-  color: #4f806b;
+.repair-workspace-shell .panel .eyebrow {
+  color: #68a786;
   opacity: 1;
 }
 
-.garage-workspace .panel .muted,
-.repair-workspace-shell .panel .muted {
-  color: #64748b;
+.repair-workspace-shell .panel .muted,
+.repair-workspace-shell .repair-context-card span,
+.repair-workspace-shell .repair-list li span,
+.repair-workspace-shell .repair-list li small,
+.repair-workspace-shell .hardware-card span,
+.repair-workspace-shell .hardware-card small,
+.repair-workspace-shell .event-timeline li > span,
+.repair-workspace-shell .event-timeline small {
+  color: #8b9ca3;
   opacity: 1;
 }
 
-.garage-workspace .garage-form label span,
-.garage-workspace .resolution-card label span,
 .repair-workspace-shell .start-repair-form label > span {
-  color: #334155;
+  color: #cbd7da;
 }
 
-.garage-workspace .garage-form input,
-.garage-workspace .garage-form select,
-.garage-workspace .resolution-card input,
 .repair-workspace-shell .start-repair-form input,
 .repair-workspace-shell .start-repair-form select,
 .repair-workspace-shell .compact-form input,
 .repair-workspace-shell .compact-form select,
 .repair-workspace-shell .compact-form textarea,
 .repair-workspace-shell .repair-panel select {
-  background: #ffffff;
-  color: #17202a;
-  -webkit-text-fill-color: #17202a;
+  color: #f0f5f5;
+  -webkit-text-fill-color: #f0f5f5;
+  background: #0f1a20;
+  border-color: #31454d;
+  outline: none;
 }
 
-.garage-workspace input::placeholder,
-.garage-workspace textarea::placeholder,
 .repair-workspace-shell input::placeholder,
 .repair-workspace-shell textarea::placeholder {
-  color: #64748b;
+  color: #657a83;
+  -webkit-text-fill-color: #657a83;
   opacity: 1;
 }
 
-.garage-workspace input:disabled,
-.garage-workspace select:disabled,
-.garage-workspace textarea:disabled,
+.repair-workspace-shell .start-repair-form input:focus,
+.repair-workspace-shell .start-repair-form select:focus,
+.repair-workspace-shell .compact-form input:focus,
+.repair-workspace-shell .compact-form select:focus,
+.repair-workspace-shell .compact-form textarea:focus,
+.repair-workspace-shell .repair-panel select:focus {
+  border-color: #568f73;
+  box-shadow: 0 0 0 3px rgba(86, 143, 115, .14);
+}
+
 .repair-workspace-shell input:disabled,
 .repair-workspace-shell select:disabled,
 .repair-workspace-shell textarea:disabled {
-  background: #f1f5f9;
-  color: #475569;
-  -webkit-text-fill-color: #475569;
+  color: #8b9ba1;
+  -webkit-text-fill-color: #8b9ba1;
+  background: #111b21;
   opacity: 1;
 }
 
-.garage-workspace .secondary,
-.repair-workspace-shell .text-button {
-  color: #334155 !important;
+.repair-workspace-shell .repair-context-card,
+.repair-workspace-shell .repair-empty,
+.repair-workspace-shell .count-grid > div,
+.repair-workspace-shell .hardware-card {
+  color: #d7e1e4;
+  background: #101b21;
+  border-color: #2f4147;
 }
 
-.garage-workspace .empty-state {
-  color: #475569;
+.repair-workspace-shell .next-action-card {
+  color: #dce8e4;
+  background: rgba(31, 104, 78, .22);
+  border-color: rgba(77, 145, 112, .5);
+  box-shadow: inset 3px 0 #568f73;
+}
+
+.repair-workspace-shell .repair-list li,
+.repair-workspace-shell .event-timeline li {
+  border-color: #2b3b42;
+}
+
+.repair-workspace-shell .lease-banner {
+  color: #e6c797;
+  background: rgba(92, 67, 24, .26);
+  border-color: #6e5933;
+}
+
+.repair-workspace-shell .status-pill--warn {
+  color: #e6c797;
+  background: rgba(92, 67, 24, .3) !important;
+}
+
+.repair-workspace-shell .status-pill--ok {
+  color: #bce7cd;
+  background: rgba(30, 93, 64, .3) !important;
+}
+
+.repair-workspace-shell button:not(.text-button):not(.secondary) {
+  color: #f7fbf9;
+  background: #2f7655;
+  border: 1px solid #4b9270;
+  box-shadow: inset 0 -2px rgba(8, 34, 23, .28);
+}
+
+.repair-workspace-shell button:not(.text-button):not(.secondary):hover:not(:disabled) {
+  background: #388866;
+  border-color: #65ad87;
+}
+
+.repair-workspace-shell button.secondary {
+  color: #c8d6d2 !important;
+  background: #17242a !important;
+  border: 1px solid #3a5149 !important;
+}
+
+.repair-workspace-shell .text-button {
+  color: #8fc7aa !important;
+  background: transparent !important;
 }
