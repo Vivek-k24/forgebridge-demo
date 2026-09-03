@@ -16,12 +16,12 @@ from .service import (
     archive_user_vehicle,
     create_manual_user_vehicle,
     create_vin_user_vehicle,
-    decode_user_vin,
     get_user_vehicle,
     list_user_vehicles,
     serialize_user_vehicle,
     serialize_vin_resolution,
 )
+from .vin_decode import decode_user_vin
 
 ERROR_RESPONSES = {
     401: {"model": ErrorEnvelope},
