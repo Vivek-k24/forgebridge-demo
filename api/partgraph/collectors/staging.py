@@ -7,12 +7,14 @@ part, fitment claim, or inventory offer directly into canonical truth.
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 from enum import StrEnum
 from hashlib import sha256
 from typing import Any
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..knowledge.models import CatalogIngestionBatch, CatalogSourceRecord
@@ -23,6 +25,13 @@ class CandidateType(StrEnum):
     PART = "part_candidate"
     PART_FITMENT = "part_fitment_candidate"
     INVENTORY_OFFER = "inventory_offer_candidate"
+    SOURCE_DOCUMENT = "source_document_candidate"
+
+
+@dataclass(frozen=True, slots=True)
+class StageResult:
+    record: CatalogSourceRecord
+    inserted: bool
 
 
 def canonical_json_bytes(payload: dict[str, Any]) -> bytes:
@@ -92,15 +101,27 @@ async def stage_observation(
     confidence: float | Decimal | None = None,
     observed_at: datetime | None = None,
     fetched_at: datetime | None = None,
-) -> CatalogSourceRecord:
+) -> StageResult:
     """Persist one immutable raw observation and its extracted candidate.
 
     The dedupe key includes the raw checksum. A listing or source record may
     therefore be observed again when its price, availability, fitment, or
-    other source payload changes without overwriting prior evidence.
+    other source payload changes without overwriting prior evidence. An
+    unchanged observation is idempotently reused instead of failing the batch.
     """
 
     raw_hash = raw_payload_sha256(raw_payload)
+    dedupe_key = observation_dedupe_key(
+        source_name=batch.source_name,
+        source_record_id=source_record_id,
+        raw_sha256=raw_hash,
+    )
+    existing = await session.scalar(
+        select(CatalogSourceRecord).where(CatalogSourceRecord.dedupe_key == dedupe_key)
+    )
+    if existing is not None:
+        return StageResult(record=existing, inserted=False)
+
     record = CatalogSourceRecord(
         batch_id=batch.id,
         source_record_id=source_record_id,
@@ -116,12 +137,8 @@ async def stage_observation(
         extraction_method=extraction_method,
         confidence=Decimal(str(confidence)) if confidence is not None else None,
         review_status="pending",
-        dedupe_key=observation_dedupe_key(
-            source_name=batch.source_name,
-            source_record_id=source_record_id,
-            raw_sha256=raw_hash,
-        ),
+        dedupe_key=dedupe_key,
     )
     session.add(record)
     await session.flush()
-    return record
+    return StageResult(record=record, inserted=True)
