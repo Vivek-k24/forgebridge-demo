@@ -98,7 +98,7 @@ export default function PartGraphShell() {
   } else if (page === 'readiness') {
     content = <RepairMemoryWorkspace />
   } else if (page === 'guidance') {
-    content = <GuidedRepairWorkspace />
+    content = <GuidedRepairWorkspace onOpenReadiness={() => navigate('readiness')} onStartRepair={() => navigate('start')} />
   } else if (page === 'log') {
     content = <RepairLogWorkspace />
   } else {
@@ -109,6 +109,7 @@ export default function PartGraphShell() {
           navigate('start')
         }}
         onOpenGarage={() => navigate('garage')}
+        onOpenReadiness={() => navigate('readiness')}
         onOpenGuidance={() => navigate('guidance')}
         onOpenLog={() => navigate('log')}
       />
