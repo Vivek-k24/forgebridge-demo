@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 from uuid import NAMESPACE_URL, UUID, uuid5
 
-from sqlalchemy import func, select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
@@ -22,6 +22,8 @@ from .workbench_sources import SourceFetchResult, fetch_source, source_requests
 
 COLLECTOR_VERSION = "local-workbench-v1"
 VERIFIER = "partgraph_local_workbench_three_source_v1"
+STALE_JOB_SECONDS = 60
+PROVIDERS = ("nhtsa_vpic", "cars_com", "edmunds", "kbb", "motortrend")
 
 
 def _now() -> datetime:
@@ -50,6 +52,42 @@ async def _log(
             details=details or {},
         )
     )
+
+
+async def _recover_interrupted_jobs() -> int:
+    cutoff = _now() - timedelta(seconds=STALE_JOB_SECONDS)
+    recovered = 0
+    async with session_factory() as session:
+        async with session.begin():
+            jobs = list(
+                await session.scalars(
+                    select(CatalogCollectionJob)
+                    .where(
+                        CatalogCollectionJob.status == "running",
+                        or_(
+                            CatalogCollectionJob.last_heartbeat_at.is_(None),
+                            CatalogCollectionJob.last_heartbeat_at < cutoff,
+                        ),
+                    )
+                    .with_for_update(skip_locked=True)
+                )
+            )
+            for job in jobs:
+                job.status = "queued"
+                job.last_error = None
+                await _log(
+                    session,
+                    job.id,
+                    "job_recovered",
+                    (
+                        f"Recovered interrupted {job.make} job at candidate "
+                        f"{job.cursor_position + 1}."
+                    ),
+                    level="warning",
+                    details={"cursor_position": job.cursor_position},
+                )
+                recovered += 1
+    return recovered
 
 
 async def _claim_next_job() -> UUID | None:
@@ -303,6 +341,7 @@ async def _process_configuration(
             if job.status != "running":
                 return False
             coverage.collection_status = "collecting"
+            job.last_heartbeat_at = _now()
             await _log(
                 session,
                 job.id,
@@ -335,6 +374,7 @@ async def _process_configuration(
                 current_configuration = await session.get(VehicleConfiguration, configuration_id)
                 if job is None or current_configuration is None:
                     return True
+                job.last_heartbeat_at = _now()
                 source = await _record_source_attempt(
                     session,
                     job,
@@ -412,6 +452,7 @@ async def _process_configuration(
                 configuration.identity_source = "multi_source"
                 await _promote_matching_evidence(session, configuration, matching)
             job.last_configuration_id = configuration.id
+            job.last_heartbeat_at = _now()
             await _log(
                 session,
                 job.id,
@@ -431,7 +472,7 @@ async def _process_configuration(
 
 
 async def _complete_ingestion_batches(session: AsyncSession, job_id: UUID) -> None:
-    for provider in ("nhtsa_vpic", "cars_com", "edmunds", "kbb", "motortrend"):
+    for provider in PROVIDERS:
         batch = await session.get(CatalogIngestionBatch, _stable_id(f"ingestion:{job_id}:{provider}"))
         if batch is not None and batch.status == "open":
             batch.status = "completed"
@@ -514,6 +555,7 @@ async def worker_loop() -> None:
         )
     try:
         while True:
+            await _recover_interrupted_jobs()
             job_id = await _claim_next_job()
             if job_id is None:
                 await asyncio.sleep(settings.workbench_poll_seconds)
