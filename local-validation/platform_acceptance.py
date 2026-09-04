@@ -123,6 +123,76 @@ def main() -> int:
                 raise AssertionError(f"preference update not persisted: {preference}")
             checks.append("account preferences")
 
+            manual_missing_trim = client.post(
+                "/api/v1/user-vehicles/manual",
+                json={
+                    "selection": {
+                        "year": 2012,
+                        "market": "US",
+                        "make": "Toyota",
+                        "model": "Acceptance Selector",
+                    }
+                },
+                headers=headers(),
+            )
+            if manual_missing_trim.status_code != 422:
+                raise AssertionError(
+                    "manual trim requirement expected 422, "
+                    f"got {manual_missing_trim.status_code}: {body(manual_missing_trim)}"
+                )
+            checks.append("manual trim required")
+
+            manual_unverified = client.post(
+                "/api/v1/user-vehicles/manual",
+                json={
+                    "selection": {
+                        "year": 2012,
+                        "market": "US",
+                        "make": "Toyota",
+                        "model": "Acceptance Selector",
+                        "trim": "Not A Canonical Trim",
+                    }
+                },
+                headers=headers(),
+            )
+            require_error(
+                manual_unverified,
+                422,
+                "USER_VEHICLE_IDENTITY_UNVERIFIED",
+                "manual unverified identity",
+            )
+            checks.append("manual unverified identity rejection")
+
+            manual_vehicle = require(
+                client.post(
+                    "/api/v1/user-vehicles/manual",
+                    json={
+                        "nickname": "Acceptance Manual",
+                        "selection": {
+                            "year": 2012,
+                            "market": "US",
+                            "make": "Toyota",
+                            "model": "Acceptance Selector",
+                            "trim": "Test Trim",
+                            "body_style": "Sedan",
+                            "engine": "2.5L I4",
+                            "transmission": "Automatic",
+                            "drivetrain": "FWD",
+                        },
+                    },
+                    headers=headers(),
+                ),
+                201,
+                "save verified manual vehicle",
+            )
+            if manual_vehicle["canonical_configuration_id"] is None:
+                raise AssertionError(f"manual vehicle lacks canonical identity: {manual_vehicle}")
+            if manual_vehicle["identity_resolution"] != "matched":
+                raise AssertionError(f"manual vehicle was not exactly matched: {manual_vehicle}")
+            if manual_vehicle["identity"]["trim"] != "Test Trim":
+                raise AssertionError(f"manual vehicle trim changed unexpectedly: {manual_vehicle}")
+            checks.append("manual canonical identity save")
+
             provider = require(
                 client.post(
                     "/api/v1/user-vehicles/vin/decode",
