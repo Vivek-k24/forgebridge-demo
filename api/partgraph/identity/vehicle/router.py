@@ -6,15 +6,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_session
 from .policy import validate_supported_year
+from .reconciliation import reconcile_vehicle_specification_profile
 from .schemas import (
     VehicleBrandRead,
     VehicleConfigurationRead,
     VehicleSelectionInput,
     VehicleSelectionNormalized,
     VehicleSelectionResult,
+    VehicleSpecificationProfileRead,
 )
 from .service import (
     get_configuration,
+    get_specification_profile,
     list_configurations,
     list_generation_options,
     list_model_options,
@@ -146,6 +149,40 @@ async def configurations(
 ) -> list[VehicleConfigurationRead]:
     items = await list_configurations(session, limit)
     return [VehicleConfigurationRead.model_validate(item) for item in items]
+
+
+@router.get(
+    "/vehicle-configurations/{configuration_id}/profile/reconciliation",
+    response_model=dict[str, object],
+)
+async def configuration_profile_reconciliation(
+    configuration_id: UUID,
+    session: SessionDep,
+) -> dict[str, object]:
+    item = await get_configuration(session, configuration_id)
+    if item is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="vehicle configuration not found",
+        )
+    return await reconcile_vehicle_specification_profile(session, configuration_id)
+
+
+@router.get(
+    "/vehicle-configurations/{configuration_id}/profile",
+    response_model=VehicleSpecificationProfileRead,
+)
+async def configuration_profile(
+    configuration_id: UUID,
+    session: SessionDep,
+) -> VehicleSpecificationProfileRead:
+    item = await get_specification_profile(session, configuration_id)
+    if item is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="vehicle specification profile not found",
+        )
+    return VehicleSpecificationProfileRead.model_validate(item)
 
 
 @router.get(

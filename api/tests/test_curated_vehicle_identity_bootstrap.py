@@ -13,7 +13,7 @@ from partgraph.knowledge.models import (
     RepairDefinition,
 )
 
-IDENTITY_HASH = "31111f85a4f95ba85abbe452c132c20eddd02e0f7242c088e49f1a328bee45cb"
+IDENTITY_HASH = "82a410dc96832dc6014dba8e94dc0e693de67ce4d34e2b4fc0025fe4c902d787"
 SOURCE_KEY = "nhtsa-honda-tech-line-dp10004"
 SOURCE_RECORD_ID = "INRD-DP10004-48962P:p390"
 NORMALIZED_KEY = "vehicle:US:2009:Honda:CIVIC:HYBRID"
@@ -57,11 +57,11 @@ def test_curated_honda_identity_is_verified_and_has_no_repair_truth() -> None:
             assert vehicle.make == "Honda"
             assert vehicle.model == "CIVIC"
             assert vehicle.trim == "HYBRID"
-            assert vehicle.engine == "I4 HYBRID"
+            assert vehicle.engine == "1.3L I4 HYBRID"
             assert vehicle.transmission == "CVT"
-            assert vehicle.body_style is None
-            assert vehicle.drivetrain is None
-            assert vehicle.identity_source == "nhtsa"
+            assert vehicle.body_style == "Sedan"
+            assert vehicle.drivetrain == "FWD"
+            assert vehicle.identity_source == "multi_source"
             assert vehicle.verification_status == "verified"
 
             claim = await session.scalar(
@@ -85,7 +85,7 @@ def test_curated_honda_identity_is_verified_and_has_no_repair_truth() -> None:
     asyncio.run(scenario())
 
 
-def test_richer_owner_input_matches_the_less_specific_verified_identity() -> None:
+def test_richer_owner_input_matches_the_verified_reference_identity() -> None:
     async def scenario() -> None:
         async with session_factory() as session:
             resolution, normalized, matches = await resolve_selection(
@@ -96,8 +96,10 @@ def test_richer_owner_input_matches_the_less_specific_verified_identity() -> Non
                     make="Honda",
                     model="Civic",
                     trim="Hybrid",
+                    body_style="Sedan",
                     engine="1.3L I4 Hybrid",
                     transmission="CVT",
+                    drivetrain="FWD",
                 ),
             )
 
@@ -105,6 +107,8 @@ def test_richer_owner_input_matches_the_less_specific_verified_identity() -> Non
             assert normalized["engine"] == "1.3L I4 HYBRID"
             assert len(matches) == 1
             assert matches[0].identity_hash == IDENTITY_HASH
-            assert matches[0].engine == "I4 HYBRID"
+            assert matches[0].engine == "1.3L I4 HYBRID"
+            assert matches[0].body_style == "Sedan"
+            assert matches[0].drivetrain == "FWD"
 
     asyncio.run(scenario())

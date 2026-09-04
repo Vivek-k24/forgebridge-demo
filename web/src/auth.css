@@ -128,7 +128,8 @@
 }
 
 .auth-submit:disabled,
-.account-strip button:disabled {
+.account-strip button:disabled,
+.account-units select:disabled {
   cursor: progress;
   opacity: 0.65;
 }
@@ -200,11 +201,18 @@
   backdrop-filter: blur(12px);
 }
 
-.account-strip > div {
+.account-strip > div,
+.account-identity,
+.account-actions {
   display: flex;
   align-items: center;
   min-width: 0;
   gap: 8px;
+}
+
+.account-actions {
+  justify-content: flex-end;
+  flex: 0 0 auto;
 }
 
 .account-dot {
@@ -233,6 +241,30 @@
   font: 650 0.67rem/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
+.account-units {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #7e9299;
+  font-size: 0.72rem;
+}
+
+.account-units select {
+  min-height: 34px;
+  border: 1px solid rgba(113, 148, 139, 0.22);
+  border-radius: 9px;
+  padding: 0 28px 0 10px;
+  color: #cbd5d8;
+  background: #101c23;
+  font: inherit;
+  outline: none;
+}
+
+.account-units select:focus {
+  border-color: #4a7f69;
+  box-shadow: 0 0 0 2px rgba(48, 105, 78, 0.14);
+}
+
 .account-strip button {
   min-height: 34px;
   padding: 0 12px;
@@ -240,6 +272,18 @@
   color: #cbd5d8;
   background: #101c23;
   font-size: 0.78rem;
+}
+
+@media (max-width: 720px) {
+  .account-strip {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .account-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
 }
 
 @media (max-width: 560px) {
@@ -261,7 +305,12 @@
   }
 
   .account-status,
-  .account-warning {
+  .account-warning,
+  .account-units > span {
     display: none;
+  }
+
+  .account-units select {
+    max-width: 145px;
   }
 }
