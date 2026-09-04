@@ -7,10 +7,13 @@ from pydantic import BaseModel, ConfigDict
 
 class CatalogCoverageMakeProgress(BaseModel):
     make: str
+    candidates: int
     collected: int
     verified: int
     conflict: int
-    remaining: int
+    collection_remaining: int
+    verification_remaining: int
+    collection_percent: float
     verification_percent: float
 
 
@@ -24,10 +27,13 @@ class CatalogCoverageBatchRead(BaseModel):
     verification_rule: str
     status: Literal["collecting", "verifying", "verified", "superseded"]
     scope: dict[str, object]
+    candidates: int
     collected: int
     verified: int
     conflict: int
-    remaining: int
+    collection_remaining: int
+    verification_remaining: int
+    collection_percent: float
     verification_percent: float
     makes: list[CatalogCoverageMakeProgress]
     created_at: datetime
