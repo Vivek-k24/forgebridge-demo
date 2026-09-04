@@ -28,7 +28,7 @@ def _register(client: TestClient) -> None:
     assert response.status_code == 200, response.text
 
 
-def test_decode_only_vin_works_without_storage_keys_but_save_remains_protected(
+def test_decode_and_identity_save_work_without_storage_keys_while_vin_storage_stays_protected(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
@@ -66,9 +66,14 @@ def test_decode_only_vin_works_without_storage_keys_but_save_remains_protected(
             json={"market": "US", "vin": VALID_VIN},
             headers=CSRF,
         )
-        saved = client.post(
+        protected_save = client.post(
             "/api/v1/user-vehicles/vin",
             json={"market": "US", "vin": VALID_VIN},
+            headers=CSRF,
+        )
+        identity_save = client.post(
+            "/api/v1/user-vehicles/vin/identity",
+            json={"market": "US", "vin": VALID_VIN, "nickname": "Accord"},
             headers=CSRF,
         )
 
@@ -77,9 +82,21 @@ def test_decode_only_vin_works_without_storage_keys_but_save_remains_protected(
     assert decoded.json()["provider"] == "nhtsa_vpic"
     assert decoded.json()["masked_vin"] == "***********004352"
     assert VALID_VIN not in decoded.text
-    assert calls == 1
 
-    assert saved.status_code == 503, saved.text
-    error = saved.json()["error"]
+    assert protected_save.status_code == 503, protected_save.text
+    error = protected_save.json()["error"]
     assert error["code"] == "VIN_CRYPTO_UNAVAILABLE"
-    assert VALID_VIN not in saved.text
+    assert VALID_VIN not in protected_save.text
+
+    assert identity_save.status_code == 201, identity_save.text
+    saved = identity_save.json()
+    assert saved["nickname"] == "Accord"
+    assert saved["identity_source"] == "vin"
+    assert saved["identity"]["year"] == 2003
+    assert saved["identity"]["make"] == "Honda"
+    assert saved["identity"]["model"] == "Accord"
+    assert saved["identity"]["trim"] == "EX"
+    assert saved["masked_vin"] is None
+    assert saved["decoder_provider"] == "nhtsa_vpic"
+    assert VALID_VIN not in identity_save.text
+    assert calls == 2
