@@ -19,7 +19,9 @@ type NavItem = {
 
 const WORKBENCH_ENABLED = import.meta.env.VITE_PARTGRAPH_WORKBENCH_ENABLED === 'true'
 const NAV_ITEMS: NavItem[] = [
-  ...(WORKBENCH_ENABLED ? [{ key: 'catalog' as const, label: 'Catalog workbench', group: 'data' as const }] : []),
+  ...(WORKBENCH_ENABLED
+    ? [{ key: 'catalog' as const, label: 'Catalog workbench', group: 'data' as const }]
+    : []),
   { key: 'garage', label: 'Garage', group: 'vehicle' },
   { key: 'start', label: 'Start repair', group: 'repair' },
   { key: 'resume', label: 'Resume repair', group: 'repair' },
@@ -108,7 +110,12 @@ export default function PartGraphShell() {
   } else if (page === 'readiness') {
     content = <RepairMemoryWorkspace />
   } else if (page === 'guidance') {
-    content = <GuidedRepairWorkspace onOpenReadiness={() => navigate('readiness')} onStartRepair={() => navigate('start')} />
+    content = (
+      <GuidedRepairWorkspace
+        onOpenReadiness={() => navigate('readiness')}
+        onStartRepair={() => navigate('start')}
+      />
+    )
   } else if (page === 'log') {
     content = <RepairLogWorkspace />
   } else {
@@ -118,8 +125,7 @@ export default function PartGraphShell() {
           setPreferredVehicleId(null)
           navigate('start')
         }}
-        onOpenGarage={() => navigate('garage')
-        }
+        onOpenGarage={() => navigate('garage')}
         onOpenReadiness={() => navigate('readiness')}
         onOpenGuidance={() => navigate('guidance')}
         onOpenLog={() => navigate('log')}
