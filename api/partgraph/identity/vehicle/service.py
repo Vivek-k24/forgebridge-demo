@@ -370,6 +370,15 @@ async def resolve_selection(
             and comparison_key("trim", candidate.trim) == trim_key
         ]
 
+    if isinstance(normalized["generation"], str):
+        generation_key = comparison_key("generation", normalized["generation"])
+        matches = [
+            candidate
+            for candidate in matches
+            if candidate.generation is not None
+            and comparison_key("generation", candidate.generation) == generation_key
+        ]
+
     for field in SELECTION_DETAIL_FIELDS:
         incoming = normalized[field]
         if not isinstance(incoming, str):
