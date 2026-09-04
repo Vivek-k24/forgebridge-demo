@@ -82,22 +82,6 @@ def _snapshot_from_configuration(configuration: VehicleConfiguration) -> Vehicle
     )
 
 
-def _optional_text(values: dict[str, int | str | None], key: str) -> str | None:
-    value = values.get(key)
-    return value if isinstance(value, str) else None
-
-
-def _snapshot_from_selection(values: dict[str, int | str | None]) -> VehicleIdentitySnapshot:
-    return VehicleIdentitySnapshot(
-        year=int(values["year"]),
-        market=str(values["market"]),
-        make=str(values["make"]),
-        model=str(values["model"]),
-        generation=_optional_text(values, "generation"),
-        trim=_optional_text(values, "trim"),
-    )
-
-
 def _detail_tokens(field: str, value: str) -> set[str]:
     return {token for token in comparison_key(field, value).split("|") if token}
 
@@ -318,7 +302,7 @@ async def create_manual_user_vehicle(
     payload: ManualUserVehicleCreate,
 ) -> UserVehicle:
     try:
-        resolution, normalized, matches = await resolve_selection(session, payload.selection)
+        resolution, _, matches = await resolve_selection(session, payload.selection)
     except VehicleIdentityError as exc:
         raise PartGraphError(
             code=ErrorCode.REQUEST_VALIDATION_FAILED,
@@ -326,19 +310,29 @@ async def create_manual_user_vehicle(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         ) from exc
 
-    canonical_configuration_id: UUID | None = None
-    if resolution == "matched":
-        canonical_configuration_id = matches[0].id
-        identity = _snapshot_from_configuration(matches[0])
-    else:
-        identity = _snapshot_from_selection(normalized)
+    if resolution != "matched" or len(matches) != 1:
+        message = (
+            "This vehicle selection matches multiple canonical configurations. "
+            "Choose a more exact configuration before saving."
+            if resolution == "ambiguous"
+            else "This vehicle selection is not verified in PartGraph canonical vehicle data "
+            "and cannot be saved yet."
+        )
+        raise PartGraphError(
+            code=ErrorCode.USER_VEHICLE_IDENTITY_UNVERIFIED,
+            message=message,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            details={"resolution": resolution},
+        )
 
+    configuration = matches[0]
+    identity = _snapshot_from_configuration(configuration)
     vehicle = UserVehicle(
         user_id=user_id,
-        canonical_configuration_id=canonical_configuration_id,
+        canonical_configuration_id=configuration.id,
         nickname=payload.nickname,
         identity_source="manual",
-        identity_resolution=resolution,
+        identity_resolution="matched",
         identity_snapshot=identity.model_dump(mode="json"),
     )
     session.add(vehicle)
