@@ -21,7 +21,7 @@ from .service import (
     serialize_user_vehicle,
     serialize_vin_resolution,
 )
-from .vin_decode import decode_user_vin
+from .vin_decode import create_vin_identity_user_vehicle, decode_user_vin
 
 ERROR_RESPONSES = {
     401: {"model": ErrorEnvelope},
@@ -103,6 +103,25 @@ async def create_from_vin(
     session: AuthSessionDep,
 ) -> UserVehicleRead:
     item = await create_vin_user_vehicle(
+        session,
+        user_id=user.id,
+        payload=payload,
+    )
+    return UserVehicleRead.model_validate(serialize_user_vehicle(item))
+
+
+@router.post(
+    "/vin/identity",
+    response_model=UserVehicleRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[CsrfDep],
+)
+async def create_from_vin_identity(
+    payload: VinUserVehicleCreate,
+    user: CurrentUserDep,
+    session: AuthSessionDep,
+) -> UserVehicleRead:
+    item = await create_vin_identity_user_vehicle(
         session,
         user_id=user.id,
         payload=payload,
