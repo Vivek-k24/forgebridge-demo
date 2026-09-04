@@ -56,8 +56,16 @@ class CatalogCoverageItem(Base):
             name="ck_catalog_coverage_items_source_match_count",
         ),
         CheckConstraint(
+            "source_observation_count >= 0",
+            name="ck_catalog_coverage_items_source_observation_count",
+        ),
+        CheckConstraint(
             "verification_status IN ('unverified', 'verified', 'conflict')",
             name="ck_catalog_coverage_items_verification_status",
+        ),
+        CheckConstraint(
+            "collection_status IN ('pending', 'collecting', 'collected', 'failed')",
+            name="ck_catalog_coverage_items_collection_status",
         ),
         UniqueConstraint(
             "batch_id",
@@ -80,11 +88,18 @@ class CatalogCoverageItem(Base):
         nullable=False,
         index=True,
     )
+    collection_status: Mapped[str] = mapped_column(
+        String(24), nullable=False, default="pending"
+    )
     verification_status: Mapped[str] = mapped_column(
         String(24), nullable=False, default="unverified"
     )
+    source_observation_count: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=0
+    )
     source_match_count: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
     source_matrix: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict)
+    last_collected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
