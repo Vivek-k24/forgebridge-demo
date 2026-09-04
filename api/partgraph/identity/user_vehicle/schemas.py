@@ -32,6 +32,13 @@ class ManualUserVehicleCreate(BaseModel):
         cleaned = " ".join(value.split())
         return cleaned or None
 
+    @field_validator("selection")
+    @classmethod
+    def require_trim(cls, value: VehicleSelectionInput) -> VehicleSelectionInput:
+        if value.trim is None or not value.trim.strip():
+            raise ValueError("trim is required for manual garage vehicles")
+        return value
+
 
 class VinRequest(BaseModel):
     market: str = Field(min_length=1, max_length=64)
