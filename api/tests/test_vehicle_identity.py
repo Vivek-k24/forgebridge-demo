@@ -15,6 +15,11 @@ async def no_provider_models(*, year: int, make: str) -> tuple[str, ...]:
     return ()
 
 
+async def no_provider_trims(*, year: int, make: str, model: str) -> tuple[str, ...]:
+    del year, make, model
+    return ()
+
+
 def seed_configuration(payload: dict[str, object]) -> str:
     async def seed() -> str:
         async with session_factory() as session:
@@ -45,6 +50,7 @@ def test_public_api_does_not_create_canonical_vehicle_truth() -> None:
 
 def test_vehicle_options_are_read_from_known_canonical_rows(monkeypatch) -> None:
     monkeypatch.setattr(vehicle_service, "models_for_make_year", no_provider_models)
+    monkeypatch.setattr(vehicle_service, "trims_for_vehicle", no_provider_trims)
     suffix = uuid4().hex[:8]
     model = f"Civic-{suffix}"
     seed_configuration(

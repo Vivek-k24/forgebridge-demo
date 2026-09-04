@@ -102,6 +102,9 @@ class Settings:
     vin_cache_hours: int
     nhtsa_base_url: str
     nhtsa_timeout_seconds: float
+    carsxe_base_url: str
+    carsxe_api_key: str | None
+    trim_provider_timeout_seconds: float
     repair_edit_lease_seconds: int
     media_root: str
     photo_max_bytes: int
@@ -118,6 +121,7 @@ def _load_settings() -> Settings:
 
     vin_encryption_keys = os.getenv("PARTGRAPH_VIN_ENCRYPTION_KEYS")
     vin_lookup_key = os.getenv("PARTGRAPH_VIN_LOOKUP_KEY")
+    carsxe_api_key = os.getenv("PARTGRAPH_CARSXE_API_KEY")
 
     return Settings(
         database_url=database_url,
@@ -143,6 +147,14 @@ def _load_settings() -> Settings:
         ),
         nhtsa_timeout_seconds=_float_env(
             "PARTGRAPH_NHTSA_TIMEOUT_SECONDS", 4.0, minimum=0.5, maximum=8.0
+        ),
+        carsxe_base_url=_http_base_url(
+            "PARTGRAPH_CARSXE_BASE_URL",
+            "https://api.carsxe.com",
+        ),
+        carsxe_api_key=carsxe_api_key.strip() if carsxe_api_key and carsxe_api_key.strip() else None,
+        trim_provider_timeout_seconds=_float_env(
+            "PARTGRAPH_TRIM_PROVIDER_TIMEOUT_SECONDS", 4.0, minimum=0.5, maximum=8.0
         ),
         repair_edit_lease_seconds=_int_env(
             "PARTGRAPH_REPAIR_EDIT_LEASE_SECONDS", 300, minimum=30, maximum=3_600
