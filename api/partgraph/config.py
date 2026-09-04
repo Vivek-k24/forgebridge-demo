@@ -105,6 +105,10 @@ class Settings:
     repair_edit_lease_seconds: int
     media_root: str
     photo_max_bytes: int
+    workbench_enabled: bool
+    workbench_cache_root: str
+    workbench_poll_seconds: float
+    workbench_fetch_timeout_seconds: float
 
 
 def _load_settings() -> Settings:
@@ -153,6 +157,20 @@ def _load_settings() -> Settings:
             15 * 1024 * 1024,
             minimum=1024,
             maximum=25 * 1024 * 1024,
+        ),
+        workbench_enabled=_bool_env("PARTGRAPH_WORKBENCH_ENABLED", False),
+        workbench_cache_root=_path_env(
+            "PARTGRAPH_WORKBENCH_CACHE_ROOT",
+            "/tmp/partgraph-workbench",
+        ),
+        workbench_poll_seconds=_float_env(
+            "PARTGRAPH_WORKBENCH_POLL_SECONDS", 2.0, minimum=0.5, maximum=30.0
+        ),
+        workbench_fetch_timeout_seconds=_float_env(
+            "PARTGRAPH_WORKBENCH_FETCH_TIMEOUT_SECONDS",
+            8.0,
+            minimum=1.0,
+            maximum=30.0,
         ),
     )
 
