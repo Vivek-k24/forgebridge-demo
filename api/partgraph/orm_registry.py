@@ -11,6 +11,7 @@ import partgraph.identity.vehicle.models  # noqa: F401
 import partgraph.intelligence.models  # noqa: F401
 import partgraph.knowledge.coverage_models  # noqa: F401
 import partgraph.knowledge.models  # noqa: F401
+import partgraph.knowledge.workbench_models  # noqa: F401
 import partgraph.repair_experience.memory_models  # noqa: F401
 import partgraph.repair_experience.models  # noqa: F401
 import partgraph.repair_experience.readiness_models  # noqa: F401
