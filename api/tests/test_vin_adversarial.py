@@ -75,14 +75,14 @@ def test_missing_vin_keys_fail_closed_before_provider_call(monkeypatch: pytest.M
     async def unexpected_provider(_: str) -> ProviderIdentity:
         nonlocal provider_called
         provider_called = True
-        raise AssertionError("provider must not run without VIN protection")
+        raise AssertionError("provider must not run before protected VIN storage is available")
 
     monkeypatch.setattr(user_vehicle_service, "decode_vin_values_extended", unexpected_provider)
 
     with TestClient(app) as client:
         _register(client, "missing_keys")
         response = client.post(
-            "/api/v1/user-vehicles/vin/decode",
+            "/api/v1/user-vehicles/vin",
             json={"market": "US", "vin": VALID_VIN},
             headers=CSRF,
         )
