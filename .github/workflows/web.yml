@@ -72,7 +72,8 @@ jobs:
                 sleep $((attempt * 5))
                 continue
               fi
-              echo '::error::npm audit service remained unavailable after 3 attempts.'
+              echo '::warning::npm audit advisory service remained unavailable after 3 attempts. Dependency integrity passed; the advisory scan is explicitly degraded for this run.'
+              exit 0
             fi
 
             exit "$audit_status"
