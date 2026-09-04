@@ -31,10 +31,14 @@ services:
       PARTGRAPH_NHTSA_TIMEOUT_SECONDS: ${PARTGRAPH_NHTSA_TIMEOUT_SECONDS:-4.0}
       PARTGRAPH_MEDIA_ROOT: /app/media
       PARTGRAPH_PHOTO_MAX_BYTES: ${PARTGRAPH_PHOTO_MAX_BYTES:-15728640}
+      PARTGRAPH_WORKBENCH_ENABLED: "true"
+      PARTGRAPH_WORKBENCH_CACHE_ROOT: /app/workbench
+      PARTGRAPH_WORKBENCH_FETCH_TIMEOUT_SECONDS: ${PARTGRAPH_WORKBENCH_FETCH_TIMEOUT_SECONDS:-8.0}
     ports:
       - "8000:8000"
     volumes:
       - partgraph_media:/app/media
+      - ./local-data/workbench:/app/workbench
     depends_on:
       postgres:
         condition: service_healthy
@@ -44,11 +48,33 @@ services:
       timeout: 3s
       retries: 10
 
+  collector:
+    build:
+      context: ./api
+    command: ["python", "-m", "partgraph.knowledge.workbench_worker"]
+    environment:
+      PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@postgres:5432/partgraph
+      PARTGRAPH_WEB_ORIGIN: http://localhost:5173
+      PARTGRAPH_DATABASE_POOLING: "false"
+      PARTGRAPH_WORKBENCH_ENABLED: "true"
+      PARTGRAPH_WORKBENCH_CACHE_ROOT: /app/workbench
+      PARTGRAPH_WORKBENCH_POLL_SECONDS: ${PARTGRAPH_WORKBENCH_POLL_SECONDS:-2.0}
+      PARTGRAPH_WORKBENCH_FETCH_TIMEOUT_SECONDS: ${PARTGRAPH_WORKBENCH_FETCH_TIMEOUT_SECONDS:-8.0}
+      PARTGRAPH_NHTSA_BASE_URL: ${PARTGRAPH_NHTSA_BASE_URL:-https://vpic.nhtsa.dot.gov/api/vehicles}
+      PARTGRAPH_NHTSA_TIMEOUT_SECONDS: ${PARTGRAPH_NHTSA_TIMEOUT_SECONDS:-4.0}
+    volumes:
+      - ./local-data/workbench:/app/workbench
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
   web:
     build:
       context: ./web
       args:
         VITE_API_BASE_URL: ""
+        VITE_PARTGRAPH_WORKBENCH_ENABLED: "true"
     environment:
       PARTGRAPH_API_UPSTREAM: http://api:8000
     ports:
