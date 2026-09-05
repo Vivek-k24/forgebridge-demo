@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('start', 'stop', 'status', 'logs', 'backup', 'scale2')]
+    [ValidateSet('start', 'stop', 'status', 'logs', 'backup', 'scale2', 'reprocess')]
     [string]$Action = 'start'
 )
 
@@ -39,6 +39,18 @@ switch ($Action) {
         New-Item -ItemType Directory -Force -Path 'local-data/workbench' | Out-Null
         docker compose up -d --build --scale collector=2
         Write-Host 'Two local collector workers are running. Start multiple makes from the dashboard to use them.' -ForegroundColor Green
+    }
+    'reprocess' {
+        New-Item -ItemType Directory -Force -Path 'local-data/workbench' | Out-Null
+        Write-Host 'Stopping collector workers at a safe checkpoint before cache reprocessing...' -ForegroundColor Yellow
+        docker compose stop collector
+        try {
+            docker compose run --rm --no-deps collector python -m partgraph.knowledge.workbench_worker_v2 --reprocess-cache
+        }
+        finally {
+            docker compose start collector
+        }
+        Write-Host 'Cached source captures were re-extracted and reconciled without new web requests.' -ForegroundColor Green
     }
     'backup' {
         $Stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
