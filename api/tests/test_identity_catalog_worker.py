@@ -43,6 +43,16 @@ def test_model_inventory_collapses_hybrid_and_drivetrain_variants_to_base_model(
     assert result["Prius Prime"]["fueleconomy_gov"] == ["Prius Prime"]
 
 
+def test_fueleconomy_hybrid_suffix_uses_base_model_even_if_nhtsa_only_names_base() -> None:
+    result = canonicalize_model_inventory(
+        ["Accord"],
+        ["Accord", "Accord Hybrid"],
+    )
+
+    assert set(result) == {"Accord"}
+    assert result["Accord"]["fueleconomy_gov"] == ["Accord", "Accord Hybrid"]
+
+
 def test_hybrid_source_model_becomes_trim_variant_not_separate_model() -> None:
     assert model_variant("Accord", "Accord Hybrid") == "Hybrid"
     assert model_variant("Accord", "Accord") is None
@@ -74,6 +84,7 @@ def test_carsdirect_style_normalization_removes_configuration_body_suffix() -> N
     assert trim_from_carsdirect_style("CX 2dr Hatchback") == "CX"
     assert trim_from_carsdirect_style("LE 4dr Front-Wheel Drive Hybrid Sedan") == "LE"
     assert trim_from_carsdirect_style("TRD Off-Road 4x4 Double Cab") == "TRD Off-Road"
+    assert trim_from_carsdirect_style("2.5L I-4 / 184 Hp") is None
 
 
 def test_carsdirect_trim_extractor_collects_select_options_without_specs() -> None:
@@ -84,6 +95,7 @@ def test_carsdirect_trim_extractor_collects_select_options_without_specs() -> No
       <option>EX-L 4dr Sedan</option>
       <option>Sport-L 4dr Sedan</option>
       <option>Touring 4dr Sedan</option>
+      <option>2.0L I-4 / 146 Hp</option>
     </select>
     """
 
