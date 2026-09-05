@@ -106,6 +106,7 @@ class Settings:
     media_root: str
     photo_max_bytes: int
     workbench_enabled: bool
+    workbench_spec_collection_enabled: bool
     workbench_cache_root: str
     workbench_poll_seconds: float
     workbench_fetch_timeout_seconds: float
@@ -159,6 +160,10 @@ def _load_settings() -> Settings:
             maximum=25 * 1024 * 1024,
         ),
         workbench_enabled=_bool_env("PARTGRAPH_WORKBENCH_ENABLED", False),
+        workbench_spec_collection_enabled=_bool_env(
+            "PARTGRAPH_WORKBENCH_SPEC_COLLECTION_ENABLED",
+            True,
+        ),
         workbench_cache_root=_path_env(
             "PARTGRAPH_WORKBENCH_CACHE_ROOT",
             "/tmp/partgraph-workbench",
