@@ -20,6 +20,12 @@ type CollectionJob = {
   created_at: string
   updated_at: string
 }
+type FieldSummary = {
+  verified: number
+  manufacturer_reported: number
+  candidate: number
+  conflict: number
+}
 type MakeProgress = {
   make: string
   candidates: number
@@ -28,6 +34,7 @@ type MakeProgress = {
   conflicts: number
   collection_percent: number
   verification_percent: number
+  field_summary: FieldSummary
   latest_job: CollectionJob | null
 }
 type Dashboard = {
@@ -40,6 +47,7 @@ type Dashboard = {
   conflicts: number
   collection_percent: number
   verification_percent: number
+  field_summary: FieldSummary
   makes: MakeProgress[]
 }
 type WorkbenchLog = {
@@ -106,10 +114,29 @@ function formatTime(value: string | null) {
 }
 
 function matchedSummary(fields: Record<string, unknown>) {
+  const observed = fields.observed_fields
+  if (Array.isArray(observed)) {
+    const names = observed.filter((item): item is string => typeof item === 'string')
+    if (names.length > 0) {
+      const preview = names.slice(0, 5).join(', ')
+      return `${names.length} field${names.length === 1 ? '' : 's'} observed: ${preview}${names.length > 5 ? '…' : ''}`
+    }
+  }
   const supported = Object.entries(fields)
     .filter(([key, value]) => key !== 'staging_record_id' && key !== 'reference_model' && value === true)
     .map(([key]) => key)
-  return supported.length > 0 ? supported.join(', ') : 'no configuration fields matched'
+  return supported.length > 0 ? supported.join(', ') : 'no technical fields observed'
+}
+
+function FieldCounts({ summary }: { summary: FieldSummary }) {
+  return (
+    <div className="catalog-console-meta" aria-label="Technical field evidence summary">
+      <span>{summary.verified} verified fields</span>
+      <span>{summary.manufacturer_reported} manufacturer-reported</span>
+      <span>{summary.candidate} candidate</span>
+      <span>{summary.conflict} conflict</span>
+    </div>
+  )
 }
 
 export function CatalogWorkbench() {
@@ -195,7 +222,7 @@ export function CatalogWorkbench() {
         <div>
           <p className="eyebrow">LOCAL DATA WORKBENCH</p>
           <h1>Catalog collection & verification</h1>
-          <p>Run the research workload on this computer. Source collection, checkpoints, evidence and logs stay local until you deliberately publish verified data.</p>
+          <p>Run the research workload on this computer. Raw captures, field observations, checkpoints and logs stay local until you deliberately publish reviewed data.</p>
         </div>
         <div className="catalog-local-badge"><i /> local worker</div>
       </header>
@@ -216,10 +243,11 @@ export function CatalogWorkbench() {
                 <small>{dashboard.collected} of {dashboard.candidates} candidates completed a source pass</small>
               </div>
               <div>
-                <ProgressBar value={dashboard.verification_percent} label="Verified" />
-                <small>{dashboard.verified} of {dashboard.candidates} verified against a minimum of 3 independent sources · up to 5 when needed</small>
+                <ProgressBar value={dashboard.verification_percent} label="Verified configurations" />
+                <small>{dashboard.verified} of {dashboard.candidates} seed configurations have every asserted fact corroborated. Ordinary fields need 3 independent matches; there is no fixed source maximum.</small>
               </div>
             </div>
+            <FieldCounts summary={dashboard.field_summary} />
             {dashboard.conflicts > 0 && <div className="catalog-conflict-note">{dashboard.conflicts} configuration{dashboard.conflicts === 1 ? '' : 's'} currently require conflict review.</div>}
           </section>
 
@@ -235,9 +263,10 @@ export function CatalogWorkbench() {
                   </div>
                   <ProgressBar value={make.collection_percent} label="Collected" />
                   <p className="catalog-card-count">{make.collected} / {make.candidates} source passes complete</p>
-                  <ProgressBar value={make.verification_percent} label="Verified" />
-                  <p className="catalog-card-count">{make.verified} / {make.candidates} canonical configurations verified</p>
-                  {make.conflicts > 0 && <p className="catalog-card-warning">{make.conflicts} conflict{make.conflicts === 1 ? '' : 's'}</p>}
+                  <ProgressBar value={make.verification_percent} label="Verified configurations" />
+                  <p className="catalog-card-count">{make.verified} / {make.candidates} seed configurations verified</p>
+                  <p className="catalog-card-count">Fields: {make.field_summary.verified} verified · {make.field_summary.manufacturer_reported} manufacturer-reported · {make.field_summary.candidate} candidate · {make.field_summary.conflict} conflict</p>
+                  {make.conflicts > 0 && <p className="catalog-card-warning">{make.conflicts} configuration conflict{make.conflicts === 1 ? '' : 's'}</p>}
                   <div className="catalog-make-actions">
                     <button type="button" disabled={busyMake === make.make} onClick={(event) => { event.stopPropagation(); void control(make) }}>
                       {busyMake === make.make ? 'Updating…' : actionLabel(job)}
@@ -264,6 +293,7 @@ export function CatalogWorkbench() {
               )}
             </div>
 
+            {selected && <FieldCounts summary={selected.field_summary} />}
             {consoleError && <div className="workspace-alert workspace-alert--error">{consoleError}</div>}
             {!selected?.latest_job && <div className="catalog-empty-console">Start this make to begin collecting source evidence and producing logs.</div>}
             {selected?.latest_job?.last_error && <div className="catalog-job-error"><strong>Last worker error</strong><span>{selected.latest_job.last_error}</span></div>}
