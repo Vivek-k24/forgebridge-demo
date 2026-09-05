@@ -6,7 +6,11 @@ from partgraph.knowledge.catalog_scope import (
 )
 from partgraph.knowledge.identity_catalog_worker import (
     canonicalize_model_inventory,
+    combine_trim_variant,
+    extract_carsdirect_trims,
     extract_kbb_trims,
+    model_variant,
+    trim_from_carsdirect_style,
     trim_from_kbb_style,
 )
 
@@ -26,15 +30,25 @@ def test_active_identity_scope_is_six_requested_makes_1996_through_2027() -> Non
     assert canonical_scoped_make("Ford") is None
 
 
-def test_model_inventory_keeps_real_hybrid_model_but_collapses_drivetrain_suffix() -> None:
+def test_model_inventory_collapses_hybrid_and_drivetrain_variants_to_base_model() -> None:
     result = canonicalize_model_inventory(
-        ["Civic", "Civic Hybrid", "CR-V"],
-        ["Civic", "Civic Hybrid", "CR-V 2WD", "CR-V 4WD"],
+        ["Civic", "Civic Hybrid", "CR-V", "Prius Prime"],
+        ["Civic", "Civic Hybrid", "CR-V 2WD", "CR-V 4WD", "Prius Prime"],
     )
 
-    assert set(result) == {"Civic", "Civic Hybrid", "CR-V"}
-    assert result["Civic Hybrid"]["fueleconomy_gov"] == ["Civic Hybrid"]
+    assert set(result) == {"Civic", "CR-V", "Prius Prime"}
+    assert result["Civic"]["nhtsa_vpic"] == ["Civic", "Civic Hybrid"]
+    assert result["Civic"]["fueleconomy_gov"] == ["Civic", "Civic Hybrid"]
     assert result["CR-V"]["fueleconomy_gov"] == ["CR-V 2WD", "CR-V 4WD"]
+    assert result["Prius Prime"]["fueleconomy_gov"] == ["Prius Prime"]
+
+
+def test_hybrid_source_model_becomes_trim_variant_not_separate_model() -> None:
+    assert model_variant("Accord", "Accord Hybrid") == "Hybrid"
+    assert model_variant("Accord", "Accord") is None
+    assert combine_trim_variant("Sport-L", "Hybrid") == "Sport-L Hybrid"
+    assert combine_trim_variant("Base", "Hybrid") == "Hybrid"
+    assert combine_trim_variant(None, "Hybrid") == "Hybrid"
 
 
 def test_kbb_style_normalization_removes_body_style_not_trim_words() -> None:
@@ -54,3 +68,28 @@ def test_kbb_trim_extractor_deduplicates_body_styles_for_same_trim() -> None:
     """
 
     assert extract_kbb_trims(raw, "Honda", "Civic", 1998) == ["DX", "HX", "LX"]
+
+
+def test_carsdirect_style_normalization_removes_configuration_body_suffix() -> None:
+    assert trim_from_carsdirect_style("CX 2dr Hatchback") == "CX"
+    assert trim_from_carsdirect_style("LE 4dr Front-Wheel Drive Hybrid Sedan") == "LE"
+    assert trim_from_carsdirect_style("TRD Off-Road 4x4 Double Cab") == "TRD Off-Road"
+
+
+def test_carsdirect_trim_extractor_collects_select_options_without_specs() -> None:
+    raw = b"""
+    <select>
+      <option>Select a Trim</option>
+      <option>Sport 4dr Sedan</option>
+      <option>EX-L 4dr Sedan</option>
+      <option>Sport-L 4dr Sedan</option>
+      <option>Touring 4dr Sedan</option>
+    </select>
+    """
+
+    assert extract_carsdirect_trims(raw, "Accord Hybrid", 2026) == [
+        "EX-L",
+        "Sport",
+        "Sport-L",
+        "Touring",
+    ]
