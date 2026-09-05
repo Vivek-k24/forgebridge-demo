@@ -4,10 +4,10 @@ import html
 import json
 import re
 import xml.etree.ElementTree as ET
+from collections.abc import Callable
 from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
-from typing import Callable
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
@@ -208,7 +208,12 @@ def _matching_window(text: str, configuration: VehicleConfiguration) -> str:
     return text[max(0, position - 1800) : min(len(text), position + 4200)]
 
 
-def _observation(value: object, *, scope: str, raw_value: object | None = None) -> dict[str, object]:
+def _observation(
+    value: object,
+    *,
+    scope: str,
+    raw_value: object | None = None,
+) -> dict[str, object]:
     result: dict[str, object] = {"value": value, "kind": "ordinary", "scope": scope}
     if raw_value is not None:
         result["raw_value"] = raw_value
@@ -324,8 +329,20 @@ def _extra_technical_fields(text: str) -> dict[str, object]:
         ("dimensions_weight.length_in", ("overall length", "length"), ("in", "inches"), 80, 350),
         ("dimensions_weight.width_in", ("overall width", "width"), ("in", "inches"), 40, 150),
         ("dimensions_weight.height_in", ("overall height", "height"), ("in", "inches"), 30, 150),
-        ("dimensions_weight.curb_weight_lb", ("curb weight",), ("lb", "lbs", "pounds"), 1000, 15000),
-        ("capacity.fuel_tank_gallons", ("fuel tank", "fuel capacity"), ("gal", "gallons"), 3, 80),
+        (
+            "dimensions_weight.curb_weight_lb",
+            ("curb weight",),
+            ("lb", "lbs", "pounds"),
+            1000,
+            15000,
+        ),
+        (
+            "capacity.fuel_tank_gallons",
+            ("fuel tank", "fuel capacity"),
+            ("gal", "gallons"),
+            3,
+            80,
+        ),
         (
             "steering.turning_diameter_ft",
             ("turning diameter", "turning circle"),
@@ -523,7 +540,11 @@ def _menu_ids(raw: bytes) -> list[str]:
 def _http(url: str, accept: str) -> tuple[bytes, str, int]:
     request = Request(
         url,
-        headers={"User-Agent": USER_AGENT, "Accept": accept, "Accept-Language": "en-US,en;q=0.8"},
+        headers={
+            "User-Agent": USER_AGENT,
+            "Accept": accept,
+            "Accept-Language": "en-US,en;q=0.8",
+        },
     )
     with urlopen(request, timeout=settings.workbench_fetch_timeout_seconds) as response:
         raw = response.read(MAX_RESPONSE_BYTES + 1)
@@ -618,7 +639,10 @@ def _extract_fueleconomy(raw: bytes, configuration: VehicleConfiguration) -> Sou
         if str(fields.get("identity.make", "")).casefold() != configuration.make.casefold():
             continue
         model_key = "".join(_tokens(str(fields.get("identity.model", ""))))
-        model_candidates = {"".join(_tokens(configuration.model)), "".join(_tokens(reference_model))}
+        model_candidates = {
+            "".join(_tokens(configuration.model)),
+            "".join(_tokens(reference_model)),
+        }
         if not any(key and (key in model_key or model_key in key) for key in model_candidates):
             continue
         score = 10
