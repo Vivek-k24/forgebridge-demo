@@ -70,7 +70,7 @@ _CARSDIRECT_EXCLUDED_KEYS = {
     "choose a trim",
     "all trims",
 }
-_DRIVETRAIN_VARIANT_TOKENS = {
+_SOURCE_MODEL_SUFFIX_TOKENS = {
     "2wd",
     "4wd",
     "awd",
@@ -78,6 +78,7 @@ _DRIVETRAIN_VARIANT_TOKENS = {
     "rwd",
     "4x2",
     "4x4",
+    "hybrid",
 }
 
 
@@ -151,7 +152,7 @@ def canonicalize_model_inventory(
                 if raw_tokens[: len(candidate_tokens)] != candidate_tokens:
                     continue
                 suffix = set(raw_tokens[len(candidate_tokens) :])
-                if suffix and suffix.issubset(_DRIVETRAIN_VARIANT_TOKENS):
+                if suffix and suffix.issubset(_SOURCE_MODEL_SUFFIX_TOKENS):
                     canonical = canonical_token_map[candidate_tokens]
                     break
         if canonical is None:
@@ -236,7 +237,10 @@ def trim_from_carsdirect_style(style: str) -> str | None:
     value = _SPACE_RE.sub(" ", html.unescape(_TAG_RE.sub(" ", style))).strip(" -|\t\r\n")
     if not value:
         return None
-    value = _CARSDIRECT_STYLE_BREAK_RE.sub("", value).strip()
+    break_match = _CARSDIRECT_STYLE_BREAK_RE.search(value)
+    if break_match is None:
+        return None
+    value = value[: break_match.start()].strip()
     if not value or normalized_key(value) in _CARSDIRECT_EXCLUDED_KEYS:
         return None
     if len(value) > 100:
@@ -271,9 +275,6 @@ def extract_carsdirect_trims(raw: bytes, model: str, year: int) -> list[str]:
             if trim is not None:
                 trims.setdefault(normalized_key(trim), trim)
 
-    # Older compare pages repeat "YEAR MAKE ... MODEL\nTRIM BODY". This
-    # conservative fallback only harvests a label immediately preceding a
-    # recognized door/body expression.
     fallback = re.compile(
         rf"{year}\s+[^\n]{{0,80}}?{re.escape(model)}\s+"
         r"([A-Za-z0-9][A-Za-z0-9+./&' -]{0,70}?)\s+"
@@ -469,9 +470,15 @@ def _source_model_aliases(
     provider_labels: dict[str, list[str]],
 ) -> list[str]:
     labels = [canonical_model]
+    base_tokens = _tokens(canonical_model)
     for provider_values in provider_labels.values():
-        labels.extend(provider_values)
-    return sorted(dict.fromkeys(labels), key=lambda value: (value != canonical_model, value.casefold()))
+        for value in provider_values:
+            if _tokens(value) == base_tokens or model_variant(canonical_model, value) is not None:
+                labels.append(value)
+    return sorted(
+        dict.fromkeys(labels),
+        key=lambda value: (value != canonical_model, value.casefold()),
+    )
 
 
 async def _upsert_model(
