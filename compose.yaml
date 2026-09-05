@@ -51,7 +51,7 @@ services:
   collector:
     build:
       context: ./api
-    command: ["python", "-m", "partgraph.knowledge.workbench_worker_v2"]
+    command: ["python", "-m", "partgraph.knowledge.workbench_worker_v3"]
     environment:
       PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@postgres:5432/partgraph
       PARTGRAPH_WEB_ORIGIN: http://localhost:5173
