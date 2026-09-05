@@ -32,6 +32,7 @@ services:
       PARTGRAPH_MEDIA_ROOT: /app/media
       PARTGRAPH_PHOTO_MAX_BYTES: ${PARTGRAPH_PHOTO_MAX_BYTES:-15728640}
       PARTGRAPH_WORKBENCH_ENABLED: "true"
+      PARTGRAPH_WORKBENCH_SPEC_COLLECTION_ENABLED: "false"
       PARTGRAPH_WORKBENCH_CACHE_ROOT: /app/workbench
       PARTGRAPH_WORKBENCH_FETCH_TIMEOUT_SECONDS: ${PARTGRAPH_WORKBENCH_FETCH_TIMEOUT_SECONDS:-8.0}
     ports:
@@ -49,6 +50,7 @@ services:
       retries: 10
 
   collector:
+    profiles: ["specs"]
     build:
       context: ./api
     command: ["python", "-m", "partgraph.knowledge.workbench_worker_v3"]
@@ -57,6 +59,7 @@ services:
       PARTGRAPH_WEB_ORIGIN: http://localhost:5173
       PARTGRAPH_DATABASE_POOLING: "false"
       PARTGRAPH_WORKBENCH_ENABLED: "true"
+      PARTGRAPH_WORKBENCH_SPEC_COLLECTION_ENABLED: "false"
       PARTGRAPH_WORKBENCH_CACHE_ROOT: /app/workbench
       PARTGRAPH_WORKBENCH_POLL_SECONDS: ${PARTGRAPH_WORKBENCH_POLL_SECONDS:-2.0}
       PARTGRAPH_WORKBENCH_FETCH_TIMEOUT_SECONDS: ${PARTGRAPH_WORKBENCH_FETCH_TIMEOUT_SECONDS:-8.0}
@@ -67,7 +70,7 @@ services:
     depends_on:
       api:
         condition: service_healthy
-    restart: unless-stopped
+    restart: "no"
 
   web:
     build:
