@@ -56,12 +56,15 @@ function Start-CoreStack {
 }
 
 function Start-IdentityCollector([switch]$Refresh) {
-    Start-CoreStack
+    # Remove a stale/failed one-off collector before Compose rebuilds the active
+    # stack. The identity worker intentionally runs from the same freshly built
+    # API image, so it can never lag behind the checked-out Python package.
     Remove-IdentityContainer
+    Start-CoreStack
     $Args = @(
         'compose', 'run', '-d', '--no-deps',
         '--name', $IdentityContainer,
-        'collector',
+        'api',
         'python', '-m', 'partgraph.knowledge.identity_catalog_worker'
     )
     if ($Refresh) {
@@ -120,13 +123,11 @@ switch ($Action) {
         Start-IdentityCollector -Refresh
     }
     'identity-status' {
-        Start-CoreStack
-        docker compose run --rm --no-deps collector `
+        docker compose exec -T api `
             python -m partgraph.knowledge.identity_catalog_worker --status
     }
     'identity-export' {
-        Start-CoreStack
-        docker compose run --rm --no-deps collector `
+        docker compose exec -T api `
             python -m partgraph.knowledge.identity_catalog_worker `
             --export-json /app/workbench/identity-catalog.json
         Write-Host ''
