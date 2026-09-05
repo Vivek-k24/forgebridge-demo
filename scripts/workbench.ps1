@@ -7,6 +7,7 @@ param(
         'backup',
         'identity-start',
         'identity-refresh',
+        'identity-rebuild',
         'identity-status',
         'identity-export',
         'scale2',
@@ -56,12 +57,22 @@ function Start-CoreStack {
     docker compose up -d --build postgres api web
 }
 
-function Start-IdentityCollector([switch]$Refresh) {
+function Start-IdentityCollector([switch]$Refresh, [switch]$Rebuild) {
     # Remove a stale/failed one-off collector before Compose rebuilds the active
     # stack. The identity worker intentionally runs from the same freshly built
     # API image, so it can never lag behind the checked-out Python package.
     Remove-IdentityContainer
     Start-CoreStack
+
+    if ($Rebuild) {
+        docker compose exec -T postgres psql `
+            -U partgraph `
+            -d partgraph `
+            -v ON_ERROR_STOP=1 `
+            -c 'TRUNCATE TABLE catalog_identity_trims, catalog_identity_models, catalog_identity_progress;'
+        Write-Host 'Cleared only the derived identity catalog tables; raw source cache was preserved.' -ForegroundColor Yellow
+    }
+
     $Args = @(
         'compose', 'run', '-d', '--no-deps',
         '--name', $IdentityContainer,
@@ -75,6 +86,7 @@ function Start-IdentityCollector([switch]$Refresh) {
     Write-Host 'US identity catalog collection started.' -ForegroundColor Green
     Write-Host 'Scope: Acura, Honda, Hyundai, Lexus, Subaru, Toyota · 1996-2027 · US market'
     Write-Host 'NHTSA scope: Passenger Car + MPV + Truck only; powersports/non-road products excluded.'
+    Write-Host 'Civic Si and Civic Type R remain separate trims under model Civic.'
     Write-Host 'This phase collects year + make + model + trim only. Technical specs are paused.'
     Write-Host 'Progress: .\scripts\workbench.ps1 identity-status'
     Write-Host 'Live log:  .\scripts\workbench.ps1 logs'
@@ -123,6 +135,9 @@ switch ($Action) {
     }
     'identity-refresh' {
         Start-IdentityCollector -Refresh
+    }
+    'identity-rebuild' {
+        Start-IdentityCollector -Rebuild
     }
     'identity-status' {
         docker compose exec -T api `
