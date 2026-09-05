@@ -44,15 +44,15 @@ def test_transmission_descriptor_is_not_part_of_trim_identity() -> None:
 
 
 def test_trim_punctuation_variants_compare_equal_without_merging_distinct_trims() -> None:
-    assert observation_comparison_key("identity.trim", "EX-L") == observation_comparison_key(
-        "identity.trim", "EX L"
-    )
-    assert observation_comparison_key("identity.trim", "XLE") != observation_comparison_key(
-        "identity.trim", "XLE Premium"
-    )
+    assert observation_comparison_key(
+        "identity.trim", "EX-L"
+    ) == observation_comparison_key("identity.trim", "EX L")
+    assert observation_comparison_key(
+        "identity.trim", "XLE"
+    ) != observation_comparison_key("identity.trim", "XLE Premium")
 
 
-def test_reference_page_emits_partial_field_observations_instead_of_all_or_nothing_vote() -> None:
+def test_reference_page_emits_partial_fields_without_whole_row_vote() -> None:
     configuration = civic_hx()
     html = b"""
     <html><body>
@@ -69,7 +69,10 @@ def test_reference_page_emits_partial_field_observations_instead_of_all_or_nothi
     assert extraction.matched_fields["trim"] is True
     assert extraction.matched_fields["configuration_match"] is False
     assert extraction.field_observations["identity.trim"]["value"] == "HX"
-    assert extraction.field_observations["powertrain.engine.displacement_l"]["value"] == 1.6
+    assert (
+        extraction.field_observations["powertrain.engine.displacement_l"]["value"]
+        == 1.6
+    )
     assert extraction.field_observations["powertrain.engine.cylinders"]["value"] == 4
     assert extraction.field_observations["performance.horsepower_hp"]["value"] == 115
     assert "transmission.family" not in extraction.field_observations
