@@ -23,7 +23,7 @@ switch ($Action) {
         Write-Host ''
         Write-Host 'PartGraph local workbench is starting.' -ForegroundColor Green
         Write-Host 'Open: http://localhost:5173/#/catalog'
-        Write-Host 'The collector runs locally and the source cache is under local-data/workbench.'
+        Write-Host 'The adaptive collector runs locally and the source cache is under local-data/workbench.'
     }
     'stop' {
         docker compose stop
@@ -45,7 +45,7 @@ switch ($Action) {
         Write-Host 'Stopping collector workers at a safe checkpoint before cache reprocessing...' -ForegroundColor Yellow
         docker compose stop collector
         try {
-            docker compose run --rm --no-deps collector python -m partgraph.knowledge.workbench_worker_v2 --reprocess-cache
+            docker compose run --rm --no-deps collector python -m partgraph.knowledge.workbench_worker_v3 --reprocess-cache
         }
         finally {
             docker compose start collector
