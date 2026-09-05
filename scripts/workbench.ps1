@@ -34,8 +34,24 @@ function Remove-IdentityContainer {
     }
 }
 
+function Stop-LegacySpecCollectors {
+    $SpecContainers = @(
+        docker ps `
+            --filter 'label=com.docker.compose.project=partgraph' `
+            --filter 'label=com.docker.compose.service=collector' `
+            --filter 'label=com.docker.compose.oneoff=False' `
+            --format '{{.ID}}'
+    )
+    foreach ($ContainerId in $SpecContainers) {
+        if ($ContainerId) {
+            docker stop $ContainerId | Out-Null
+        }
+    }
+}
+
 function Start-CoreStack {
     New-Item -ItemType Directory -Force -Path 'local-data/workbench' | Out-Null
+    Stop-LegacySpecCollectors
     docker compose up -d --build postgres api web
 }
 
