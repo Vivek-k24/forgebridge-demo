@@ -27,6 +27,10 @@ def test_workbench_dashboard_keeps_candidates_separate_from_collection(monkeypat
         assert dashboard.verified == 0
         assert dashboard.collection_percent == 0.0
         assert dashboard.verification_percent == 0.0
+        assert dashboard.field_summary.verified == 0
+        assert dashboard.field_summary.manufacturer_reported == 0
+        assert dashboard.field_summary.candidate == 0
+        assert dashboard.field_summary.conflict == 0
         assert {item.make: item.candidates for item in dashboard.makes} == {
             "Acura": 62,
             "Honda": 114,
@@ -34,6 +38,7 @@ def test_workbench_dashboard_keeps_candidates_separate_from_collection(monkeypat
             "Subaru": 63,
             "Toyota": 106,
         }
+        assert all(item.field_summary.verified == 0 for item in dashboard.makes)
 
     asyncio.run(run())
 
