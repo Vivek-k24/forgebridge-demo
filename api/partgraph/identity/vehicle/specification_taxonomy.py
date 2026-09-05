@@ -20,8 +20,14 @@ from .taxonomy import (
 
 TECHNICAL_PROFILE_VERSION = 1
 
-_ENGINE_DISPLACEMENT = re.compile(r"\b(\d+(?:\.\d+)?)\s*(?:l|liter|liters|litre|litres)\b", re.I)
-_ENGINE_CYLINDERS = re.compile(r"\b([2-9]|1[0-2])\s*(?:cyl(?:inder)?s?|cylinders?)\b", re.I)
+_ENGINE_DISPLACEMENT = re.compile(
+    r"\b(\d+(?:\.\d+)?)\s*(?:l|liter|liters|litre|litres)\b",
+    re.I,
+)
+_ENGINE_CYLINDERS = re.compile(
+    r"\b([2-9]|1[0-2])\s*[\s-]*(?:cyl(?:inder)?s?|cylinders?)\b",
+    re.I,
+)
 _ENGINE_ARCHITECTURE = (
     (re.compile(r"\b(?:inline[\s-]*3|i3|l3)\b", re.I), "I3"),
     (re.compile(r"\b(?:inline[\s-]*4|i4|l4)\b", re.I), "I4"),
