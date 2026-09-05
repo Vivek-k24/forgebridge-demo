@@ -14,7 +14,6 @@ from ..config import settings
 from ..identity.vehicle.models import VehicleConfiguration
 from ..identity.vehicle.specification_taxonomy import (
     core_configuration_fields,
-    normalize_observation_value,
     observation_comparison_key,
 )
 from .workbench_source_pipeline import (
@@ -118,7 +117,9 @@ _SOURCE_CAPABILITIES: dict[str, SourceCapability] = {
 def field_group(field: str) -> str:
     if field.startswith("identity.") or field.startswith("classification."):
         return "identity"
-    if field.startswith("powertrain.engine.") or field.startswith("powertrain.electrification"):
+    if field.startswith("powertrain.engine.") or field.startswith(
+        "powertrain.electrification"
+    ):
         return "engine_powertrain"
     if field.startswith("performance."):
         return "performance"
@@ -148,7 +149,10 @@ def field_group(field: str) -> str:
 
 
 def _supports_field(capability: SourceCapability, field: str) -> bool:
-    return any(field == prefix or field.startswith(prefix) for prefix in capability.field_prefixes)
+    return any(
+        field == prefix or field.startswith(prefix)
+        for prefix in capability.field_prefixes
+    )
 
 
 def analyze_gaps(
@@ -188,7 +192,10 @@ def analyze_gaps(
         ):
             enrichment.append(field)
 
-    return GapAnalysis(tuple(sorted(set(core))), tuple(sorted(set(enrichment))))
+    return GapAnalysis(
+        tuple(sorted(set(core))),
+        tuple(sorted(set(enrichment))),
+    )
 
 
 def plan_source_requests(
@@ -210,11 +217,15 @@ def plan_source_requests(
             continue
         if request.source_key in attempted_providers:
             continue
-        relevant = tuple(sorted(field for field in active if _supports_field(capability, field)))
+        relevant = tuple(
+            sorted(field for field in active if _supports_field(capability, field))
+        )
         if not relevant:
             continue
         already_observed = observed_by_provider.get(request.source_key, set())
-        missing_from_provider = tuple(field for field in relevant if field not in already_observed)
+        missing_from_provider = tuple(
+            field for field in relevant if field not in already_observed
+        )
         if not missing_from_provider:
             continue
         plans.append(
@@ -222,7 +233,9 @@ def plan_source_requests(
                 request=request,
                 phase=phase,
                 requested_fields=missing_from_provider,
-                capability_groups=tuple(sorted({field_group(field) for field in missing_from_provider})),
+                capability_groups=tuple(
+                    sorted({field_group(field) for field in missing_from_provider})
+                ),
             )
         )
 
@@ -254,15 +267,7 @@ def matching_fueleconomy_models(
     configuration: VehicleConfiguration,
     model_names: list[str],
 ) -> list[str]:
-    """Resolve FuelEconomy model-menu names without hard-coding one model.
-
-    FuelEconomy sometimes expands a base model into variants such as
-    "CR-V 2WD" and "CR-V 4WD". The direct options endpoint can therefore
-    return no rows for a valid PartGraph model. This resolver accepts only
-    menu names whose normalized token string begins with the PartGraph model
-    token string; downstream option-record scoring still resolves engine,
-    transmission, and drivetrain variants.
-    """
+    """Resolve source-expanded FuelEconomy model-menu names conservatively."""
     base = "".join(_tokens(configuration.model))
     if not base:
         return []
@@ -285,12 +290,17 @@ def _http(url: str, accept: str) -> tuple[bytes, str, int]:
             "Accept-Language": "en-US,en;q=0.8",
         },
     )
-    with urlopen(request, timeout=settings.workbench_fetch_timeout_seconds) as response:
+    with urlopen(
+        request,
+        timeout=settings.workbench_fetch_timeout_seconds,
+    ) as response:
         raw = response.read(MAX_RESPONSE_BYTES + 1)
         if len(raw) > MAX_RESPONSE_BYTES:
             raise ValueError("source response exceeded 8 MiB workbench limit")
-        return raw, response.headers.get("Content-Type", "application/octet-stream"), int(
-            getattr(response, "status", 200)
+        return (
+            raw,
+            response.headers.get("Content-Type", "application/octet-stream"),
+            int(getattr(response, "status", 200)),
         )
 
 
@@ -321,13 +331,23 @@ def _cache_adaptive_fueleconomy(
 ) -> SourceFetchResult:
     raw = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode()
     digest = sha256(raw).hexdigest()
-    relative = Path(configuration.make) / str(configuration.year) / request.source_key / f"{digest}.json"
+    relative = (
+        Path(configuration.make)
+        / str(configuration.year)
+        / request.source_key
+        / f"{digest}.json"
+    )
     destination = Path(settings.workbench_cache_root) / relative
     destination.parent.mkdir(parents=True, exist_ok=True)
     if not destination.exists():
         destination.write_bytes(raw)
 
-    extraction = extract_source(request.source_key, raw, "application/json", configuration)
+    extraction = extract_source(
+        request.source_key,
+        raw,
+        "application/json",
+        configuration,
+    )
     return SourceFetchResult(
         provider=request.source_key,
         source_class=request.source_class,
@@ -353,11 +373,22 @@ def _fueleconomy_model_discovery(
     request: SourceRequest,
     configuration: VehicleConfiguration,
 ) -> SourceFetchResult | None:
-    model_query = urlencode({"year": configuration.year, "make": configuration.make})
-    model_url = f"https://www.fueleconomy.gov/ws/rest/vehicle/menu/model?{model_query}"
+    model_query = urlencode(
+        {"year": configuration.year, "make": configuration.make}
+    )
+    model_url = (
+        "https://www.fueleconomy.gov/ws/rest/vehicle/menu/model?"
+        f"{model_query}"
+    )
     try:
-        raw_models, _content_type, status = _http(model_url, "application/xml,text/xml;q=0.9")
-        resolved_models = matching_fueleconomy_models(configuration, _menu_values(raw_models))
+        raw_models, _content_type, status = _http(
+            model_url,
+            "application/xml,text/xml;q=0.9",
+        )
+        resolved_models = matching_fueleconomy_models(
+            configuration,
+            _menu_values(raw_models),
+        )
         if not resolved_models:
             return None
 
@@ -365,16 +396,33 @@ def _fueleconomy_model_discovery(
         option_errors: list[dict[str, str]] = []
         for model in resolved_models:
             options_query = urlencode(
-                {"year": configuration.year, "make": configuration.make, "model": model}
+                {
+                    "year": configuration.year,
+                    "make": configuration.make,
+                    "model": model,
+                }
             )
-            options_url = f"https://www.fueleconomy.gov/ws/rest/vehicle/menu/options?{options_query}"
+            options_url = (
+                "https://www.fueleconomy.gov/ws/rest/vehicle/menu/options?"
+                f"{options_query}"
+            )
             try:
                 raw_options, _option_type, _option_status = _http(
-                    options_url, "application/xml,text/xml;q=0.9"
+                    options_url,
+                    "application/xml,text/xml;q=0.9",
                 )
                 vehicle_ids.extend(_menu_values(raw_options))
-            except (HTTPError, URLError, TimeoutError, OSError, ValueError, ET.ParseError) as exc:
-                option_errors.append({"model": model, "error": str(exc)[:300]})
+            except (
+                HTTPError,
+                URLError,
+                TimeoutError,
+                OSError,
+                ValueError,
+                ET.ParseError,
+            ) as exc:
+                option_errors.append(
+                    {"model": model, "error": str(exc)[:300]}
+                )
 
         records: list[dict[str, str]] = []
         detail_errors: list[dict[str, str]] = []
@@ -385,10 +433,29 @@ def _fueleconomy_model_discovery(
                     "application/xml,text/xml;q=0.9",
                 )
                 record = _xml_leaf_map(raw_detail)
+                source_model = record.get("model")
+                if source_model:
+                    record["_source_model"] = source_model
+                # Model-menu discovery already established that this source
+                # model is a source-expanded variant of the PartGraph base
+                # model (for example CR-V 2WD/4WD -> CR-V). Preserve the raw
+                # source label above, then compare the identity at base-model
+                # scope so multiple drivetrain options do not erase the model
+                # observation simply because their source labels differ.
+                record["model"] = configuration.model
                 record["_vehicle_id"] = vehicle_id
                 records.append(record)
-            except (HTTPError, URLError, TimeoutError, OSError, ValueError, ET.ParseError) as exc:
-                detail_errors.append({"vehicle_id": vehicle_id, "error": str(exc)[:300]})
+            except (
+                HTTPError,
+                URLError,
+                TimeoutError,
+                OSError,
+                ValueError,
+                ET.ParseError,
+            ) as exc:
+                detail_errors.append(
+                    {"vehicle_id": vehicle_id, "error": str(exc)[:300]}
+                )
 
         return _cache_adaptive_fueleconomy(
             request,
@@ -402,7 +469,14 @@ def _fueleconomy_model_discovery(
             },
             status=status,
         )
-    except (HTTPError, URLError, TimeoutError, OSError, ValueError, ET.ParseError):
+    except (
+        HTTPError,
+        URLError,
+        TimeoutError,
+        OSError,
+        ValueError,
+        ET.ParseError,
+    ):
         return None
 
 
@@ -412,7 +486,7 @@ def fetch_source_adaptive(
     *,
     primary_result: SourceFetchResult | None = None,
 ) -> SourceFetchResult:
-    """Fetch broadly first, with a narrow deterministic fallback where proven needed."""
+    """Fetch broadly first, with a narrow fallback where proven needed."""
     result = primary_result or fetch_source(request, configuration)
     if request.source_key != "fueleconomy_gov":
         return result
