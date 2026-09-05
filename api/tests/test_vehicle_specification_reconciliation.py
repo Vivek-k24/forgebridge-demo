@@ -1,6 +1,9 @@
 from types import SimpleNamespace
 
-from partgraph.identity.vehicle.reconciliation import FieldObservation, reconcile_field_observations
+from partgraph.identity.vehicle.reconciliation import (
+    FieldObservation,
+    reconcile_field_observations,
+)
 from partgraph.identity.vehicle.specification_taxonomy import core_verification_decision
 
 
@@ -82,7 +85,7 @@ def test_service_and_fluid_facts_cannot_be_auto_verified_by_generic_sites() -> N
     assert field["authority"] == "manufacturer_required"
 
 
-def test_manufacturer_source_can_retain_authoritative_service_fact_without_fake_three_source_label() -> None:
+def test_manufacturer_source_retains_authoritative_service_fact() -> None:
     result = reconcile_field_observations(
         [
             observation(
