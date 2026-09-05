@@ -26,7 +26,7 @@ USER_AGENT = (
     "Mozilla/5.0 (compatible; PartGraphResearch/2.0; "
     "+local-operator-controlled-catalog-workbench)"
 )
-EXTRACTION_METHOD = "local_field_observation_v2"
+EXTRACTION_METHOD = "local_field_observation_v3"
 MAX_RESPONSE_BYTES = 8 * 1024 * 1024
 _TAG_RE = re.compile(r"<[^>]+>")
 _SPACE_RE = re.compile(r"\s+")
@@ -185,27 +185,95 @@ def _tokens(value: str | None, *, ignore: set[str] | None = None) -> list[str]:
     return [token for token in _TOKEN_RE.findall(value.casefold()) if token not in ignored]
 
 
+def _phrase_pattern(value: str | None) -> re.Pattern[str] | None:
+    tokens = _tokens(value)
+    if not tokens:
+        return None
+    joined = r"[\W_]+".join(re.escape(token) for token in tokens)
+    return re.compile(rf"(?<![a-z0-9]){joined}(?![a-z0-9])", re.I)
+
+
+def _contains_phrase(text: str, value: str | None) -> bool:
+    pattern = _phrase_pattern(value)
+    return bool(pattern and pattern.search(text))
+
+
 def _all_tokens(text: str, value: str | None, *, ignore: set[str] | None = None) -> bool:
     tokens = _tokens(value, ignore=ignore)
-    return bool(tokens) and all(token in text for token in tokens)
+    return bool(tokens) and all(
+        re.search(rf"(?<![a-z0-9]){re.escape(token)}(?![a-z0-9])", text)
+        for token in tokens
+    )
 
 
 def _trim_tokens(configuration: VehicleConfiguration) -> list[str]:
-    ignored = (
-        set(_tokens(configuration.make))
-        | set(_tokens(configuration.model))
-        | set(_tokens(_reference_model(configuration)))
-    )
+    ignored = set(_tokens(configuration.make)) | set(_tokens(configuration.model))
     return _tokens(configuration.trim, ignore=ignored)
 
 
+def _lexus_reference_trim(configuration: VehicleConfiguration) -> bool:
+    if configuration.make != "Lexus" or not configuration.trim:
+        return False
+    trim_tokens = _tokens(configuration.trim)
+    reference_tokens = _tokens(_reference_model(configuration))
+    return trim_tokens == reference_tokens + ["base"]
+
+
+def _trim_match(text: str, configuration: VehicleConfiguration) -> bool:
+    if not configuration.trim:
+        return False
+    if _contains_phrase(text, configuration.trim):
+        return True
+    # The seed workbook represents historic Lexus ES/GS/LS model variants as
+    # model=ES + trim=ES 300 BASE (etc.). Reference sites normally call that
+    # vehicle simply "ES 300". This is a controlled nomenclature alias, not a
+    # general rule that a missing BASE label proves a base trim.
+    if _lexus_reference_trim(configuration):
+        return _contains_phrase(text, _reference_model(configuration))
+    return False
+
+
 def _matching_window(text: str, configuration: VehicleConfiguration) -> str:
-    anchors = _trim_tokens(configuration) or _tokens(_reference_model(configuration))
-    positions = [text.find(anchor) for anchor in anchors if text.find(anchor) >= 0]
-    if not positions:
-        return text[:9000]
-    position = min(positions)
-    return text[max(0, position - 1800) : min(len(text), position + 4200)]
+    trim_pattern = _phrase_pattern(configuration.trim)
+    if trim_pattern:
+        match = trim_pattern.search(text)
+        if match:
+            position = match.start()
+            return text[max(0, position - 1800) : min(len(text), position + 4200)]
+
+    if _lexus_reference_trim(configuration):
+        reference_pattern = _phrase_pattern(_reference_model(configuration))
+        if reference_pattern:
+            match = reference_pattern.search(text)
+            if match:
+                position = match.start()
+                return text[max(0, position - 1800) : min(len(text), position + 4200)]
+
+    # Prefer distinctive alphabetic trim tokens (e.g. RS in "2.5 RS") over
+    # single letters and numbers, which otherwise anchor on unrelated specs.
+    trim_tokens = _trim_tokens(configuration)
+    anchors = sorted(
+        trim_tokens,
+        key=lambda token: (
+            token.isdigit(),
+            len(token) < 2,
+            -len(token),
+            token,
+        ),
+    )
+    for anchor in anchors:
+        match = re.search(rf"(?<![a-z0-9]){re.escape(anchor)}(?![a-z0-9])", text)
+        if match:
+            position = match.start()
+            return text[max(0, position - 1800) : min(len(text), position + 4200)]
+
+    reference_pattern = _phrase_pattern(_reference_model(configuration))
+    if reference_pattern:
+        match = reference_pattern.search(text)
+        if match:
+            position = match.start()
+            return text[max(0, position - 1800) : min(len(text), position + 4200)]
+    return text[:9000]
 
 
 def _observation(
@@ -226,9 +294,29 @@ def _number_in_text(text: str, number: int | float, units: tuple[str, ...]) -> b
     return bool(re.search(rf"(?<!\d){re.escape(value)}\s*(?:{unit_pattern})\b", text, re.I))
 
 
+def _technology_supported(text: str, value: object) -> bool:
+    technologies = value if isinstance(value, list) else [value]
+    patterns = {
+        "ivtec": re.compile(r"\bi[\s-]*vtec\b", re.I),
+        "vtece": re.compile(r"\bvtec[\s-]*e\b", re.I),
+        "vtec": re.compile(r"(?<!i-)(?<!i )\bvtec\b(?![\s-]*e\b)", re.I),
+        "vvti": re.compile(r"\bvvt[\s-]*i\b|\bvvti\b", re.I),
+        "avcs": re.compile(r"\bavcs\b", re.I),
+    }
+    for item in technologies:
+        key = "".join(_tokens(str(item)))
+        pattern = patterns.get(key)
+        if pattern is not None:
+            if not pattern.search(text):
+                return False
+        elif not _contains_phrase(text, str(item)):
+            return False
+    return bool(technologies)
+
+
 def _supports_expected(text: str, field: str, value: object) -> bool:
     if field.startswith("identity.") and field not in {"identity.drivetrain"}:
-        return _all_tokens(text, str(value))
+        return _contains_phrase(text, str(value))
     if field == "identity.drivetrain":
         aliases = {
             "FWD": ("fwd", "front wheel drive", "front-wheel drive"),
@@ -260,8 +348,7 @@ def _supports_expected(text: str, field: str, value: object) -> bool:
         }
         return any(alias in text for alias in aliases.get(str(value), (str(value).casefold(),)))
     if field == "powertrain.engine.technology":
-        values = value if isinstance(value, list) else [value]
-        return all(_all_tokens(text, str(item)) for item in values)
+        return _technology_supported(text, value)
     if field == "powertrain.engine.aspiration":
         marker = str(value).casefold()
         return "turbo" in text if "turbo" in marker else marker in text
@@ -292,7 +379,7 @@ def _supports_expected(text: str, field: str, value: object) -> bool:
         return any(alias in text for alias in aliases.get(family, (family,)))
     if field == "transmission.speeds" and isinstance(value, (int, float)):
         return bool(re.search(rf"\b{int(value)}\s*[\s-]*(?:speed|spd)\b", text, re.I))
-    return _all_tokens(text, str(value))
+    return _contains_phrase(text, str(value))
 
 
 def _labeled_number(
@@ -401,12 +488,13 @@ def _extract_html(
     text = _visible_text(raw, content_type)
     reference_model = _reference_model(configuration)
     year_match = str(configuration.year) in text
-    make_match = _all_tokens(text, configuration.make)
-    model_match = _all_tokens(text, reference_model) or _all_tokens(text, configuration.model)
+    make_match = _contains_phrase(text, configuration.make)
+    model_match = _contains_phrase(text, reference_model) or _contains_phrase(
+        text, configuration.model
+    )
     identity_scope = year_match and make_match and model_match
     window = _matching_window(text, configuration)
-    trim_tokens = _trim_tokens(configuration)
-    trim_match = bool(trim_tokens) and all(token in window for token in trim_tokens)
+    trim_match = _trim_match(window, configuration)
 
     expected = seed_profile_fields(configuration)
     required = core_configuration_fields(configuration)
@@ -638,14 +726,19 @@ def _extract_fueleconomy(raw: bytes, configuration: VehicleConfiguration) -> Sou
             continue
         if str(fields.get("identity.make", "")).casefold() != configuration.make.casefold():
             continue
-        model_key = "".join(_tokens(str(fields.get("identity.model", ""))))
+        raw_model = str(fields.get("identity.model", ""))
+        model_key = "".join(_tokens(raw_model))
         model_candidates = {
             "".join(_tokens(configuration.model)),
             "".join(_tokens(reference_model)),
         }
         if not any(key and (key in model_key or model_key in key) for key in model_candidates):
             continue
+        if configuration.trim and _trim_match(raw_model.casefold(), configuration):
+            fields["identity.trim"] = configuration.trim
         score = 10
+        if "identity.trim" in expected and "identity.trim" in fields:
+            score += 8
         for field in (
             "powertrain.engine.displacement_l",
             "powertrain.engine.cylinders",
@@ -680,11 +773,14 @@ def _extract_fueleconomy(raw: bytes, configuration: VehicleConfiguration) -> Sou
                 value = configuration.make
             elif field == "identity.model":
                 value = configuration.model
-            scope = (
-                "model_year"
-                if field.startswith("identity.") and field != "identity.drivetrain"
-                else "powertrain_configuration"
-            )
+            elif field == "identity.trim":
+                value = configuration.trim or values[0]
+            if field == "identity.trim":
+                scope = "exact_trim"
+            elif field.startswith("identity.") and field != "identity.drivetrain":
+                scope = "model_year"
+            else:
+                scope = "powertrain_configuration"
             observations[field] = _observation(value, scope=scope)
 
     return SourceExtraction(
@@ -692,7 +788,7 @@ def _extract_fueleconomy(raw: bytes, configuration: VehicleConfiguration) -> Sou
             "year": "identity.year" in observations,
             "make": "identity.make" in observations,
             "model": "identity.model" in observations,
-            "trim": None,
+            "trim": "identity.trim" in observations if configuration.trim else None,
             "engine": None,
             "transmission": None,
             "configuration_match": False,
