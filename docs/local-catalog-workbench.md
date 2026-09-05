@@ -21,9 +21,9 @@ Dashboard terms:
 - **Verified configuration**: every mechanical fact asserted by the seed configuration has been corroborated under the field-level evidence rules.
 - **Conflict/unresolved**: evidence is insufficient or contradictory; PartGraph does not force a canonical answer.
 
-## Current collection model
+## Field-level collection model
 
-The workbench no longer asks one webpage to reproduce an entire vehicle row. Vehicle data is assembled field by field:
+The workbench does not ask one webpage to reproduce an entire vehicle row. Vehicle data is assembled field by field:
 
 ```text
 independent public/OEM sources
@@ -59,6 +59,38 @@ A compound seed value such as:
 
 is decomposed into independent facts such as displacement, cylinders, technology, and horsepower before comparison. Transmission is also independent from trim and engine identity.
 
+## Adaptive collection strategy
+
+The local collector uses a **broad-first, gap-fill** strategy. It avoids both extremes: it does not issue a separate web request for every scalar specification, and it does not blindly download every configured source for every vehicle.
+
+For each exact candidate configuration:
+
+1. inspect already-reconciled field evidence;
+2. identify unresolved core fields asserted by the seed row;
+3. select broad, high-yield sources whose declared capabilities overlap those gaps;
+4. extract every applicable technical fact from each retrieved response, not only the field that caused the request;
+5. reconcile again after each source;
+6. if core facts remain unresolved, use the gap-fill phase only with source adapters capable of contributing those fields;
+7. after core applicability is proven, the same planner may enrich unresolved non-comfort technical fields already discovered by broad extraction;
+8. stop asking a provider for fields it has already supplied for that configuration.
+
+Conceptually:
+
+```text
+exact vehicle
+    -> broad high-yield collection
+    -> extract all useful facts
+    -> field evidence matrix
+         -> verified fields: stop
+         -> unresolved fields: capability-aware gap fill
+         -> conflicts: collect additional independent evidence
+    -> reconcile again
+```
+
+Sources are tagged with capability groups such as identity, engine/powertrain, performance, transmission/drivetrain, dimensions/capacities, chassis/running gear, electrical/charging, safety, service/fluids, and parts/fitment. A source is queried only when its declared capabilities intersect the unresolved field set.
+
+This capability model is intentionally extensible. For example, future OEM or aftermarket parts adapters can contribute `parts/fitment` and applicable engine/transmission identity without being treated as horsepower authorities. No parts-site adapter is active in the current initial registry yet.
+
 ## Corroboration and authority rules
 
 There is **no fixed maximum number of sources**. The source adapter registry is only the currently implemented starting set. More independent adapters may be added without changing the reconciliation rule.
@@ -78,7 +110,7 @@ Configuration identity/specification corroboration never automatically verifies 
 
 ## Current source adapters
 
-The V2 collector currently includes an extensible registry beginning with:
+The adaptive collector currently begins with:
 
 - NHTSA vPIC;
 - FuelEconomy.gov;
@@ -89,7 +121,9 @@ The V2 collector currently includes an extensible registry beginning with:
 
 This list is an implementation starting point, **not a source ceiling or an approved-source-only policy**.
 
-NHTSA model-year evidence contributes only the identity fields actually in scope. FuelEconomy.gov can contribute powertrain, drivetrain, fuel, and EPA efficiency facts when a record can be deterministically resolved. Generic reference pages contribute only facts extracted within the applicable model/trim window.
+NHTSA model-year evidence contributes only the identity fields actually in scope. FuelEconomy.gov can contribute powertrain, drivetrain, fuel, transmission, and EPA efficiency facts when a record can be deterministically resolved. Generic reference pages contribute only facts extracted within the applicable model/trim window.
+
+The FuelEconomy adapter also has a conservative model-menu fallback for sources that split a PartGraph base model into source-specific variants. For example, if a direct request for `CR-V` returns no option records but the source exposes `CR-V 2WD` and `CR-V 4WD`, the collector can discover those menu names, preserve their raw labels, and compare them at the proven base-model scope while downstream engine/transmission/drivetrain scoring still distinguishes configurations. This is generic source nomenclature handling, not a hard-coded CR-V truth rule.
 
 Blocked/authenticated/paywalled/CAPTCHA-protected sources are not bypassed. Repeated access-control responses open a local circuit breaker so the collector stops hammering that source during the process lifetime.
 
@@ -101,15 +135,17 @@ Successful source responses are cached under:
 local-data/workbench/
 ```
 
-The raw capture is not rewritten when extraction logic improves. The V2 extractor can re-read existing cache and rebuild field observations with **zero web requests**.
+The raw capture is not rewritten when extraction logic improves. The extractor can re-read existing cache and rebuild field observations with **zero web requests**.
 
-After pulling a collector update, use:
+After pulling an extractor/reconciler update, use:
 
 ```powershell
 .\scripts\workbench.ps1 reprocess
 ```
 
 The helper temporarily stops collector workers, re-extracts/reconciles cached successful captures, then restarts the collector. This preserves the original research material and avoids downloading the same pages again just because the parser changed.
+
+The adaptive FuelEconomy model-menu fallback is a real source request, so it runs during a new collection job, not during cache-only reprocessing.
 
 ## Local runtime
 
@@ -119,8 +155,10 @@ browser
   -> local FastAPI :8000
   -> local PostgreSQL :5432
 
-local collector worker
-  -> source adapter registry
+local adaptive collector worker
+  -> field-gap planner
+  -> source capability registry
+  -> broad collection + targeted gap fill
   -> local-data/workbench raw-response cache
   -> PostgreSQL staging/evidence/profile state
 ```
