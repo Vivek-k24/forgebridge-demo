@@ -1,11 +1,14 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, Path, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..config import settings
 from ..database import get_session
+from ..errors import ErrorCode, PartGraphError
 from ..identity.auth.dependencies import CurrentUserDep, require_csrf
+from .catalog_scope import US_IDENTITY_MAKES, canonical_scoped_make
 from .workbench_schemas import (
     CatalogCollectionJobRead,
     CatalogWorkbenchDashboardRead,
@@ -31,6 +34,27 @@ BatchKey = Annotated[
 MakePath = Annotated[str, Path(min_length=1, max_length=64)]
 
 
+def _require_spec_collection(make: str) -> None:
+    if canonical_scoped_make(make) is None:
+        raise PartGraphError(
+            code=ErrorCode.REQUEST_FORBIDDEN,
+            message=(
+                "Catalog collection is currently limited to "
+                f"{', '.join(US_IDENTITY_MAKES)}."
+            ),
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+    if not settings.workbench_spec_collection_enabled:
+        raise PartGraphError(
+            code=ErrorCode.REQUEST_CONFLICT,
+            message=(
+                "Technical specification collection is paused while the US "
+                "1996-2027 make/model/trim inventory is being built."
+            ),
+            status_code=status.HTTP_409_CONFLICT,
+        )
+
+
 @router.get(
     "/batches/{batch_key}",
     response_model=CatalogWorkbenchDashboardRead,
@@ -54,6 +78,7 @@ async def start_make(
     _user: CurrentUserDep,
     _csrf: CsrfDep,
 ) -> CatalogCollectionJobRead:
+    _require_spec_collection(make)
     return await start_make_job(session, batch_key, make)
 
 
@@ -82,6 +107,7 @@ async def resume_make(
     _user: CurrentUserDep,
     _csrf: CsrfDep,
 ) -> CatalogCollectionJobRead:
+    _require_spec_collection(make)
     return await resume_make_job(session, batch_key, make)
 
 
