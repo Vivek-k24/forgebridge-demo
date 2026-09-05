@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { CatalogWorkbench } from './CatalogWorkbench'
 import { GarageWorkspace } from './GarageWorkspace'
 import { GuidedRepairWorkspace } from './GuidedRepair'
 import { RepairLogWorkspace } from './RepairLog'
@@ -7,8 +8,8 @@ import { ResumeRepairWorkspace } from './ResumeRepair'
 import { StartRepairWorkspace } from './StartRepair'
 import './partgraph-shell.css'
 
-type PageKey = 'garage' | 'start' | 'resume' | 'readiness' | 'guidance' | 'log'
-type NavGroup = 'vehicle' | 'repair'
+type PageKey = 'catalog' | 'garage' | 'start' | 'resume' | 'readiness' | 'guidance' | 'log'
+type NavGroup = 'data' | 'vehicle' | 'repair'
 
 type NavItem = {
   key: PageKey
@@ -16,7 +17,11 @@ type NavItem = {
   group: NavGroup
 }
 
+const WORKBENCH_ENABLED = import.meta.env.VITE_PARTGRAPH_WORKBENCH_ENABLED === 'true'
 const NAV_ITEMS: NavItem[] = [
+  ...(WORKBENCH_ENABLED
+    ? [{ key: 'catalog' as const, label: 'Catalog workbench', group: 'data' as const }]
+    : []),
   { key: 'garage', label: 'Garage', group: 'vehicle' },
   { key: 'start', label: 'Start repair', group: 'repair' },
   { key: 'resume', label: 'Resume repair', group: 'repair' },
@@ -26,6 +31,7 @@ const NAV_ITEMS: NavItem[] = [
 ]
 
 const GROUP_LABELS: Record<NavGroup, string> = {
+  data: 'Data',
   vehicle: 'Vehicle',
   repair: 'Repair',
 }
@@ -53,28 +59,34 @@ export default function PartGraphShell() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const navigation = (group: NavGroup) => (
-    <>
-      <p>{GROUP_LABELS[group]}</p>
-      {NAV_ITEMS.filter((item) => item.group === group).map((item) => {
-        const active = item.key === page
-        return (
-          <button
-            key={item.key}
-            type="button"
-            className={active ? 'partgraph-nav-item partgraph-nav-item--active' : 'partgraph-nav-item'}
-            aria-current={active ? 'page' : undefined}
-            onClick={() => navigate(item.key)}
-          >
-            <span>{item.label}</span>
-          </button>
-        )
-      })}
-    </>
-  )
+  const navigation = (group: NavGroup) => {
+    const items = NAV_ITEMS.filter((item) => item.group === group)
+    if (items.length === 0) return null
+    return (
+      <>
+        <p>{GROUP_LABELS[group]}</p>
+        {items.map((item) => {
+          const active = item.key === page
+          return (
+            <button
+              key={item.key}
+              type="button"
+              className={active ? 'partgraph-nav-item partgraph-nav-item--active' : 'partgraph-nav-item'}
+              aria-current={active ? 'page' : undefined}
+              onClick={() => navigate(item.key)}
+            >
+              <span>{item.label}</span>
+            </button>
+          )
+        })}
+      </>
+    )
+  }
 
   let content: React.ReactNode
-  if (page === 'garage') {
+  if (page === 'catalog' && WORKBENCH_ENABLED) {
+    content = <CatalogWorkbench />
+  } else if (page === 'garage') {
     content = (
       <GarageWorkspace
         initialMarket="US"
@@ -98,7 +110,12 @@ export default function PartGraphShell() {
   } else if (page === 'readiness') {
     content = <RepairMemoryWorkspace />
   } else if (page === 'guidance') {
-    content = <GuidedRepairWorkspace onOpenReadiness={() => navigate('readiness')} onStartRepair={() => navigate('start')} />
+    content = (
+      <GuidedRepairWorkspace
+        onOpenReadiness={() => navigate('readiness')}
+        onStartRepair={() => navigate('start')}
+      />
+    )
   } else if (page === 'log') {
     content = <RepairLogWorkspace />
   } else {
@@ -127,6 +144,7 @@ export default function PartGraphShell() {
           </div>
         </div>
         <nav className="partgraph-nav">
+          {navigation('data')}
           {navigation('vehicle')}
           {navigation('repair')}
         </nav>
