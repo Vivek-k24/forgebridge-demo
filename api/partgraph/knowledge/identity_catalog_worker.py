@@ -30,7 +30,7 @@ from .identity_catalog_models import (
 )
 
 USER_AGENT = (
-    "Mozilla/5.0 (compatible; PartGraphIdentityCatalog/1.0; "
+    "Mozilla/5.0 (compatible; PartGraphIdentityCatalog/1.1; "
     "+local-operator-controlled-catalog-workbench)"
 )
 _TAG_RE = re.compile(r"<[^>]+>")
@@ -57,17 +57,27 @@ _KBB_EXCLUDED_STYLE_KEYS = {
     "recall",
     "recalls",
 }
-_VARIANT_TOKENS = {
+_CARSDIRECT_STYLE_BREAK_RE = re.compile(
+    r"\s+(?:"
+    r"[2-5]dr\b|2-door\b|3-door\b|4-door\b|5-door\b|"
+    r"4x2\b|4x4\b|2wd\b|4wd\b|awd\b|fwd\b|rwd\b|"
+    r"front-wheel\b|rear-wheel\b|all-wheel\b"
+    r").*$",
+    re.I,
+)
+_CARSDIRECT_EXCLUDED_KEYS = {
+    "select a trim",
+    "choose a trim",
+    "all trims",
+}
+_DRIVETRAIN_VARIANT_TOKENS = {
     "2wd",
     "4wd",
     "awd",
     "fwd",
-    "hybrid",
-    "phev",
-    "plug",
-    "in",
-    "electric",
-    "ev",
+    "rwd",
+    "4x2",
+    "4x4",
 }
 
 
@@ -87,32 +97,53 @@ def slug(value: str) -> str:
     return "-".join(_tokens(value))
 
 
+def _nhtsa_canonical_map(nhtsa_models: list[str]) -> dict[tuple[str, ...], str]:
+    cleaned: dict[tuple[str, ...], str] = {}
+    for raw in nhtsa_models:
+        label = _SPACE_RE.sub(" ", raw).strip()
+        tokens = _tokens(label)
+        if label and tokens:
+            cleaned.setdefault(tokens, label)
+
+    result: dict[tuple[str, ...], str] = {}
+    for tokens, label in cleaned.items():
+        # PartGraph models the ordinary vehicle family separately from its
+        # hybrid powertrain variant. This matches the accepted Civic Hybrid
+        # profile and keeps identities such as 2026 Accord Sport Hybrid under
+        # model=Accord rather than inventing model=Accord Hybrid.
+        if tokens[-1:] == ("hybrid",) and tokens[:-1] in cleaned:
+            result[tokens] = cleaned[tokens[:-1]]
+        else:
+            result[tokens] = label
+    return result
+
+
 def canonicalize_model_inventory(
     nhtsa_models: list[str],
     fueleconomy_models: list[str],
 ) -> dict[str, dict[str, list[str]]]:
     inventory: dict[str, dict[str, list[str]]] = {}
-    nhtsa_by_tokens: dict[tuple[str, ...], str] = {}
+    nhtsa_map = _nhtsa_canonical_map(nhtsa_models)
 
     for raw in nhtsa_models:
         label = _SPACE_RE.sub(" ", raw).strip()
         if not label:
             continue
-        key = normalized_key(label)
-        canonical = next(
-            (name for name in inventory if normalized_key(name) == key),
-            label,
-        )
+        canonical = nhtsa_map.get(_tokens(label), label)
         inventory.setdefault(canonical, {}).setdefault("nhtsa_vpic", []).append(label)
-        nhtsa_by_tokens[_tokens(canonical)] = canonical
 
-    ordered_nhtsa = sorted(nhtsa_by_tokens, key=len, reverse=True)
+    canonical_token_map: dict[tuple[str, ...], str] = {}
+    for raw_tokens, canonical in nhtsa_map.items():
+        canonical_token_map[raw_tokens] = canonical
+        canonical_token_map.setdefault(_tokens(canonical), canonical)
+    ordered_nhtsa = sorted(canonical_token_map, key=len, reverse=True)
+
     for raw in fueleconomy_models:
         label = _SPACE_RE.sub(" ", raw).strip()
         if not label:
             continue
         raw_tokens = _tokens(label)
-        canonical = nhtsa_by_tokens.get(raw_tokens)
+        canonical = canonical_token_map.get(raw_tokens)
         if canonical is None:
             for candidate_tokens in ordered_nhtsa:
                 if len(raw_tokens) <= len(candidate_tokens):
@@ -120,8 +151,8 @@ def canonicalize_model_inventory(
                 if raw_tokens[: len(candidate_tokens)] != candidate_tokens:
                     continue
                 suffix = set(raw_tokens[len(candidate_tokens) :])
-                if suffix and suffix.issubset(_VARIANT_TOKENS):
-                    canonical = nhtsa_by_tokens[candidate_tokens]
+                if suffix and suffix.issubset(_DRIVETRAIN_VARIANT_TOKENS):
+                    canonical = canonical_token_map[candidate_tokens]
                     break
         if canonical is None:
             key = normalized_key(label)
@@ -135,6 +166,24 @@ def canonicalize_model_inventory(
         for provider, labels in provider_map.items():
             provider_map[provider] = sorted(dict.fromkeys(labels), key=str.casefold)
     return inventory
+
+
+def model_variant(canonical_model: str, source_model: str) -> str | None:
+    base = _tokens(canonical_model)
+    source = _tokens(source_model)
+    if source == base + ("hybrid",):
+        return "Hybrid"
+    return None
+
+
+def combine_trim_variant(trim: str | None, variant: str | None) -> str | None:
+    if variant is None:
+        return trim
+    if trim is None or normalized_key(trim) in {"base", "standard"}:
+        return variant
+    if normalized_key(variant) in set(_tokens(trim)):
+        return trim
+    return f"{trim} {variant}"
 
 
 def trim_from_kbb_style(style: str) -> str | None:
@@ -178,6 +227,62 @@ def extract_kbb_trims(raw: bytes, make: str, model: str, year: int) -> list[str]
     )
     for match in mpg_pattern.finditer(visible):
         trim = trim_from_kbb_style(match.group(1))
+        if trim is not None:
+            trims.setdefault(normalized_key(trim), trim)
+    return sorted(trims.values(), key=str.casefold)
+
+
+def trim_from_carsdirect_style(style: str) -> str | None:
+    value = _SPACE_RE.sub(" ", html.unescape(_TAG_RE.sub(" ", style))).strip(" -|\t\r\n")
+    if not value:
+        return None
+    value = _CARSDIRECT_STYLE_BREAK_RE.sub("", value).strip()
+    if not value or normalized_key(value) in _CARSDIRECT_EXCLUDED_KEYS:
+        return None
+    if len(value) > 100:
+        return None
+    return value
+
+
+def extract_carsdirect_trims(raw: bytes, model: str, year: int) -> list[str]:
+    text = raw.decode("utf-8", errors="replace")
+    trims: dict[str, str] = {}
+
+    for option in re.findall(r"<option\b[^>]*>(.*?)</option>", text, re.I | re.S):
+        trim = trim_from_carsdirect_style(option)
+        if trim is not None:
+            trims.setdefault(normalized_key(trim), trim)
+
+    visible = _SPACE_RE.sub(" ", html.unescape(_TAG_RE.sub(" ", text)))
+    marker = "Select a Trim"
+    marker_index = visible.casefold().find(marker.casefold())
+    if marker_index >= 0:
+        segment = visible[marker_index : marker_index + 6000]
+        style_pattern = re.compile(
+            r"(?<![A-Za-z0-9-])"
+            r"([A-Za-z0-9][A-Za-z0-9+./&' -]{0,70}?)\s+"
+            r"(?:[2-5]dr|2-door|3-door|4-door|5-door)\s+"
+            r"(?:[A-Za-z-]+\s+){0,5}"
+            r"(?:Sedan|Coupe|Hatchback|Wagon|SUV|Convertible|Roadster|Van|Pickup)",
+            re.I,
+        )
+        for match in style_pattern.finditer(segment):
+            trim = trim_from_carsdirect_style(match.group(0))
+            if trim is not None:
+                trims.setdefault(normalized_key(trim), trim)
+
+    # Older compare pages repeat "YEAR MAKE ... MODEL\nTRIM BODY". This
+    # conservative fallback only harvests a label immediately preceding a
+    # recognized door/body expression.
+    fallback = re.compile(
+        rf"{year}\s+[^\n]{{0,80}}?{re.escape(model)}\s+"
+        r"([A-Za-z0-9][A-Za-z0-9+./&' -]{0,70}?)\s+"
+        r"(?:[2-5]dr|2-door|3-door|4-door|5-door)\s+"
+        r"(?:Sedan|Coupe|Hatchback|Wagon|SUV|Convertible|Roadster|Van|Pickup)",
+        re.I,
+    )
+    for match in fallback.finditer(visible):
+        trim = trim_from_carsdirect_style(match.group(1))
         if trim is not None:
             trims.setdefault(normalized_key(trim), trim)
     return sorted(trims.values(), key=str.casefold)
@@ -242,7 +347,13 @@ def _fetch_cached(
             }
     except HTTPError as exc:
         return None, {
-            "status": "not_found" if exc.code == 404 else "blocked" if exc.code == 403 else "failed",
+            "status": (
+                "not_found"
+                if exc.code == 404
+                else "blocked"
+                if exc.code == 403
+                else "failed"
+            ),
             "http_status": exc.code,
             "url": url,
             "error": str(exc)[:300],
@@ -313,11 +424,11 @@ def _fueleconomy_models(
 
 def _kbb_trims(
     make: str,
-    model: str,
+    source_model: str,
     year: int,
     refresh: bool,
 ) -> tuple[list[str], dict[str, object]]:
-    url = f"https://www.kbb.com/{slug(make)}/{slug(model)}/{year}/"
+    url = f"https://www.kbb.com/{slug(make)}/{slug(source_model)}/{year}/"
     raw, evidence = _fetch_cached(
         "kbb",
         make,
@@ -329,7 +440,38 @@ def _kbb_trims(
     )
     if raw is None:
         return [], evidence
-    return extract_kbb_trims(raw, make, model, year), evidence
+    return extract_kbb_trims(raw, make, source_model, year), evidence
+
+
+def _carsdirect_trims(
+    make: str,
+    source_model: str,
+    year: int,
+    refresh: bool,
+) -> tuple[list[str], dict[str, object]]:
+    url = f"https://www.carsdirect.com/{slug(make)}/{slug(source_model)}/{year}/specs"
+    raw, evidence = _fetch_cached(
+        "carsdirect",
+        make,
+        year,
+        url,
+        accept="text/html,application/xhtml+xml;q=0.9",
+        suffix="html",
+        refresh=refresh,
+    )
+    if raw is None:
+        return [], evidence
+    return extract_carsdirect_trims(raw, source_model, year), evidence
+
+
+def _source_model_aliases(
+    canonical_model: str,
+    provider_labels: dict[str, list[str]],
+) -> list[str]:
+    labels = [canonical_model]
+    for provider_values in provider_labels.values():
+        labels.extend(provider_values)
+    return sorted(dict.fromkeys(labels), key=lambda value: (value != canonical_model, value.casefold()))
 
 
 async def _upsert_model(
@@ -437,6 +579,35 @@ async def _progress(make: str, year: int) -> CatalogIdentityProgress:
             return row
 
 
+async def _collect_trim_source(
+    model_row: CatalogIdentityModel,
+    canonical_model: str,
+    source_model: str,
+    provider: str,
+    trims: list[str],
+    evidence: dict[str, object],
+) -> int:
+    variant = model_variant(canonical_model, source_model)
+    canonical_trims = {
+        combined
+        for trim in trims
+        if (combined := combine_trim_variant(trim, variant)) is not None
+    }
+    if variant is not None and not canonical_trims and evidence.get("status") in {
+        "success",
+        "cached",
+    }:
+        canonical_trims.add(variant)
+
+    enriched_evidence = dict(evidence)
+    enriched_evidence["source_model"] = source_model
+    if variant is not None:
+        enriched_evidence["model_variant"] = variant
+    for trim in sorted(canonical_trims, key=str.casefold):
+        await _upsert_trim(model_row, trim, provider, enriched_evidence)
+    return len(canonical_trims)
+
+
 async def collect_make_year(make: str, year: int, *, refresh: bool) -> None:
     progress = await _progress(make, year)
     if progress.status == "completed" and not refresh:
@@ -477,8 +648,11 @@ async def collect_make_year(make: str, year: int, *, refresh: bool) -> None:
                         )
                     )
 
-        trim_count = 0
-        kbb_summary = {"success": 0, "not_found": 0, "blocked": 0, "failed": 0}
+        unique_trim_keys: set[tuple[str, str]] = set()
+        summaries = {
+            "kbb": {"success": 0, "not_found": 0, "blocked": 0, "failed": 0},
+            "carsdirect": {"success": 0, "not_found": 0, "blocked": 0, "failed": 0},
+        }
         for model, provider_labels in sorted(inventory.items(), key=lambda item: item[0].casefold()):
             model_row = await _upsert_model(
                 make,
@@ -487,16 +661,40 @@ async def collect_make_year(make: str, year: int, *, refresh: bool) -> None:
                 provider_labels,
                 source_evidence,
             )
-            trims, evidence = await asyncio.to_thread(
-                _kbb_trims, make, model, year, refresh
-            )
-            status = str(evidence.get("status", "failed"))
-            summary_key = "success" if status in {"success", "cached"} else status
-            if summary_key in kbb_summary:
-                kbb_summary[summary_key] += 1
-            for trim in trims:
-                await _upsert_trim(model_row, trim, "kbb", evidence)
-                trim_count += 1
+            for source_model in _source_model_aliases(model, provider_labels):
+                for provider, fetcher in (
+                    ("kbb", _kbb_trims),
+                    ("carsdirect", _carsdirect_trims),
+                ):
+                    trims, evidence = await asyncio.to_thread(
+                        fetcher, make, source_model, year, refresh
+                    )
+                    status = str(evidence.get("status", "failed"))
+                    summary_key = "success" if status in {"success", "cached"} else status
+                    provider_summary = summaries[provider]
+                    if summary_key in provider_summary:
+                        provider_summary[summary_key] += 1
+                    variant = model_variant(model, source_model)
+                    canonical_trims = {
+                        combined
+                        for trim in trims
+                        if (combined := combine_trim_variant(trim, variant)) is not None
+                    }
+                    if variant is not None and not canonical_trims and status in {
+                        "success",
+                        "cached",
+                    }:
+                        canonical_trims.add(variant)
+                    await _collect_trim_source(
+                        model_row,
+                        model,
+                        source_model,
+                        provider,
+                        trims,
+                        evidence,
+                    )
+                    for trim in canonical_trims:
+                        unique_trim_keys.add((normalized_key(model), normalized_key(trim)))
 
         async with session_factory() as session:
             async with session.begin():
@@ -505,16 +703,16 @@ async def collect_make_year(make: str, year: int, *, refresh: bool) -> None:
                     return
                 row.status = "completed"
                 row.models_found = len(inventory)
-                row.trims_found = trim_count
+                row.trims_found = len(unique_trim_keys)
                 row.source_summary = {
                     "nhtsa_vpic": nhtsa_evidence,
                     "fueleconomy_gov": fueleconomy_evidence,
-                    "kbb": kbb_summary,
+                    **summaries,
                 }
                 row.completed_at = _now()
         print(
             f"PASS {year} {make}: {len(inventory)} models, "
-            f"{trim_count} model-trim observations"
+            f"{len(unique_trim_keys)} canonical model-trim rows"
         )
     except Exception as exc:
         async with session_factory() as session:
@@ -667,6 +865,13 @@ async def _main_async(args: argparse.Namespace) -> None:
     await collect_scope(makes, args.year_from, args.year_to, refresh=args.refresh)
 
 
+async def _run(args: argparse.Namespace) -> None:
+    try:
+        await _main_async(args)
+    finally:
+        await engine.dispose()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Collect US make/model/trim inventory before technical specifications"
@@ -678,10 +883,7 @@ def main() -> None:
     parser.add_argument("--status", action="store_true")
     parser.add_argument("--export-json")
     args = parser.parse_args()
-    try:
-        asyncio.run(_main_async(args))
-    finally:
-        asyncio.run(engine.dispose())
+    asyncio.run(_run(args))
 
 
 if __name__ == "__main__":
