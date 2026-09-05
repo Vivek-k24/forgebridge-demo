@@ -57,6 +57,13 @@ class CatalogWorkbenchSourceRead(BaseModel):
     created_at: datetime
 
 
+class CatalogWorkbenchFieldSummary(BaseModel):
+    verified: int = 0
+    manufacturer_reported: int = 0
+    candidate: int = 0
+    conflict: int = 0
+
+
 class CatalogWorkbenchMakeRead(BaseModel):
     make: str
     candidates: int
@@ -65,6 +72,7 @@ class CatalogWorkbenchMakeRead(BaseModel):
     conflicts: int
     collection_percent: float
     verification_percent: float
+    field_summary: CatalogWorkbenchFieldSummary
     latest_job: CatalogCollectionJobRead | None
 
 
@@ -78,4 +86,5 @@ class CatalogWorkbenchDashboardRead(BaseModel):
     conflicts: int
     collection_percent: float
     verification_percent: float
+    field_summary: CatalogWorkbenchFieldSummary
     makes: list[CatalogWorkbenchMakeRead]
