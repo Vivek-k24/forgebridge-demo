@@ -241,7 +241,13 @@ def trim_from_carsdirect_style(style: str) -> str | None:
     if break_match is None:
         return None
     value = value[: break_match.start()].strip()
-    if not value or normalized_key(value) in _CARSDIRECT_EXCLUDED_KEYS:
+    key = normalized_key(value)
+    if (
+        not value
+        or key in _CARSDIRECT_EXCLUDED_KEYS
+        or key.startswith("select a trim ")
+        or key.startswith("choose a trim ")
+    ):
         return None
     if len(value) > 100:
         return None
@@ -261,7 +267,8 @@ def extract_carsdirect_trims(raw: bytes, model: str, year: int) -> list[str]:
     marker = "Select a Trim"
     marker_index = visible.casefold().find(marker.casefold())
     if marker_index >= 0:
-        segment = visible[marker_index : marker_index + 6000]
+        segment_start = marker_index + len(marker)
+        segment = visible[segment_start : segment_start + 6000]
         style_pattern = re.compile(
             r"(?<![A-Za-z0-9-])"
             r"([A-Za-z0-9][A-Za-z0-9+./&' -]{0,70}?)\s+"
