@@ -5,7 +5,11 @@ thin forwarder prevents old local commands or references from accidentally
 running the retired whole-configuration matcher.
 """
 
-from .workbench_worker_v2 import main
+
+def main() -> None:
+    from .workbench_worker_v2 import main as run_v2
+
+    run_v2()
 
 
 if __name__ == "__main__":
