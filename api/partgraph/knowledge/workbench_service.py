@@ -19,6 +19,7 @@ from .workbench_models import (
 from .workbench_schemas import (
     CatalogCollectionJobRead,
     CatalogWorkbenchDashboardRead,
+    CatalogWorkbenchFieldSummary,
     CatalogWorkbenchLogRead,
     CatalogWorkbenchMakeRead,
     CatalogWorkbenchSourceRead,
@@ -42,6 +43,40 @@ def _percent(numerator: int, denominator: int) -> float:
     if denominator <= 0:
         return 0.0
     return round((numerator / denominator) * 100, 1)
+
+
+def _empty_field_counts() -> dict[str, int]:
+    return {
+        "verified": 0,
+        "manufacturer_reported": 0,
+        "candidate": 0,
+        "conflict": 0,
+    }
+
+
+def _add_matrix_field_counts(
+    target: dict[str, int],
+    source_matrix: dict[str, object] | None,
+) -> None:
+    if not isinstance(source_matrix, dict):
+        return
+    raw = source_matrix.get("field_summary")
+    if not isinstance(raw, dict):
+        return
+    mapping = {
+        "verified_fields": "verified",
+        "manufacturer_reported_fields": "manufacturer_reported",
+        "candidate_fields": "candidate",
+        "conflict_fields": "conflict",
+    }
+    for source_key, target_key in mapping.items():
+        value = raw.get(source_key, 0)
+        if isinstance(value, int) and value >= 0:
+            target[target_key] += value
+
+
+def _field_summary(counts: dict[str, int]) -> CatalogWorkbenchFieldSummary:
+    return CatalogWorkbenchFieldSummary(**counts)
 
 
 async def _batch(session: AsyncSession, batch_key: str) -> CatalogCoverageBatch:
@@ -85,6 +120,7 @@ async def workbench_dashboard(
                 VehicleConfiguration.make,
                 CatalogCoverageItem.collection_status,
                 CatalogCoverageItem.verification_status,
+                CatalogCoverageItem.source_matrix,
             )
             .join(
                 VehicleConfiguration,
@@ -94,33 +130,52 @@ async def workbench_dashboard(
         )
     ).all()
 
-    by_make: dict[str, dict[str, int]] = {}
-    for make, collection_status, verification_status in rows:
+    by_make: dict[str, dict[str, object]] = {}
+    for make, collection_status, verification_status, source_matrix in rows:
         counters = by_make.setdefault(
             make,
-            {"candidates": 0, "collected": 0, "verified": 0, "conflicts": 0},
+            {
+                "candidates": 0,
+                "collected": 0,
+                "verified": 0,
+                "conflicts": 0,
+                "fields": _empty_field_counts(),
+            },
         )
-        counters["candidates"] += 1
+        counters["candidates"] = int(counters["candidates"]) + 1
         if collection_status == "collected":
-            counters["collected"] += 1
+            counters["collected"] = int(counters["collected"]) + 1
         if verification_status == "verified":
-            counters["verified"] += 1
+            counters["verified"] = int(counters["verified"]) + 1
         elif verification_status == "conflict":
-            counters["conflicts"] += 1
+            counters["conflicts"] = int(counters["conflicts"]) + 1
+        fields = counters["fields"]
+        if isinstance(fields, dict):
+            _add_matrix_field_counts(fields, source_matrix)
 
     makes: list[CatalogWorkbenchMakeRead] = []
+    total_fields = _empty_field_counts()
     for make in sorted(by_make, key=str.casefold):
         counts = by_make[make]
+        candidates = int(counts["candidates"])
+        collected = int(counts["collected"])
+        verified = int(counts["verified"])
+        conflicts = int(counts["conflicts"])
+        raw_fields = counts["fields"]
+        fields = raw_fields if isinstance(raw_fields, dict) else _empty_field_counts()
+        for key in total_fields:
+            total_fields[key] += int(fields.get(key, 0))
         latest = await _latest_job(session, batch.id, make)
         makes.append(
             CatalogWorkbenchMakeRead(
                 make=make,
-                candidates=counts["candidates"],
-                collected=counts["collected"],
-                verified=counts["verified"],
-                conflicts=counts["conflicts"],
-                collection_percent=_percent(counts["collected"], counts["candidates"]),
-                verification_percent=_percent(counts["verified"], counts["candidates"]),
+                candidates=candidates,
+                collected=collected,
+                verified=verified,
+                conflicts=conflicts,
+                collection_percent=_percent(collected, candidates),
+                verification_percent=_percent(verified, candidates),
+                field_summary=_field_summary(fields),
                 latest_job=(
                     CatalogCollectionJobRead.model_validate(latest) if latest is not None else None
                 ),
@@ -141,6 +196,7 @@ async def workbench_dashboard(
         conflicts=conflicts,
         collection_percent=_percent(collected, candidates),
         verification_percent=_percent(verified, candidates),
+        field_summary=_field_summary(total_fields),
         makes=makes,
     )
 
