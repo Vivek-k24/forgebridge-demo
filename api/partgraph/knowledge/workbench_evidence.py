@@ -50,13 +50,18 @@ async def _ingestion_batch(
     batch_id = _stable_id(f"ingestion:{job.id}:{provider}:{COLLECTOR_VERSION}")
     existing = await session.get(CatalogIngestionBatch, batch_id)
     if existing is not None:
+        if job.status == "completed" and existing.status == "open":
+            existing.status = "completed"
+            existing.completed_at = _now()
         return existing
+    completed = job.status == "completed"
     batch = CatalogIngestionBatch(
         id=batch_id,
         source_name=f"local_workbench_{provider}",
         source_type=source_class,
         collector_version=COLLECTOR_VERSION,
-        status="open",
+        status="completed" if completed else "open",
+        completed_at=_now() if completed else None,
     )
     session.add(batch)
     await session.flush()
