@@ -191,11 +191,9 @@ def seed_profile_fields(configuration: Any) -> dict[str, object]:
 def core_configuration_fields(configuration: Any) -> dict[str, object]:
     """Facts the seed row itself asserts and therefore must corroborate.
 
-    The workbench no longer treats the original engine/transmission strings as
-    atomic identity fields. It splits them first, but it still requires every
-    mechanical fact asserted by the seed row to be corroborated before that
-    candidate row is called verified. This prevents a horsepower/technology
-    variant from being silently collapsed into a sibling configuration.
+    The original engine/transmission strings are not atomic identity fields.
+    They are split first, but every mechanical fact asserted by the seed row
+    must still be corroborated before that candidate row is called verified.
     """
     return seed_profile_fields(configuration)
 
@@ -274,7 +272,7 @@ def observation_comparison_key(field: str, value: object) -> str:
 
 
 def technical_section(field: str) -> str:
-    if field.startswith("identity."):
+    if field.startswith("identity.") or field.startswith("classification."):
         return "identity"
     if field.startswith("powertrain.") or field.startswith("transmission."):
         return "powertrain"
@@ -284,6 +282,8 @@ def technical_section(field: str) -> str:
         return "efficiency_emissions"
     if field.startswith("dimensions_weight."):
         return "dimensions_weight"
+    if field.startswith("capacity."):
+        return "capacities"
     if (
         field.startswith("chassis.")
         or field.startswith("steering.")
@@ -295,9 +295,9 @@ def technical_section(field: str) -> str:
     if field.startswith("wheels_tires."):
         return "wheels_tires"
     if field.startswith("service.") or field.startswith("fluids."):
-        return "service"
-    if field.startswith("electrical."):
-        return "electrical"
+        return "service_fluids"
+    if field.startswith("electrical.") or field.startswith("charging."):
+        return "electrical_charging"
     if field.startswith("safety."):
         return "safety"
     return "other_technical"
