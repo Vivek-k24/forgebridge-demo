@@ -434,7 +434,10 @@ async def worker_loop() -> None:
                                 session,
                                 job.id,
                                 "job_failed",
-                                "Adaptive collection failed; it can be resumed after the cause is fixed.",
+                                (
+                                    "Adaptive collection failed; it can be resumed "
+                                    "after the cause is fixed."
+                                ),
                                 level="error",
                                 details={"error": job.last_error},
                             )
