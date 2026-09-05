@@ -1,10 +1,23 @@
 param(
-    [ValidateSet('start', 'stop', 'status', 'logs', 'backup', 'scale2', 'reprocess')]
+    [ValidateSet(
+        'start',
+        'stop',
+        'status',
+        'logs',
+        'backup',
+        'identity-start',
+        'identity-refresh',
+        'identity-status',
+        'identity-export',
+        'scale2',
+        'reprocess'
+    )]
     [string]$Action = 'start'
 )
 
 $ErrorActionPreference = 'Stop'
 $RepoRoot = Split-Path -Parent $PSScriptRoot
+$IdentityContainer = 'partgraph-identity-catalog'
 Set-Location $RepoRoot
 
 function Assert-Docker {
@@ -14,43 +27,101 @@ function Assert-Docker {
     docker compose version | Out-Null
 }
 
+function Remove-IdentityContainer {
+    $Existing = docker ps -a --filter "name=^/$IdentityContainer$" --format '{{.ID}}'
+    if ($Existing) {
+        docker rm -f $IdentityContainer | Out-Null
+    }
+}
+
+function Start-CoreStack {
+    New-Item -ItemType Directory -Force -Path 'local-data/workbench' | Out-Null
+    docker compose up -d --build postgres api web
+}
+
+function Start-IdentityCollector([switch]$Refresh) {
+    Start-CoreStack
+    Remove-IdentityContainer
+    $Args = @(
+        'compose', 'run', '-d', '--no-deps',
+        '--name', $IdentityContainer,
+        'collector',
+        'python', '-m', 'partgraph.knowledge.identity_catalog_worker'
+    )
+    if ($Refresh) {
+        $Args += '--refresh'
+    }
+    & docker $Args | Out-Null
+    Write-Host 'US identity catalog collection started.' -ForegroundColor Green
+    Write-Host 'Scope: Acura, Honda, Hyundai, Lexus, Subaru, Toyota · 1996-2027 · US market'
+    Write-Host 'This phase collects year + make + model + trim only. Technical specs are paused.'
+    Write-Host 'Progress: .\scripts\workbench.ps1 identity-status'
+    Write-Host 'Live log:  .\scripts\workbench.ps1 logs'
+}
+
 Assert-Docker
 
 switch ($Action) {
     'start' {
-        New-Item -ItemType Directory -Force -Path 'local-data/workbench' | Out-Null
-        docker compose up -d --build
+        Start-CoreStack
         Write-Host ''
         Write-Host 'PartGraph local workbench is starting.' -ForegroundColor Green
         Write-Host 'Open: http://localhost:5173/#/catalog'
-        Write-Host 'The adaptive collector runs locally and the source cache is under local-data/workbench.'
+        Write-Host 'Specification collection is paused during the identity inventory phase.'
+        Write-Host 'Start the six-make identity run with:'
+        Write-Host '  .\scripts\workbench.ps1 identity-start' -ForegroundColor Cyan
     }
     'stop' {
+        $Running = docker ps --filter "name=^/$IdentityContainer$" --format '{{.ID}}'
+        if ($Running) {
+            docker stop $IdentityContainer | Out-Null
+        }
         docker compose stop
         Write-Host 'Stopped containers without deleting PostgreSQL or source-cache data.' -ForegroundColor Yellow
     }
     'status' {
         docker compose ps
+        Write-Host ''
+        $Identity = docker ps -a --filter "name=^/$IdentityContainer$" --format 'table {{.Status}}'
+        if ($Identity) {
+            Write-Host 'Identity collector:'
+            Write-Host $Identity
+        }
     }
     'logs' {
-        docker compose logs -f collector
+        $Identity = docker ps -a --filter "name=^/$IdentityContainer$" --format '{{.ID}}'
+        if ($Identity) {
+            docker logs -f $IdentityContainer
+        }
+        else {
+            Write-Host 'No identity collector container exists yet.' -ForegroundColor Yellow
+        }
+    }
+    'identity-start' {
+        Start-IdentityCollector
+    }
+    'identity-refresh' {
+        Start-IdentityCollector -Refresh
+    }
+    'identity-status' {
+        Start-CoreStack
+        docker compose run --rm --no-deps collector `
+            python -m partgraph.knowledge.identity_catalog_worker --status
+    }
+    'identity-export' {
+        Start-CoreStack
+        docker compose run --rm --no-deps collector `
+            python -m partgraph.knowledge.identity_catalog_worker `
+            --export-json /app/workbench/identity-catalog.json
+        Write-Host ''
+        Write-Host 'JSON export:' -ForegroundColor Green
+        Write-Host '  local-data\workbench\identity-catalog.json'
     }
     'scale2' {
-        New-Item -ItemType Directory -Force -Path 'local-data/workbench' | Out-Null
-        docker compose up -d --build --scale collector=2
-        Write-Host 'Two local collector workers are running. Start multiple makes from the dashboard to use them.' -ForegroundColor Green
+        throw 'scale2 is paused. The current phase is make/model/trim inventory only.'
     }
     'reprocess' {
-        New-Item -ItemType Directory -Force -Path 'local-data/workbench' | Out-Null
-        Write-Host 'Stopping collector workers at a safe checkpoint before cache reprocessing...' -ForegroundColor Yellow
-        docker compose stop collector
-        try {
-            docker compose run --rm --no-deps collector python -m partgraph.knowledge.workbench_worker_v3 --reprocess-cache
-        }
-        finally {
-            docker compose start collector
-        }
-        Write-Host 'Cached source captures were re-extracted and reconciled without new web requests.' -ForegroundColor Green
+        throw 'Specification cache reprocessing is paused until identity inventory is complete.'
     }
     'backup' {
         $Stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
