@@ -189,24 +189,15 @@ def seed_profile_fields(configuration: Any) -> dict[str, object]:
 
 
 def core_configuration_fields(configuration: Any) -> dict[str, object]:
-    """Facts required before a seed configuration itself can be called verified."""
-    seed = seed_profile_fields(configuration)
-    core_names = {
-        "identity.year",
-        "identity.make",
-        "identity.model",
-        "identity.trim",
-        "identity.body_style",
-        "identity.drivetrain",
-        "powertrain.engine.displacement_l",
-        "powertrain.engine.cylinders",
-        "powertrain.engine.architecture",
-        "powertrain.engine.aspiration",
-        "powertrain.electrification",
-        "transmission.family",
-        "transmission.speeds",
-    }
-    return {field: value for field, value in seed.items() if field in core_names}
+    """Facts the seed row itself asserts and therefore must corroborate.
+
+    The workbench no longer treats the original engine/transmission strings as
+    atomic identity fields. It splits them first, but it still requires every
+    mechanical fact asserted by the seed row to be corroborated before that
+    candidate row is called verified. This prevents a horsepower/technology
+    variant from being silently collapsed into a sibling configuration.
+    """
+    return seed_profile_fields(configuration)
 
 
 def normalize_observation_value(field: str, value: object) -> object:
