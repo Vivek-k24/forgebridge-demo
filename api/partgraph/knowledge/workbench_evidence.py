@@ -173,7 +173,7 @@ async def record_source_attempt(
     return source
 
 
-async def _promote_verified_fields(
+async def _promote_reconciled_fields(
     session: AsyncSession,
     configuration: VehicleConfiguration,
     reconciliation: dict[str, object],
@@ -181,15 +181,19 @@ async def _promote_verified_fields(
     field_results = reconciliation.get("fields")
     if not isinstance(field_results, list):
         return
-    verified_by_field: dict[str, set[str]] = {}
+
+    accepted_by_field: dict[str, tuple[str, set[str]]] = {}
     for item in field_results:
-        if not isinstance(item, dict) or item.get("status") != "verified":
+        if not isinstance(item, dict):
+            continue
+        status = item.get("status")
+        if status not in {"verified", "manufacturer_reported"}:
             continue
         field = item.get("field")
         sources = item.get("sources")
         if isinstance(field, str) and isinstance(sources, list):
-            verified_by_field[field] = {str(source) for source in sources}
-    if not verified_by_field:
+            accepted_by_field[field] = (str(status), {str(source) for source in sources})
+    if not accepted_by_field:
         return
 
     rows = (
@@ -211,7 +215,7 @@ async def _promote_verified_fields(
         contributed = {
             field: payload
             for field, payload in fields.items()
-            if field in verified_by_field and batch.source_name in verified_by_field[field]
+            if field in accepted_by_field and batch.source_name in accepted_by_field[field][1]
         }
         if not contributed:
             continue
@@ -226,7 +230,13 @@ async def _promote_verified_fields(
             CatalogVerifiedEvidence(
                 staging_record_id=staging.id,
                 candidate_type=staging.candidate_type,
-                verified_payload={"fields": contributed},
+                verified_payload={
+                    "fields": contributed,
+                    "field_status": {
+                        field: accepted_by_field[field][0]
+                        for field in contributed
+                    },
+                },
                 vehicle_identity=staging.vehicle_identity,
                 source_name=batch.source_name,
                 source_type=batch.source_type,
@@ -252,13 +262,16 @@ async def _upsert_profile(
     if not isinstance(patch, dict) or not patch:
         return
     fields = reconciliation.get("fields")
-    counts = [
-        int(item.get("match_count", 0))
-        for item in fields
+    counts = (
+        [
+            int(item.get("match_count", 0))
+            for item in fields
+            if isinstance(item, dict)
+            and item.get("status") in {"verified", "manufacturer_reported"}
+        ]
         if isinstance(fields, list)
-        and isinstance(item, dict)
-        and item.get("status") in {"verified", "manufacturer_reported"}
-    ] if isinstance(fields, list) else []
+        else []
+    )
     source_match_count = max(1, max(counts, default=1))
     matrix = dict(reconciliation)
     matrix["core_configuration"] = core
@@ -281,6 +294,8 @@ async def _upsert_profile(
             )
         )
         return
+    # A later incomplete pass cannot silently erase previously accepted truth.
+    # New conflicts remain visible in coverage/source_matrix for review.
     if profile.verification_status == "verified" and status != "verified":
         return
     profile.profile_version += 1
@@ -313,24 +328,33 @@ async def reconcile_configuration(
         "fields": fields,
     }
 
+    previously_verified = (
+        coverage.verification_status == "verified"
+        or configuration.verification_status == "verified"
+    )
     if core.get("verified") is True:
         coverage.verification_status = "verified"
-        coverage.verified_at = _now()
+        coverage.verified_at = coverage.verified_at or _now()
         configuration.verification_status = "verified"
         configuration.identity_source = "multi_source"
     elif core.get("conflict") is True:
+        # Conflicting new evidence must be visible even when canonical identity
+        # was previously verified. Canonical truth itself is not silently erased.
         coverage.verification_status = "conflict"
-        coverage.verified_at = None
-        if configuration.verification_status != "verified":
+        if not previously_verified:
+            coverage.verified_at = None
             configuration.verification_status = "unverified"
+    elif previously_verified:
+        # Mere absence/incompleteness in a later pass is not contradictory
+        # evidence and therefore cannot silently downgrade an accepted profile.
+        coverage.verification_status = "verified"
     else:
         coverage.verification_status = "unverified"
         coverage.verified_at = None
-        if configuration.verification_status != "verified":
-            configuration.verification_status = "unverified"
+        configuration.verification_status = "unverified"
 
     await _upsert_profile(session, configuration, reconciliation, core)
-    await _promote_verified_fields(session, configuration, reconciliation)
+    await _promote_reconciled_fields(session, configuration, reconciliation)
     return reconciliation
 
 
