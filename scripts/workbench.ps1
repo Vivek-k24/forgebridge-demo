@@ -18,6 +18,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $IdentityContainer = 'partgraph-identity-catalog'
+$IdentityModule = 'partgraph.knowledge.identity_catalog_worker_v2'
 Set-Location $RepoRoot
 
 function Assert-Docker {
@@ -65,7 +66,7 @@ function Start-IdentityCollector([switch]$Refresh) {
         'compose', 'run', '-d', '--no-deps',
         '--name', $IdentityContainer,
         'api',
-        'python', '-m', 'partgraph.knowledge.identity_catalog_worker'
+        'python', '-m', $IdentityModule
     )
     if ($Refresh) {
         $Args += '--refresh'
@@ -73,6 +74,7 @@ function Start-IdentityCollector([switch]$Refresh) {
     & docker $Args | Out-Null
     Write-Host 'US identity catalog collection started.' -ForegroundColor Green
     Write-Host 'Scope: Acura, Honda, Hyundai, Lexus, Subaru, Toyota · 1996-2027 · US market'
+    Write-Host 'NHTSA scope: Passenger Car + MPV + Truck only; powersports/non-road products excluded.'
     Write-Host 'This phase collects year + make + model + trim only. Technical specs are paused.'
     Write-Host 'Progress: .\scripts\workbench.ps1 identity-status'
     Write-Host 'Live log:  .\scripts\workbench.ps1 logs'
@@ -124,11 +126,11 @@ switch ($Action) {
     }
     'identity-status' {
         docker compose exec -T api `
-            python -m partgraph.knowledge.identity_catalog_worker --status
+            python -m $IdentityModule --status
     }
     'identity-export' {
         docker compose exec -T api `
-            python -m partgraph.knowledge.identity_catalog_worker `
+            python -m $IdentityModule `
             --export-json /app/workbench/identity-catalog.json
         Write-Host ''
         Write-Host 'JSON export:' -ForegroundColor Green
