@@ -1,10 +1,10 @@
 # PartGraph local catalog workbench
 
-The catalog workbench is an operator-controlled research runtime for gathering and reconciling vehicle-configuration evidence on local compute. It is intentionally separate from the interactive repair path and does not require Vercel or Neon.
+The catalog workbench is an operator-controlled local research runtime for gathering and reconciling vehicle data. It stays outside the interactive repair path and does not require Vercel or Neon for collection.
 
 ## First batch
 
-The first workbench batch is the 363 candidate rows imported from `Selected_Asian_Brands_1996_2000.xlsx`:
+The first workbench batch is the 363 seed rows imported from `Selected_Asian_Brands_1996_2000.xlsx`:
 
 - Acura: 62
 - Honda: 114
@@ -12,44 +12,106 @@ The first workbench batch is the 363 candidate rows imported from `Selected_Asia
 - Subaru: 63
 - Toyota: 106
 
-These are **seed candidates**, not a complete 1996-2000 vehicle universe and not automatically verified truth.
+These are candidate configurations, not a complete 1996-2000 vehicle universe and not automatically verified truth.
 
 Dashboard terms:
 
-- **Candidates**: rows currently in the declared batch.
-- **Collected**: candidates for which a source-collection pass completed. A completed pass can still contain source failures or insufficient evidence.
-- **Verified**: candidates for which at least three independent sources support the exact configuration signature used for canonical identity.
-- **Conflict/unresolved**: evidence is insufficient or contradictory; the workbench does not force a canonical result.
+- **Candidates**: rows in the declared batch.
+- **Collected**: candidates for which a source pass completed. A completed pass may still contain blocks, failures, missing fields, or conflicts.
+- **Verified configuration**: every mechanical fact asserted by the seed configuration has been corroborated under the field-level evidence rules.
+- **Conflict/unresolved**: evidence is insufficient or contradictory; PartGraph does not force a canonical answer.
 
-The first batch completes research for these 363 rows. Broader missing-model/year/trim discovery belongs in later batches with their own explicit scopes.
+## Current collection model
 
-## Corroboration rule
+The workbench no longer asks one webpage to reproduce an entire vehicle row. Vehicle data is assembled field by field:
 
-For ordinary vehicle configuration identity:
+```text
+independent public/OEM sources
+        -> immutable raw cache
+        -> source-scoped field observations
+        -> deterministic nomenclature/unit normalization
+        -> one vote per independent source per field
+        -> field reconciliation
+        -> progressive technical vehicle profile
+```
 
-1. Start with up to five independent sources.
-2. A reachable page is not a verification vote by itself.
-3. A source contributes a configuration vote only when the fetched material supports the relevant year, make, model/alias, trim/grade, engine signature, and transmission signature.
-4. Three independent configuration matches are the minimum automatic verification threshold.
-5. A fourth or fifth source is retained when available and is especially useful when earlier sources fail, disagree, or are incomplete.
-6. Source disagreements remain visible in the source matrix and operational log. Do not turn a timeout, 404, block, or partial match into agreement.
-7. Manufacturer-only service specifications, safety-critical claims, exact repair procedures, torque values, fluid requirements, fitment, and similar mechanical facts retain their stricter domain-specific evidence boundaries. Configuration identity verification does not automatically verify those facts.
+Examples of separate fields include:
 
-The local v1 adapters attempt:
+- identity: year, make, model, generation, trim, body style, market, drivetrain;
+- powertrain: displacement, cylinder count, engine architecture, aspiration, fuel/electrification, valvetrain, technologies;
+- transmission: family and speed count;
+- performance: horsepower and torque;
+- efficiency/emissions;
+- dimensions and weight;
+- chassis, steering, suspension, brakes;
+- wheels and tires;
+- fluid/service facts;
+- electrical/charging facts;
+- safety hardware.
 
-- NHTSA vPIC
-- Cars.com
-- Edmunds
-- Kelley Blue Book (KBB)
-- MotorTrend
+Comfort/convenience equipment such as audio, navigation, seat trim, heated seats, and similar features is outside the core technical profile.
 
-NHTSA model evidence can support year/make/model identity, but it does not count as an exact trim/powertrain configuration vote unless the retrieved source actually contains that scope. The worker records per-field match results rather than treating every successful HTTP request as evidence.
+A compound seed value such as:
 
-Do not bypass authentication, paywalls, CAPTCHA, access controls, or paid-source activation. A blocked source remains a blocked source in the log and the worker proceeds with the remaining configured references.
+```text
+1.6L VTEC-E 4-Cyl (115 hp)
+```
+
+is decomposed into independent facts such as displacement, cylinders, technology, and horsepower before comparison. Transmission is also independent from trim and engine identity.
+
+## Corroboration and authority rules
+
+There is **no fixed maximum number of sources**. The source adapter registry is only the currently implemented starting set. More independent adapters may be added without changing the reconciliation rule.
+
+For ordinary vehicle facts:
+
+1. a successful HTTP response is not evidence by itself;
+2. a source contributes only fields its retrieved material actually supports within the applicable vehicle scope;
+3. one provider receives at most one vote for a field, regardless of reruns or duplicate pages;
+4. three independent sources agreeing on the normalized value is the normal automatic verification threshold;
+5. additional sources may be collected whenever evidence is incomplete or conflicting;
+6. disagreement is retained in the source matrix rather than overwritten.
+
+Manufacturer-authoritative facts such as exact service/fluid specifications are not allowed to become canonical merely because three generic reference sites repeat them. Applicable OEM/manufacturer evidence is retained as `manufacturer_reported` unless stronger domain-specific promotion rules apply.
+
+Configuration identity/specification corroboration never automatically verifies repair procedures, torque values, exact fitment, or other repair-domain claims that have stricter authority requirements.
+
+## Current source adapters
+
+The V2 collector currently includes an extensible registry beginning with:
+
+- NHTSA vPIC;
+- FuelEconomy.gov;
+- Cars.com;
+- Edmunds;
+- Kelley Blue Book (KBB);
+- MotorTrend.
+
+This list is an implementation starting point, **not a source ceiling or an approved-source-only policy**.
+
+NHTSA model-year evidence contributes only the identity fields actually in scope. FuelEconomy.gov can contribute powertrain, drivetrain, fuel, and EPA efficiency facts when a record can be deterministically resolved. Generic reference pages contribute only facts extracted within the applicable model/trim window.
+
+Blocked/authenticated/paywalled/CAPTCHA-protected sources are not bypassed. Repeated access-control responses open a local circuit breaker so the collector stops hammering that source during the process lifetime.
+
+## Raw cache and reprocessing
+
+Successful source responses are cached under:
+
+```text
+local-data/workbench/
+```
+
+The raw capture is not rewritten when extraction logic improves. The V2 extractor can re-read existing cache and rebuild field observations with **zero web requests**.
+
+After pulling a collector update, use:
+
+```powershell
+.\scripts\workbench.ps1 reprocess
+```
+
+The helper temporarily stops collector workers, re-extracts/reconciles cached successful captures, then restarts the collector. This preserves the original research material and avoids downloading the same pages again just because the parser changed.
 
 ## Local runtime
-
-The normal local stack is:
 
 ```text
 browser
@@ -58,144 +120,75 @@ browser
   -> local PostgreSQL :5432
 
 local collector worker
-  -> public reference sources
+  -> source adapter registry
   -> local-data/workbench raw-response cache
-  -> PostgreSQL workbench/staging/evidence tables
+  -> PostgreSQL staging/evidence/profile state
 ```
 
-Vercel and Neon are not required for collection.
+Vercel and Neon are not collection engines. The hosted/default frontend keeps workbench navigation disabled.
 
-The workbench API is disabled by default in normal/cloud runtime configuration. `compose.yaml` explicitly enables it for local Docker and the local web build. The `Catalog workbench` navigation item is therefore not built into the default Vercel frontend.
+## Windows commands
 
-## Clone and run on Windows
-
-Requirements:
-
-- Git
-- Docker Desktop with Docker Compose v2
-
-Clone the repository and switch to the branch containing the workbench while it is under review:
-
-```powershell
-git clone https://github.com/Vivek-k24/forgebridge-demo.git
-cd forgebridge-demo
-git checkout partgraph-local-catalog-workbench
-```
-
-Start everything:
+Start/rebuild the stack:
 
 ```powershell
 .\scripts\workbench.ps1 start
 ```
 
-Then open:
+Open:
 
 ```text
 http://localhost:5173/#/catalog
 ```
 
-Register/login through the normal PartGraph account flow if the local database does not already contain an account.
+Other helper commands:
 
-The first startup builds the images and applies Alembic migrations. Later startups reuse the existing PostgreSQL volume and source cache.
+```powershell
+.\scripts\workbench.ps1 status
+.\scripts\workbench.ps1 logs
+.\scripts\workbench.ps1 stop
+.\scripts\workbench.ps1 scale2
+.\scripts\workbench.ps1 reprocess
+.\scripts\workbench.ps1 backup
+```
 
-## Dashboard controls
-
-Each make card contains collection and verification progress plus a job control:
-
-- **Start**: create a collection pass for that make.
-- **Pause**: stop after the current safe checkpoint. Already fetched source attempts remain stored.
-- **Resume**: continue the same job/cursor rather than starting over.
-- **Run again**: after a completed pass, create a new pass so sources can be refreshed.
-- **View activity**: select the make for the lower activity console.
-
-The activity console shows:
-
-- actual worker events;
-- current job state and processed candidate count;
-- source provider;
-- source URL;
-- HTTP/fetch outcome;
-- per-field match result;
-- local cache path;
-- fetch errors/blocks where applicable.
-
-The UI polls local APIs approximately every two seconds. It does not invoke collection during page load.
+`scale2` runs two local worker containers so different queued make jobs can be transactionally claimed in parallel. More workers increase outbound request volume and do not increase source quality.
 
 ## Persistence and interruption behavior
 
-Structured state is kept in the local PostgreSQL Docker volume. Raw successful source responses are cached under:
+Structured state remains in the PostgreSQL Docker volume. Source cache remains under `local-data/workbench/`, which is git-ignored.
 
-```text
-local-data/workbench/
-```
+A make job advances only after a configuration reaches a safe checkpoint. Existing source attempts are retained. Interrupted running jobs are recovered to the queue after their heartbeat becomes stale.
 
-`local-data/` is git-ignored.
+Do not use `docker compose down -v` as routine cleanup; `-v` intentionally deletes the PostgreSQL volume.
 
-A make job advances its cursor only after a configuration reaches a safe checkpoint. Partial source attempts for the current configuration are retained, so a resumed job can skip already-recorded attempts.
+## Backup
 
-Stopping the stack does not delete data:
-
-```powershell
-.\scripts\workbench.ps1 stop
-```
-
-Never use `docker compose down -v` as routine cleanup because `-v` deliberately removes the PostgreSQL volume.
-
-## Using more local compute
-
-One collector worker is the default. Multiple make jobs can be processed concurrently with two worker containers:
-
-```powershell
-.\scripts\workbench.ps1 scale2
-```
-
-Start multiple makes from the dashboard. Jobs are transactionally claimed so separate workers do not intentionally process the same queued job at the same time.
-
-Begin with one worker until source behavior is understood. More workers increase outbound request volume and do not improve source quality.
-
-## Logs from the terminal
-
-To watch the collector container directly:
-
-```powershell
-.\scripts\workbench.ps1 logs
-```
-
-The dashboard remains the better audit view because it shows persisted events and source rows rather than only container stdout.
-
-## Back up the workbench
-
-Create a local snapshot:
+Create a portable local snapshot:
 
 ```powershell
 .\scripts\workbench.ps1 backup
 ```
 
-The backup is written under:
+The output under `local-data/exports/<timestamp>/` contains:
 
-```text
-local-data/exports/<timestamp>/
-```
+- `partgraph.dump` — PostgreSQL custom dump;
+- `workbench/` — cached raw source material;
+- `repository-commit.txt` — exact code commit used for the run;
+- `created-at.txt` — timestamp.
 
-It contains:
-
-- `partgraph.dump`: PostgreSQL custom-format dump;
-- `workbench/`: cached raw source material;
-- `repository-commit.txt`: exact code commit used for the run;
-- `created-at.txt`: backup timestamp.
-
-This is the portable handoff unit for the research runtime.
+The raw cache and database dumps do not belong in normal Git history.
 
 ## Publishing later
 
-Neon is a later publication/deployment target, not the collection engine. Before publishing local results:
+Neon is a later reviewed publication target. Before publishing local results:
 
-1. finish/inspect the relevant local workbench runs;
-2. preserve unresolved/conflicting rows as unresolved;
+1. finish and inspect the relevant local runs;
+2. preserve unresolved/conflicting fields as unresolved;
 3. create a backup;
-4. review the migration/current schema version;
-5. restore or selectively promote the verified PostgreSQL state into the intended Neon branch/database;
-6. run the normal PartGraph migration and integration checks against that target;
-7. only then point a hosted API at the published database.
+4. verify migration/schema compatibility;
+5. selectively publish reviewed canonical/profile/evidence state;
+6. run normal migration, API, RLS, and full-stack checks against the target;
+7. only then use the published data in hosted runtime.
 
-Do not upload `local-data/workbench` to GitHub. Raw source cache is local research material; PostgreSQL provenance records are the structured audit trail used by PartGraph.
+Collection evidence enters staging/provenance first. Neither a collector nor an LLM may silently overwrite canonical vehicle or repair truth.
