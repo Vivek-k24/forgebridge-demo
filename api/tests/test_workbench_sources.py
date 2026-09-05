@@ -2,7 +2,12 @@ import json
 from uuid import uuid4
 
 from partgraph.identity.vehicle.models import VehicleConfiguration
-from partgraph.knowledge.workbench_sources import match_source, source_requests
+from partgraph.identity.vehicle.specification_taxonomy import (
+    observation_comparison_key,
+    split_engine_descriptor,
+    split_transmission_descriptor,
+)
+from partgraph.knowledge.workbench_source_pipeline import extract_source, source_requests
 
 
 def civic_hx() -> VehicleConfiguration:
@@ -23,43 +28,54 @@ def civic_hx() -> VehicleConfiguration:
     )
 
 
-def test_reference_page_requires_configuration_signature_not_just_reachability() -> None:
+def test_engine_descriptor_is_split_into_independent_facts() -> None:
+    fields = split_engine_descriptor("1.6L VTEC-E 4-Cyl (115 hp)")
+
+    assert fields["powertrain.engine.displacement_l"] == 1.6
+    assert fields["powertrain.engine.cylinders"] == 4
+    assert fields["powertrain.engine.technology"] == ["VTEC-E"]
+    assert fields["performance.horsepower_hp"] == 115
+
+
+def test_transmission_descriptor_is_not_part_of_trim_identity() -> None:
+    fields = split_transmission_descriptor("CVT Automatic")
+
+    assert fields == {"transmission.family": "CVT"}
+
+
+def test_trim_punctuation_variants_compare_equal_without_merging_distinct_trims() -> None:
+    assert observation_comparison_key("identity.trim", "EX-L") == observation_comparison_key(
+        "identity.trim", "EX L"
+    )
+    assert observation_comparison_key("identity.trim", "XLE") != observation_comparison_key(
+        "identity.trim", "XLE Premium"
+    )
+
+
+def test_reference_page_emits_partial_field_observations_instead_of_all_or_nothing_vote() -> None:
     configuration = civic_hx()
     html = b"""
     <html><body>
       <h1>1998 Honda Civic HX</h1>
-      <section>HX 1.6L VTEC-E 4-cylinder engine with CVT Automatic transmission.</section>
+      <section>HX 1.6L VTEC-E 4-cylinder engine producing 115 hp.</section>
     </body></html>
     """
 
-    matched = match_source("cars_com", html, "text/html", configuration)
+    extraction = extract_source("kbb", html, "text/html", configuration)
 
-    assert matched["year"] is True
-    assert matched["make"] is True
-    assert matched["model"] is True
-    assert matched["trim"] is True
-    assert matched["engine"] is True
-    assert matched["transmission"] is True
-    assert matched["configuration_match"] is True
-
-
-def test_reference_page_missing_transmission_does_not_vote_for_configuration() -> None:
-    configuration = civic_hx()
-    html = b"""
-    <html><body>
-      <h1>1998 Honda Civic HX</h1>
-      <section>HX 1.6L VTEC-E 4-cylinder engine.</section>
-    </body></html>
-    """
-
-    matched = match_source("kbb", html, "text/html", configuration)
-
-    assert matched["engine"] is True
-    assert matched["transmission"] is False
-    assert matched["configuration_match"] is False
+    assert extraction.matched_fields["year"] is True
+    assert extraction.matched_fields["make"] is True
+    assert extraction.matched_fields["model"] is True
+    assert extraction.matched_fields["trim"] is True
+    assert extraction.matched_fields["configuration_match"] is False
+    assert extraction.field_observations["identity.trim"]["value"] == "HX"
+    assert extraction.field_observations["powertrain.engine.displacement_l"]["value"] == 1.6
+    assert extraction.field_observations["powertrain.engine.cylinders"]["value"] == 4
+    assert extraction.field_observations["performance.horsepower_hp"]["value"] == 115
+    assert "transmission.family" not in extraction.field_observations
 
 
-def test_nhtsa_model_result_supports_identity_but_not_trim_powertrain_vote() -> None:
+def test_nhtsa_model_result_supports_model_year_identity_only() -> None:
     configuration = civic_hx()
     raw = json.dumps(
         {
@@ -70,15 +86,20 @@ def test_nhtsa_model_result_supports_identity_but_not_trim_powertrain_vote() -> 
         }
     ).encode()
 
-    matched = match_source("nhtsa_vpic", raw, "application/json", configuration)
+    extraction = extract_source("nhtsa_vpic", raw, "application/json", configuration)
 
-    assert matched["year"] is True
-    assert matched["make"] is True
-    assert matched["model"] is True
-    assert matched["configuration_match"] is False
+    assert set(extraction.field_observations) == {
+        "identity.year",
+        "identity.make",
+        "identity.model",
+    }
+    assert extraction.matched_fields["configuration_match"] is False
 
 
-def test_workbench_attempts_up_to_five_independent_references() -> None:
-    providers = [provider for provider, _ in source_requests(civic_hx())]
+def test_source_registry_is_extensible_and_has_no_five_source_ceiling() -> None:
+    providers = [request.source_key for request in source_requests(civic_hx())]
 
-    assert providers == ["nhtsa_vpic", "cars_com", "edmunds", "kbb", "motortrend"]
+    assert providers[:2] == ["nhtsa_vpic", "fueleconomy_gov"]
+    assert {"cars_com", "edmunds", "kbb", "motortrend"}.issubset(providers)
+    assert len(providers) >= 6
+    assert len(providers) == len(set(providers))
