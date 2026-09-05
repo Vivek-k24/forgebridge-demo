@@ -39,7 +39,9 @@ def test_nhtsa_scope_is_only_consumer_road_vehicle_classes(monkeypatch: pytest.M
     assert evidence["vehicle_type_scope"] == list(NHTSA_AUTOMOBILE_VEHICLE_TYPES)
 
 
-def test_nhtsa_network_gap_fails_make_year_instead_of_returning_zero(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_nhtsa_network_gap_fails_make_year_instead_of_returning_zero(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     def fake_fetch_cached(provider, make, year, url, **kwargs):
         if "/vehicletype/Truck" in url:
             return None, {"status": "failed", "error": "offline"}
