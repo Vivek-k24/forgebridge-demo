@@ -1,14 +1,13 @@
 """Field-level reconciliation for progressively enriched vehicle specifications.
 
 The staging boundary remains immutable. This module reads reviewed vehicle
-specification observations, counts one vote per independent source, promotes
-ordinary fields only after three matching sources, and preserves conflicting
-observations instead of flattening them.
+specification observations, counts one vote per independent source per field,
+promotes ordinary fields only after three matching sources, and preserves
+conflicting observations instead of flattening them.
 """
 
 from __future__ import annotations
 
-import json
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Literal
@@ -18,10 +17,16 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...knowledge.models import CatalogIngestionBatch, CatalogSourceRecord
+from .specification_taxonomy import (
+    normalize_observation_value,
+    observation_comparison_key,
+    section_summary,
+)
 
 VEHICLE_SPECIFICATION_CANDIDATE = "vehicle_specification_candidate"
 ORDINARY_MATCH_THRESHOLD = 3
 FieldKind = Literal["ordinary", "manufacturer_reported"]
+_MANUFACTURER_SOURCE_CLASSES = {"manufacturer", "oem_service", "oem_parts"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -31,12 +36,6 @@ class FieldObservation:
     kind: FieldKind
     source_name: str
     source_class: str
-
-
-def _normalized_value(value: object) -> str:
-    if isinstance(value, str):
-        value = " ".join(value.split()).casefold()
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
 def _set_nested(target: dict[str, object], dotted_field: str, value: object) -> None:
@@ -56,9 +55,9 @@ def reconcile_field_observations(
 ) -> dict[str, object]:
     """Reconcile reviewed observations without mutating canonical truth.
 
-    The latest staged value for a given source/field should be supplied by the
-    caller. This function defensively collapses duplicate source votes anyway,
-    so one site cannot satisfy the three-source threshold by repetition.
+    One independent source receives one vote for one field. Repeated pages,
+    reruns, or multiple records from the same source cannot satisfy the
+    three-source threshold by themselves.
     """
 
     by_field_source: dict[str, dict[str, FieldObservation]] = defaultdict(dict)
@@ -78,11 +77,14 @@ def reconcile_field_observations(
         source_observations = list(by_field_source[field].values())
         value_groups: dict[str, list[FieldObservation]] = defaultdict(list)
         for observation in source_observations:
-            value_groups[_normalized_value(observation.value)].append(observation)
+            value_groups[observation_comparison_key(field, observation.value)].append(observation)
 
         ranked = sorted(
             value_groups.values(),
-            key=lambda group: (-len(group), _normalized_value(group[0].value)),
+            key=lambda group: (
+                -len(group),
+                observation_comparison_key(field, group[0].value),
+            ),
         )
         winner = ranked[0]
         winner_count = len(winner)
@@ -95,7 +97,8 @@ def reconcile_field_observations(
         )
 
         manufacturer_winner = kind == "manufacturer_reported" and any(
-            observation.source_class == "manufacturer" for observation in winner
+            observation.source_class in _MANUFACTURER_SOURCE_CLASSES
+            for observation in winner
         )
         if manufacturer_winner and not tied:
             decision = "manufacturer_reported"
@@ -108,12 +111,12 @@ def reconcile_field_observations(
 
         selected_value: object | None = None
         if decision in {"verified", "manufacturer_reported"}:
-            selected_value = winner[0].value
+            selected_value = normalize_observation_value(field, winner[0].value)
             _set_nested(promotable_patch, field, selected_value)
 
         conflicts = [
             {
-                "value": group[0].value,
+                "value": normalize_observation_value(field, group[0].value),
                 "match_count": len(group),
                 "sources": sorted(item.source_name for item in group),
             }
@@ -143,13 +146,17 @@ def reconcile_field_observations(
     return {
         "rule": {
             "ordinary_min_independent_sources": ORDINARY_MATCH_THRESHOLD,
-            "source_vote_policy": "one vote per source per field",
+            "source_vote_policy": "one vote per independent source per field",
+            "source_count_policy": (
+                "no fixed maximum; collect additional independent sources as needed"
+            ),
             "manufacturer_reported_policy": (
                 "manufacturer-specific fields may be retained from one manufacturer source "
                 "but are labeled manufacturer_reported instead of three-source verified"
             ),
         },
         "summary": summary,
+        "sections": section_summary(fields),
         "fields": fields,
         "promotable_profile_patch": promotable_patch,
     }
