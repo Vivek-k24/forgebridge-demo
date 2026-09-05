@@ -19,21 +19,52 @@ The hosted browser app and `/api/*` use the Vercel production origin so the exis
 
 Core product foundations include authentication, Garage/vehicle identity, VIN/manual resolution, private repair sessions, readiness/inventory, repair memory, resume/reorientation, verified-guidance boundaries, PostgreSQL persistence, RLS/security controls, and hosted Vercel/Neon compatibility.
 
-The current data focus is **vehicle coverage and technical specification collection**.
+The current data phase is **US vehicle identity inventory before technical specifications**.
 
-The first active research batch contains 363 seed candidates from selected Asian brands for model years 1996-2000:
+Active identity scope:
 
-- Acura: 62
-- Honda: 114
-- Lexus: 18
-- Subaru: 63
-- Toyota: 106
+- market: United States;
+- model years: 1996 through 2027;
+- makes: Acura, Honda, Hyundai, Lexus, Subaru, Toyota;
+- fields: year, make, model, trim.
 
-These are candidate configurations, not a complete 1996-2000 catalog and not verified merely because they were imported from the workbook.
+Technical specifications, parts, fluids, procedures, dimensions, performance data, and other vehicle facts are intentionally paused until the identity inventory is complete enough for review.
 
-## Vehicle data pipeline
+The earlier 363-row selected-Asian workbook remains useful as a seed/reference batch for later technical work. It is not the boundary of the current identity inventory and is not treated as a complete vehicle catalog.
 
-PartGraph does not expect one website to describe the whole car. Vehicle data is built field by field:
+## Vehicle identity pipeline
+
+The identity phase is union-first rather than verification-gated:
+
+```text
+US make + model year
+  -> broad model enumerators
+  -> raw source cache + provenance
+  -> conservative model-name normalization
+  -> trim/style enumerators
+  -> conservative trim normalization
+  -> source-backed discovered identity
+  -> optional independent corroboration
+  -> export/review
+```
+
+A model or trim is retained when a usable source discovers it. A second independent source can mark the normalized identity as corroborated, but three-source technical verification is **not** required to keep an identity row.
+
+Source labels are preserved alongside normalized labels so PartGraph can later correct taxonomy without losing provenance. Body-style and drivetrain wording is not silently turned into trim data, and genuine model distinctions are not collapsed merely because names are similar.
+
+Examples of the intended taxonomy boundary:
+
+- `Accord Hybrid` may be represented under model `Accord` when the source is expressing a powertrain variant, allowing consumer trims such as `Sport Hybrid` or `EX-L Hybrid`;
+- a genuine separate model such as `Prius Prime` remains a separate model;
+- body-style suffixes such as `Sedan 4D`, `Coupe 2D`, or `Sport Utility 4D` are retained in source provenance but removed from the canonical trim label.
+
+The current identity collector uses NHTSA vPIC and FuelEconomy.gov for broad model enumeration and KBB/CarsDirect for trim/style enumeration. Additional public or licensed enumerators can be added without changing the identity data model.
+
+See `docs/identity-catalog-phase.md` for the current identity workflow.
+
+## Later technical data pipeline
+
+After the identity phase, PartGraph can resume field-level technical collection:
 
 ```text
 candidate configuration
@@ -49,13 +80,11 @@ candidate configuration
 
 Compound strings such as `1.6L VTEC-E 4-Cyl (115 hp)` are decomposed into independent facts before comparison. Trim, engine, powertrain, transmission, drivetrain, horsepower, dimensions, capacities, chassis, safety hardware, and other technical facts remain separate dimensions.
 
-For ordinary vehicle facts, three independent agreeing sources are the normal automatic verification threshold. **There is no fixed maximum number of sources.** Additional independent sources may be consulted whenever earlier evidence is missing or conflicting. Source wording is normalized conservatively; meaningful distinctions are never merged simply because names look similar.
+For ordinary technical vehicle facts, three independent agreeing sources remain the normal automatic verification threshold. **There is no fixed maximum number of sources.** Additional independent sources may be consulted whenever earlier evidence is missing or conflicting.
 
 Manufacturer-authoritative facts such as exact service/fluid specifications keep a separate evidence boundary and are not promoted merely because several generic sites repeat them.
 
 Comfort/convenience equipment such as audio, navigation, seat trim, heated seats, and similar features is outside the core technical profile.
-
-See `docs/local-catalog-workbench.md` for the local research workflow.
 
 ## Architecture
 
@@ -80,36 +109,46 @@ React/Vite web
     -> FastAPI modular monolith
     -> PostgreSQL
 
-local collector worker
-    -> extensible source adapter registry
+local identity collector
+    -> public identity enumerators
     -> local raw source cache
-    -> staging/evidence/profile state
+    -> identity inventory + provenance
 ```
 
-Start/rebuild on Windows:
+Start/rebuild the core local stack on Windows:
 
 ```powershell
 .\scripts\workbench.ps1 start
 ```
 
-Open:
-
-```text
-http://localhost:5173/#/catalog
-```
-
-Useful helper commands:
+Start or resume the six-make 1996-2027 identity collection:
 
 ```powershell
-.\scripts\workbench.ps1 status
-.\scripts\workbench.ps1 logs
-.\scripts\workbench.ps1 scale2
-.\scripts\workbench.ps1 reprocess
-.\scripts\workbench.ps1 backup
-.\scripts\workbench.ps1 stop
+.\scripts\workbench.ps1 identity-start
 ```
 
-`reprocess` re-runs the current extractor and reconciler over successful cached source captures with zero new web requests. `backup` creates a PostgreSQL custom dump plus the raw cache and repository commit reference under `local-data/exports/<timestamp>/`.
+Check progress and follow logs:
+
+```powershell
+.\scripts\workbench.ps1 identity-status
+.\scripts\workbench.ps1 logs
+```
+
+Export the collected identity inventory:
+
+```powershell
+.\scripts\workbench.ps1 identity-export
+```
+
+The export is written to:
+
+```text
+local-data/workbench/identity-catalog.json
+```
+
+Use `identity-refresh` only when a fresh network pass is intentionally required. A normal `identity-start` resumes by make/year and skips completed make/year pairs.
+
+The old technical-spec collector is disabled by default during this phase. `scale2` and technical cache `reprocess` are deliberately paused so identity collection cannot silently restart technical-spec work.
 
 Raw research cache and database dumps stay outside normal Git history. Neon is a later reviewed publication target, not the gathering engine.
 
@@ -160,7 +199,7 @@ source record
   -> canonical consumer
 ```
 
-A reachable page is not a verification vote. One site cannot satisfy a three-source threshold through reruns or duplicate pages. Conflicts remain visible and unresolved until the applicable evidence policy resolves them.
+A reachable page is not a technical verification vote. One site cannot satisfy a three-source threshold through reruns or duplicate pages. Conflicts remain visible and unresolved until the applicable evidence policy resolves them.
 
 Blocked/authenticated/paywalled/CAPTCHA-protected sources are not bypassed. Paid source activation or spend requires explicit approval.
 
@@ -197,12 +236,13 @@ An LLM explanation cannot bypass a deterministic capability restriction.
 
 Near-term sequence:
 
-1. prove the field-level local vehicle collection/reconciliation pipeline on the 363-candidate batch;
-2. expand source adapters and technical-profile coverage while preserving source authority;
-3. broaden vehicle coverage across the supported US/Canada taxonomy;
-4. selectively publish reviewed verified data to Neon;
-5. expand verified repair definitions, requirements, procedures, and part applicability;
-6. add the planned separate Admin Console for operations/catalog review;
-7. extend the existing API-driven product to mobile clients without duplicating canonical business logic.
+1. build and review the six-make US 1996-2027 year/make/model/trim inventory;
+2. close identity coverage gaps by adding enumerators where source coverage is weak;
+3. freeze/review the identity taxonomy before resuming technical specifications;
+4. resume field-level technical profile collection and reconciliation on the reviewed identity universe;
+5. selectively publish reviewed data to Neon;
+6. expand verified repair definitions, requirements, procedures, and part applicability;
+7. add the planned separate Admin Console for operations/catalog review;
+8. extend the existing API-driven product to mobile clients without duplicating canonical business logic.
 
 See `docs/ROADMAP.md` and `docs/PARTGRAPH_SYSTEM_UML.md` for current planning and architecture detail.
