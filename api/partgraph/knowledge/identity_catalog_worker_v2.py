@@ -256,6 +256,7 @@ def model_variant(canonical_model: str, source_model: str) -> str | None:
             "3",
             "4",
             "5",
+            "dr",
             "door",
             "doors",
             "wagon",
