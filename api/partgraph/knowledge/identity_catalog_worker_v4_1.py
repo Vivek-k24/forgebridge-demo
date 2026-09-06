@@ -6,7 +6,11 @@ from . import identity_catalog_worker_v4 as v4
 
 # Patch V4's body-prefix splitter so aliases whose display name has a different
 # word count from the source spelling ("Sport Utility" -> "SUV") remove the
-# correct number of source words. All other V4 behavior remains unchanged.
+# correct number of source words. Also make a reconciled dictionary key control
+# the persisted marketed label when V4 intentionally folds a verbose source
+# presentation into a shorter observed selection.
+
+_V4_FINALIZE = v4._finalize_trim_observations
 
 
 def _split_body_prefix(label: str) -> tuple[str | None, str]:
@@ -26,11 +30,31 @@ def _split_body_prefix(label: str) -> tuple[str | None, str]:
     return None, label
 
 
+def _finalize_trim_observations(
+    observations: dict[str, dict[str, tuple[str, dict[str, object]]]],
+    provider_labels: dict[str, list[str]],
+) -> dict[str, dict[str, tuple[str, dict[str, object]]]]:
+    finalized = _V4_FINALIZE(observations, provider_labels)
+    result: dict[str, dict[str, tuple[str, dict[str, object]]]] = {}
+
+    for key, provider_map in finalized.items():
+        labels = [label for label, _evidence in provider_map.values()]
+        exact = [label for label in labels if legacy.normalized_key(label) == key]
+        canonical = min(exact or labels, key=lambda value: (len(value), value.casefold()))
+        result[key] = {
+            provider: (canonical, evidence)
+            for provider, (_label, evidence) in provider_map.items()
+        }
+    return result
+
+
 def install_v4_1_behavior() -> None:
     v4.install_v4_behavior()
     v3._split_body_prefix = _split_body_prefix
+    v4._finalize_trim_observations = _finalize_trim_observations
+    v3._finalize_trim_observations = _finalize_trim_observations
 
-    # V4/V3 functions resolve the splitter dynamically from the V3 module.
+    # V4/V3 functions resolve these helpers dynamically at run time.
     legacy.collect_make_year = v3._collect_make_year
     legacy.export_json = v4.export_json
 
