@@ -47,7 +47,7 @@ def test_v3_rejects_singular_consumer_review_and_engine_displacement() -> None:
 
 def test_kbb_parser_preserves_multiple_body_styles_for_civic() -> None:
     raw = b"""
-    <a href="/honda/civic/2026/lx-sedan-4d/">LX Sedan 4D</a>
+    <a href="/honda/civic/2026/lx-sedan-4d/">LX</a>
     <a href="/honda/civic/2026/sport-sedan-4d/">Sport Sedan 4D</a>
     <a href="/honda/civic/2026/sport-hatchback-4d/">Sport Hatchback 4D</a>
     <a href="/honda/civic/2026/sport-touring-hybrid-hatchback-4d/">
@@ -129,6 +129,26 @@ def test_specific_hybrid_grades_remove_generic_hybrid_row() -> None:
 
     assert "Hybrid" not in labels
     assert {"Sport Hybrid", "EX-L Hybrid", "Touring Hybrid"} <= labels
+
+
+def test_fueleconomy_generic_grade_yields_to_consumer_hybrid_grade() -> None:
+    observations = _merge(
+        _observation("TrailSport", "fueleconomy_gov"),
+        _observation("TrailSport Hybrid", "kbb"),
+        _observation("Sport", "fueleconomy_gov"),
+        _observation("Sport", "kbb"),
+        _observation("Sport Hybrid", "kbb"),
+    )
+    finalized = _finalize_trim_observations(
+        observations,
+        {"nhtsa_vpic": ["CR-V"]},
+    )
+    labels = _labels(finalized)
+
+    assert "TrailSport" not in labels
+    assert "TrailSport Hybrid" in labels
+    assert "Sport" in labels
+    assert "Sport Hybrid" in labels
 
 
 def test_package_extensions_are_not_promoted_without_independent_model_label_support() -> None:

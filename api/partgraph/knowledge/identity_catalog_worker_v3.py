@@ -142,8 +142,12 @@ def extract_kbb_trims(raw: bytes, make: str, model: str, year: int) -> list[str]
         style_slug = legacy.normalized_key(match.group(1).replace("-", " "))
         if style_slug in legacy._KBB_EXCLUDED_STYLE_KEYS:
             continue
-        label = trim_from_kbb_style(match.group(2))
-        if label is not None:
+        grade = _strict_trim_value(_V2_KBB_TRIM(match.group(2)))
+        body_style = _body_style_from_text(match.group(2))
+        if body_style is None:
+            body_style = _body_style_from_text(match.group(1).replace("-", " "))
+        if grade is not None:
+            label = _selection_label(grade, body_style)
             trims.setdefault(legacy.normalized_key(label), label)
 
     # Keep V2's fallback coverage for historical pages whose useful style data is
@@ -368,6 +372,14 @@ def _finalize_trim_observations(
     final: dict[str, dict[str, tuple[str, dict[str, object]]]] = {}
     for key, provider_map in body_aware.items():
         if key == "hybrid" and has_specific_hybrid:
+            continue
+
+        hybrid_key = f"{key} hybrid"
+        if (
+            set(provider_map) <= {"fueleconomy_gov"}
+            and hybrid_key in body_aware
+            and set(body_aware[hybrid_key]) & {"kbb", "carsdirect"}
+        ):
             continue
 
         # KBB occasionally emits truncated style strings such as "Touring S" or
