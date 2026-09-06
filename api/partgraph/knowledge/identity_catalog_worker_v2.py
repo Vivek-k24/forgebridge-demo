@@ -332,7 +332,10 @@ def _source_model_aliases(
     for value in provider_labels.get("fueleconomy_gov", []):
         if model_variant(canonical_model, value) is not None:
             aliases.append(value)
-    return sorted(dict.fromkeys(aliases), key=lambda value: (value != canonical_model, value.casefold()))
+    return sorted(
+        dict.fromkeys(aliases),
+        key=lambda value: (value != canonical_model, value.casefold()),
+    )
 
 
 def _fueleconomy_models(
@@ -470,7 +473,10 @@ async def _collect_make_year(make: str, year: int, *, refresh: bool) -> None:
         for model, provider_labels in sorted(inventory.items(), key=lambda item: item[0].casefold()):
             # Fetch and normalize consumer trim observations before deciding that
             # a one-source model-year belongs in the canonical catalog.
-            trim_observations: dict[str, dict[str, tuple[str, dict[str, object]]]] = defaultdict(dict)
+            trim_observations: dict[
+                str,
+                dict[str, tuple[str, dict[str, object]]],
+            ] = defaultdict(dict)
             consumer_model_evidence: dict[str, list[dict[str, object]]] = defaultdict(list)
 
             # Configuration labels can themselves provide conservative trim
@@ -515,7 +521,11 @@ async def _collect_make_year(make: str, year: int, *, refresh: bool) -> None:
                         if (strict := _strict_trim_value(trim)) is not None
                         if (combined := legacy.combine_trim_variant(strict, variant)) is not None
                     }
-                    if variant is not None and not canonical_trims and status in {"success", "cached"}:
+                    if (
+                        variant is not None
+                        and not canonical_trims
+                        and status in {"success", "cached"}
+                    ):
                         canonical_trims.add(variant)
 
                     if canonical_trims:
@@ -525,7 +535,8 @@ async def _collect_make_year(make: str, year: int, *, refresh: bool) -> None:
                             enriched["model_variant"] = variant
                         consumer_model_evidence[provider].append(enriched)
                         for trim in canonical_trims:
-                            trim_observations[legacy.normalized_key(trim)][provider] = (trim, enriched)
+                            trim_key = legacy.normalized_key(trim)
+                            trim_observations[trim_key][provider] = (trim, enriched)
 
             # Reconcile safe provider presentation differences such as
             # "GS-R Sport" vs "GS-R" only when the shorter form was actually
@@ -540,12 +551,17 @@ async def _collect_make_year(make: str, year: int, *, refresh: bool) -> None:
 
             has_fueleconomy = "fueleconomy_gov" in provider_labels
             has_consumer = bool(consumer_model_evidence)
-            nhtsa_future_candidate = year == legacy.US_IDENTITY_YEAR_MAX and "nhtsa_vpic" in provider_labels
+            nhtsa_future_candidate = (
+                year == legacy.US_IDENTITY_YEAR_MAX and "nhtsa_vpic" in provider_labels
+            )
             if not (has_fueleconomy or has_consumer or nhtsa_future_candidate):
                 unresolved_models.append(model)
                 continue
 
-            model_source_labels = {provider: list(labels) for provider, labels in provider_labels.items()}
+            model_source_labels = {
+                provider: list(labels)
+                for provider, labels in provider_labels.items()
+            }
             source_evidence: dict[str, dict[str, object]] = {
                 "nhtsa_vpic": nhtsa_evidence,
                 "fueleconomy_gov": fueleconomy_evidence,
