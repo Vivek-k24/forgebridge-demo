@@ -19,7 +19,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $IdentityContainer = 'partgraph-identity-catalog'
-$IdentityModule = 'partgraph.knowledge.identity_catalog_worker_v4'
+$IdentityModule = 'partgraph.knowledge.identity_catalog_worker_v4_1'
 Set-Location $RepoRoot
 
 function Assert-Docker {
