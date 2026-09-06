@@ -19,7 +19,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $IdentityContainer = 'partgraph-identity-catalog'
-$IdentityModule = 'partgraph.knowledge.identity_catalog_worker_v4_4'
+$IdentityModule = 'partgraph.knowledge.identity_catalog_worker_v4_5'
 Set-Location $RepoRoot
 
 function Assert-Docker {
@@ -86,7 +86,7 @@ function Start-IdentityCollector([switch]$Refresh, [switch]$Rebuild) {
     Write-Host 'US identity catalog collection started.' -ForegroundColor Green
     Write-Host 'Scope: Acura, Honda, Hyundai, Lexus, Subaru, Toyota · 1996-2027 · US market'
     Write-Host 'NHTSA scope: Passenger Car + MPV + Truck only; powersports/non-road products excluded.'
-    Write-Host 'Identity reconciliation: V4.4 KBB specs recovery + source-backed final audit supplements.'
+    Write-Host 'Identity reconciliation: V4.5 final source-backed audit + KBB specs recovery.'
     Write-Host 'Civic Si and Civic Type R remain separate trims under model Civic.'
     Write-Host 'This phase collects year + make + model + trim only. Technical specs are paused.'
     Write-Host 'Progress: .\scripts\workbench.ps1 identity-status'
