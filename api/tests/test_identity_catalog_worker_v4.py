@@ -5,7 +5,7 @@ from collections import defaultdict
 from partgraph.knowledge import identity_catalog_worker as legacy
 from partgraph.knowledge import identity_catalog_worker_v3 as v3
 from partgraph.knowledge import identity_catalog_worker_v4 as v4
-from partgraph.knowledge import identity_catalog_worker_v4_2 as v4_2
+from partgraph.knowledge import identity_catalog_worker_v4_3 as v4_3
 
 
 def _observation(label: str, provider: str = "kbb"):
@@ -33,7 +33,7 @@ def _labels(observations):
 
 
 def setup_module() -> None:
-    v4_2.install_v4_2_behavior()
+    v4_3.install_v4_3_behavior()
 
 
 def test_hybrid_slash_source_keeps_hybrid_on_each_grade() -> None:
@@ -123,6 +123,7 @@ def test_family_name_is_not_repeated_inside_trim() -> None:
         {"nhtsa_vpic": ["IS"]},
     )
     assert _labels(finalized) == {"350 F SPORT", "350 F SPORT Design"}
+    assert v4._normalize_selection_label("Passport", "Passport") is None
 
 
 def test_drivetrain_is_not_promoted_to_trim() -> None:
@@ -143,6 +144,37 @@ def test_marketed_package_selection_survives_configuration_cleanup() -> None:
     assert v4._normalize_selection_label("Type S w/Advance Pkg") == "Type S Advance"
 
 
+def test_v4_3_normalizes_residual_package_presentations() -> None:
+    assert v4._normalize_selection_label("w/Technology") == "Technology"
+    assert v4._normalize_selection_label("Premium Package") == "Premium"
+    assert v4._normalize_selection_label("Premium Pkg") == "Premium"
+    assert (
+        v4._normalize_selection_label("Premium & A-Spec Packages")
+        == "Premium A-Spec"
+    )
+    assert (
+        v4._normalize_selection_label("Technology Plus & A-Spec Pkgs")
+        == "Technology Plus A-Spec"
+    )
+    assert (
+        v4._normalize_selection_label("Tech & A-Spec Pkgs")
+        == "Technology A-Spec"
+    )
+    assert v4._normalize_selection_label("Advance & Entertainment Pkgs") == "Advance"
+    assert (
+        v4._normalize_selection_label("Technology & Entertainment Pkgs")
+        == "Technology"
+    )
+    assert v4._normalize_selection_label("AcuraWatch Plus Pkg") is None
+
+
+def test_v4_3_collapses_known_source_package_noise() -> None:
+    assert v4._normalize_selection_label("Sedan Value Package") == "Sedan VP"
+    assert v4._normalize_selection_label("Base Pkg 3 & 4") == "Base"
+    assert v4._normalize_selection_label("Base Pkg 3 to 6") == "Base"
+    assert v4._normalize_selection_label("2 & 5") is None
+
+
 def test_historical_performance_and_hybrid_artifacts_collapse() -> None:
     assert v4._normalize_selection_label("Coupe Type R Sport") == "Type R"
     assert v4._normalize_selection_label("Sedan Si Base") == "Si"
@@ -156,6 +188,7 @@ def test_engine_and_transmission_tokens_are_not_trim_dimensions() -> None:
     assert v4._normalize_selection_label("3.2 Type S") == "Type S"
     assert v4._normalize_selection_label("LE V6 4 Speed Auto") == "LE"
     assert v4._normalize_selection_label("1.5T") is None
+    assert v4._normalize_selection_label("V6") is None
     # Historical numeric marketed grades remain intact when no technical suffix
     # proves that the value is only an engine designation.
     assert v4._normalize_selection_label("3.2") == "3.2"
@@ -165,6 +198,7 @@ def test_non_trim_page_configuration_text_is_rejected() -> None:
     assert v4._normalize_selection_label("Hatchback w/0 Blind Spot Information") is None
     assert v4._normalize_selection_label("w/Solar Roof") is None
     assert v4._normalize_selection_label("Wheels") is None
+    assert v4._normalize_selection_label("wheels 3.7") is None
     assert v4._normalize_selection_label("Continuously Variable Transmission") is None
     assert v4._normalize_selection_label("2011 Toyota Camry SE") is None
     # "1958" is a real Land Cruiser grade, not a year-prefixed page artifact.
