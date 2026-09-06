@@ -7,7 +7,6 @@ from pathlib import Path
 from sqlalchemy import select
 
 from . import identity_catalog_worker as legacy
-from . import identity_catalog_worker_v2 as v2
 from . import identity_catalog_worker_v3 as v3
 from . import identity_catalog_worker_v4 as v4
 from . import identity_catalog_worker_v4_3 as v4_3
