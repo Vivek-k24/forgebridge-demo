@@ -9,8 +9,8 @@ from . import identity_catalog_worker as legacy
 from . import identity_catalog_worker_v2 as v2
 from . import identity_catalog_worker_v3 as v3
 
-# V4 is a cache-reconciliation pass over V3. It does not add technical specs.
-# It fixes source-presentation artifacts exposed by the September 6 catalog audit.
+# V4.2 is a cache-reconciliation pass over V3. It does not add technical specs.
+# It fixes source-presentation artifacts exposed by the September 6 catalog audits.
 
 _V2_CANONICALIZE = v2.canonicalize_model_inventory
 _V3_MODEL_VARIANTS = v3.model_variants
@@ -53,10 +53,10 @@ _STANDALONE_PACKAGE_KEYS = {
     "tow hitch",
 }
 _CONFIG_MARKER_RE = re.compile(
-    r"(?:\bw/|\b\d+\s+passenger\b|auto access seat|"
+    r"(?:\bw/|\bw/o\b|\b\d+\s+passenger\b|auto access seat|"
     r"\bpackage\b|\bpkg\b|navigation|nav system|honda sensing|"
-    r"\bautomatic\b|\bmanual\b|\bcvt\b|\b50 state\b|"
-    r"\binterior\b|\bleather\b)",
+    r"\bautomatic\b|\bmanual\b|\bcvt\b|\bdct\b|\b50 state\b|"
+    r"\binterior\b|\bleather\b|blind spot information|solar roof)",
     re.I,
 )
 _TRAILING_OPTION_RE = re.compile(r"\s+w/.*$", re.I)
@@ -66,15 +66,40 @@ _PASSENGER_RE = re.compile(
 )
 _AUTO_ACCESS_RE = re.compile(r"\s+Auto Access Seat$", re.I)
 _LEADING_TRANSMISSION_RE = re.compile(
-    r"^w/(?:"
-    r"(?:4|5|6|7|8|9|10)[- ]?(?:Speed|Spd)\s+(?:Automatic|Manual)|"
-    r"Automatic|Manual|CVT"
-    r")\s+",
+    r"^w/\s*(?:"
+    r"(?:4|5|6|7|8|9|10)[- ]?(?:Speed|Spd)\s+(?:Automatic|Auto|Manual)|"
+    r"Automatic|Manual|CVT|DCT"
+    r")[/ ]*",
     re.I,
 )
-
-_CURRENT_MAKE: str | None = None
-_HYBRID_FAMILIES: set[tuple[str, str]] = set()
+_DRIVETRAIN_TOKEN_RE = re.compile(
+    r"(?:(?<=^)|(?<=\s))(?:SH-AWD|AWD|FWD|RWD|4WD|2WD|4X4|4X2)(?=\s|$)",
+    re.I,
+)
+_YEAR_PREFIXED_LABEL_RE = re.compile(r"^(?:19|20)\d{2}\s+[A-Za-z]", re.I)
+_TRANSMISSION_ONLY_RE = re.compile(
+    r"^(?:Continuously Variable Transmission|CVT|DCT|Automatic|Manual|"
+    r"Automatic Transmission|Manual Transmission|"
+    r"(?:4|5|6|7|8|9|10)[- ]?(?:Speed|Spd)\s+(?:Automatic|Auto|Manual))$",
+    re.I,
+)
+_NON_TRIM_SELECTION_RE = re.compile(
+    r"(?:blind spot information|solar roof|^wheels?$|hawaii only)",
+    re.I,
+)
+_LEADING_ENGINE_RE = re.compile(
+    r"^(?:\d+\.\d+(?:L|T)?|V-?[468]|I[346])\s+",
+    re.I,
+)
+_TRAILING_ENGINE_RE = re.compile(r"\s+(?:V-?[468]|I[346])$", re.I)
+_TRAILING_TRANSMISSION_RE = re.compile(
+    r"(?:\s+(?:V-?[468]|I[346]))?\s+"
+    r"(?:4|5|6|7|8|9|10)[- ]?(?:Speed|Spd)\s+"
+    r"(?:Automatic|Auto|Manual)$",
+    re.I,
+)
+_PURE_NUMERIC_GRADE_RE = re.compile(r"^\d+(?:\.\d+)?(?:L|T)?$", re.I)
+_PURE_ENGINE_GRADE_RE = re.compile(r"^\d+\.\d+(?:L|T)$", re.I)
 
 
 def _provider_labels_have_hybrid(provider_labels: dict[str, list[str]]) -> bool:
@@ -92,19 +117,16 @@ def canonicalize_model_inventory(
     make: str | None = None,
     year: int | None = None,
 ) -> dict[str, dict[str, list[str]]]:
-    global _CURRENT_MAKE
-    _CURRENT_MAKE = make
-    inventory = _V2_CANONICALIZE(
+    # V4.1 remembered hybrid capability globally by make/model. That allowed a
+    # hybrid observed in one model year to create a synthetic "{model} Hybrid"
+    # consumer-page alias in unrelated years. Hybrid aliases must be exact-year
+    # evidence only, so canonicalization is deliberately stateless here.
+    return _V2_CANONICALIZE(
         nhtsa_models,
         fueleconomy_models,
         make=make,
         year=year,
     )
-    if make:
-        for model, provider_labels in inventory.items():
-            if _provider_labels_have_hybrid(provider_labels):
-                _HYBRID_FAMILIES.add((make, legacy.normalized_key(model)))
-    return inventory
 
 
 def _simple_variant(fragment: str) -> str | None:
@@ -157,10 +179,10 @@ def _source_model_aliases(
                 if key in _MODEL_PAGE_VARIANTS:
                     aliases.append(f"{canonical_model} {variant}")
 
-    if (
-        _CURRENT_MAKE
-        and (_CURRENT_MAKE, legacy.normalized_key(canonical_model)) in _HYBRID_FAMILIES
-    ):
+    # Simplified Hybrid pages are useful when an exact-year NHTSA/FuelEconomy
+    # label proves that this model-year has a hybrid configuration. Never carry
+    # this alias forward from a different year.
+    if _provider_labels_have_hybrid(provider_labels):
         aliases.append(f"{canonical_model} Hybrid")
 
     return sorted(
@@ -190,12 +212,141 @@ def _strict_trim_value(value: str | None) -> str | None:
     return cleaned
 
 
-def _normalize_selection_label(label: str) -> str | None:
-    body, grade = v3._split_body_prefix(label)
-    grade = grade or label
+def _canonical_family_label(provider_labels: dict[str, list[str]]) -> str | None:
+    """Infer the canonical family prefix already represented by the model row."""
+
+    labels = list(provider_labels.get("nhtsa_vpic", []))
+    if not labels:
+        labels = [
+            label
+            for provider_values in provider_labels.values()
+            for label in provider_values
+        ]
+    if not labels:
+        return None
+
+    return min(
+        labels,
+        key=lambda value: (
+            len(v2._components(value)),
+            len(value),
+            value.casefold(),
+        ),
+    )
+
+
+def _strip_family_prefix(value: str, family_label: str | None) -> str:
+    if not family_label:
+        return value
+    prefix = f"{family_label} "
+    if value.casefold().startswith(prefix.casefold()):
+        return value[len(prefix) :].strip()
+    return value
+
+
+def _strip_drivetrain(value: str) -> tuple[str, bool]:
+    cleaned = _DRIVETRAIN_TOKEN_RE.sub(" ", value)
+    cleaned = legacy._SPACE_RE.sub(" ", cleaned).strip()
+    return cleaned, cleaned != value
+
+
+def _package_selection(option: str) -> str | None:
+    cleaned = re.sub(r"\b(?:Pkgs?|Packages?)\b", " ", option, flags=re.I)
+    cleaned = re.sub(r"\bTech\b", "Technology", cleaned, flags=re.I)
+    cleaned = re.sub(r"\bAdvanced\b", "Advance", cleaned, flags=re.I)
+    cleaned = re.sub(r"\bEntertainment\b", " ", cleaned, flags=re.I)
+    cleaned = re.sub(r"\bAuto Trans\b", " ", cleaned, flags=re.I)
+    cleaned = re.sub(r"\band\b|&", " ", cleaned, flags=re.I)
+    cleaned = re.sub(r"\s+\d+(?:\.\d+)?(?:L|T)?$", "", cleaned, flags=re.I)
+    cleaned = legacy._SPACE_RE.sub(" ", cleaned).strip()
+    key = legacy.normalized_key(cleaned)
+
+    has_aspec = "a spec" in key
+    has_advance = "advance" in key
+    has_technology = "technology" in key
+    if has_aspec and has_advance:
+        return "A-Spec Advance"
+    if has_aspec:
+        return "A-Spec"
+    if has_advance:
+        return "Advance"
+    if has_technology:
+        return "Technology"
+    return None
+
+
+def _normalize_leading_with_configuration(grade: str) -> str | None:
+    """Recover the marketed grade from source strings that begin with w/..."""
+
+    if re.match(r"^w/\s*(?:Automatic//)?(?:Tech|Technology)\s+Pkg\b", grade, re.I):
+        return "Technology"
+    if re.match(r"^w/\s*Advance\s+Pkg\b", grade, re.I):
+        return "Advance"
+    if re.match(r"^w/\s*Navigation\s+", grade, re.I):
+        return re.sub(r"^w/\s*Navigation\s+", "", grade, flags=re.I).strip()
+
+    stripped = _LEADING_TRANSMISSION_RE.sub("", grade).strip()
+    if stripped != grade:
+        stripped = _LEADING_ENGINE_RE.sub("", stripped).strip()
+        return stripped or None
+
+    if grade.casefold().startswith("w/"):
+        return None
+    return grade
+
+
+def _normalize_special_grade(grade: str) -> tuple[str, bool]:
+    """Return normalized marketed grade and whether body style should be dropped."""
+
+    grade = re.sub(r"\bType-R\b", "Type R", grade, flags=re.I)
+    grade = re.sub(r"\bA-SPEC\b", "A-Spec", grade, flags=re.I)
     key = legacy.normalized_key(grade)
 
-    if key in _STANDALONE_PACKAGE_KEYS:
+    aliases = {
+        "si base": ("Si", True),
+        "si summer tires": ("Si", True),
+        "n base": ("N", True),
+        "type r": ("Type R", True),
+        "type r sport": ("Type R", True),
+        "type r touring": ("Type R", True),
+        "touring type r": ("Type R", True),
+        "type s sport cpe": ("Type S", True),
+        "type r limited edition": ("Type R Limited Edition", False),
+        "limited edition type r": ("Type R Limited Edition", False),
+    }
+    if key in aliases:
+        return aliases[key]
+
+    grade = re.sub(r"^Base\s+Hybrid$", "Hybrid", grade, flags=re.I)
+    grade = re.sub(r"\s+Hybrid\s+Base$", " Hybrid", grade, flags=re.I)
+    grade = re.sub(r"^Hybrid\s+Base$", "Hybrid", grade, flags=re.I)
+
+    hybrid_prefix = re.match(r"^Hybrid\s+(.+)$", grade, re.I)
+    if hybrid_prefix:
+        remainder = hybrid_prefix.group(1).strip()
+        if remainder and legacy.normalized_key(remainder) != "base":
+            grade = f"{remainder} Hybrid"
+
+    key = legacy.normalized_key(grade)
+    return grade, key in {"si", "n", "type r", "type s", "a spec"}
+
+
+def _normalize_selection_label(
+    label: str,
+    family_label: str | None = None,
+) -> str | None:
+    body, grade = v3._split_body_prefix(label)
+    grade = grade or label
+    grade = _strip_family_prefix(grade, family_label).strip()
+    key = legacy.normalized_key(grade)
+
+    if not grade or key in _STANDALONE_PACKAGE_KEYS:
+        return None
+    if _YEAR_PREFIXED_LABEL_RE.search(grade):
+        return None
+    if _NON_TRIM_SELECTION_RE.search(grade):
+        return None
+    if _TRANSMISSION_ONLY_RE.fullmatch(grade):
         return None
 
     if key.startswith("base "):
@@ -203,21 +354,91 @@ def _normalize_selection_label(label: str) -> str | None:
         if suffix in _SPECIAL_VARIANTS:
             return _SPECIAL_VARIANTS[suffix]
 
-    # Transmission/options/seating are configuration dimensions, not trims.
-    grade = _LEADING_TRANSMISSION_RE.sub("", grade).strip()
-    grade = _TRAILING_OPTION_RE.sub("", grade).strip()
+    leading = _normalize_leading_with_configuration(grade)
+    if leading is None:
+        return None
+    grade = leading
+
+    # Acura and several historical consumer catalogs encode marketed selection
+    # packages after drivetrain/base text. Keep the marketed package grade while
+    # dropping drivetrain and non-selection entertainment/navigation qualifiers.
+    with_match = re.match(r"^(.*?)\s+w/(.+)$", grade, re.I)
+    if with_match:
+        prefix = with_match.group(1).strip()
+        option = with_match.group(2).strip()
+        prefix, _ = _strip_drivetrain(prefix)
+        if legacy.normalized_key(prefix) in {"base", "standard"}:
+            prefix = ""
+
+        package = _package_selection(option)
+        if package is not None:
+            prefix_key = legacy.normalized_key(prefix)
+            if prefix_key == "type s":
+                grade = "Type S Advance" if "advance" in legacy.normalized_key(package) else "Type S"
+            elif not prefix:
+                grade = package
+            else:
+                # A real grade plus an optional package remains the real grade.
+                grade = prefix
+        else:
+            # Navigation/seating/transmission/etc. are configuration qualifiers.
+            grade = prefix
+
     grade = _PASSENGER_RE.sub("", grade).strip()
     grade = _AUTO_ACCESS_RE.sub("", grade).strip()
 
+    grade, drivetrain_removed = _strip_drivetrain(grade)
+    if not grade:
+        return None
+
+    # Normalize package spelling when the package itself is the marketed grade.
+    grade = re.sub(
+        r"\bA-Spec\s+(?:Tech|Technology)\s+(?:Pkg|Package)\b",
+        "A-Spec Technology",
+        grade,
+        flags=re.I,
+    )
+    grade = re.sub(
+        r"\bA-Spec\s+(?:Pkg|Package)\b",
+        "A-Spec",
+        grade,
+        flags=re.I,
+    )
+    grade = re.sub(
+        r"\b(?:Tech|Technology)\s+(?:Pkg|Package)\b",
+        "Technology",
+        grade,
+        flags=re.I,
+    )
+    grade = re.sub(
+        r"\bAdvance\s+(?:Pkg|Package)\b",
+        "Advance",
+        grade,
+        flags=re.I,
+    )
+
+    # Engine/transmission/drivetrain are separate identity facts, not trim.
+    grade = _LEADING_ENGINE_RE.sub("", grade).strip()
+    grade = _TRAILING_TRANSMISSION_RE.sub("", grade).strip()
+    grade = _TRAILING_ENGINE_RE.sub("", grade).strip()
+    if not grade or _TRANSMISSION_ONLY_RE.fullmatch(grade):
+        return None
+    if _PURE_ENGINE_GRADE_RE.fullmatch(grade):
+        return None
+    if drivetrain_removed and _PURE_NUMERIC_GRADE_RE.fullmatch(grade):
+        return None
+
     # Preserve the marketed grade spelling used by the accepted Honda fixture.
     grade = re.sub(r"\bSport L\b", "Sport-L", grade, flags=re.I)
+
+    grade, drop_body = _normalize_special_grade(grade)
+    if drop_body:
+        body = None
 
     if not grade:
         return None
     if legacy.normalized_key(grade) in _STANDALONE_PACKAGE_KEYS:
         return None
-    if legacy.normalized_key(grade) in _SPECIAL_VARIANTS:
-        body = None
 
     return v3._selection_label(grade, body)
 
@@ -231,11 +452,12 @@ def _finalize_trim_observations(
     provider_labels: dict[str, list[str]],
 ) -> dict[str, dict[str, tuple[str, dict[str, object]]]]:
     base = _V3_FINALIZE(observations, provider_labels)
+    family_label = _canonical_family_label(provider_labels)
 
     normalized: dict[str, dict[str, tuple[str, dict[str, object]]]] = defaultdict(dict)
     for provider_map in base.values():
         for provider, (label, evidence) in provider_map.items():
-            canonical = _normalize_selection_label(label)
+            canonical = _normalize_selection_label(label, family_label)
             if canonical is None:
                 continue
             key = legacy.normalized_key(canonical)
@@ -259,6 +481,19 @@ def _finalize_trim_observations(
                 key = legacy.normalized_key(canonical)
                 collapsed[key][provider] = (canonical, evidence)
         normalized = collapsed
+
+    # Collapse source "Base" decorations only when the concise grade exists.
+    keys = set(normalized)
+    base_collapsed: dict[str, dict[str, tuple[str, dict[str, object]]]] = defaultdict(dict)
+    for key, provider_map in normalized.items():
+        target = key
+        if key.endswith(" base"):
+            candidate = key[: -len(" base")].strip()
+            if candidate in keys:
+                target = candidate
+        for provider, observation in provider_map.items():
+            base_collapsed[target][provider] = observation
+    normalized = base_collapsed
 
     # KBB sometimes treats "Sport Coupe/Wagon" as body-style wording. Collapse
     # a trailing "Sport" only when the same shorter grade is independently
@@ -306,7 +541,7 @@ async def export_json(path: str) -> None:
     destination = Path(path)
     payload = json.loads(destination.read_text(encoding="utf-8"))
     scope = payload.setdefault("scope", {})
-    scope["identity_label_strategy"] = "marketed_selection_v4"
+    scope["identity_label_strategy"] = "marketed_selection_v4_2"
     model_rows = payload.get("models", [])
     empty_trim_models = sum(
         1 for model in model_rows if isinstance(model, dict) and not model.get("trims")
@@ -316,10 +551,36 @@ async def export_json(path: str) -> None:
         for model in model_rows
         if isinstance(model, dict)
     )
+    one_source_trims = sum(
+        1
+        for model in model_rows
+        if isinstance(model, dict)
+        for trim in model.get("trims", [])
+        if isinstance(trim, dict) and trim.get("source_count") == 1
+    )
+    residual_drivetrain_labels = sum(
+        1
+        for model in model_rows
+        if isinstance(model, dict)
+        for trim in model.get("trims", [])
+        if isinstance(trim, dict)
+        and _DRIVETRAIN_TOKEN_RE.search(str(trim.get("trim", "")))
+    )
+    residual_config_labels = sum(
+        1
+        for model in model_rows
+        if isinstance(model, dict)
+        for trim in model.get("trims", [])
+        if isinstance(trim, dict)
+        and _CONFIG_MARKER_RE.search(str(trim.get("trim", "")))
+    )
     payload["quality_summary"] = {
         "model_year_rows": len(model_rows),
         "marketed_selection_rows": trim_rows,
         "model_years_without_trim_rows": empty_trim_models,
+        "one_source_selection_rows": one_source_trims,
+        "residual_drivetrain_label_rows": residual_drivetrain_labels,
+        "residual_config_marker_rows": residual_config_labels,
     }
     destination.write_text(
         json.dumps(payload, indent=2, sort_keys=False),
