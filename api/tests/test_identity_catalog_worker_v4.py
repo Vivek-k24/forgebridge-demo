@@ -5,7 +5,7 @@ from collections import defaultdict
 from partgraph.knowledge import identity_catalog_worker as legacy
 from partgraph.knowledge import identity_catalog_worker_v3 as v3
 from partgraph.knowledge import identity_catalog_worker_v4 as v4
-from partgraph.knowledge import identity_catalog_worker_v4_1 as v4_1
+from partgraph.knowledge import identity_catalog_worker_v4_2 as v4_2
 
 
 def _observation(label: str, provider: str = "kbb"):
@@ -33,7 +33,7 @@ def _labels(observations):
 
 
 def setup_module() -> None:
-    v4_1.install_v4_1_behavior()
+    v4_2.install_v4_2_behavior()
 
 
 def test_hybrid_slash_source_keeps_hybrid_on_each_grade() -> None:
@@ -86,6 +86,7 @@ def test_configuration_options_collapse_to_marketed_grade() -> None:
 def test_leading_transmission_option_collapses_without_losing_grade() -> None:
     assert v4._normalize_selection_label("Sedan w/CVT SE") == "Sedan SE"
     assert v4._normalize_selection_label("Coupe w/5-Speed Manual EX") == "Coupe EX"
+    assert v4._normalize_selection_label("w/ Manual N Base") == "N"
 
 
 def test_trailing_kbb_sport_descriptor_collapses_when_shorter_grade_exists() -> None:
@@ -101,14 +102,73 @@ def test_trailing_kbb_sport_descriptor_collapses_when_shorter_grade_exists() -> 
     assert _labels(finalized) == {"Coupe GS-R", "Sedan GS-R"}
 
 
-def test_simplified_hybrid_alias_is_added_after_family_is_observed() -> None:
-    v4._CURRENT_MAKE = "Honda"
-    v4._HYBRID_FAMILIES.add(("Honda", legacy.normalized_key("CR-V")))
-    aliases = v4._source_model_aliases(
+def test_simplified_hybrid_alias_requires_current_year_evidence() -> None:
+    assert v4._source_model_aliases(
         "CR-V",
         {"fueleconomy_gov": ["CR-V AWD"]},
+    ) == ["CR-V"]
+    assert v4._source_model_aliases(
+        "CR-V",
+        {"fueleconomy_gov": ["CR-V Hybrid AWD"]},
+    ) == ["CR-V", "CR-V Hybrid"]
+
+
+def test_family_name_is_not_repeated_inside_trim() -> None:
+    observations = _merge(
+        _observation("IS 350 F SPORT"),
+        _observation("IS 350 F SPORT Design", "carsdirect"),
     )
-    assert aliases == ["CR-V", "CR-V Hybrid"]
+    finalized = v4._finalize_trim_observations(
+        observations,
+        {"nhtsa_vpic": ["IS"]},
+    )
+    assert _labels(finalized) == {"350 F SPORT", "350 F SPORT Design"}
+
+
+def test_drivetrain_is_not_promoted_to_trim() -> None:
+    assert v4._normalize_selection_label("SH-AWD") is None
+    assert v4._normalize_selection_label("FWD") is None
+    assert v4._normalize_selection_label("SH-AWD PMC Edition") == "PMC Edition"
+    assert v4._normalize_selection_label("2.0 SH-AWD") is None
+
+
+def test_marketed_package_selection_survives_configuration_cleanup() -> None:
+    assert v4._normalize_selection_label("Base w/Technology Pkg") == "Technology"
+    assert (
+        v4._normalize_selection_label("SH-AWD w/A-Spec Advance Pkg")
+        == "A-Spec Advance"
+    )
+    assert v4._normalize_selection_label("SH-AWD w/A-Spec Pkg") == "A-Spec"
+    assert v4._normalize_selection_label("SH-AWD w/Advance Pkg") == "Advance"
+    assert v4._normalize_selection_label("Type S w/Advance Pkg") == "Type S Advance"
+
+
+def test_historical_performance_and_hybrid_artifacts_collapse() -> None:
+    assert v4._normalize_selection_label("Coupe Type R Sport") == "Type R"
+    assert v4._normalize_selection_label("Sedan Si Base") == "Si"
+    assert v4._normalize_selection_label("Base Hybrid") == "Hybrid"
+    assert v4._normalize_selection_label("Sport Hybrid Base") == "Sport Hybrid"
+    assert v4._normalize_selection_label("Hybrid LE") == "LE Hybrid"
+
+
+def test_engine_and_transmission_tokens_are_not_trim_dimensions() -> None:
+    assert v4._normalize_selection_label("Coupe 2.4 EX") == "Coupe EX"
+    assert v4._normalize_selection_label("3.2 Type S") == "Type S"
+    assert v4._normalize_selection_label("LE V6 4 Speed Auto") == "LE"
+    assert v4._normalize_selection_label("1.5T") is None
+    # Historical numeric marketed grades remain intact when no technical suffix
+    # proves that the value is only an engine designation.
+    assert v4._normalize_selection_label("3.2") == "3.2"
+
+
+def test_non_trim_page_configuration_text_is_rejected() -> None:
+    assert v4._normalize_selection_label("Hatchback w/0 Blind Spot Information") is None
+    assert v4._normalize_selection_label("w/Solar Roof") is None
+    assert v4._normalize_selection_label("Wheels") is None
+    assert v4._normalize_selection_label("Continuously Variable Transmission") is None
+    assert v4._normalize_selection_label("2011 Toyota Camry SE") is None
+    # "1958" is a real Land Cruiser grade, not a year-prefixed page artifact.
+    assert v4._normalize_selection_label("1958") == "1958"
 
 
 def test_v4_body_map_is_installed_for_v3_dimension_parser() -> None:
