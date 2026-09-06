@@ -5,6 +5,7 @@ from collections import defaultdict
 from partgraph.knowledge import identity_catalog_worker as legacy
 from partgraph.knowledge import identity_catalog_worker_v3 as v3
 from partgraph.knowledge import identity_catalog_worker_v4 as v4
+from partgraph.knowledge import identity_catalog_worker_v4_1 as v4_1
 
 
 def _observation(label: str, provider: str = "kbb"):
@@ -32,7 +33,7 @@ def _labels(observations):
 
 
 def setup_module() -> None:
-    v4.install_v4_behavior()
+    v4_1.install_v4_1_behavior()
 
 
 def test_hybrid_slash_source_keeps_hybrid_on_each_grade() -> None:
