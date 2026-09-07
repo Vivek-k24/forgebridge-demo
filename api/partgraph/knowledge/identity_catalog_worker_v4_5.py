@@ -75,9 +75,9 @@ def _collapse_kbb_body_presentation_sport(
 
     KBB uses `Sport Wagon 4D` / `Sport Coupe 2D` as a body-style presentation on
     a number of older pages. `Sport` can also be a genuine modern trim, so it is
-    removed only when all KBB-only rows for that exact body presentation end in
-    Sport and the shorter grade is independently visible elsewhere in the same
-    model-year observation set. Genuine `Outback Sport` is explicitly retained.
+    removed only when every KBB-observed row for that exact body presentation
+    ends in Sport and the shorter grade is independently visible elsewhere in
+    the same model-year observation set. Genuine `Outback Sport` is retained.
     """
 
     result = {key: dict(provider_map) for key, provider_map in finalized.items()}
@@ -94,20 +94,23 @@ def _collapse_kbb_body_presentation_sport(
         grade = grade or label
         parsed[key] = (body, grade)
         grade_keys[legacy.normalized_key(grade)].add(key)
-        if body is not None and set(provider_map) == {"kbb"}:
+        # Include corroborated KBB rows in the body-group context so a genuine
+        # non-Sport grade cannot be hidden merely because another provider also
+        # observed it. Rewrites themselves remain KBB-only below.
+        if body is not None and "kbb" in provider_map:
             body_groups[body].append(key)
 
     rewrites: list[tuple[str, str, str]] = []
     for body, keys in body_groups.items():
         if not keys:
             continue
-        if not all(
-            _TRAILING_SPORT_RE.search(parsed[key][1])
-            for key in keys
-        ):
+        if not all(_TRAILING_SPORT_RE.search(parsed[key][1]) for key in keys):
             continue
 
         for key in keys:
+            provider_map = finalized[key]
+            if set(provider_map) != {"kbb"}:
+                continue
             _body, grade = parsed[key]
             if legacy.normalized_key(grade) == "outback sport":
                 continue
