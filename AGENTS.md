@@ -28,7 +28,7 @@ Never fabricate records, requirements, steps, parts, blockers, observations, or 
 - `web` — React + TypeScript + Vite; Nginx production container.
 - `api` — Python/FastAPI modular monolith.
 - PostgreSQL — authoritative canonical and private state.
-- `collector` — separate future Python service only when an approved real ingestion source exists.
+- `collector` — operator-controlled Python worker for offline/local catalog acquisition; disabled by default in the hosted repair runtime and kept off the interactive repair critical path.
 - GitHub Actions — CI/CD and container delivery.
 - GitHub Pages — static/read-only current-main frontend preview only.
 
@@ -139,18 +139,33 @@ Source authority and extraction confidence are different dimensions.
 
 Conflicts never silently overwrite. Unsupported inference stays unverified.
 
-## Collection/licensing gate
+## Collection and corroboration gate
 
-The collector is not part of the interactive repair path and is not implemented until real ingestion is approved.
+Catalog collection is allowed as an operator-controlled offline/local workflow when it stays outside the interactive repair critical path and preserves provenance. The existence of a seed row or a reachable webpage is not evidence that a configuration is verified.
+
+For ordinary vehicle-configuration identity and technical-profile facts:
+
+1. A collection batch declares its candidate scope explicitly. Seed candidates are not automatically counted as collected or verified.
+2. The collector may gather public source material locally and store immutable raw/cache metadata plus structured source observations.
+3. Compound descriptions must be decomposed into independent technical facts before corroboration; trim, engine, transmission, drivetrain, horsepower, dimensions, capacities, and other mechanical dimensions are not one string.
+4. A source contributes at most one verification vote per field. It contributes only fields its retrieved content actually supports within that source's real vehicle/applicability scope.
+5. Three independent matching sources are the normal minimum for automatic verification of an ordinary field. There is no fixed source maximum; collect additional independent sources whenever evidence is incomplete, unavailable, or conflicting.
+6. Normalize nomenclature and units conservatively before comparison. Normalization may join equivalent notation but must not erase meaningful distinctions such as different trims, transmissions, powertrains, or markets.
+7. Failed, blocked, missing, contradictory, or partial source observations remain visible and do not become agreement.
+8. Unresolved conflicts remain unresolved. Do not force a canonical result simply to increase coverage percentage.
+9. Manufacturer-authoritative service/fluid facts keep their source-authority boundary; repetition by generic reference sites does not turn them into OEM truth. Applicable OEM facts may be retained as `manufacturer_reported` where policy permits.
+10. Configuration/profile corroboration does not automatically verify safety-critical mechanical facts, exact repair procedures, torque values, fitment, or other domain claims that require stronger/source-specific authority.
 
 Do not:
 
-- run production collection from CI, deployment, page load, or a normal repair session;
-- scrape or ingest a new source merely because staging tables exist;
-- accept licensing terms, activate a paid source, spend money, or start real collection without explicit approval;
-- let the collector write canonical truth directly.
+- run real catalog collection from CI, deployment, page load, or a normal repair session;
+- bypass authentication, paywalls, CAPTCHA, robots/access controls, or technical blocking;
+- accept new paid-source terms, activate paid credentials, or spend money without explicit approval;
+- let a successful HTTP request count as a verification vote without field-level support;
+- let repeated records/pages from one provider satisfy a multi-source threshold;
+- let an LLM or collector silently overwrite canonical truth merely because it found a plausible value.
 
-Collector writes, when implemented, are staging-only with provenance and deterministic fixtures for CI.
+Local/operator-controlled public-source collection does not require a separate licensing ceremony before every run. Source terms, access controls, paid activation, redistribution restrictions, and mechanical source authority must still be respected. Collector results enter staging/provenance first; canonical promotion must follow deterministic corroboration/review rules.
 
 ## AI boundary
 
@@ -229,7 +244,7 @@ When continuing an existing block:
 3. Make routine implementation decisions autonomously.
 4. Diagnose and fix red checks; do not merge around them.
 5. Preserve architecture/truth/security gates.
-6. Do not cross collection/licensing/spending/safety gates without explicit authorization.
+6. Local public-source collection may proceed under the corroboration rules above; do not bypass access controls, activate paid sources, spend money, or weaken safety gates without explicit authorization.
 7. Update the relevant issue/roadmap/UML when the architecture or completion boundary materially changes.
 
 ## Merge/validation discipline
