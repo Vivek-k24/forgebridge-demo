@@ -54,6 +54,108 @@ def test_v4_5_normalizes_remaining_package_presentations() -> None:
     )
 
 
+def test_v4_5_removes_liftback_body_presentation() -> None:
+    assert v4._normalize_selection_label("Liftback") == "Base"
+    assert v4._normalize_selection_label("Turbo Liftback") == "Turbo"
+    assert v4._normalize_selection_label("Hatchback GT Liftback") == "Hatchback GT"
+    assert (
+        v4._normalize_selection_label("Hatchback Limited Edition Turbo Liftback")
+        == "Hatchback Limited Edition Turbo"
+    )
+
+
+def test_v4_5_collapses_historical_kbb_sport_body_presentation_with_support() -> None:
+    observations = {
+        legacy.normalized_key("Sedan WRX"): {
+            "kbb": ("Sedan WRX", _evidence("Impreza")),
+        },
+        legacy.normalized_key("Sedan 2.5i"): {
+            "kbb": ("Sedan 2.5i", _evidence("Impreza")),
+        },
+        legacy.normalized_key("Wagon WRX Sport"): {
+            "kbb": ("Wagon WRX Sport", _evidence("Impreza")),
+        },
+        legacy.normalized_key("Wagon 2.5i Sport"): {
+            "kbb": ("Wagon 2.5i Sport", _evidence("Impreza")),
+        },
+    }
+
+    finalized = v3._finalize_trim_observations(
+        observations,
+        {"nhtsa_vpic": ["Impreza"]},
+    )
+
+    assert "wagon wrx sport" not in finalized
+    assert "wagon 2 5i sport" not in finalized
+    assert "wagon wrx" in finalized
+    assert "wagon 2 5i" in finalized
+
+
+def test_v4_5_does_not_strip_real_sport_when_body_group_has_other_grades() -> None:
+    observations = {
+        legacy.normalized_key("Sedan 2.0i Limited"): {
+            "kbb": ("Sedan 2.0i Limited", _evidence("Impreza")),
+        },
+        legacy.normalized_key("Sedan 2.0i Sport"): {
+            "kbb": ("Sedan 2.0i Sport", _evidence("Impreza")),
+        },
+        legacy.normalized_key("Wagon 2.0i"): {
+            "kbb": ("Wagon 2.0i", _evidence("Impreza")),
+        },
+    }
+
+    finalized = v3._finalize_trim_observations(
+        observations,
+        {"nhtsa_vpic": ["Impreza"]},
+    )
+
+    assert "sedan 2 0i sport" in finalized
+
+
+def test_v4_5_preserves_genuine_outback_sport() -> None:
+    observations = {
+        legacy.normalized_key("Sedan L"): {
+            "kbb": ("Sedan L", _evidence("Impreza")),
+        },
+        legacy.normalized_key("Wagon L Sport"): {
+            "kbb": ("Wagon L Sport", _evidence("Impreza")),
+        },
+        legacy.normalized_key("Wagon Outback Sport"): {
+            "kbb": ("Wagon Outback Sport", _evidence("Impreza")),
+        },
+    }
+
+    finalized = v3._finalize_trim_observations(
+        observations,
+        {"nhtsa_vpic": ["Impreza"]},
+    )
+
+    assert "wagon l" in finalized
+    assert "wagon outback sport" in finalized
+
+
+def test_final_sample_supplements_cover_body_presentation_artifacts() -> None:
+    expected = {
+        ("Hyundai", 2010, "Accent"): {"Hatchback Blue"},
+        ("Lexus", 2010, "IS"): {
+            "Sedan 250",
+            "Sedan 350",
+            "Convertible 250",
+            "Convertible 350",
+        },
+        ("Subaru", 2006, "Impreza"): {"Wagon Outback Sport Special Edition"},
+        ("Subaru", 2008, "Impreza"): {"Wagon WRX STI"},
+        ("Subaru", 2010, "Impreza"): {
+            "Wagon WRX STI",
+            "Wagon WRX STI Special Edition",
+        },
+    }
+    for key, trims in expected.items():
+        provider, rows = v4_4._SOURCE_BACKED_SUPPLEMENTS[key]
+        assert provider == "edmunds_reference"
+        assert {trim for trim, _url in rows} == trims
+
+
 def test_2019_es_premium_package_artifacts_are_removed() -> None:
     assert v4_5._FINAL_SAMPLE_REPLACEMENTS[("Lexus", 2019, "ES")] == {
         "300h Premium",
