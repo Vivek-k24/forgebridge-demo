@@ -14,4 +14,4 @@ RUN python -m pip install --upgrade pip && \
     python -m pip install ./api && \
     python -m pip install httpx==0.28.1
 
-CMD ["python", "local-validation/acceptance_runner.py"]
+CMD ["python", "local-validation/repair_acceptance_entrypoint.py"]
