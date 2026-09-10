@@ -52,6 +52,11 @@ class VehicleConfiguration(Base):
     engine: Mapped[str | None] = mapped_column(String(128))
     transmission: Mapped[str | None] = mapped_column(String(128))
     drivetrain: Mapped[str | None] = mapped_column(String(64))
+    configuration_qualifiers: Mapped[dict[str, object]] = mapped_column(
+        JSON,
+        nullable=False,
+        default=dict,
+    )
     identity_source: Mapped[str] = mapped_column(String(32), nullable=False, default="manual")
     verification_status: Mapped[str] = mapped_column(
         String(32),
