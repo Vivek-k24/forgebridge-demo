@@ -1,25 +1,20 @@
-from __future__ import annotations
-
 from datetime import datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
-    JSON,
-    JSON as SAJSON,
     Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
-    Index,
     Integer,
     Numeric,
-    SmallInteger,
     String,
     Text,
     UniqueConstraint,
     Uuid,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
@@ -31,22 +26,41 @@ STAGING_SCHEMA = "catalog_staging"
 
 class CatalogIngestionBatch(Base):
     __tablename__ = "ingestion_batches"
-    __table_args__ = ({"schema": STAGING_SCHEMA},)
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('open', 'completed', 'failed')",
+            name="ck_catalog_ingestion_batches_status",
+        ),
+        {"schema": STAGING_SCHEMA},
+    )
 
     id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
     source_name: Mapped[str] = mapped_column(String(128), nullable=False)
     source_type: Mapped[str] = mapped_column(String(64), nullable=False)
-    collector_version: Mapped[str] = mapped_column(String(64), nullable=False)
-    status: Mapped[str] = mapped_column(String(32), nullable=False)
-    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    collector_version: Mapped[str | None] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(
+        String(24), nullable=False, default="open", server_default=text("'open'")
+    )
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
 
 
 class CatalogSourceRecord(Base):
     __tablename__ = "source_records"
     __table_args__ = (
-        UniqueConstraint("dedupe_key", name="uq_catalog_source_records_dedupe_key"),
+        CheckConstraint(
+            "confidence IS NULL OR (confidence >= 0 AND confidence <= 1)",
+            name="ck_catalog_source_records_confidence",
+        ),
+        CheckConstraint(
+            "review_status IN ('pending', 'verified', 'rejected')",
+            name="ck_catalog_source_records_review_status",
+        ),
         {"schema": STAGING_SCHEMA},
     )
 
@@ -69,14 +83,20 @@ class CatalogSourceRecord(Base):
     provenance: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
     extraction_method: Mapped[str] = mapped_column(String(64), nullable=False)
     confidence: Mapped[Decimal | None] = mapped_column(Numeric(5, 4))
-    review_status: Mapped[str] = mapped_column(String(32), nullable=False)
+    review_status: Mapped[str] = mapped_column(
+        String(24), nullable=False, server_default=text("'pending'")
+    )
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     reviewed_by: Mapped[str | None] = mapped_column(String(128))
-    dedupe_key: Mapped[str] = mapped_column(String(64), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    dedupe_key: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
 
 
 class CatalogVerifiedEvidence(Base):
+    """Immutable verified evidence snapshot, not canonical truth by itself."""
+
     __tablename__ = "catalog_verified_evidence"
 
     id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
