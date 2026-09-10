@@ -1,10 +1,39 @@
 from datetime import datetime
+from math import isfinite
 from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .policy import validate_supported_year
+
+ConfigurationQualifierValue = str | int | float | bool
+
+
+def _clean_configuration_qualifiers(
+    value: dict[str, ConfigurationQualifierValue],
+) -> dict[str, ConfigurationQualifierValue]:
+    cleaned: dict[str, ConfigurationQualifierValue] = {}
+    for raw_key, raw_value in value.items():
+        key = "_".join(raw_key.strip().casefold().replace("-", " ").split())
+        if not key or len(key) > 64:
+            raise ValueError("configuration qualifier keys must be 1-64 characters")
+        if isinstance(raw_value, str):
+            normalized_value = " ".join(raw_value.split())
+            if not normalized_value or len(normalized_value) > 128:
+                raise ValueError(
+                    "configuration qualifier string values must be 1-128 characters"
+                )
+            cleaned[key] = normalized_value
+        elif isinstance(raw_value, bool):
+            cleaned[key] = raw_value
+        elif isinstance(raw_value, int):
+            cleaned[key] = raw_value
+        elif isinstance(raw_value, float) and isfinite(raw_value):
+            cleaned[key] = raw_value
+        else:
+            raise ValueError("configuration qualifier values must be finite scalar values")
+    return dict(sorted(cleaned.items()))
 
 
 class VehicleConfigurationInput(BaseModel):
@@ -18,6 +47,9 @@ class VehicleConfigurationInput(BaseModel):
     engine: str | None = Field(default=None, max_length=128)
     transmission: str | None = Field(default=None, max_length=128)
     drivetrain: str | None = Field(default=None, max_length=64)
+    configuration_qualifiers: dict[str, ConfigurationQualifierValue] = Field(
+        default_factory=dict
+    )
 
     @field_validator("year")
     @classmethod
@@ -46,6 +78,14 @@ class VehicleConfigurationInput(BaseModel):
             return None
         cleaned = " ".join(value.split())
         return cleaned or None
+
+    @field_validator("configuration_qualifiers")
+    @classmethod
+    def clean_configuration_qualifiers(
+        cls,
+        value: dict[str, ConfigurationQualifierValue],
+    ) -> dict[str, ConfigurationQualifierValue]:
+        return _clean_configuration_qualifiers(value)
 
 
 class VehicleSelectionInput(BaseModel):
@@ -59,6 +99,9 @@ class VehicleSelectionInput(BaseModel):
     engine: str | None = Field(default=None, max_length=128)
     transmission: str | None = Field(default=None, max_length=128)
     drivetrain: str | None = Field(default=None, max_length=64)
+    configuration_qualifiers: dict[str, ConfigurationQualifierValue] = Field(
+        default_factory=dict
+    )
 
     @field_validator("year")
     @classmethod
@@ -87,6 +130,14 @@ class VehicleSelectionInput(BaseModel):
             return None
         cleaned = " ".join(value.split())
         return cleaned or None
+
+    @field_validator("configuration_qualifiers")
+    @classmethod
+    def clean_configuration_qualifiers(
+        cls,
+        value: dict[str, ConfigurationQualifierValue],
+    ) -> dict[str, ConfigurationQualifierValue]:
+        return _clean_configuration_qualifiers(value)
 
 
 class VehicleConfigurationRead(BaseModel):
@@ -103,6 +154,7 @@ class VehicleConfigurationRead(BaseModel):
     engine: str | None
     transmission: str | None
     drivetrain: str | None
+    configuration_qualifiers: dict[str, ConfigurationQualifierValue]
     identity_source: str
     verification_status: str
     canonicalization_version: int
@@ -140,6 +192,9 @@ class VehicleSelectionNormalized(BaseModel):
     engine: str | None = None
     transmission: str | None = None
     drivetrain: str | None = None
+    configuration_qualifiers: dict[str, ConfigurationQualifierValue] = Field(
+        default_factory=dict
+    )
 
 
 class VehicleSelectionResult(BaseModel):
