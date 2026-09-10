@@ -88,7 +88,7 @@ def load_reference_fleet_repair_corpus() -> dict[str, object]:
         raise ValueError("deferred guided-operation boundary changed unexpectedly")
 
     fleet = load_reference_fleet()
-    vehicle_keys = {str(vehicle["vehicle_key"]) for vehicle in fleet["vehicles"]}
+    vehicle_keys = {str(vehicle["key"]) for vehicle in fleet["vehicles"]}
     repairs = payload.get("repairs")
     if not isinstance(repairs, list) or not repairs:
         raise ValueError("reference fleet repair corpus must contain repairs")
