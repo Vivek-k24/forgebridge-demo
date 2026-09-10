@@ -2,6 +2,11 @@ from partgraph.knowledge.reference_fleet import (
     EXPECTED_MVP_DOMAINS,
     load_reference_fleet,
 )
+from partgraph.knowledge.reference_fleet_repairs import (
+    DEFERRED_GUIDED_OPERATIONS,
+    load_reference_fleet_repair_corpus,
+    verified_reference_repairs,
+)
 from partgraph.knowledge.support_boundaries import (
     COMPUTER_SERVICE_BOUNDARY_ACTION_KEY,
     ProcedureBoundaryAction,
@@ -24,6 +29,54 @@ def test_reference_fleet_has_five_source_backed_configurations_and_full_domain_m
     }
     assert covered == EXPECTED_MVP_DOMAINS
     assert all(vehicle["evidence"] for vehicle in payload["vehicles"])
+
+
+def test_reference_repair_corpus_does_not_inherit_collector_rules() -> None:
+    payload = load_reference_fleet_repair_corpus()
+    policy = payload["verification_policy"]
+
+    assert policy["collector_rules_inherited"] is False
+    assert policy["computer_service"] == "unsupported_indefinitely"
+    assert policy["physical_bleeding_supported"] is True
+    assert set(policy["deferred_guided_operations"]) == DEFERRED_GUIDED_OPERATIONS
+
+
+def test_only_verified_reference_repairs_expose_guided_actions() -> None:
+    payload = load_reference_fleet_repair_corpus()
+    verified = verified_reference_repairs()
+
+    assert verified
+    assert all(repair["actions"] for repair in verified)
+    assert all(
+        not repair["actions"]
+        for repair in payload["repairs"]
+        if repair["verification_status"] == "candidate"
+    )
+
+
+def test_reference_repair_corpus_contains_all_planned_mvp_domains() -> None:
+    payload = load_reference_fleet_repair_corpus()
+    covered = {
+        domain
+        for repair in payload["repairs"]
+        for domain in repair["domains"]
+    }
+
+    # A domain may be present as candidate research before it is safe to guide.
+    assert EXPECTED_MVP_DOMAINS.issubset(covered)
+
+
+def test_verified_reference_actions_do_not_guide_deferred_operations() -> None:
+    for repair in verified_reference_repairs():
+        for action in repair["actions"]:
+            text = " ".join(
+                f"{action['key']} {action['title']} {action['instruction']}"
+                .casefold()
+                .replace("-", " ")
+                .replace("_", " ")
+                .split()
+            )
+            assert not any(operation in text for operation in DEFERRED_GUIDED_OPERATIONS)
 
 
 def test_computer_service_boundary_is_reserved_terminal_non_skippable_action() -> None:
