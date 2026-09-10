@@ -168,7 +168,8 @@
       "body_style": "Pickup",
       "engine": "3.5L V6 gasoline",
       "transmission": "6-speed automatic",
-      "drivetrain": "part-time 4WD",
+      "drivetrain": "4WD",
+      "drivetrain_description": "4WDemand part-time 4WD with electronically controlled transfer case",
       "configuration_qualifiers": {
         "cab_style": "Double Cab",
         "bed_length_in": 73.7
