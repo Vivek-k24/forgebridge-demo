@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..errors import ErrorCode, PartGraphError
 from .credentials import ProviderCredentialError, protect_provider_credential
-from .models import ProviderConnection
-from .schemas import ProviderCreate, ProviderRead, ProviderUpdate
+from .models import OperatorAuditEvent, ProviderConnection
+from .schemas import OperatorAuditRead, ProviderCreate, ProviderRead, ProviderUpdate
 
 
 def _credential_storage(provider: ProviderConnection) -> str | None:
@@ -35,6 +35,37 @@ def serialize_provider(provider: ProviderConnection) -> ProviderRead:
         notes=provider.notes,
         created_at=provider.created_at,
         updated_at=provider.updated_at,
+    )
+
+
+def serialize_audit_event(event: OperatorAuditEvent) -> OperatorAuditRead:
+    return OperatorAuditRead(
+        id=event.id,
+        actor_user_id=event.actor_user_id,
+        action=event.action,
+        target_type=event.target_type,
+        target_id=event.target_id,
+        event_data=dict(event.event_data or {}),
+        created_at=event.created_at,
+    )
+
+
+def _record_audit(
+    session: AsyncSession,
+    *,
+    actor_id: UUID,
+    action: str,
+    provider: ProviderConnection,
+    event_data: dict[str, object] | None = None,
+) -> None:
+    session.add(
+        OperatorAuditEvent(
+            actor_user_id=actor_id,
+            action=action,
+            target_type="provider",
+            target_id=provider.id,
+            event_data=event_data or {},
+        )
     )
 
 
@@ -76,6 +107,17 @@ async def list_providers(session: AsyncSession) -> list[ProviderRead]:
     return [serialize_provider(row) for row in rows]
 
 
+async def list_operator_audit(session: AsyncSession, *, limit: int = 50) -> list[OperatorAuditRead]:
+    rows = list(
+        await session.scalars(
+            select(OperatorAuditEvent)
+            .order_by(OperatorAuditEvent.created_at.desc(), OperatorAuditEvent.id.desc())
+            .limit(limit)
+        )
+    )
+    return [serialize_audit_event(row) for row in rows]
+
+
 async def create_provider(
     session: AsyncSession,
     *,
@@ -106,6 +148,20 @@ async def create_provider(
             message="A provider with this key already exists.",
             status_code=409,
         ) from exc
+
+    _record_audit(
+        session,
+        actor_id=actor_id,
+        action="provider_created",
+        provider=provider,
+        event_data={
+            "provider_key": provider.provider_key,
+            "provider_kind": provider.provider_kind,
+            "enabled": provider.enabled,
+            "credential_storage": _credential_storage(provider),
+        },
+    )
+    await session.flush()
     return serialize_provider(provider)
 
 
@@ -124,6 +180,8 @@ async def update_provider(
             status_code=404,
         )
 
+    previous_enabled = provider.enabled
+    previous_storage = _credential_storage(provider)
     changes = payload.model_dump(
         exclude_unset=True,
         exclude={"credential", "clear_credential", "secret_ref"},
@@ -131,17 +189,56 @@ async def update_provider(
     for field, value in changes.items():
         setattr(provider, field, value)
 
+    credential_changed = False
     if payload.clear_credential:
         _clear_encrypted_credential(provider)
         provider.secret_ref = None
+        credential_changed = previous_storage is not None
     elif payload.credential is not None:
         _set_encrypted_credential(provider, payload.credential.get_secret_value())
+        credential_changed = True
     elif "secret_ref" in payload.model_fields_set:
         provider.secret_ref = payload.secret_ref
         if payload.secret_ref is not None:
             _clear_encrypted_credential(provider)
+        credential_changed = previous_storage != _credential_storage(provider)
 
     provider.updated_by = actor_id
     provider.updated_at = datetime.now(UTC)
+    await session.flush()
+
+    non_state_fields = sorted(field for field in changes if field != "enabled")
+    if non_state_fields:
+        _record_audit(
+            session,
+            actor_id=actor_id,
+            action="provider_updated",
+            provider=provider,
+            event_data={
+                "provider_key": provider.provider_key,
+                "changed_fields": non_state_fields,
+            },
+        )
+    if "enabled" in changes and provider.enabled != previous_enabled:
+        _record_audit(
+            session,
+            actor_id=actor_id,
+            action="provider_enabled" if provider.enabled else "provider_disabled",
+            provider=provider,
+            event_data={"provider_key": provider.provider_key},
+        )
+    if credential_changed:
+        storage = _credential_storage(provider)
+        _record_audit(
+            session,
+            actor_id=actor_id,
+            action="provider_credential_saved" if storage is not None else "provider_credential_removed",
+            provider=provider,
+            event_data={
+                "provider_key": provider.provider_key,
+                "credential_storage": storage,
+            },
+        )
+
     await session.flush()
     return serialize_provider(provider)
