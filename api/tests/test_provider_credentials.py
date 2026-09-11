@@ -4,8 +4,6 @@ import unittest
 from dataclasses import replace
 from uuid import uuid4
 
-from cryptography.exceptions import InvalidTag
-
 from partgraph.operator import credentials
 
 
