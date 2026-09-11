@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { apiRequest, CSRF_HEADERS, formatApiFailure } from './api'
-import { YearWheel } from './YearWheel'
 import './garage-workspace.css'
 
 type Resolution = 'matched' | 'ambiguous' | 'manual_candidate'
@@ -75,9 +74,7 @@ type Reconciliation = {
   independent_sources: number
 }
 type AddMode = 'manual' | 'vin'
-
-const MIN_YEAR = 1996
-const MAX_YEAR = new Date().getFullYear()
+type ModelYear = number | ''
 
 function optionPath(path: string, params: Record<string, string | number | undefined>) {
   const query = new URLSearchParams()
@@ -89,15 +86,23 @@ function optionPath(path: string, params: Record<string, string | number | undef
 }
 
 function identityLine(identity: VehicleIdentity) {
-  return [identity.year, identity.make, identity.model, identity.trim, identity.engine, identity.transmission, identity.drivetrain]
-    .filter(Boolean)
-    .join(' · ')
+  return [
+    identity.year,
+    identity.make,
+    identity.model,
+    identity.trim,
+    identity.generation,
+    identity.body_style,
+    identity.engine,
+    identity.transmission,
+    identity.drivetrain,
+  ].filter(Boolean).join(' · ')
 }
 
 function resolutionLabel(resolution: Resolution) {
-  if (resolution === 'matched') return 'Canonical configuration matched'
-  if (resolution === 'ambiguous') return 'Multiple canonical variants remain'
-  return 'Manual candidate'
+  if (resolution === 'matched') return 'Verified canonical configuration matched'
+  if (resolution === 'ambiguous') return 'Multiple verified canonical variants remain'
+  return 'Private vehicle candidate'
 }
 
 function formatValue(value: unknown) {
@@ -119,11 +124,15 @@ export function GarageWorkspace({
   const [models, setModels] = useState<string[]>([])
   const [trims, setTrims] = useState<string[]>([])
   const [generations, setGenerations] = useState<string[]>([])
-  const [year, setYear] = useState(Math.min(MAX_YEAR, 2009))
-  const [make, setMake] = useState('Honda')
-  const [model, setModel] = useState('Civic')
-  const [trim, setTrim] = useState('Hybrid')
+  const [year, setYear] = useState<ModelYear>('')
+  const [make, setMake] = useState('')
+  const [model, setModel] = useState('')
+  const [trim, setTrim] = useState('')
   const [generation, setGeneration] = useState('')
+  const [bodyStyle, setBodyStyle] = useState('')
+  const [engine, setEngine] = useState('')
+  const [transmission, setTransmission] = useState('')
+  const [drivetrain, setDrivetrain] = useState('')
   const [manualNickname, setManualNickname] = useState('')
   const [selection, setSelection] = useState<SelectionResult | null>(null)
   const [manualBusy, setManualBusy] = useState(false)
@@ -178,7 +187,7 @@ export function GarageWorkspace({
   useEffect(() => {
     let active = true
     setModels([])
-    if (!make.trim()) return () => { active = false }
+    if (typeof year !== 'number' || !make.trim()) return () => { active = false }
     apiRequest<string[]>(optionPath('/api/v1/vehicle-options/models', { year, market, make: make.trim() }), undefined, { retryIdempotent: true })
       .then((rows) => { if (active) setModels(rows) })
       .catch(() => { if (active) setModels([]) })
@@ -189,7 +198,7 @@ export function GarageWorkspace({
     let active = true
     setTrims([])
     setGenerations([])
-    if (!make.trim() || !model.trim()) return () => { active = false }
+    if (typeof year !== 'number' || !make.trim() || !model.trim()) return () => { active = false }
     const base = { year, market, make: make.trim(), model: model.trim() }
     void Promise.all([
       apiRequest<string[]>(optionPath('/api/v1/vehicle-options/trims', base), undefined, { retryIdempotent: true }),
@@ -211,6 +220,10 @@ export function GarageWorkspace({
     setManualError(null)
     setManualMessage(null)
     setSelection(null)
+    if (typeof year !== 'number' || year <= 0) {
+      setManualError('Model year is required.')
+      return
+    }
     if (!make.trim() || !model.trim()) {
       setManualError('Make and model are required.')
       return
@@ -227,6 +240,10 @@ export function GarageWorkspace({
           model: model.trim(),
           trim: trim.trim() || undefined,
           generation: generation.trim() || undefined,
+          body_style: bodyStyle.trim() || undefined,
+          engine: engine.trim() || undefined,
+          transmission: transmission.trim() || undefined,
+          drivetrain: drivetrain.trim() || undefined,
         }),
       })
       setSelection(result)
@@ -255,6 +272,10 @@ export function GarageWorkspace({
             model: selection.normalized.model,
             trim: selection.normalized.trim || undefined,
             generation: selection.normalized.generation || undefined,
+            body_style: selection.normalized.body_style || undefined,
+            engine: selection.normalized.engine || undefined,
+            transmission: selection.normalized.transmission || undefined,
+            drivetrain: selection.normalized.drivetrain || undefined,
           },
         }),
       })
@@ -366,31 +387,38 @@ export function GarageWorkspace({
           <form className="garage-form" onSubmit={(event) => void resolveManual(event)}>
             <div className="garage-vehicle-selector">
               <div className="garage-year-field">
-                <div className="garage-field-label"><span>Year</span><small>scroll · drag · arrows</small></div>
-                <YearWheel
+                <div className="garage-field-label"><span>Model year</span><small>required</small></div>
+                <input
+                  required
+                  type="number"
+                  inputMode="numeric"
                   value={year}
-                  min={MIN_YEAR}
-                  max={MAX_YEAR}
-                  onChange={(nextYear) => {
-                    setYear(nextYear)
+                  placeholder="Year"
+                  onChange={(event) => {
+                    const raw = event.target.value
+                    setYear(raw === '' ? '' : Number(raw))
                     setSelection(null)
                   }}
                 />
               </div>
               <div className="garage-detail-fields">
                 <label><span>Market</span><select value={market} onChange={(event) => { setMarket(event.target.value as 'US' | 'CA'); setSelection(null) }}><option value="US">United States</option><option value="CA">Canada</option></select></label>
-                <label><span>Make</span><input list="garage-makes" value={make} onChange={(event) => { setMake(event.target.value); setSelection(null) }} /><datalist id="garage-makes">{knownMakes.map((item) => <option key={item} value={item} />)}</datalist></label>
-                <label><span>Model</span><input list="garage-models" value={model} onChange={(event) => { setModel(event.target.value); setSelection(null) }} /><datalist id="garage-models">{models.map((item) => <option key={item} value={item} />)}</datalist></label>
-                <label><span>Trim <small>optional</small></span><input list="garage-trims" value={trim} onChange={(event) => { setTrim(event.target.value); setSelection(null) }} /><datalist id="garage-trims">{trims.map((item) => <option key={item} value={item} />)}</datalist></label>
-                <label><span>Generation <small>optional</small></span><input list="garage-generations" value={generation} onChange={(event) => { setGeneration(event.target.value); setSelection(null) }} /><datalist id="garage-generations">{generations.map((item) => <option key={item} value={item} />)}</datalist></label>
+                <label><span>Make</span><input required list="garage-makes" value={make} placeholder="Make" onChange={(event) => { setMake(event.target.value); setSelection(null) }} /><datalist id="garage-makes">{knownMakes.map((item) => <option key={item} value={item} />)}</datalist></label>
+                <label><span>Model</span><input required list="garage-models" value={model} placeholder="Model" onChange={(event) => { setModel(event.target.value); setSelection(null) }} /><datalist id="garage-models">{models.map((item) => <option key={item} value={item} />)}</datalist></label>
+                <label><span>Trim <small>optional</small></span><input list="garage-trims" value={trim} placeholder="Trim" onChange={(event) => { setTrim(event.target.value); setSelection(null) }} /><datalist id="garage-trims">{trims.map((item) => <option key={item} value={item} />)}</datalist></label>
+                <label><span>Generation <small>optional</small></span><input list="garage-generations" value={generation} placeholder="Generation" onChange={(event) => { setGeneration(event.target.value); setSelection(null) }} /><datalist id="garage-generations">{generations.map((item) => <option key={item} value={item} />)}</datalist></label>
+                <label><span>Body style <small>optional</small></span><input value={bodyStyle} placeholder="Body style" onChange={(event) => { setBodyStyle(event.target.value); setSelection(null) }} /></label>
+                <label><span>Engine / powertrain <small>optional</small></span><input value={engine} placeholder="Engine / powertrain" onChange={(event) => { setEngine(event.target.value); setSelection(null) }} /></label>
+                <label><span>Transmission <small>optional</small></span><input value={transmission} placeholder="Transmission" onChange={(event) => { setTransmission(event.target.value); setSelection(null) }} /></label>
+                <label><span>Drivetrain <small>optional</small></span><input value={drivetrain} placeholder="Drivetrain" onChange={(event) => { setDrivetrain(event.target.value); setSelection(null) }} /></label>
               </div>
             </div>
             <button type="submit" disabled={manualBusy}>{manualBusy ? 'Resolving…' : 'Resolve vehicle'}</button>
             {manualError && <div className="workspace-alert workspace-alert--error">{manualError}</div>}
             {selection && (
               <div className="resolution-card">
-                <div><p className="eyebrow">{selection.resolution.replace('_', ' ')}</p><h3>{resolutionLabel(selection.resolution)}</h3><p>{identityLine(selection.normalized)}</p>{selection.resolution === 'ambiguous' && <p className="muted">PartGraph will save the observed identity without guessing between canonical variants.</p>}</div>
-                <label><span>Garage nickname <small>optional</small></span><input maxLength={80} value={manualNickname} placeholder="Daily Civic, project car…" onChange={(event) => setManualNickname(event.target.value)} /></label>
+                <div><p className="eyebrow">{selection.resolution.replace('_', ' ')}</p><h3>{resolutionLabel(selection.resolution)}</h3><p>{identityLine(selection.normalized)}</p>{selection.resolution !== 'matched' && <p className="muted">PartGraph can save this private vehicle without pretending that an unverified or ambiguous configuration is canonical.</p>}</div>
+                <label><span>Garage nickname <small>optional</small></span><input maxLength={80} value={manualNickname} placeholder="Garage nickname" onChange={(event) => setManualNickname(event.target.value)} /></label>
                 <button type="button" disabled={manualBusy} onClick={() => void saveManual()}>{manualBusy ? 'Saving…' : 'Add to garage'}</button>
               </div>
             )}
@@ -400,14 +428,14 @@ export function GarageWorkspace({
           <form className="garage-form" onSubmit={(event) => void decodeVin(event)}>
             <div className="garage-form-grid garage-form-grid--vin">
               <label><span>Market</span><select value={market} onChange={(event) => { setMarket(event.target.value as 'US' | 'CA'); setDecode(null) }}><option value="US">United States</option><option value="CA">Canada</option></select></label>
-              <label className="garage-vin-field"><span>17-character VIN</span><input value={vin} maxLength={17} autoCapitalize="characters" autoComplete="off" spellCheck={false} placeholder="1HGFA16589L000000" onChange={(event) => { setVin(event.target.value.toUpperCase()); setDecode(null); setVinMessage(null) }} /></label>
+              <label className="garage-vin-field"><span>17-character VIN</span><input value={vin} maxLength={17} autoCapitalize="characters" autoComplete="off" spellCheck={false} placeholder="17-character VIN" onChange={(event) => { setVin(event.target.value.toUpperCase()); setDecode(null); setVinMessage(null) }} /></label>
             </div>
             <button type="submit" disabled={vinBusy}>{vinBusy ? 'Decoding…' : 'Decode VIN'}</button>
             {vinError && <div className="workspace-alert workspace-alert--error">{vinError}</div>}
             {decode && (
               <div className="resolution-card">
                 <div><p className="eyebrow">{decode.source === 'cache' ? 'CACHED VIN EVIDENCE' : 'VIN EVIDENCE'} · {decode.masked_vin}</p><h3>{resolutionLabel(decode.resolution)}</h3><p>{identityLine(decode.identity)}</p></div>
-                <label><span>Garage nickname <small>optional</small></span><input maxLength={80} value={vinNickname} placeholder="Daily car, project car…" onChange={(event) => setVinNickname(event.target.value)} /></label>
+                <label><span>Garage nickname <small>optional</small></span><input maxLength={80} value={vinNickname} placeholder="Garage nickname" onChange={(event) => setVinNickname(event.target.value)} /></label>
                 <button type="button" disabled={vinBusy} onClick={() => void saveVin()}>{vinBusy ? 'Saving…' : 'Add to garage'}</button>
               </div>
             )}
@@ -427,7 +455,7 @@ export function GarageWorkspace({
               <div className="vehicle-card-main"><p className="eyebrow">{vehicle.identity_source.toUpperCase()} · {resolutionLabel(vehicle.identity_resolution)}</p><h3>{vehicle.nickname || `${vehicle.identity.year} ${vehicle.identity.make} ${vehicle.identity.model}`}</h3><p>{identityLine(vehicle.identity)}</p>{vehicle.masked_vin && <p className="muted">VIN {vehicle.masked_vin}</p>}</div>
               <div className="vehicle-card-actions">
                 {!vehicle.archived_at && <button type="button" onClick={() => onStartRepair(vehicle.id)}>Start repair</button>}
-                {vehicle.canonical_configuration_id && <button type="button" className="secondary" onClick={() => void inspectVehicle(vehicle)}>{profileVehicleId === vehicle.id ? 'Refresh specs' : 'View verified specs'}</button>}
+                {vehicle.canonical_configuration_id && <button type="button" className="secondary" onClick={() => void inspectVehicle(vehicle)}>{profileVehicleId === vehicle.id ? 'Refresh profile' : 'View canonical profile'}</button>}
                 {!vehicle.archived_at && <button type="button" className="secondary" onClick={() => void archiveVehicle(vehicle.id)}>Archive</button>}
                 {vehicle.archived_at && <span className="status-pill">Archived</span>}
               </div>
