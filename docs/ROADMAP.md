@@ -19,6 +19,20 @@ Primary deep test configuration:
 
 The names above are validation data. They must not become hard-coded behavior in Python, TypeScript, SQL application logic, CI logic, or UI components.
 
+### Product-validation gate
+
+The MVP must be convincing enough that at least 6 out of 10 qualified target users in a small observed product evaluation say they would use PartGraph for a suitable small repair or maintenance task rather than immediately booking a mechanic for that task.
+
+This is a product-validation target, not a claim that every repair should be DIY. The evaluated workflow must make the user understand:
+- whether the job is appropriate for them
+- what parts, tools, fluids or workspace are required
+- what the verified repair path is
+- where the safety or professional-service boundaries are
+- what remains incomplete after a physical part replacement
+- how to pause and return without losing repair context
+
+The value proposition is practical: reduce avoidable repair cost, travel, appointment delay and repeated diagnostic/setup time for appropriate owner-serviceable work while making professional escalation explicit when it is the safer or required path.
+
 ## 2. Current completion baseline
 
 These percentages are strict MVP completion estimates, not code-volume estimates.
@@ -178,21 +192,34 @@ An empty database can represent the whole MVP without hard-coded reference-vehic
 Exit gate:
 Fresh installs and production upgrades follow a generic schema path.
 
-### Phase 6 — Canonical data pipeline
+### Phase 6 — Canonical data and provider pipeline
 
 1. source registry
 2. source authority policy
-3. immutable raw capture
-4. extraction/normalization
-5. candidate fact generation
-6. exact applicability assignment
-7. conflict detection
-8. reviewer decision
-9. verified evidence promotion
-10. mechanical claim creation
-11. repair-definition materialization
-12. versioning/supersession
-13. audit trail
+3. provider/connector registry
+4. immutable raw capture
+5. extraction/normalization
+6. candidate fact generation
+7. exact applicability assignment
+8. conflict detection
+9. reviewer decision
+10. verified evidence promotion
+11. mechanical claim creation
+12. repair-definition materialization
+13. versioning/supersession
+14. audit trail
+
+MVP provider strategy:
+- canonical vehicle and repair data may come from PartGraph database tables and approved backend data files through the same provider/connector boundary
+- external URLs or public services may be used only through backend adapters
+- the frontend must not contain provider secrets or vehicle-specific source logic
+
+Production provider strategy:
+- commercial vehicle-data providers, AI providers and manufacturer integrations are registered/configured through an authenticated admin/operator UI
+- provider base URLs, capabilities, status and non-secret metadata may be stored in PartGraph configuration tables
+- credentials/API keys must be referenced from protected server-side secret storage rather than embedded in application source, frontend bundles or ordinary vehicle-data rows
+- each provider adapter writes raw/candidate evidence into the staging plane; external providers never receive direct canonical-publish authority
+- AI-provider output remains candidate/explanation input and cannot directly publish canonical automotive truth
 
 Rules:
 - missing remains missing
@@ -259,6 +286,7 @@ Required gates:
 - durable photo persistence
 - data-free-source-code check
 - RBAC authorization tests
+- observed product-validation sessions demonstrating the 6/10 usefulness target for appropriate owner-serviceable repairs
 
 ### Phase 10 — Production MVP cutover
 
