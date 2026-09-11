@@ -158,6 +158,61 @@
   margin-left: 238px;
 }
 
+.partgraph-repair-nav {
+  position: sticky;
+  top: 46px;
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  width: min(1180px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(100, 140, 127, 0.16);
+  background: color-mix(in srgb, var(--page-bg, #f5f7f8) 93%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.partgraph-repair-nav > span {
+  flex: 0 0 auto;
+  color: #60736c;
+  font: 750 0.65rem/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.partgraph-repair-nav > div {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.partgraph-repair-nav__item {
+  min-height: 38px;
+  flex: 0 0 auto;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: #60736c;
+  font-size: 0.82rem;
+  font-weight: 720;
+}
+
+.partgraph-repair-nav__item:hover {
+  border-color: rgba(95, 157, 124, 0.2);
+  background: rgba(95, 157, 124, 0.06);
+}
+
+.partgraph-repair-nav__item--active {
+  border-color: rgba(95, 157, 124, 0.3);
+  background: rgba(95, 157, 124, 0.12);
+  color: #234d3d;
+}
+
 .partgraph-main > .repair-workspace {
   width: min(1120px, calc(100% - 2rem));
   margin: 0 auto;
@@ -228,6 +283,11 @@
     margin-left: 0;
   }
 
+  .partgraph-repair-nav {
+    top: 96px;
+    width: min(100% - 1rem, 1180px);
+  }
+
   .authenticated-shell .account-strip {
     z-index: 40;
     padding-left: clamp(14px, 3vw, 30px);
@@ -251,5 +311,16 @@
 
   .partgraph-nav-item small {
     display: none;
+  }
+
+  .partgraph-repair-nav {
+    top: 98px;
+    display: grid;
+    gap: 7px;
+    padding-top: 8px;
+  }
+
+  .partgraph-repair-nav > span {
+    padding-left: 4px;
   }
 }
