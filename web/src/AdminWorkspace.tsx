@@ -32,6 +32,24 @@ type Provider = {
   updated_at: string
 }
 
+type OperatorAuditAction =
+  | 'provider_created'
+  | 'provider_updated'
+  | 'provider_enabled'
+  | 'provider_disabled'
+  | 'provider_credential_saved'
+  | 'provider_credential_removed'
+
+type OperatorAuditEvent = {
+  id: string
+  actor_user_id: string
+  action: OperatorAuditAction
+  target_type: string
+  target_id: string
+  event_data: Record<string, unknown>
+  created_at: string
+}
+
 type AccessState = 'checking' | 'granted' | 'denied' | 'failed'
 
 const PROVIDER_KINDS: Array<{ value: ProviderKind; label: string }> = [
@@ -53,10 +71,27 @@ function credentialLabel(provider: Provider): string {
   return 'No credential configured'
 }
 
+function auditLabel(action: OperatorAuditAction): string {
+  switch (action) {
+    case 'provider_created': return 'Provider created'
+    case 'provider_updated': return 'Provider configuration updated'
+    case 'provider_enabled': return 'Provider enabled'
+    case 'provider_disabled': return 'Provider disabled'
+    case 'provider_credential_saved': return 'Provider credential saved'
+    case 'provider_credential_removed': return 'Provider credential removed'
+  }
+}
+
+function auditProviderKey(event: OperatorAuditEvent): string | null {
+  const value = event.event_data.provider_key
+  return typeof value === 'string' ? value : null
+}
+
 export function AdminWorkspace() {
   const [access, setAccess] = useState<AccessState>('checking')
   const [health, setHealth] = useState<ReadyHealth | null>(null)
   const [providers, setProviders] = useState<Provider[]>([])
+  const [auditEvents, setAuditEvents] = useState<OperatorAuditEvent[]>([])
   const [providerBusy, setProviderBusy] = useState(false)
   const [credentialBusyId, setCredentialBusyId] = useState<string | null>(null)
   const [credentialDrafts, setCredentialDrafts] = useState<Record<string, string>>({})
@@ -72,8 +107,13 @@ export function AdminWorkspace() {
   const [notes, setNotes] = useState('')
   const [enabled, setEnabled] = useState(false)
 
-  async function loadProviders() {
-    setProviders(await apiRequest<Provider[]>('/api/v1/operator/providers'))
+  async function loadOperatorData() {
+    const [providerRows, auditRows] = await Promise.all([
+      apiRequest<Provider[]>('/api/v1/operator/providers'),
+      apiRequest<OperatorAuditEvent[]>('/api/v1/operator/audit'),
+    ])
+    setProviders(providerRows)
+    setAuditEvents(auditRows)
   }
 
   useEffect(() => {
@@ -86,17 +126,21 @@ export function AdminWorkspace() {
         if (!active || grant.access !== 'granted' || grant.role !== 'operator_admin') return
         setAccess('granted')
 
-        const [healthResult, providerResult] = await Promise.allSettled([
+        const [healthResult, providerResult, auditResult] = await Promise.allSettled([
           apiRequest<ReadyHealth>('/api/v1/health/ready'),
           apiRequest<Provider[]>('/api/v1/operator/providers'),
+          apiRequest<OperatorAuditEvent[]>('/api/v1/operator/audit'),
         ])
         if (!active) return
         if (healthResult.status === 'fulfilled') setHealth(healthResult.value)
         if (providerResult.status === 'fulfilled') setProviders(providerResult.value)
+        if (auditResult.status === 'fulfilled') setAuditEvents(auditResult.value)
         if (healthResult.status === 'rejected') {
           setError(formatApiFailure(healthResult.reason, 'Platform status could not be loaded.'))
         } else if (providerResult.status === 'rejected') {
           setError(formatApiFailure(providerResult.reason, 'Provider registry could not be loaded.'))
+        } else if (auditResult.status === 'rejected') {
+          setError(formatApiFailure(auditResult.reason, 'Administrator activity could not be loaded.'))
         }
       } catch (failure) {
         if (!active) return
@@ -141,7 +185,7 @@ export function AdminWorkspace() {
       setCredential('')
       setNotes('')
       setEnabled(false)
-      await loadProviders()
+      await loadOperatorData()
       setMessage('Provider configuration saved.')
     } catch (failure) {
       setError(formatApiFailure(failure, 'Provider configuration could not be saved.'))
@@ -160,7 +204,7 @@ export function AdminWorkspace() {
         headers: { ...CSRF_HEADERS, 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled: nextEnabled }),
       })
-      await loadProviders()
+      await loadOperatorData()
       setMessage(`${provider.display_name} ${nextEnabled ? 'enabled' : 'disabled'}.`)
     } catch (failure) {
       setError(formatApiFailure(failure, 'Provider state could not be updated.'))
@@ -182,7 +226,7 @@ export function AdminWorkspace() {
         body: JSON.stringify({ credential: value }),
       })
       setCredentialDrafts((current) => ({ ...current, [provider.id]: '' }))
-      await loadProviders()
+      await loadOperatorData()
       setMessage(`${provider.display_name} credential encrypted and saved.`)
     } catch (failure) {
       setError(formatApiFailure(failure, 'Provider credential could not be saved.'))
@@ -202,7 +246,7 @@ export function AdminWorkspace() {
         body: JSON.stringify({ clear_credential: true }),
       })
       setCredentialDrafts((current) => ({ ...current, [provider.id]: '' }))
-      await loadProviders()
+      await loadOperatorData()
       setMessage(`${provider.display_name} credential removed.`)
     } catch (failure) {
       setError(formatApiFailure(failure, 'Provider credential could not be removed.'))
@@ -280,6 +324,20 @@ export function AdminWorkspace() {
             <button disabled={providerBusy || !providerKey.trim() || !displayName.trim()}>{providerBusy ? 'Saving…' : 'Save provider'}</button>
           </form>
         </section>
+      </section>
+
+      <section className="panel admin-audit-panel">
+        <div className="admin-section-heading"><div><p className="eyebrow">ADMIN ACTIVITY</p><h2>Recent changes</h2></div><span>{auditEvents.length}</span></div>
+        {auditEvents.length === 0 ? <p className="admin-muted">No administrator changes recorded yet.</p> : (
+          <ol className="admin-audit-list">
+            {auditEvents.map((event) => (
+              <li key={event.id}>
+                <div><strong>{auditLabel(event.action)}</strong>{auditProviderKey(event) && <span>{auditProviderKey(event)}</span>}</div>
+                <time dateTime={event.created_at}>{new Date(event.created_at).toLocaleString()}</time>
+              </li>
+            ))}
+          </ol>
+        )}
       </section>
     </main>
   )
