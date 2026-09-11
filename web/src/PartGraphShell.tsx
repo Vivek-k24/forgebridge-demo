@@ -27,6 +27,15 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'log', label: 'Repair log', group: 'repair' },
 ]
 
+const REPAIR_WORKSPACE_ITEMS: Array<{ key: PageKey; label: string }> = [
+  { key: 'resume', label: 'Overview' },
+  { key: 'readiness', label: 'Readiness' },
+  { key: 'guidance', label: 'Guided repair' },
+  { key: 'log', label: 'Repair log' },
+]
+
+const REPAIR_WORKSPACE_KEYS = new Set<PageKey>(REPAIR_WORKSPACE_ITEMS.map((item) => item.key))
+
 const GROUP_LABELS: Record<NavGroup, string> = {
   overview: 'Workspace',
   vehicle: 'Vehicle',
@@ -155,7 +164,27 @@ export default function PartGraphShell() {
           <p>Verified guidance stays explicit. Private repair memory remains owner-scoped.</p>
         </div>
       </aside>
-      <div className="partgraph-main">{content}</div>
+      <div className="partgraph-main">
+        {REPAIR_WORKSPACE_KEYS.has(page) && (
+          <nav className="partgraph-repair-nav" aria-label="Current repair workspace">
+            <span>Current repair</span>
+            <div>
+              {REPAIR_WORKSPACE_ITEMS.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  className={item.key === page ? 'partgraph-repair-nav__item partgraph-repair-nav__item--active' : 'partgraph-repair-nav__item'}
+                  aria-current={item.key === page ? 'page' : undefined}
+                  onClick={() => navigate(item.key)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </nav>
+        )}
+        {content}
+      </div>
     </div>
   )
 }
