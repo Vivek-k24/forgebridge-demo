@@ -20,10 +20,12 @@ class ProviderConnection(Base):
             name="ck_provider_connections_key_format",
         ),
         CheckConstraint(
-            "(credential_ciphertext IS NULL AND credential_nonce IS NULL AND credential_key_version IS NULL "
-            "AND credential_fingerprint IS NULL AND credential_hint IS NULL) OR "
-            "(credential_ciphertext IS NOT NULL AND credential_nonce IS NOT NULL AND credential_key_version IS NOT NULL "
-            "AND credential_fingerprint IS NOT NULL AND credential_hint IS NOT NULL)",
+            "(credential_ciphertext IS NULL AND credential_nonce IS NULL "
+            "AND credential_key_version IS NULL AND credential_fingerprint IS NULL "
+            "AND credential_hint IS NULL) OR "
+            "(credential_ciphertext IS NOT NULL AND credential_nonce IS NOT NULL "
+            "AND credential_key_version IS NOT NULL AND credential_fingerprint IS NOT NULL "
+            "AND credential_hint IS NOT NULL)",
             name="ck_provider_connections_encrypted_credential_complete",
         ),
         CheckConstraint(
