@@ -7,12 +7,15 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from cryptography.exceptions import InvalidTag
+from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 from ..config import settings
 
 NONCE_BYTES = 12
 KEY_BYTES = 32
+_DERIVATION_SALT = b"partgraph:provider-credentials:hkdf:v1"
 
 
 class ProviderCredentialError(ValueError):
@@ -38,10 +41,7 @@ def _decode_key(value: str) -> bytes:
     return key
 
 
-def _keyring() -> dict[int, bytes]:
-    raw = settings.provider_credential_keys
-    if not raw:
-        raise ProviderCredentialError("Provider credential encryption is not configured.")
+def _parse_keyring(raw: str, *, active_version: int) -> dict[int, bytes]:
     try:
         payload = json.loads(raw)
     except json.JSONDecodeError as exc:
@@ -59,9 +59,44 @@ def _keyring() -> dict[int, bytes]:
     except (TypeError, ValueError) as exc:
         raise ProviderCredentialError("Provider credential key configuration is invalid.") from exc
 
-    if settings.provider_credential_active_key_version not in keys:
+    if active_version not in keys:
         raise ProviderCredentialError("Provider credential active key version is not configured.")
     return keys
+
+
+def _derive_provider_key(root_key: bytes, *, version: int) -> bytes:
+    return HKDF(
+        algorithm=hashes.SHA256(),
+        length=KEY_BYTES,
+        salt=_DERIVATION_SALT,
+        info=f"partgraph:provider-credential:encryption:v{version}".encode("ascii"),
+    ).derive(root_key)
+
+
+def _active_key_version() -> int:
+    if settings.provider_credential_keys:
+        return settings.provider_credential_active_key_version
+    if settings.vin_encryption_keys:
+        return settings.vin_active_key_version
+    raise ProviderCredentialError("Provider credential encryption is not configured.")
+
+
+def _keyring() -> dict[int, bytes]:
+    explicit = settings.provider_credential_keys
+    if explicit:
+        return _parse_keyring(
+            explicit,
+            active_version=settings.provider_credential_active_key_version,
+        )
+
+    root = settings.vin_encryption_keys
+    if not root:
+        raise ProviderCredentialError("Provider credential encryption is not configured.")
+    root_keys = _parse_keyring(root, active_version=settings.vin_active_key_version)
+    return {
+        version: _derive_provider_key(key, version=version)
+        for version, key in root_keys.items()
+    }
 
 
 def _aad(version: int, provider_id: UUID) -> bytes:
@@ -82,7 +117,7 @@ def protect_provider_credential(
     provider_id: UUID,
 ) -> ProtectedProviderCredential:
     keys = _keyring()
-    version = settings.provider_credential_active_key_version
+    version = _active_key_version()
     key = keys[version]
     nonce = secrets.token_bytes(NONCE_BYTES)
     ciphertext = AESGCM(key).encrypt(
