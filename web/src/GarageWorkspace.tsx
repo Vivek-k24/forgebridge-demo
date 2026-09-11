@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { apiRequest, CSRF_HEADERS, formatApiFailure } from './api'
 import './garage-workspace.css'
+import './garage-owner-profile.css'
 
 type Resolution = 'matched' | 'ambiguous' | 'manual_candidate'
 type VehicleBrand = { name: string; status: 'active' | 'legacy' }
@@ -56,22 +57,6 @@ type VehicleProfile = {
   verification_status: string
   source_match_count: number
   profile: Record<string, unknown>
-  source_matrix: Record<string, unknown>
-}
-type ReconciliationField = {
-  field: string
-  kind: string
-  status: string
-  selected_value: unknown
-  match_count: number
-  sources: string[]
-  conflicts: Array<{ value: unknown; match_count: number; sources: string[] }>
-}
-type Reconciliation = {
-  summary: Record<string, number>
-  fields: ReconciliationField[]
-  observation_records: number
-  independent_sources: number
 }
 type AddMode = 'manual' | 'vin'
 type ModelYear = number | ''
@@ -100,15 +85,56 @@ function identityLine(identity: VehicleIdentity) {
 }
 
 function resolutionLabel(resolution: Resolution) {
-  if (resolution === 'matched') return 'Verified canonical configuration matched'
-  if (resolution === 'ambiguous') return 'Multiple verified canonical variants remain'
-  return 'Private vehicle candidate'
+  if (resolution === 'matched') return 'Exact vehicle matched'
+  if (resolution === 'ambiguous') return 'More details needed for an exact match'
+  return 'Vehicle saved without an exact verified match'
 }
 
-function formatValue(value: unknown) {
-  if (value === null || value === undefined) return '—'
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value)
-  return JSON.stringify(value)
+function readableFieldName(value: string) {
+  return value
+    .replaceAll('_', ' ')
+    .replaceAll('-', ' ')
+    .replace(/\b\w/g, (character) => character.toUpperCase())
+}
+
+function simpleProfileValue(value: unknown): string | null {
+  if (value === null || value === undefined || value === '') return null
+  if (typeof value === 'string' || typeof value === 'number') return String(value)
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No'
+  if (Array.isArray(value) && value.every((item) => ['string', 'number', 'boolean'].includes(typeof item))) {
+    return value.map(String).join(', ')
+  }
+  return null
+}
+
+function VehicleProfileFields({ data, depth = 0 }: { data: Record<string, unknown>; depth?: number }) {
+  const entries = Object.entries(data).filter(([, value]) => value !== null && value !== undefined && value !== '')
+  if (entries.length === 0) return <p className="muted">No verified details are available in this profile yet.</p>
+
+  return (
+    <div className={depth === 0 ? 'owner-profile-fields' : 'owner-profile-nested'}>
+      {entries.map(([key, value]) => {
+        const simple = simpleProfileValue(value)
+        if (simple !== null) {
+          return (
+            <div className="owner-profile-field" key={key}>
+              <span>{readableFieldName(key)}</span>
+              <strong>{simple}</strong>
+            </div>
+          )
+        }
+        if (typeof value === 'object' && !Array.isArray(value) && value !== null && depth < 2) {
+          return (
+            <section className="owner-profile-group" key={key}>
+              <h3>{readableFieldName(key)}</h3>
+              <VehicleProfileFields data={value as Record<string, unknown>} depth={depth + 1} />
+            </section>
+          )
+        }
+        return null
+      })}
+    </div>
+  )
 }
 
 export function GarageWorkspace({
@@ -152,7 +178,6 @@ export function GarageWorkspace({
   const [vehiclesError, setVehiclesError] = useState<string | null>(null)
   const [profileVehicleId, setProfileVehicleId] = useState<string | null>(null)
   const [profile, setProfile] = useState<VehicleProfile | null>(null)
-  const [reconciliation, setReconciliation] = useState<Reconciliation | null>(null)
   const [profileBusy, setProfileBusy] = useState(false)
   const [profileError, setProfileError] = useState<string | null>(null)
 
@@ -348,22 +373,19 @@ export function GarageWorkspace({
 
   async function inspectVehicle(vehicle: UserVehicle) {
     if (!vehicle.canonical_configuration_id) return
-    const configurationId = vehicle.canonical_configuration_id
     setProfileVehicleId(vehicle.id)
     setProfile(null)
-    setReconciliation(null)
     setProfileError(null)
     setProfileBusy(true)
     try {
-      const [profileResult, reconciliationResult] = await Promise.allSettled([
-        apiRequest<VehicleProfile>(`/api/v1/vehicle-configurations/${configurationId}/profile`, undefined, { retryIdempotent: true }),
-        apiRequest<Reconciliation>(`/api/v1/vehicle-configurations/${configurationId}/profile/reconciliation`, undefined, { retryIdempotent: true }),
-      ])
-      if (profileResult.status === 'fulfilled') setProfile(profileResult.value)
-      if (reconciliationResult.status === 'fulfilled') setReconciliation(reconciliationResult.value)
-      if (profileResult.status === 'rejected' && reconciliationResult.status === 'rejected') {
-        setProfileError('No verified specification profile or reconciliation data is available for this configuration yet.')
-      }
+      const result = await apiRequest<VehicleProfile>(
+        `/api/v1/vehicle-configurations/${vehicle.canonical_configuration_id}/profile`,
+        undefined,
+        { retryIdempotent: true },
+      )
+      setProfile(result)
+    } catch (failure) {
+      setProfileError(formatApiFailure(failure, 'Verified vehicle details are not available yet.'))
     } finally {
       setProfileBusy(false)
     }
@@ -373,14 +395,14 @@ export function GarageWorkspace({
     <main className="garage-workspace">
       <header className="workspace-hero">
         <p className="eyebrow">PARTGRAPH · GARAGE</p>
-        <h1>Add the vehicle first. Everything else follows its exact identity.</h1>
-        <p>Use VIN evidence or manual vehicle details. Both paths save a private garage vehicle and preserve canonical verification boundaries.</p>
+        <h1>Add your vehicle first. Everything else follows the vehicle you are actually working on.</h1>
+        <p>Use a VIN or enter the vehicle details manually. PartGraph saves it privately and tells you when it can match one exact verified configuration.</p>
       </header>
 
       <section className="garage-add panel">
         <div className="segmented" role="tablist" aria-label="Add vehicle method">
-          <button type="button" className={mode === 'manual' ? 'active' : ''} onClick={() => setMode('manual')}>Manual selection</button>
-          <button type="button" className={mode === 'vin' ? 'active' : ''} onClick={() => setMode('vin')}>VIN</button>
+          <button type="button" className={mode === 'manual' ? 'active' : ''} onClick={() => setMode('manual')}>Enter details</button>
+          <button type="button" className={mode === 'vin' ? 'active' : ''} onClick={() => setMode('vin')}>Use VIN</button>
         </div>
 
         {mode === 'manual' ? (
@@ -413,13 +435,18 @@ export function GarageWorkspace({
                 <label><span>Drivetrain <small>optional</small></span><input value={drivetrain} placeholder="Drivetrain" onChange={(event) => { setDrivetrain(event.target.value); setSelection(null) }} /></label>
               </div>
             </div>
-            <button type="submit" disabled={manualBusy}>{manualBusy ? 'Resolving…' : 'Resolve vehicle'}</button>
+            <button type="submit" disabled={manualBusy}>{manualBusy ? 'Checking…' : 'Check vehicle'}</button>
             {manualError && <div className="workspace-alert workspace-alert--error">{manualError}</div>}
             {selection && (
               <div className="resolution-card">
-                <div><p className="eyebrow">{selection.resolution.replace('_', ' ')}</p><h3>{resolutionLabel(selection.resolution)}</h3><p>{identityLine(selection.normalized)}</p>{selection.resolution !== 'matched' && <p className="muted">PartGraph can save this private vehicle without pretending that an unverified or ambiguous configuration is canonical.</p>}</div>
+                <div>
+                  <p className="eyebrow">VEHICLE MATCH</p>
+                  <h3>{resolutionLabel(selection.resolution)}</h3>
+                  <p>{identityLine(selection.normalized)}</p>
+                  {selection.resolution !== 'matched' && <p className="muted">You can still save this vehicle privately. PartGraph will not pretend the exact configuration is verified.</p>}
+                </div>
                 <label><span>Garage nickname <small>optional</small></span><input maxLength={80} value={manualNickname} placeholder="Garage nickname" onChange={(event) => setManualNickname(event.target.value)} /></label>
-                <button type="button" disabled={manualBusy} onClick={() => void saveManual()}>{manualBusy ? 'Saving…' : 'Add to garage'}</button>
+                <button type="button" disabled={manualBusy} onClick={() => void saveManual()}>{manualBusy ? 'Saving…' : 'Add to Garage'}</button>
               </div>
             )}
             {manualMessage && <div className="workspace-alert workspace-alert--success">{manualMessage}</div>}
@@ -430,13 +457,13 @@ export function GarageWorkspace({
               <label><span>Market</span><select value={market} onChange={(event) => { setMarket(event.target.value as 'US' | 'CA'); setDecode(null) }}><option value="US">United States</option><option value="CA">Canada</option></select></label>
               <label className="garage-vin-field"><span>17-character VIN</span><input value={vin} maxLength={17} autoCapitalize="characters" autoComplete="off" spellCheck={false} placeholder="17-character VIN" onChange={(event) => { setVin(event.target.value.toUpperCase()); setDecode(null); setVinMessage(null) }} /></label>
             </div>
-            <button type="submit" disabled={vinBusy}>{vinBusy ? 'Decoding…' : 'Decode VIN'}</button>
+            <button type="submit" disabled={vinBusy}>{vinBusy ? 'Checking VIN…' : 'Check VIN'}</button>
             {vinError && <div className="workspace-alert workspace-alert--error">{vinError}</div>}
             {decode && (
               <div className="resolution-card">
-                <div><p className="eyebrow">{decode.source === 'cache' ? 'CACHED VIN EVIDENCE' : 'VIN EVIDENCE'} · {decode.masked_vin}</p><h3>{resolutionLabel(decode.resolution)}</h3><p>{identityLine(decode.identity)}</p></div>
+                <div><p className="eyebrow">VIN · {decode.masked_vin}</p><h3>{resolutionLabel(decode.resolution)}</h3><p>{identityLine(decode.identity)}</p></div>
                 <label><span>Garage nickname <small>optional</small></span><input maxLength={80} value={vinNickname} placeholder="Garage nickname" onChange={(event) => setVinNickname(event.target.value)} /></label>
-                <button type="button" disabled={vinBusy} onClick={() => void saveVin()}>{vinBusy ? 'Saving…' : 'Add to garage'}</button>
+                <button type="button" disabled={vinBusy} onClick={() => void saveVin()}>{vinBusy ? 'Saving…' : 'Add to Garage'}</button>
               </div>
             )}
             {vinMessage && <div className="workspace-alert workspace-alert--success">{vinMessage}</div>}
@@ -445,17 +472,22 @@ export function GarageWorkspace({
       </section>
 
       <section className="garage-list panel">
-        <div className="section-heading-row"><div><p className="eyebrow">PRIVATE GARAGE</p><h2>Your vehicles</h2></div><label className="inline-check"><input type="checkbox" checked={showArchived} onChange={(event) => setShowArchived(event.target.checked)} />Include archived</label></div>
-        {vehiclesBusy && <p className="muted">Loading garage…</p>}
+        <div className="section-heading-row"><div><p className="eyebrow">YOUR GARAGE</p><h2>Saved vehicles</h2></div><label className="inline-check"><input type="checkbox" checked={showArchived} onChange={(event) => setShowArchived(event.target.checked)} />Include archived</label></div>
+        {vehiclesBusy && <p className="muted">Loading Garage…</p>}
         {vehiclesError && <div className="workspace-alert workspace-alert--error">{vehiclesError}</div>}
-        {!vehiclesBusy && !vehiclesError && vehicles.length === 0 && <div className="empty-state"><strong>No saved vehicles yet.</strong><p>Add one above by VIN or manual selection.</p></div>}
+        {!vehiclesBusy && !vehiclesError && vehicles.length === 0 && <div className="empty-state"><strong>No saved vehicles yet.</strong><p>Add one above by VIN or by entering its details.</p></div>}
         <div className="vehicle-card-list">
           {vehicles.map((vehicle) => (
             <article className={`vehicle-card ${vehicle.archived_at ? 'vehicle-card--archived' : ''}`} key={vehicle.id}>
-              <div className="vehicle-card-main"><p className="eyebrow">{vehicle.identity_source.toUpperCase()} · {resolutionLabel(vehicle.identity_resolution)}</p><h3>{vehicle.nickname || `${vehicle.identity.year} ${vehicle.identity.make} ${vehicle.identity.model}`}</h3><p>{identityLine(vehicle.identity)}</p>{vehicle.masked_vin && <p className="muted">VIN {vehicle.masked_vin}</p>}</div>
+              <div className="vehicle-card-main">
+                <p className="eyebrow">{resolutionLabel(vehicle.identity_resolution)}</p>
+                <h3>{vehicle.nickname || `${vehicle.identity.year} ${vehicle.identity.make} ${vehicle.identity.model}`}</h3>
+                <p>{identityLine(vehicle.identity)}</p>
+                {vehicle.masked_vin && <p className="muted">VIN {vehicle.masked_vin}</p>}
+              </div>
               <div className="vehicle-card-actions">
                 {!vehicle.archived_at && <button type="button" onClick={() => onStartRepair(vehicle.id)}>Start repair</button>}
-                {vehicle.canonical_configuration_id && <button type="button" className="secondary" onClick={() => void inspectVehicle(vehicle)}>{profileVehicleId === vehicle.id ? 'Refresh profile' : 'View canonical profile'}</button>}
+                {vehicle.canonical_configuration_id && <button type="button" className="secondary" onClick={() => void inspectVehicle(vehicle)}>{profileVehicleId === vehicle.id ? 'Refresh details' : 'Vehicle details'}</button>}
                 {!vehicle.archived_at && <button type="button" className="secondary" onClick={() => void archiveVehicle(vehicle.id)}>Archive</button>}
                 {vehicle.archived_at && <span className="status-pill">Archived</span>}
               </div>
@@ -465,19 +497,21 @@ export function GarageWorkspace({
       </section>
 
       {profileVehicleId && (
-        <section className="vehicle-profile panel">
-          <div className="section-heading-row"><div><p className="eyebrow">CANONICAL VEHICLE DATA</p><h2>Verified specification profile</h2></div><button type="button" className="secondary" onClick={() => { setProfileVehicleId(null); setProfile(null); setReconciliation(null); setProfileError(null) }}>Close</button></div>
-          {profileBusy && <p className="muted">Loading profile and source reconciliation…</p>}
+        <section className="vehicle-profile panel owner-vehicle-profile">
+          <div className="section-heading-row">
+            <div><p className="eyebrow">VERIFIED VEHICLE DETAILS</p><h2>What PartGraph knows about this vehicle</h2></div>
+            <button type="button" className="secondary" onClick={() => { setProfileVehicleId(null); setProfile(null); setProfileError(null) }}>Close</button>
+          </div>
+          {profileBusy && <p className="muted">Loading verified vehicle details…</p>}
           {profileError && <div className="workspace-alert workspace-alert--error">{profileError}</div>}
-          {profile && <div className="profile-summary"><span className="status-pill">{profile.verification_status}</span><span>Profile v{profile.profile_version}</span><span>{profile.source_match_count} matching sources</span></div>}
-          {profile && <pre className="profile-json">{JSON.stringify(profile.profile, null, 2)}</pre>}
-          {reconciliation && (
-            <div className="reconciliation-block">
-              <div className="profile-summary"><span>{reconciliation.independent_sources} independent sources</span><span>{reconciliation.observation_records} reviewed records</span>{Object.entries(reconciliation.summary).map(([key, value]) => <span key={key}>{key.replaceAll('_', ' ')}: {value}</span>)}</div>
-              <div className="reconciliation-table" role="table" aria-label="Vehicle specification reconciliation">
-                {reconciliation.fields.map((field) => <div className="reconciliation-row" role="row" key={field.field}><strong>{field.field}</strong><span>{field.status}</span><span>{formatValue(field.selected_value)}</span><span>{field.match_count} vote{field.match_count === 1 ? '' : 's'}</span><span>{field.sources.join(', ') || '—'}</span>{field.conflicts.length > 0 && <small>Conflicts: {field.conflicts.map((conflict) => `${formatValue(conflict.value)} (${conflict.sources.join(', ')})`).join(' · ')}</small>}</div>)}
+          {profile && (
+            <>
+              <div className="owner-profile-status">
+                <span className="status-pill">{readableFieldName(profile.verification_status)}</span>
+                <span>These details come from PartGraph's verified vehicle profile.</span>
               </div>
-            </div>
+              <VehicleProfileFields data={profile.profile} />
+            </>
           )}
         </section>
       )}
