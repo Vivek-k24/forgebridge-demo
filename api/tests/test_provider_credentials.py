@@ -12,9 +12,10 @@ class ProviderCredentialCryptoTests(unittest.TestCase):
         self.original_settings = credentials.settings
         key_v1 = base64.urlsafe_b64encode(bytes(range(32))).decode("ascii")
         key_v2 = base64.urlsafe_b64encode(bytes(reversed(range(32)))).decode("ascii")
+        self.keyring = json.dumps({"1": key_v1, "2": key_v2})
         credentials.settings = replace(
             self.original_settings,
-            provider_credential_keys=json.dumps({"1": key_v1, "2": key_v2}),
+            provider_credential_keys=self.keyring,
             provider_credential_active_key_version=2,
         )
 
@@ -57,6 +58,35 @@ class ProviderCredentialCryptoTests(unittest.TestCase):
                 key_version=protected.key_version,
                 provider_id=uuid4(),
             )
+
+    def test_old_key_version_remains_readable_after_rotation(self) -> None:
+        provider_id = uuid4()
+        plaintext = "provider-access-key-ROT1"
+        credentials.settings = replace(
+            self.original_settings,
+            provider_credential_keys=self.keyring,
+            provider_credential_active_key_version=1,
+        )
+        protected = credentials.protect_provider_credential(
+            plaintext,
+            provider_id=provider_id,
+        )
+        self.assertEqual(protected.key_version, 1)
+
+        credentials.settings = replace(
+            self.original_settings,
+            provider_credential_keys=self.keyring,
+            provider_credential_active_key_version=2,
+        )
+        self.assertEqual(
+            credentials.reveal_provider_credential(
+                ciphertext=protected.ciphertext,
+                nonce=protected.nonce,
+                key_version=protected.key_version,
+                provider_id=provider_id,
+            ),
+            plaintext,
+        )
 
     def test_missing_key_version_fails_closed(self) -> None:
         provider_id = uuid4()
