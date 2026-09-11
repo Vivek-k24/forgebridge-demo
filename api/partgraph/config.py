@@ -150,9 +150,9 @@ def _load_settings() -> Settings:
         media_root=_path_env("PARTGRAPH_MEDIA_ROOT", "/tmp/partgraph-media"),
         photo_max_bytes=_int_env(
             "PARTGRAPH_PHOTO_MAX_BYTES",
-            15 * 1024 * 1024,
+            4 * 1024 * 1024,
             minimum=1024,
-            maximum=25 * 1024 * 1024,
+            maximum=4 * 1024 * 1024,
         ),
     )
 
