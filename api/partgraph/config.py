@@ -99,6 +99,8 @@ class Settings:
     vin_encryption_keys: str | None
     vin_active_key_version: int
     vin_lookup_key: str | None
+    provider_credential_keys: str | None
+    provider_credential_active_key_version: int
     vin_cache_hours: int
     nhtsa_base_url: str
     nhtsa_timeout_seconds: float
@@ -118,6 +120,7 @@ def _load_settings() -> Settings:
 
     vin_encryption_keys = os.getenv("PARTGRAPH_VIN_ENCRYPTION_KEYS")
     vin_lookup_key = os.getenv("PARTGRAPH_VIN_LOOKUP_KEY")
+    provider_credential_keys = os.getenv("PARTGRAPH_PROVIDER_CREDENTIAL_KEYS")
 
     return Settings(
         database_url=database_url,
@@ -136,6 +139,15 @@ def _load_settings() -> Settings:
             "PARTGRAPH_VIN_ACTIVE_KEY_VERSION", 1, minimum=1, maximum=32_767
         ),
         vin_lookup_key=vin_lookup_key.strip() if vin_lookup_key else None,
+        provider_credential_keys=(
+            provider_credential_keys.strip() if provider_credential_keys else None
+        ),
+        provider_credential_active_key_version=_int_env(
+            "PARTGRAPH_PROVIDER_CREDENTIAL_ACTIVE_KEY_VERSION",
+            1,
+            minimum=1,
+            maximum=32_767,
+        ),
         vin_cache_hours=_int_env("PARTGRAPH_VIN_CACHE_HOURS", 720, minimum=1, maximum=2_160),
         nhtsa_base_url=_http_base_url(
             "PARTGRAPH_NHTSA_BASE_URL",
