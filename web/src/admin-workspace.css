@@ -53,7 +53,8 @@
 }
 
 .admin-provider-list,
-.admin-provider-form {
+.admin-provider-form,
+.admin-audit-panel {
   padding: 1.25rem;
 }
 
@@ -218,6 +219,50 @@
   width: auto;
 }
 
+.admin-audit-panel {
+  margin-top: 1rem;
+}
+
+.admin-muted {
+  opacity: 0.68;
+}
+
+.admin-audit-list {
+  list-style: none;
+  display: grid;
+  gap: 0;
+  padding: 0;
+  margin: 0.75rem 0 0;
+}
+
+.admin-audit-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--line, #e2e8f0);
+}
+
+.admin-audit-list li:last-child {
+  border-bottom: 0;
+}
+
+.admin-audit-list div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.admin-audit-list span,
+.admin-audit-list time {
+  font-size: 0.76rem;
+  opacity: 0.66;
+}
+
+.admin-audit-list time {
+  white-space: nowrap;
+}
+
 @media (max-width: 850px) {
   .admin-provider-layout {
     grid-template-columns: 1fr;
@@ -234,7 +279,12 @@
     grid-template-columns: 1fr;
   }
 
-  .admin-provider-card__head {
+  .admin-provider-card__head,
+  .admin-audit-list li {
     flex-direction: column;
+  }
+
+  .admin-audit-list time {
+    white-space: normal;
   }
 }
