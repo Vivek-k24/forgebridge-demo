@@ -21,6 +21,7 @@ from .identity.user_vehicle.router import router as user_vehicle_router
 from .identity.vehicle.router import router as vehicle_router
 from .knowledge.coverage_router import router as catalog_coverage_router
 from .knowledge.router import router as repair_definition_router
+from .operator.router import router as operator_router
 from .repair_experience.guidance import router as repair_guidance_router
 from .repair_experience.memory.router import router as repair_memory_router
 from .repair_experience.readiness import router as repair_readiness_router
@@ -72,6 +73,7 @@ app.add_middleware(
     expose_headers=["X-Request-ID", "X-PartGraph-API-Version", "Retry-After"],
 )
 app.include_router(auth_router)
+app.include_router(operator_router)
 app.include_router(vehicle_router)
 app.include_router(user_vehicle_router)
 app.include_router(catalog_coverage_router)
@@ -165,6 +167,7 @@ def _finish_response(request: Request, response: Response, duration_ms: float) -
         (
             "/api/v1/auth",
             "/api/v1/account",
+            "/api/v1/operator",
             "/api/v1/user-vehicles",
             "/api/v1/repair-sessions",
         )
