@@ -1,293 +1,333 @@
 # PartGraph
 
-PartGraph is a stateful AI-assisted automotive repair companion. It identifies the exact vehicle configuration, tracks repair state, manages readiness, and preserves repair memory so a user can pause and resume work without losing context.
+PartGraph is a stateful, data-driven automotive repair platform designed to guide a user through a real repair without losing mechanical context, repair state, inventory state, evidence, or safety boundaries.
 
-The product loop:
+It is not designed as a generic automotive chatbot.
 
-1. **What do I need?** — verified repair requirements and readiness.
-2. **How do I do it?** — verified guidance with safety boundaries.
-3. **Where am I now?** — RepairSession state and physical repair memory.
+The product is built around four questions:
 
-Honda and the 2009 Civic Hybrid are validation cases, not product limits. PartGraph is designed around exact vehicle configurations across supported manufacturers, models, trims, engines, transmissions, and drivetrains.
+1. **What exact vehicle am I working on?**
+2. **What does this repair actually require?**
+3. **What is the next supported action?**
+4. **What is the physical state of the repair right now?**
 
----
-
-# Current Development Status
-
-## Completed foundations
-
-- React + TypeScript frontend
-- FastAPI backend
-- PostgreSQL persistence
-- Authentication and user isolation
-- UserVehicle/Garage system
-- Vehicle identity resolution
-- RepairSession foundation
-- Repair memory
-- Inventory/readiness model
-- Canonical vehicle configuration model
-- Catalog coverage tracking
-- Docker local development environment
-
-## Current active work
-
-### Vehicle data coverage workbench
-
-The first research batch contains **363 vehicle configuration candidates** from the selected Asian brands workbook.
-
-Important:
-
-The 363 rows are not considered complete or verified data.
-
-They represent:
-
-```
-Candidate configurations
-        ↓
-Source collection
-        ↓
-Evidence reconciliation
-        ↓
-Canonical promotion
-```
-
-Collection and verification progress are tracked separately.
-
-Example:
-
-```
-Collected: 120 / 363
-Verified:  45 / 363
-```
-
-A configuration becomes verified only after sufficient independent evidence supports the exact identity.
+PartGraph combines verified automotive knowledge with private, resumable owner repair state.
 
 ---
 
-# Local Development
+## Project status
 
-PartGraph is designed to run locally using Docker Compose.
+The software foundation is substantial, but the MVP is not complete.
 
-The local environment contains:
+Already implemented in meaningful form:
 
-```
-Browser
-   ↓
-React Web
-   ↓
+- account signup and sign-in
+- server-side authentication sessions
+- private owner data isolation
+- PostgreSQL row-level security
+- Garage / saved vehicle backend
+- VIN and manual vehicle identity foundation
+- resumable RepairSession lifecycle
+- immutable repair event history
+- pause / resume
+- edit leases for multi-device protection
+- repair memory
+- inventory and readiness foundations
+- deterministic guided-procedure engine
+- structured API error codes and request IDs
+- staging-versus-canonical data boundaries
+- safety / capability policy foundations
+
+Major remaining work includes:
+
+- consolidating historical branches and removing obsolete code paths
+- eliminating vehicle-specific facts from application/test logic
+- completing exact vehicle applicability handling
+- adding first-class downstream repair dependencies
+- correcting repair completion semantics
+- reconciling inventory/readiness state
+- durable private photo storage
+- browser end-to-end testing
+- restoring offline repair continuity
+- human reviewer/curator/admin RBAC
+- completing the canonical automotive data pipeline
+- building trustworthy repair knowledge for the MVP reference fleet
+
+Current implementation sequencing is maintained in [`docs/ROADMAP.md`](docs/ROADMAP.md).
+
+---
+
+## Architecture contract
+
+The canonical architecture is defined in [`docs/BLUEPRINT.md`](docs/BLUEPRINT.md).
+
+The most important rules are:
+
+### Code contains behavior; data contains automotive facts
+
+Application logic must not be written around a particular real vehicle.
+
+Real vehicle identity and mechanical facts belong in databases or approved stored data, including:
+
+- model year
+- make
+- model
+- trim
+- engine
+- transmission
+- drivetrain
+- OEM part numbers
+- vehicle-specific specifications
+- repair procedures
+
+The same application code must work as vehicle coverage expands.
+
+### Missing means missing
+
+PartGraph does not invent a mechanical fact because the user expects an answer.
+
+Conflicting evidence remains conflicting until resolved. Missing evidence remains missing.
+
+### Deterministic repair execution
+
+Once a repair definition is verified, deterministic application logic decides:
+
+- readiness
+- blockers
+- next supported action
+- dependencies
+- downstream required operations
+- completion state
+
+AI may assist with explanation, extraction, normalization, and candidate generation. It does not choose the next repair step and cannot directly publish canonical mechanical truth.
+
+### Replacement does not automatically mean completion
+
+A component replacement can trigger another required operation.
+
+PartGraph must keep that downstream requirement visible and cannot report a repair as fully complete while known required work remains unresolved.
+
+### Shared knowledge and private owner state are separate
+
+Shared canonical knowledge includes verified vehicle, part, repair, requirement, procedure, specification, evidence, and capability data.
+
+Private owner state includes Garage vehicles, RepairSessions, readiness, inventory, repair memory, observations, progress, and photos.
+
+Private data is protected through authenticated API access and database-level isolation.
+
+### Safety boundaries fail closed
+
+Unsupported or uncertain work must be represented explicitly rather than improvised.
+
+Computer/service-tool programming, coding, relearn, initialization, and similar operations are outside the guided MVP boundary. Purely physical/mechanical work may be guided only when supported by verified data and policy.
+
+---
+
+## System shape
+
+```text
+Browser / Device
+      |
+      v
+React + TypeScript Web Application
+      |
+      v
 FastAPI API
-   ↓
-PostgreSQL
-
-Optional local workers:
-   ↓
-Collection / evidence processing
-```
-
-Local development does not require Vercel or Neon.
-
-Those are deployment targets. Research and development workloads can run on developer hardware first.
-
-Start locally:
-
-```bash
-docker compose up --build
-```
-
-Services:
-
-- Web: `http://localhost:5173`
-- API: `http://localhost:8000`
-- API docs: `http://localhost:8000/docs`
-
----
-
-# Vehicle Data Collection Workbench
-
-The planned local workbench provides:
-
-- make-level progress tracking
-- start/pause/resume controls
-- collection job history
-- source evidence logs
-- failed source tracking
-- retry capability
-- local source caching
-- verification progress
-
-The workbench is not part of the user repair flow.
-
-It exists for controlled research and data preparation.
-
----
-
-# Verification Model
-
-PartGraph separates:
-
-- source collection
-- evidence extraction
-- normalization
-- conflict detection
-- canonical promotion
-
-Three independent source matches are the minimum verification target for ordinary configuration identity. Additional sources may be used when evidence conflicts or remains incomplete.
-
-Conflicts are preserved. The system does not silently guess.
-
----
-
-# Future Admin Console (Planned)
-
-A separate administrator application is planned.
-
-It will manage operational visibility without exposing internal controls to normal users.
-
-Planned areas:
-
-- user statistics
-- active users
-- product usage analytics
-- repair trends
-- vehicle coverage progress
-- collection workers
-- source monitoring
-- AI/LLM usage
-- token consumption
-- cost tracking
-- application errors
-- server metrics
-- database health
-- website analytics
-- mobile app analytics
-- reports and feedback
-- security events
-- audit logs
-- feature controls
-
-Status:
-
-```
-Planned
-Not implemented
-Separate admin surface
-```
-
----
-
-# Architecture
-
-```
-User Application
+      |
+      +-----------------------------+
+      | Identity / Authentication   |
+      | Canonical Knowledge         |
+      | Repair Experience           |
+      | Assistance                  |
+      | Optional Intelligence       |
+      +-----------------------------+
       |
       v
-FastAPI Modular Monolith
+PostgreSQL / Neon
       |
-      v
-PostgreSQL
+      +-- shared canonical knowledge
+      +-- source/evidence provenance
+      +-- private owner state
+      +-- repair event history
+      +-- readiness/progress
 
-Local Research Tools
+Private durable object storage
       |
-      v
-Staging / Evidence Data
+      +-- owner repair media
+
+Offline / operator data pipeline
+      |
+      +-- source acquisition
+      +-- raw evidence
+      +-- candidate extraction
+      +-- review/conflict handling
+      +-- canonical promotion
 ```
 
-Canonical truth and private user state remain separate.
-
-Private data:
-
-- UserVehicle
-- RepairSession
-- Inventory
-- Photos
-- Repair observations
-
-Canonical data:
-
-- VehicleConfiguration
-- Verified repair definitions
-- Verified requirements
-- Mechanical claims
+External collectors and LLM providers are not required on the normal deterministic repair-execution path.
 
 ---
 
-# Documentation
+## Repository layout
 
-Architecture reference:
+```text
+api/                 FastAPI backend, domain modules, migrations and API tests
+web/                 React + TypeScript frontend
+local-validation/    Local end-to-end acceptance harness
+.github/workflows/   CI/CD workflows
+docs/ROADMAP.md      Implementation sequence and completion gates
+docs/BLUEPRINT.md    Canonical architecture and system rules
+docs/*.xlsx          Preserved automotive datasets where still present
+```
 
-`docs/PARTGRAPH_SYSTEM_UML.md`
-
-Engineering rules:
-
-`AGENTS.md`
-
-Future planning:
-
-`docs/ROADMAP.md`
+Historical documents, old UMLs, collector notes, branch experiments, and prototypes are not architecture authority unless their useful content has been incorporated into the Blueprint or Roadmap.
 
 ---
 
-# Technology Stack
+## Technology stack
 
-Frontend:
+### Frontend
 
 - React
 - TypeScript
 - Vite
 
-Backend:
+### Backend
 
 - Python
 - FastAPI
 - SQLAlchemy
 - Alembic
 
-Database:
+### Data
 
 - PostgreSQL
+- Neon for hosted PostgreSQL
 
-Infrastructure:
+### Infrastructure and validation
 
 - Docker
 - Docker Compose
 - GitHub Actions
 - GitHub Container Registry
-
-Deployment:
-
-- Vercel
-- Neon PostgreSQL
-
-Local research:
-
-- Docker-based worker environment
-- Local PostgreSQL state
-- Local evidence cache
+- Vercel deployment
 
 ---
 
-# Engineering Principles
+## Local development
 
-- Exact vehicle identity before repair applicability.
-- Evidence before canonical truth.
-- Ambiguity is preserved instead of guessed.
-- AI assists but does not replace mechanical verification.
-- Collection tools never write directly into canonical truth.
-- User data and shared vehicle knowledge remain isolated.
+The core application is designed to run locally with Docker Compose.
+
+```bash
+docker compose up --build
+```
+
+Default local services:
+
+- Web: `http://localhost:5173`
+- API: `http://localhost:8000`
+- API documentation: `http://localhost:8000/docs`
+
+Local development must not require production owner data.
 
 ---
 
-# Roadmap
+## Data trust model
 
-Current:
+PartGraph separates raw observations from canonical truth.
 
-- Complete initial vehicle coverage research batch.
-- Improve catalog verification workflows.
-- Expand supported configurations.
+```text
+External source
+      |
+      v
+Raw / staging evidence
+      |
+      v
+Candidate fact
+      |
+      v
+Applicability + authority review
+      |
+      +---- conflict / reject / needs review
+      |
+      v
+Verified evidence
+      |
+      v
+Canonical mechanical claim
+      |
+      v
+Versioned repair knowledge
+```
 
-Future:
+Collectors may place information into staging. They do not have authority to publish canonical truth directly.
 
-- Admin operations console.
-- Mobile applications.
-- Expanded vehicle coverage.
-- Production-scale data operations.
+---
+
+## Error, timeout and degraded-operation model
+
+PartGraph uses machine-readable failures rather than relying only on text messages.
+
+A normal API error includes:
+
+```text
+code
+message
+request_id
+retryable
+details
+```
+
+The browser has a bounded request timeout. Safe reads may use bounded retry behavior. Ambiguous writes must be reconciled against authoritative server state rather than blindly retried.
+
+Offline continuity is part of the target architecture. The server remains authoritative; offline repair packs are versioned working copies, not a second source of truth.
+
+See the Blueprint for the full resilience contract.
+
+---
+
+## Security and isolation model
+
+Private owner data uses defense in depth:
+
+```text
+Authenticated browser
+      |
+      v
+API authentication + CSRF/origin checks
+      |
+      v
+restricted application database role
+      |
+      v
+transaction-local owner identity
+      |
+      v
+PostgreSQL FORCE ROW LEVEL SECURITY
+      |
+      v
+owner-private rows
+```
+
+Human curation roles are being expanded beyond normal owner authorization to separate contributor, reviewer, curator, and operator/admin authority.
+
+---
+
+## Documentation authority
+
+There are two primary project documents:
+
+- **[`docs/BLUEPRINT.md`](docs/BLUEPRINT.md)** — what PartGraph is and how it is designed.
+- **[`docs/ROADMAP.md`](docs/ROADMAP.md)** — the order in which the remaining work is implemented and validated.
+
+The Blueprint controls architecture. The Roadmap controls sequencing.
+
+A roadmap update must not silently change the architecture contract.
+
+---
+
+## Development principle
+
+PartGraph should become broader by adding trustworthy data, not by adding vehicle-specific application branches.
+
+A new vehicle should be primarily a **data coverage problem**, not another software architecture rewrite.
