@@ -72,14 +72,15 @@ Goal: one coherent implementation line before new automotive data work.
 5. Inventory every Git branch.
 6. Selectively port useful code; do not wholesale merge historical experiment branches.
 7. Remove code paths that no longer belong to the target architecture.
-8. Externalize hard-coded vehicle facts from source/tests/CI into data fixtures.
+8. Externalize hard-coded vehicle facts from source/CI into data fixtures.
 9. Make supported vehicle selection data-driven.
-10. Repair CI/acceptance gates before substantial new feature work.
+10. Retire obsolete historical test/acceptance suites while keeping build, lint, dependency-audit and container-smoke CI operational.
 
 Exit gate:
 - no useful code remains stranded on an old branch
 - no stale documentation competes with the Blueprint
 - data assets are preserved
+- build/lint/smoke quality gates remain operational
 - main can receive one coherent consolidation result
 
 ### Phase 1 — Correct existing behavioral defects
@@ -94,7 +95,7 @@ Exit gate:
 8. Reconcile manual session inventory with canonical readiness.
 9. Finalize durable private photo storage.
 10. Align upload limits with actual hosting limits.
-11. Add regression tests for every corrected defect.
+11. Record behaviors that require final regression coverage; do not rebuild the automated test suite until the functional MVP build is complete.
 
 Exit gate:
 PartGraph can no longer report a mechanically incomplete or unsupported repair as complete.
@@ -235,10 +236,13 @@ Adding another vehicle may require more data, but must not require a make/model/
 Exit gate:
 The same source code executes workflows for all five model families.
 
-### Phase 9 — Full MVP validation
+### Phase 9 — Build the fresh MVP validation suite
+
+Do not revive the historical tests removed during consolidation. Build a new validation suite against the completed Blueprint and the final MVP behavior.
 
 Required gates:
-- unit/API tests
+- unit/domain tests
+- API tests
 - authentication/security tests
 - RLS/owner-isolation tests
 - migration tests
