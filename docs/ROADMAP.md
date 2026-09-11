@@ -19,20 +19,6 @@ Primary deep test configuration:
 
 The names above are validation data. They must not become hard-coded behavior in Python, TypeScript, SQL application logic, CI logic, or UI components.
 
-### Product-validation gate
-
-The MVP must be convincing enough that at least 6 out of 10 qualified target users in a small observed product evaluation say they would use PartGraph for a suitable small repair or maintenance task rather than immediately booking a mechanic for that task.
-
-This is a product-validation target, not a claim that every repair should be DIY. The evaluated workflow must make the user understand:
-- whether the job is appropriate for them
-- what parts, tools, fluids or workspace are required
-- what the verified repair path is
-- where the safety or professional-service boundaries are
-- what remains incomplete after a physical part replacement
-- how to pause and return without losing repair context
-
-The value proposition is practical: reduce avoidable repair cost, travel, appointment delay and repeated diagnostic/setup time for appropriate owner-serviceable work while making professional escalation explicit when it is the safer or required path.
-
 ## 2. Current completion baseline
 
 These percentages are strict MVP completion estimates, not code-volume estimates.
@@ -286,7 +272,6 @@ Required gates:
 - durable photo persistence
 - data-free-source-code check
 - RBAC authorization tests
-- observed product-validation sessions demonstrating the 6/10 usefulness target for appropriate owner-serviceable repairs
 
 ### Phase 10 — Production MVP cutover
 
