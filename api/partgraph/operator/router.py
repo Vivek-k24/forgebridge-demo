@@ -6,8 +6,15 @@ from ..errors import ErrorEnvelope
 from ..identity.auth.dependencies import AuthSessionDep, CurrentUserDep, require_csrf
 from ..identity.auth.roles import require_role
 from ..identity.auth.schemas import AdminAccessRead
-from .schemas import OperatorAuditRead, ProviderCreate, ProviderRead, ProviderUpdate
-from .service import create_provider, list_operator_audit, list_providers, update_provider
+from .schemas import OperatorAuditRead, PreviewOperatorBootstrapStatus, ProviderCreate, ProviderRead, ProviderUpdate
+from .service import (
+    bootstrap_preview_operator,
+    create_provider,
+    list_operator_audit,
+    list_providers,
+    preview_operator_bootstrap_status,
+    update_provider,
+)
 
 router = APIRouter(
     prefix="/api/v1/operator",
@@ -24,6 +31,28 @@ def _operator(user: CurrentUserDep):
 @router.get("/access", response_model=AdminAccessRead)
 async def access(user: CurrentUserDep) -> AdminAccessRead:
     _operator(user)
+    return AdminAccessRead()
+
+
+@router.get("/preview-bootstrap/status", response_model=PreviewOperatorBootstrapStatus)
+async def preview_bootstrap_status(
+    user: CurrentUserDep,
+    session: AuthSessionDep,
+) -> PreviewOperatorBootstrapStatus:
+    del user
+    return await preview_operator_bootstrap_status(session)
+
+
+@router.post(
+    "/preview-bootstrap",
+    response_model=AdminAccessRead,
+    dependencies=[CsrfDep],
+)
+async def preview_bootstrap(
+    user: CurrentUserDep,
+    session: AuthSessionDep,
+) -> AdminAccessRead:
+    await bootstrap_preview_operator(session, user=user)
     return AdminAccessRead()
 
 
