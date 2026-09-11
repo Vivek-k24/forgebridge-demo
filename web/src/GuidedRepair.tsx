@@ -8,7 +8,7 @@ import './guided-repair.css'
 type SessionStatus = 'active' | 'paused' | 'archived'
 type LeaseStatus = 'available' | 'owned' | 'held_by_other'
 type ProgressState = 'pending' | 'completed' | 'skipped' | 'blocked'
-type GuidanceStatus = 'action_available' | 'action_blocked' | 'inventory_blocked' | 'procedure_complete'
+type GuidanceStatus = 'action_available' | 'action_blocked' | 'inventory_blocked' | 'unsupported_boundary' | 'procedure_complete'
 
 type RepairSession = {
   id: string
@@ -57,6 +57,8 @@ type GuidanceAction = {
   dependency_action_keys: string[]
   inventory_blockers: InventoryBlocker[]
   supporting_claim_ids: string[]
+  completion_allowed: boolean
+  boundary_code: string | null
 }
 
 type GuidanceSummary = {
@@ -252,7 +254,7 @@ export function GuidedRepairWorkspace({
 
   async function updateProgress(progressState: 'completed' | 'skipped' | 'blocked') {
     const action = guidance?.current_action
-    if (!selectedId || !action) return
+    if (!selectedId || !action || !action.completion_allowed) return
     try {
       setBusy(true)
       setError(null)
@@ -387,7 +389,7 @@ export function GuidedRepairWorkspace({
               <span aria-hidden="true">✓</span>
               <div>
                 <strong>Verified procedure complete.</strong>
-                <p>All canonical actions in this version-pinned repair plan are completed or explicitly skippable-and-skipped.</p>
+                <p>All supported required actions in this version-pinned repair plan are resolved, with no pending boundary represented as complete.</p>
               </div>
             </div>
           ) : guidance.current_action ? (
@@ -450,15 +452,16 @@ function CurrentAction({
 }) {
   const inventoryBlocked = guidanceStatus === 'inventory_blocked'
   const actionBlocked = guidanceStatus === 'action_blocked'
+  const unsupportedBoundary = guidanceStatus === 'unsupported_boundary' || !action.completion_allowed
 
   return (
     <article className={`guided-action guided-action--${guidanceStatus}`}>
       <div className="guided-action-head">
         <div>
-          <span>Current verified action · step {action.position + 1}</span>
+          <span>{unsupportedBoundary ? 'Required work outside PartGraph support' : `Current verified action · step ${action.position + 1}`}</span>
           <h2>{action.title}</h2>
         </div>
-        <b>{human(action.progress_state)}</b>
+        <b>{unsupportedBoundary ? human(action.boundary_code ?? 'unsupported boundary') : human(action.progress_state)}</b>
       </div>
 
       <p className="guided-instruction">{action.instruction}</p>
@@ -467,7 +470,14 @@ function CurrentAction({
       {action.workspace_note && <div className="guided-workspace-note"><strong>Before this action</strong><p>{action.workspace_note}</p></div>}
       {action.dependency_action_keys.length > 0 && <p className="guided-dependencies">Prerequisites complete: {action.dependency_action_keys.map(human).join(', ')}</p>}
 
-      {action.inventory_blockers.length > 0 && (
+      {unsupportedBoundary && (
+        <div className="guided-boundary guided-boundary--professional">
+          <strong>PartGraph stops guidance here.</strong>
+          <p>This required downstream operation is recorded, but it cannot be marked complete inside PartGraph. Completion remains pending until the product has a supported way to represent the outside service result.</p>
+        </div>
+      )}
+
+      {!unsupportedBoundary && action.inventory_blockers.length > 0 && (
         <div className="guided-blockers">
           <div>
             <strong>Readiness must be resolved before this action can complete.</strong>
@@ -484,7 +494,7 @@ function CurrentAction({
         </div>
       )}
 
-      {actionBlocked && (
+      {!unsupportedBoundary && actionBlocked && (
         <div className="guided-problem">
           <strong>Work stopped here.</strong>
           <p>{action.notes ?? human(action.blocker_code ?? 'owner reported problem')}</p>
@@ -492,14 +502,16 @@ function CurrentAction({
         </div>
       )}
 
-      <div className="guided-action-buttons">
-        <button type="button" disabled={busy || !canEdit || inventoryBlocked} onClick={onComplete}>
-          {actionBlocked ? 'Problem resolved · complete action' : 'Complete action'}
-        </button>
-        {!actionBlocked && <button type="button" className="secondary" disabled={busy || !canEdit} onClick={onBlocked}>Problem / blocked</button>}
-        {action.skippable && !actionBlocked && <button type="button" className="secondary" disabled={busy || !canEdit} onClick={onSkip}>Skip verified optional action</button>}
-      </div>
-      {!canEdit && <small className="guided-edit-note">Take editing control to record physical progress.</small>}
+      {!unsupportedBoundary && (
+        <div className="guided-action-buttons">
+          <button type="button" disabled={busy || !canEdit || inventoryBlocked} onClick={onComplete}>
+            {actionBlocked ? 'Problem resolved · complete action' : 'Complete action'}
+          </button>
+          {!actionBlocked && <button type="button" className="secondary" disabled={busy || !canEdit} onClick={onBlocked}>Problem / blocked</button>}
+          {action.skippable && !actionBlocked && <button type="button" className="secondary" disabled={busy || !canEdit} onClick={onSkip}>Skip verified optional action</button>}
+        </div>
+      )}
+      {!unsupportedBoundary && !canEdit && <small className="guided-edit-note">Take editing control to record physical progress.</small>}
     </article>
   )
 }
@@ -518,7 +530,7 @@ function VerifiedPlan({ plan }: { plan: GuidancePlan }) {
             <div>
               <strong>{action.title}</strong>
               <small>
-                {human(action.progress_state)}
+                {action.completion_allowed ? human(action.progress_state) : human(action.boundary_code ?? 'unsupported boundary')}
                 {action.inventory_blockers.length > 0 ? ` · ${action.inventory_blockers.length} readiness blocker(s)` : ''}
                 {action.dependency_action_keys.length > 0 ? ` · after ${action.dependency_action_keys.map(human).join(', ')}` : ''}
               </small>
