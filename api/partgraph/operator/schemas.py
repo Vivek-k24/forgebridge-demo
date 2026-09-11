@@ -6,6 +6,14 @@ from pydantic import BaseModel, Field, SecretStr, field_validator, model_validat
 
 ProviderKind = Literal["internal_data", "vehicle_data", "ai", "manufacturer"]
 ProviderCredentialStorage = Literal["encrypted_database", "external_reference"]
+OperatorAuditAction = Literal[
+    "provider_created",
+    "provider_updated",
+    "provider_enabled",
+    "provider_disabled",
+    "provider_credential_saved",
+    "provider_credential_removed",
+]
 PROVIDER_KEY_PATTERN = r"^[a-z0-9][a-z0-9_-]{1,95}$"
 
 
@@ -156,3 +164,13 @@ class ProviderRead(BaseModel):
     notes: str | None
     created_at: datetime
     updated_at: datetime
+
+
+class OperatorAuditRead(BaseModel):
+    id: UUID
+    actor_user_id: UUID
+    action: OperatorAuditAction
+    target_type: str
+    target_id: UUID
+    event_data: dict[str, object]
+    created_at: datetime
