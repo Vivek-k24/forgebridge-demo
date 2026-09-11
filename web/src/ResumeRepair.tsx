@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { activeRepairSessionId, preferredRepairSessionId, setActiveRepairSessionId } from './active-repair'
 import { apiRequest, formatApiFailure } from './api'
-import { repairMutationHeaders } from './repair-client'
+import { repairDeviceId, repairMutationHeaders } from './repair-client'
 import './repair-workspaces.css'
 
 type SessionStatus = 'active' | 'paused' | 'archived'
@@ -91,7 +91,11 @@ export function ResumeRepairWorkspace({
     }
     setError(null)
     try {
-      const value = await apiRequest<ResumeSnapshot>(`/api/v1/repair-sessions/${sessionId}/resume`, undefined, { retryIdempotent: true })
+      const value = await apiRequest<ResumeSnapshot>(
+        `/api/v1/repair-sessions/${sessionId}/resume`,
+        { headers: { 'X-PartGraph-Device-ID': repairDeviceId() } },
+        { retryIdempotent: true },
+      )
       setSnapshot(value)
       setActiveRepairSessionId(sessionId)
     } catch (failure) {
