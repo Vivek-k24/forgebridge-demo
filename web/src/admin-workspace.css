@@ -1,0 +1,56 @@
+.admin-shell {
+  width: min(1080px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 2rem 0 5rem;
+}
+
+.admin-heading {
+  max-width: 780px;
+  margin-bottom: 1.25rem;
+}
+
+.admin-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.admin-status-grid article {
+  display: grid;
+  gap: 0.35rem;
+  min-height: 130px;
+  align-content: center;
+  padding: 1.25rem;
+}
+
+.admin-status-grid span,
+.admin-status-grid small {
+  font-size: 0.78rem;
+  opacity: 0.68;
+}
+
+.admin-status-grid strong {
+  font-size: 1.35rem;
+  text-transform: capitalize;
+}
+
+.admin-access-state {
+  max-width: 640px;
+  margin: 5rem auto;
+  padding: 1.5rem;
+}
+
+.admin-access-state h1 {
+  margin-top: 0;
+}
+
+@media (max-width: 720px) {
+  .admin-shell {
+    width: min(100% - 1rem, 1080px);
+    padding-top: 1rem;
+  }
+
+  .admin-status-grid {
+    grid-template-columns: 1fr;
+  }
+}
