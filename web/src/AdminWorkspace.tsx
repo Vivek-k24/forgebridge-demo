@@ -15,6 +15,7 @@ type ReadyHealth = {
 }
 
 type ProviderKind = 'internal_data' | 'vehicle_data' | 'ai' | 'manufacturer'
+type ProviderCredentialStorage = 'encrypted_database' | 'external_reference'
 type Provider = {
   id: string
   provider_key: string
@@ -24,6 +25,8 @@ type Provider = {
   enabled: boolean
   capabilities: string[]
   secret_configured: boolean
+  secret_storage: ProviderCredentialStorage | null
+  secret_hint: string | null
   notes: string | null
   created_at: string
   updated_at: string
@@ -42,11 +45,21 @@ function kindLabel(kind: ProviderKind): string {
   return PROVIDER_KINDS.find((item) => item.value === kind)?.label ?? kind.replaceAll('_', ' ')
 }
 
+function credentialLabel(provider: Provider): string {
+  if (provider.secret_storage === 'encrypted_database') {
+    return provider.secret_hint ? `Encrypted credential · •••• ${provider.secret_hint}` : 'Encrypted credential'
+  }
+  if (provider.secret_storage === 'external_reference') return 'External credential reference'
+  return 'No credential configured'
+}
+
 export function AdminWorkspace() {
   const [access, setAccess] = useState<AccessState>('checking')
   const [health, setHealth] = useState<ReadyHealth | null>(null)
   const [providers, setProviders] = useState<Provider[]>([])
   const [providerBusy, setProviderBusy] = useState(false)
+  const [credentialBusyId, setCredentialBusyId] = useState<string | null>(null)
+  const [credentialDrafts, setCredentialDrafts] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -55,7 +68,7 @@ export function AdminWorkspace() {
   const [providerKind, setProviderKind] = useState<ProviderKind>('internal_data')
   const [baseUrl, setBaseUrl] = useState('')
   const [capabilities, setCapabilities] = useState('')
-  const [secretRef, setSecretRef] = useState('')
+  const [credential, setCredential] = useState('')
   const [notes, setNotes] = useState('')
   const [enabled, setEnabled] = useState(false)
 
@@ -116,7 +129,7 @@ export function AdminWorkspace() {
           base_url: baseUrl.trim() || null,
           enabled,
           capabilities: capabilities.split(',').map((item) => item.trim()).filter(Boolean),
-          secret_ref: secretRef.trim() || null,
+          credential: credential || null,
           notes: notes.trim() || null,
         }),
       })
@@ -125,7 +138,7 @@ export function AdminWorkspace() {
       setProviderKind('internal_data')
       setBaseUrl('')
       setCapabilities('')
-      setSecretRef('')
+      setCredential('')
       setNotes('')
       setEnabled(false)
       await loadProviders()
@@ -153,6 +166,48 @@ export function AdminWorkspace() {
       setError(formatApiFailure(failure, 'Provider state could not be updated.'))
     } finally {
       setProviderBusy(false)
+    }
+  }
+
+  async function saveCredential(provider: Provider) {
+    const value = credentialDrafts[provider.id] ?? ''
+    if (!value) return
+    try {
+      setCredentialBusyId(provider.id)
+      setError(null)
+      setMessage(null)
+      await apiRequest<Provider>(`/api/v1/operator/providers/${provider.id}`, {
+        method: 'PATCH',
+        headers: { ...CSRF_HEADERS, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: value }),
+      })
+      setCredentialDrafts((current) => ({ ...current, [provider.id]: '' }))
+      await loadProviders()
+      setMessage(`${provider.display_name} credential encrypted and saved.`)
+    } catch (failure) {
+      setError(formatApiFailure(failure, 'Provider credential could not be saved.'))
+    } finally {
+      setCredentialBusyId(null)
+    }
+  }
+
+  async function clearCredential(provider: Provider) {
+    try {
+      setCredentialBusyId(provider.id)
+      setError(null)
+      setMessage(null)
+      await apiRequest<Provider>(`/api/v1/operator/providers/${provider.id}`, {
+        method: 'PATCH',
+        headers: { ...CSRF_HEADERS, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clear_credential: true }),
+      })
+      setCredentialDrafts((current) => ({ ...current, [provider.id]: '' }))
+      await loadProviders()
+      setMessage(`${provider.display_name} credential removed.`)
+    } catch (failure) {
+      setError(formatApiFailure(failure, 'Provider credential could not be removed.'))
+    } finally {
+      setCredentialBusyId(null)
     }
   }
 
@@ -196,8 +251,13 @@ export function AdminWorkspace() {
                 <article key={provider.id} className={provider.enabled ? 'admin-provider-card admin-provider-card--enabled' : 'admin-provider-card'}>
                   <div className="admin-provider-card__head"><div><span>{kindLabel(provider.provider_kind)}</span><strong>{provider.display_name}</strong><small>{provider.provider_key}</small></div><button type="button" disabled={providerBusy} className={provider.enabled ? 'secondary' : ''} onClick={() => void setProviderEnabled(provider, !provider.enabled)}>{provider.enabled ? 'Disable' : 'Enable'}</button></div>
                   {provider.base_url && <p>{provider.base_url}</p>}
-                  <div className="admin-provider-meta"><span>{provider.secret_configured ? 'Secret reference configured' : 'No secret reference'}</span><span>{provider.capabilities.length} capabilities</span></div>
+                  <div className="admin-provider-meta"><span>{credentialLabel(provider)}</span><span>{provider.capabilities.length} capabilities</span></div>
                   {provider.capabilities.length > 0 && <div className="admin-capabilities">{provider.capabilities.map((item) => <span key={item}>{item.replaceAll('_', ' ')}</span>)}</div>}
+                  <div className="admin-credential-editor">
+                    <label><span>{provider.secret_configured ? 'Replace credential' : 'Add credential'}</span><input type="password" autoComplete="new-password" maxLength={8192} value={credentialDrafts[provider.id] ?? ''} onChange={(event) => setCredentialDrafts((current) => ({ ...current, [provider.id]: event.target.value }))} placeholder="Paste provider access key" /></label>
+                    <div className="admin-credential-actions"><button type="button" disabled={credentialBusyId === provider.id || !(credentialDrafts[provider.id] ?? '')} onClick={() => void saveCredential(provider)}>{credentialBusyId === provider.id ? 'Saving…' : provider.secret_configured ? 'Replace credential' : 'Save credential'}</button>{provider.secret_configured && <button type="button" className="secondary" disabled={credentialBusyId === provider.id} onClick={() => void clearCredential(provider)}>Remove</button>}</div>
+                    <small>Saved credentials cannot be viewed again. PartGraph only shows the final four characters for identification.</small>
+                  </div>
                   {provider.notes && <small className="admin-provider-notes">{provider.notes}</small>}
                 </article>
               ))}
@@ -214,7 +274,7 @@ export function AdminWorkspace() {
             <label><span>Type</span><select value={providerKind} onChange={(event) => setProviderKind(event.target.value as ProviderKind)}>{PROVIDER_KINDS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
             <label><span>Base URL</span><input type="url" maxLength={1024} value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} placeholder="https://… (optional)" /></label>
             <label><span>Capabilities</span><input value={capabilities} onChange={(event) => setCapabilities(event.target.value)} placeholder="Comma-separated capability names" /></label>
-            <label><span>Server secret reference</span><input maxLength={255} value={secretRef} onChange={(event) => setSecretRef(event.target.value)} placeholder="Reference only, not the API key" /><small>PartGraph stores this reference, not the provider secret value.</small></label>
+            <label><span>Provider access key</span><input type="password" autoComplete="new-password" minLength={4} maxLength={8192} value={credential} onChange={(event) => setCredential(event.target.value)} placeholder="Optional" /><small>Encrypted on the server before database storage. After saving, only the last four characters are shown.</small></label>
             <label><span>Notes</span><textarea rows={3} maxLength={500} value={notes} onChange={(event) => setNotes(event.target.value)} /></label>
             <label className="admin-toggle"><input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} /><span>Enable after saving</span></label>
             <button disabled={providerBusy || !providerKey.trim() || !displayName.trim()}>{providerBusy ? 'Saving…' : 'Save provider'}</button>
