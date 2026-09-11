@@ -20,11 +20,12 @@ from .service import (
     get_specification_profile,
     list_configurations,
     list_generation_options,
+    list_make_options,
     list_model_options,
     list_trim_options,
     resolve_selection,
 )
-from .taxonomy import VehicleIdentityError, supported_brand_records
+from .taxonomy import VehicleIdentityError
 
 router = APIRouter(prefix="/api/v1", tags=["Vehicle Identity"])
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
@@ -48,8 +49,13 @@ def _validated_year(year: int) -> int:
 
 
 @router.get("/vehicle-brands", response_model=list[VehicleBrandRead])
-async def vehicle_brands() -> list[VehicleBrandRead]:
-    return [VehicleBrandRead.model_validate(item) for item in supported_brand_records()]
+async def vehicle_brands(
+    session: SessionDep,
+    q: Annotated[str | None, Query(max_length=96)] = None,
+    limit: Annotated[int, Query(ge=1, le=500)] = 200,
+) -> list[VehicleBrandRead]:
+    names = await list_make_options(session, query=q, limit=limit)
+    return [VehicleBrandRead(name=name, status="active") for name in names]
 
 
 @router.get("/vehicle-options/models", response_model=list[str])
