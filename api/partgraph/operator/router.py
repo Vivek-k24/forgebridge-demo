@@ -6,8 +6,8 @@ from ..errors import ErrorEnvelope
 from ..identity.auth.dependencies import AuthSessionDep, CurrentUserDep, require_csrf
 from ..identity.auth.roles import require_role
 from ..identity.auth.schemas import AdminAccessRead
-from .schemas import ProviderCreate, ProviderRead, ProviderUpdate
-from .service import create_provider, list_providers, update_provider
+from .schemas import OperatorAuditRead, ProviderCreate, ProviderRead, ProviderUpdate
+from .service import create_provider, list_operator_audit, list_providers, update_provider
 
 router = APIRouter(
     prefix="/api/v1/operator",
@@ -31,6 +31,12 @@ async def access(user: CurrentUserDep) -> AdminAccessRead:
 async def providers(user: CurrentUserDep, session: AuthSessionDep) -> list[ProviderRead]:
     _operator(user)
     return await list_providers(session)
+
+
+@router.get("/audit", response_model=list[OperatorAuditRead])
+async def audit(user: CurrentUserDep, session: AuthSessionDep) -> list[OperatorAuditRead]:
+    _operator(user)
+    return await list_operator_audit(session)
 
 
 @router.post(
