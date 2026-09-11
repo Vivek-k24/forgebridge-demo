@@ -1,0 +1,209 @@
+{
+  "schema_version": 1,
+  "corpus_key": "reference-fleet-repair-corpus-v1",
+  "verification_policy": {
+    "method": "manual_source_specific_review",
+    "collector_rules_inherited": false,
+    "canonical_rule": "Only publish a repair fact when the cited source supports the fact and its vehicle applicability. Missing detail remains missing rather than inferred.",
+    "computer_service": "unsupported_indefinitely",
+    "computer_boundary_message": "PartGraph does not support vehicle-computer diagnostics, relearn, coding, programming, calibration, or service-tool operations.",
+    "deferred_guided_operations": ["calibration", "initialization", "aiming", "adjustment", "priming", "torque_sequence"],
+    "physical_bleeding_supported": true,
+    "hybrid_high_voltage_service": "unsupported"
+  },
+  "repairs": [
+    {
+      "vehicle_key": "2009-honda-civic-hybrid-sedan",
+      "repair_key": "engine-oil-and-filter-change",
+      "title": "Change engine oil and filter",
+      "domains": ["routine_maintenance", "fluids_and_bleeding"],
+      "verification_status": "verified",
+      "applicability": "2009 US Honda Civic Hybrid",
+      "requirements": [
+        {"key": "fluid.engine-oil.0w20", "category": "fluid", "name": "0W-20 engine oil", "quantity": 3.4, "unit": "US qt", "fulfillment_mode": "consumed"},
+        {"key": "part.engine-oil-filter.civic-hybrid-2009", "category": "part", "name": "Compatible engine oil filter", "quantity": 1, "unit": "each", "fulfillment_mode": "replacement_required"},
+        {"key": "hardware.engine-oil-drain-washer.civic-hybrid-2009", "category": "hardware", "name": "New engine oil drain-bolt washer", "quantity": 1, "unit": "each", "fulfillment_mode": "replacement_required"},
+        {"key": "tool.engine-oil-filter-wrench.civic-hybrid-2009", "category": "tool", "name": "Oil-filter wrench", "quantity": 1, "unit": "each", "fulfillment_mode": "reusable"},
+        {"key": "equipment.safe-underbody-access", "category": "equipment", "name": "Safe underbody access / vehicle support", "quantity": 1, "unit": "setup", "fulfillment_mode": "reusable"},
+        {"key": "equipment.engine-oil-drain-pan", "category": "equipment", "name": "Oil drain pan", "quantity": 1, "unit": "each", "fulfillment_mode": "reusable"}
+      ],
+      "actions": [
+        {"key": "warm-and-shut-down", "title": "Warm engine and shut it down", "instruction": "Bring the engine to normal operating temperature, shut it off, open the hood, and remove the engine-oil fill cap."},
+        {"key": "remove-undercover", "title": "Open underbody access", "instruction": "On U.S. models, remove the nine holding clips and two bolts and lower the undercover."},
+        {"key": "drain-engine-oil", "title": "Drain the engine oil", "instruction": "Remove the drain bolt and washer and drain the oil into an appropriate container."},
+        {"key": "remove-old-filter", "title": "Remove the oil filter", "instruction": "Remove the oil filter, let the remaining oil drain, and make sure the old filter gasket is not stuck to the engine block."},
+        {"key": "install-filter-and-drain-bolt", "title": "Install filter and drain bolt", "instruction": "Install the new filter according to its instructions. Fit a new washer to the drain bolt, reinstall it, and tighten the drain bolt to 29 lbf-ft (39 N-m)."},
+        {"key": "refill-engine-oil", "title": "Refill engine oil", "instruction": "Refill with 3.4 US qt (3.2 L) of the recommended engine oil and reinstall the fill cap."},
+        {"key": "leak-and-level-check", "title": "Check pressure, leaks, and final level", "instruction": "Start the engine. The oil-pressure indicator should go out within 5 seconds. Let the engine run several minutes, check the drain bolt and filter for leaks, then shut down, wait several minutes, and confirm the dipstick level."},
+        {"key": "reinstall-undercover", "title": "Reinstall the undercover", "instruction": "Reinstall the undercover, two bolts, and nine holding clips; lock each clip by pushing its center."}
+      ],
+      "evidence": [
+        {"source_key": "honda-2009-civic-hybrid-owner-manual", "source_class": "manufacturer_owner_manual", "url": "https://techinfo.honda.com/rjanisis/pubs/OM/NC0909/NC0909OM.pdf", "supports": ["applicability", "requirements", "procedure", "fluid_capacity", "drain_bolt_torque"]}
+      ]
+    },
+    {
+      "vehicle_key": "2015-toyota-camry-le",
+      "repair_key": "cabin-air-filter-replacement",
+      "title": "Replace cabin air filter",
+      "domains": ["hvac_safe_mechanical", "routine_maintenance"],
+      "verification_status": "verified",
+      "applicability": "2015 US Toyota Camry",
+      "requirements": [
+        {"key": "part.cabin-air-filter.camry-2015", "category": "part", "name": "Compatible cabin air filter", "quantity": 1, "unit": "each", "fulfillment_mode": "replacement_required"}
+      ],
+      "actions": [
+        {"key": "switch-off", "title": "Switch the vehicle off", "instruction": "Turn the engine switch off."},
+        {"key": "open-glove-box", "title": "Open the glove box access", "instruction": "Open the glove box and remove the glove-box cover inside the glove box."},
+        {"key": "remove-filter-cover", "title": "Remove the filter cover", "instruction": "Remove the air-conditioning filter cover."},
+        {"key": "replace-filter", "title": "Replace the filter", "instruction": "Remove the old filter and install the new filter with the UP marks pointing upward."},
+        {"key": "close-access", "title": "Restore the glove box", "instruction": "Reinstall the filter cover and glove-box cover."}
+      ],
+      "evidence": [
+        {"source_key": "toyota-2015-camry-owner-manual-om33a86u", "source_class": "manufacturer_owner_manual_mirror", "url": "https://www.manualzz.com/doc/13857438/toyota-2015-camry-owner-s-manual", "supports": ["applicability", "procedure"]},
+        {"source_key": "toyota-2015-camry-warranty-maintenance-guide", "source_class": "manufacturer", "url": "https://assets.sia.toyota.com/publications/en/omms-s/T-MMS-15Camry/pdf/2015_Toyota_Camry_WMG_lr.pdf", "supports": ["scheduled_replacement"]}
+      ]
+    },
+    {
+      "vehicle_key": "2018-subaru-forester-2-5i",
+      "repair_key": "engine-air-cleaner-element-replacement",
+      "title": "Replace engine air-cleaner element",
+      "domains": ["engine_peripheral", "routine_maintenance"],
+      "verification_status": "verified",
+      "applicability": "2018 Subaru Forester non-turbo 2.5i",
+      "requirements": [
+        {"key": "part.engine-air-filter.forester-2018-2-5i", "category": "part", "name": "Compatible engine air-cleaner element", "quantity": 1, "unit": "each", "fulfillment_mode": "replacement_required"},
+        {"key": "consumable.clean-damp-cloth", "category": "consumable", "name": "Clean damp cloth", "quantity": 1, "unit": "each", "fulfillment_mode": "consumed"}
+      ],
+      "actions": [
+        {"key": "release-air-case-clips", "title": "Release air-cleaner case", "instruction": "Unsnap the two clips holding the front of the air-cleaner case."},
+        {"key": "remove-air-filter", "title": "Remove the old element", "instruction": "Open the rear portion of the air-cleaner case and remove the air-cleaner element."},
+        {"key": "clean-air-case", "title": "Clean the housing", "instruction": "Clean the inside of the front and rear air-cleaner case with a damp cloth."},
+        {"key": "install-air-filter", "title": "Install the new element", "instruction": "Install the new air-cleaner element, insert the three rear-case projections into the front-case slits, and reinstall in reverse order."}
+      ],
+      "evidence": [
+        {"source_key": "subaru-2018-forester-owner-manual", "source_class": "manufacturer_owner_manual_mirror", "url": "https://subaru.oemdtc.com/811/msa5m1802a-owners-manual-2018-subaru-forester/", "supports": ["applicability", "procedure", "safety"]}
+      ]
+    },
+    {
+      "vehicle_key": "2018-subaru-forester-2-5i",
+      "repair_key": "front-brake-pads-and-rotors",
+      "title": "Replace front brake pads and rotors",
+      "domains": ["brakes", "fluids_and_bleeding"],
+      "verification_status": "verified",
+      "applicability": "2014-2018 Subaru Forester front disc brakes; reference vehicle 2018 2.5i",
+      "requirements": [
+        {"key": "part.front-brake-pad-set.forester-2018", "category": "part", "name": "Compatible front brake pad set", "quantity": 1, "unit": "set", "fulfillment_mode": "replacement_required"},
+        {"key": "part.front-brake-rotor.forester-2018", "category": "part", "name": "Compatible front brake rotor", "quantity": 2, "unit": "each", "fulfillment_mode": "replacement_required"},
+        {"key": "equipment.floor-jack", "category": "equipment", "name": "Floor jack", "quantity": 1, "unit": "each", "fulfillment_mode": "reusable"},
+        {"key": "equipment.jack-stands", "category": "equipment", "name": "Jack stands", "quantity": 2, "unit": "each", "fulfillment_mode": "reusable"},
+        {"key": "tool.torque-wrench", "category": "tool", "name": "Torque wrench", "quantity": 1, "unit": "each", "fulfillment_mode": "reusable"},
+        {"key": "tool.metric-sockets-14-17-19", "category": "tool", "name": "14 mm, 17 mm, and 19 mm sockets/wrenches", "quantity": 1, "unit": "set", "fulfillment_mode": "reusable"},
+        {"key": "tool.caliper-piston-compressor", "category": "tool", "name": "Caliper piston compressor or suitable clamp", "quantity": 1, "unit": "each", "fulfillment_mode": "reusable"},
+        {"key": "consumable.brake-parts-cleaner", "category": "consumable", "name": "Brake parts cleaner", "quantity": 1, "unit": "can", "fulfillment_mode": "consumed"},
+        {"key": "consumable.caliper-slide-grease", "category": "consumable", "name": "Brake-compatible caliper slide grease", "quantity": 1, "unit": "tube", "fulfillment_mode": "consumed"}
+      ],
+      "actions": [
+        {"key": "secure-and-lift-front", "title": "Secure and support the vehicle", "instruction": "Park on a level surface, secure the vehicle against movement, loosen the front wheel fasteners on the ground, raise the front, and support it on jack stands."},
+        {"key": "remove-front-wheel", "title": "Remove the front wheel", "instruction": "Remove the wheel to expose the front brake caliper, bracket, and rotor."},
+        {"key": "remove-caliper-and-pads", "title": "Remove caliper and pads", "instruction": "Remove the 14 mm caliper fasteners, move the caliper aside without stressing the brake hose, and remove the old pads."},
+        {"key": "remove-bracket-and-rotor", "title": "Remove bracket and rotor", "instruction": "Remove the caliper bracket fasteners and remove the rotor. If fitted, remove the rotor retaining screws before pulling the rotor from the hub."},
+        {"key": "prepare-brake-hardware", "title": "Prepare the brake hardware", "instruction": "Clean the hub and new rotor, service the caliper slides with brake-compatible grease, and compress the caliper piston enough for the new pad thickness."},
+        {"key": "install-rotor-pads-and-caliper", "title": "Install rotor, pads, and caliper", "instruction": "Install the cleaned rotor, bracket, new pads, and caliper. Start fasteners by hand and tighten them to the applicable verified torque values before the vehicle is returned to service."},
+        {"key": "reinstall-wheel", "title": "Reinstall the wheel", "instruction": "Reinstall the wheel, lower the vehicle safely, and tighten the wheel fasteners to the applicable verified wheel torque."},
+        {"key": "restore-brake-pedal", "title": "Restore pedal before moving", "instruction": "Pump the brake pedal repeatedly until it is firm before attempting to move the vehicle."},
+        {"key": "low-speed-brake-test", "title": "Perform low-speed brake test", "instruction": "Verify braking at very low speed before a normal road test. Stop if pedal feel or braking behavior is abnormal."}
+      ],
+      "evidence": [
+        {"source_key": "1aauto-forester-front-brakes-2011-2018", "source_class": "repair_reference", "url": "https://www.1aauto.com/how-to-replace-front-brakes-2011-18-subaru-forester/video/51720", "supports": ["applicability", "procedure", "tools", "verification"]},
+        {"source_key": "pauls-forester-front-brakes-2014-2018", "source_class": "repair_reference", "url": "https://www.paulstravelpictures.com/Subaru-Forester-Front-Brake-Pads-Replacement-Guide/", "supports": ["applicability", "procedure", "tools"]}
+      ],
+      "notes": ["Opening the hydraulic circuit is not part of this definition. If hydraulic bleeding becomes necessary, it must be selected as a separate physical bleeding procedure with its own verified evidence."]
+    },
+    {
+      "vehicle_key": "2020-hyundai-tucson-se",
+      "repair_key": "halogen-headlamp-bulb-replacement",
+      "title": "Replace halogen headlamp bulb",
+      "domains": ["lighting_body", "sensor_simple_electrical"],
+      "verification_status": "verified",
+      "applicability": "2020 Hyundai Tucson with halogen headlamp configuration",
+      "requirements": [
+        {"key": "part.headlamp-halogen-bulb.tucson-2020", "category": "part", "name": "Correct same-wattage halogen headlamp bulb", "quantity": 1, "unit": "each", "fulfillment_mode": "replacement_required"},
+        {"key": "equipment.eye-protection", "category": "safety_prerequisite", "name": "Eye protection", "quantity": 1, "unit": "each", "fulfillment_mode": "reusable"}
+      ],
+      "actions": [
+        {"key": "cool-and-secure-vehicle", "title": "Cool and secure the vehicle", "instruction": "Turn the vehicle off, allow the headlamp bulb to cool, open the hood, and keep the vehicle secured against movement."},
+        {"key": "disconnect-negative-battery", "title": "Disconnect 12-volt negative battery cable", "instruction": "Disconnect the negative battery cable before opening the headlamp bulb circuit."},
+        {"key": "open-headlamp-bulb-access", "title": "Open headlamp bulb access", "instruction": "Turn the headlamp bulb cover counterclockwise and remove it, then disconnect the bulb socket connector."},
+        {"key": "remove-halogen-bulb", "title": "Remove the bulb", "instruction": "Release the retaining wire and remove the bulb. Do not touch the glass of the replacement halogen bulb with bare fingers."},
+        {"key": "install-halogen-bulb", "title": "Install the replacement bulb", "instruction": "Install the new bulb, seat and secure the retaining wire, reconnect the socket connector, and reinstall the bulb cover clockwise."},
+        {"key": "reconnect-and-test-light", "title": "Reconnect and test", "instruction": "Reconnect the 12-volt negative battery cable and verify the replacement lamp illuminates normally."}
+      ],
+      "evidence": [
+        {"source_key": "hyundai-2020-tucson-owner-manual-light-bulbs", "source_class": "manufacturer_owner_manual_mirror", "url": "https://www.carmanualsonline.info/hyundai-tucson-ultimate-2020-owners-manual/?srch=bulb", "supports": ["applicability", "procedure", "safety"]},
+        {"source_key": "hyundai-2020-tucson-quick-reference-guide", "source_class": "manufacturer", "url": "https://sweb-owners.hyundaiusa.com/content/dam/hyundai/us/myhyundai/manuals/glovebox-manual/2020/tucson/2020%20Tucson%20Quick%20Reference%20Guide.pdf", "supports": ["model_year_identity", "maintenance_context"]}
+      ],
+      "notes": ["Headlamp assembly aiming is deliberately outside this MVP. This definition is only for bulb replacement where the assembly itself is not removed or disturbed."]
+    },
+    {
+      "vehicle_key": "2020-hyundai-tucson-se",
+      "repair_key": "engine-air-cleaner-filter-replacement",
+      "title": "Replace engine air-cleaner filter",
+      "domains": ["engine_peripheral", "routine_maintenance"],
+      "verification_status": "verified",
+      "applicability": "2020 Hyundai Tucson",
+      "requirements": [
+        {"key": "part.engine-air-filter.tucson-2020", "category": "part", "name": "Compatible engine air-cleaner filter", "quantity": 1, "unit": "each", "fulfillment_mode": "replacement_required"}
+      ],
+      "actions": [
+        {"key": "open-air-cleaner", "title": "Open the air cleaner", "instruction": "Release the air-cleaner cover and move its locking levers to the unlocked position."},
+        {"key": "replace-air-cleaner-filter", "title": "Replace the filter", "instruction": "Remove the old filter without allowing dirt into the intake and install the replacement filter."},
+        {"key": "secure-air-cleaner", "title": "Secure the housing", "instruction": "Reassemble the air-cleaner housing and confirm the cover is firmly installed before running the engine."}
+      ],
+      "evidence": [
+        {"source_key": "hyundai-2020-tucson-owner-manual-air-cleaner", "source_class": "manufacturer_owner_manual_mirror", "url": "https://www.manualslib.com/manual/2373737/Hyundai-Tucson-2020.html", "supports": ["applicability", "procedure", "airflow_sensor_caution"]}
+      ]
+    },
+    {
+      "vehicle_key": "2017-toyota-tacoma-sr5-v6-4wd-double-cab",
+      "repair_key": "rear-shock-absorber-replacement",
+      "title": "Replace rear shock absorbers",
+      "domains": ["suspension_steering"],
+      "verification_status": "candidate",
+      "applicability": "2017 Toyota Tacoma SR5; exact OE suspension configuration still requires final source confirmation before guided publication",
+      "requirements": [
+        {"key": "part.rear-shock-absorber.tacoma-2017-sr5", "category": "part", "name": "Configuration-compatible rear shock absorber", "quantity": 2, "unit": "each", "fulfillment_mode": "replacement_required"},
+        {"key": "equipment.floor-jack", "category": "equipment", "name": "Floor jack", "quantity": 1, "unit": "each", "fulfillment_mode": "reusable"},
+        {"key": "equipment.jack-stands", "category": "equipment", "name": "Jack stands", "quantity": 2, "unit": "each", "fulfillment_mode": "reusable"},
+        {"key": "equipment.wheel-chocks", "category": "safety_prerequisite", "name": "Wheel chocks", "quantity": 2, "unit": "each", "fulfillment_mode": "reusable"}
+      ],
+      "actions": [],
+      "evidence": [
+        {"source_key": "bilstein-2017-tacoma-sr5-rear-fitment", "source_class": "parts_manufacturer_fitment", "url": "https://www.truckspring.com/shock-absorbers/bilstein/5100.aspx?make=Toyota&model=Tacoma&year=2017", "supports": ["sr5_rear_fitment", "mount_type"]},
+        {"source_key": "toyota-2017-tacoma-trd-suspension-instructions", "source_class": "manufacturer_accessory_instruction", "url": "https://www.toyotapartsdeal.com/resources/installation/tpd/18_my17%20tacoma%20trd%20pro%20suspension%20kit%20issb.pdf", "supports": ["generation_rear_shock_physical_layout", "hardware_reuse_context"]}
+      ],
+      "notes": ["Kept candidate because the Toyota accessory instruction is TRD Pro-specific while the reference vehicle is SR5. PartGraph must not infer exact SR5 procedure from shared generation layout."]
+    },
+    {
+      "vehicle_key": "2009-honda-civic-hybrid-sedan",
+      "repair_key": "radiator-replacement-and-coolant-bleed",
+      "title": "Replace radiator and physically bleed cooling system",
+      "domains": ["cooling", "fluids_and_bleeding", "engine_peripheral"],
+      "verification_status": "candidate",
+      "applicability": "2009 Honda Civic Hybrid; exact Hybrid removal procedure not yet sufficiently corroborated",
+      "requirements": [
+        {"key": "part.radiator.19010-rrh-901", "category": "part", "name": "Honda radiator assembly 19010-RRH-901", "quantity": 1, "unit": "each", "fulfillment_mode": "replacement_required"},
+        {"key": "fluid.honda-type-2-coolant", "category": "fluid", "name": "Honda Long-Life Antifreeze/Coolant Type 2 (50/50 premix)", "quantity": null, "unit": "US gal", "fulfillment_mode": "consumed"},
+        {"key": "equipment.coolant-drain-pan", "category": "equipment", "name": "Coolant drain pan", "quantity": 1, "unit": "each", "fulfillment_mode": "reusable"},
+        {"key": "tool.coolant-funnel", "category": "tool", "name": "Cooling-system fill funnel", "quantity": 1, "unit": "each", "fulfillment_mode": "reusable"}
+      ],
+      "actions": [],
+      "evidence": [
+        {"source_key": "honda-2009-civic-hybrid-owner-manual", "source_class": "manufacturer_owner_manual", "url": "https://techinfo.honda.com/rjanisis/pubs/OM/NC0909/NC0909OM.pdf", "supports": ["coolant_type", "coolant_safety"]},
+        {"source_key": "honda-oem-parts-2009-civic-hybrid-cooling", "source_class": "oem_parts_reference", "url": "https://honda.oempartsonline.com/v-2009-honda-civic--hybrid--1-3l-l4-electric-gas/cooling-system--cooling-system", "supports": ["exact_radiator_part_number", "upper_lower_hose_part_numbers"]},
+        {"source_key": "honda-factory-parts-2009-civic-hybrid-cooling", "source_class": "oem_parts_reference", "url": "https://www.hondafactoryparts.com/v-2009-honda-civic--hybrid--1-3l-l4-electric-gas/cooling-system--cooling-system", "supports": ["exact_radiator_part_number", "upper_lower_hose_part_numbers"]},
+        {"source_key": "1aauto-civic-radiator-2006-2011", "source_class": "repair_reference", "url": "https://www.1aauto.com/how-to-replace-radiator-06-11-honda-civic/video/45924", "supports": ["generation_level_physical_procedure", "physical_coolant_bleeding"]}
+      ],
+      "notes": ["The radiator OEM part number and coolant are verified for the Hybrid. The guided removal/install procedure remains unpublished until Hybrid-specific applicability is established; no 1.8L procedure is silently promoted to Hybrid truth."]
+    }
+  ]
+}
