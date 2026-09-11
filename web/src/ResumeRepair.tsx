@@ -48,6 +48,10 @@ function vehicleLabel(snapshot: ResumeSnapshot) {
   return snapshot.vehicle.nickname || [identity.year, identity.make, identity.model, identity.trim].filter(Boolean).join(' ')
 }
 
+function human(value: string): string {
+  return value.replaceAll('_', ' ')
+}
+
 export function ResumeRepairWorkspace({
   onStartRepair,
   onOpenGarage,
@@ -123,7 +127,7 @@ export function ResumeRepairWorkspace({
       await apiRequest(`/api/v1/repair-sessions/${selectedId}/lease/${action}`, { method: 'POST', headers: repairMutationHeaders() })
       await loadSnapshot(selectedId)
     } catch (failure) {
-      setError(formatApiFailure(failure, `Could not ${action === 'acquire' ? 'acquire' : 'take over'} the edit lease.`))
+      setError(formatApiFailure(failure, 'Could not enable editing on this device.'))
     } finally {
       setBusy(false)
     }
@@ -151,32 +155,32 @@ export function ResumeRepairWorkspace({
   return (
     <main className="repair-workspace-shell">
       <header className="workspace-hero repair-hero-row">
-        <div><p className="eyebrow">PARTGRAPH · RESUME</p><h1>Return to the repair exactly where work stopped.</h1><p>Resume prioritizes current state, loose hardware, blockers, recent evidence, and the next verified action instead of making you reconstruct the job from memory.</p></div>
+        <div><p className="eyebrow">PARTGRAPH · REPAIR OVERVIEW</p><h1>Pick up the repair without rebuilding the story in your head.</h1><p>See what changed, what is still out of the vehicle, what needs attention, where hardware is stored, and what verified action comes next.</p></div>
         <button type="button" onClick={onStartRepair}>Start a new repair</button>
       </header>
 
       <section className="repair-panel panel">
         <div className="section-heading-row">
-          <div><p className="eyebrow">REPAIR SESSIONS</p><h2>Choose a repair</h2></div>
+          <div><p className="eyebrow">YOUR REPAIRS</p><h2>Choose a repair</h2></div>
           {sessions.length > 0 && <select aria-label="Repair session" value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>{sessions.map((session) => <option key={session.id} value={session.id}>{session.title} · {session.status}</option>)}</select>}
         </div>
         {loading && <p className="muted">Loading repairs…</p>}
-        {!loading && sessions.length === 0 && <div className="repair-empty"><h2>No repair sessions yet</h2><p>Start from a saved garage vehicle. The new session will then appear here for continuity.</p><div className="repair-button-row"><button type="button" onClick={onStartRepair}>Start repair</button><button type="button" className="secondary" onClick={onOpenGarage}>Open Garage</button></div></div>}
+        {!loading && sessions.length === 0 && <div className="repair-empty"><h2>No repair sessions yet</h2><p>Start from a saved Garage vehicle. The repair will appear here so you can return to it later.</p><div className="repair-button-row"><button type="button" onClick={onStartRepair}>Start repair</button><button type="button" className="secondary" onClick={onOpenGarage}>Open Garage</button></div></div>}
         {error && <div className="workspace-alert workspace-alert--error">{error}</div>}
       </section>
 
       {snapshot && selectedSession && (
         <>
           <section className="repair-panel panel">
-            <div className="section-heading-row"><div><p className="eyebrow">{snapshot.session.status.toUpperCase()} · SEQUENCE {snapshot.session.current_sequence}</p><h2>{snapshot.session.title}</h2><p>{vehicleLabel(snapshot)}</p></div><span className={`status-pill status-pill--${snapshot.lease.can_edit ? 'ok' : 'warn'}`}>{snapshot.lease.can_edit ? 'Editable on this device' : snapshot.lease.status.replaceAll('_', ' ')}</span></div>
+            <div className="section-heading-row"><div><p className="eyebrow">{snapshot.session.status.toUpperCase()}</p><h2>{snapshot.session.title}</h2><p>{vehicleLabel(snapshot)}</p></div><span className={`status-pill status-pill--${snapshot.lease.can_edit ? 'ok' : 'warn'}`}>{snapshot.lease.can_edit ? 'Editing here' : 'View only'}</span></div>
             <div className="repair-button-row">
-              {!snapshot.lease.can_edit && snapshot.lease.status !== 'held_by_other' && <button type="button" disabled={busy} onClick={() => void leaseAction('acquire')}>Acquire edit lease</button>}
-              {!snapshot.lease.can_edit && snapshot.lease.status === 'held_by_other' && <button type="button" disabled={busy} onClick={() => void leaseAction('takeover')}>Take over edit lease</button>}
+              {!snapshot.lease.can_edit && snapshot.lease.status !== 'held_by_other' && <button type="button" disabled={busy} onClick={() => void leaseAction('acquire')}>Edit this repair</button>}
+              {!snapshot.lease.can_edit && snapshot.lease.status === 'held_by_other' && <button type="button" disabled={busy} onClick={() => void leaseAction('takeover')}>Move editing here</button>}
               {snapshot.session.status === 'active' && <button type="button" className="secondary" disabled={busy || !snapshot.lease.can_edit} onClick={() => void mutateSession('pause')}>Pause repair</button>}
               {snapshot.session.status === 'paused' && <button type="button" disabled={busy || !snapshot.lease.can_edit} onClick={() => void mutateSession('resume')}>Resume repair</button>}
               {snapshot.session.status !== 'archived' && <button type="button" className="secondary" disabled={busy || !snapshot.lease.can_edit} onClick={() => void mutateSession('archive')}>Archive repair</button>}
-              <button type="button" onClick={onOpenReadiness}>Open readiness</button>
-              <button type="button" onClick={onOpenGuidance}>Open guided repair</button>
+              <button type="button" onClick={onOpenReadiness}>Check readiness</button>
+              <button type="button" onClick={onOpenGuidance}>Continue guided repair</button>
               <button type="button" className="secondary" onClick={onOpenLog}>Open repair log</button>
             </div>
           </section>
@@ -184,13 +188,14 @@ export function ResumeRepairWorkspace({
           {snapshot.reorientation && (
             <section className="repair-dashboard-grid">
               <article className="repair-panel panel repair-span-2">
-                <p className="eyebrow">CHECKPOINT</p><h2>{snapshot.reorientation.checkpoint.label}</h2><p>Last durable event: {snapshot.reorientation.checkpoint.event_type.replaceAll('_', ' ')} · sequence {snapshot.reorientation.checkpoint.sequence}</p>
+                <p className="eyebrow">WHERE YOU LEFT OFF</p><h2>{snapshot.reorientation.checkpoint.label}</h2><p>{human(snapshot.reorientation.checkpoint.event_type)} · {new Date(snapshot.reorientation.checkpoint.created_at).toLocaleString()}</p>
                 <div className="next-action-card"><strong>Next verified action</strong>{snapshot.reorientation.next_verified_action.status === 'available' ? <span>{snapshot.reorientation.next_verified_action.label}</span> : <span>{snapshot.reorientation.next_verified_action.reason || 'No verified next action is available.'}</span>}</div>
               </article>
-              <article className="repair-panel panel"><p className="eyebrow">REPAIR MEMORY</p><h3>Tracked state</h3><dl className="count-grid"><div><dt>Fasteners</dt><dd>{snapshot.reorientation.counts.fasteners_total}</dd></div><div><dt>Not installed</dt><dd>{snapshot.reorientation.counts.hardware_not_installed}</dd></div><div><dt>Inventory</dt><dd>{snapshot.reorientation.counts.inventory_total}</dd></div><div><dt>Blockers</dt><dd>{snapshot.reorientation.counts.procurement_blockers}</dd></div><div><dt>Observations</dt><dd>{snapshot.reorientation.counts.observations_total}</dd></div><div><dt>Photos</dt><dd>{snapshot.reorientation.counts.photos_total}</dd></div></dl></article>
-              <article className="repair-panel panel"><p className="eyebrow">ATTENTION</p><h3>What still needs attention</h3>{snapshot.reorientation.attention.length === 0 ? <p className="muted">Nothing flagged.</p> : <ul className="repair-list">{snapshot.reorientation.attention.map((item) => <li key={`${item.kind}-${item.id}`}><strong>{item.label}</strong><span>{item.state} · {item.severity}</span>{item.detail && <small>{item.detail}</small>}</li>)}</ul>}</article>
-              <article className="repair-panel panel"><p className="eyebrow">STORAGE</p><h3>Where hardware is stored</h3>{snapshot.reorientation.storage_groups.length === 0 ? <p className="muted">No stored groups.</p> : <ul className="repair-list">{snapshot.reorientation.storage_groups.map((group) => <li key={group.storage_location_id}><strong>{group.label}</strong><span>{group.item_count} item{group.item_count === 1 ? '' : 's'}</span></li>)}</ul>}</article>
-              <article className="repair-panel panel"><p className="eyebrow">RECENT OBSERVATIONS</p><h3>Latest notes</h3>{snapshot.reorientation.recent_observations.length === 0 ? <p className="muted">No observations yet.</p> : <ul className="repair-list">{snapshot.reorientation.recent_observations.map((observation) => <li key={observation.id}><strong>{observation.category.replaceAll('_', ' ')}</strong><span>{observation.text}</span></li>)}</ul>}</article>
+              <article className="repair-panel panel"><p className="eyebrow">PHYSICAL STATE</p><h3>What PartGraph is tracking</h3><dl className="count-grid"><div><dt>Hardware</dt><dd>{snapshot.reorientation.counts.fasteners_total}</dd></div><div><dt>Not installed</dt><dd>{snapshot.reorientation.counts.hardware_not_installed}</dd></div><div><dt>Items needed</dt><dd>{snapshot.reorientation.counts.inventory_total}</dd></div><div><dt>Blockers</dt><dd>{snapshot.reorientation.counts.procurement_blockers}</dd></div><div><dt>Notes</dt><dd>{snapshot.reorientation.counts.observations_total}</dd></div><div><dt>Photos</dt><dd>{snapshot.reorientation.counts.photos_total}</dd></div></dl></article>
+              <article className="repair-panel panel"><p className="eyebrow">ATTENTION</p><h3>What still needs attention</h3>{snapshot.reorientation.attention.length === 0 ? <p className="muted">Nothing flagged.</p> : <ul className="repair-list">{snapshot.reorientation.attention.map((item) => <li key={`${item.kind}-${item.id}`}><strong>{item.label}</strong><span>{human(item.state)}</span>{item.detail && <small>{item.detail}</small>}</li>)}</ul>}</article>
+              <article className="repair-panel panel"><p className="eyebrow">STORAGE</p><h3>Where removed hardware is stored</h3>{snapshot.reorientation.storage_groups.length === 0 ? <p className="muted">No stored groups.</p> : <ul className="repair-list">{snapshot.reorientation.storage_groups.map((group) => <li key={group.storage_location_id}><strong>{group.label}</strong><span>{group.item_count} item{group.item_count === 1 ? '' : 's'}</span></li>)}</ul>}</article>
+              <article className="repair-panel panel"><p className="eyebrow">RECENT NOTES</p><h3>Latest observations</h3>{snapshot.reorientation.recent_observations.length === 0 ? <p className="muted">No observations yet.</p> : <ul className="repair-list">{snapshot.reorientation.recent_observations.map((observation) => <li key={observation.id}><strong>{human(observation.category)}</strong><span>{observation.text}</span></li>)}</ul>}</article>
+              <article className="repair-panel panel repair-span-2"><p className="eyebrow">RECENT PHOTOS</p><h3>Visual repair memory</h3>{snapshot.reorientation.recent_evidence.length === 0 ? <p className="muted">No photos saved yet.</p> : <div className="resume-photo-strip">{snapshot.reorientation.recent_evidence.map((photo) => <figure key={photo.id}><img src={photo.content_url} alt={`${human(photo.purpose)} repair`} loading="lazy" /><figcaption>{human(photo.purpose)}</figcaption></figure>)}</div>}</article>
             </section>
           )}
         </>
