@@ -1,14 +1,25 @@
+import os
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..errors import ErrorCode, PartGraphError
+from ..identity.auth.models import User
 from .credentials import ProviderCredentialError, protect_provider_credential
 from .models import OperatorAuditEvent, ProviderConnection
-from .schemas import OperatorAuditRead, ProviderCreate, ProviderRead, ProviderUpdate
+from .schemas import (
+    OperatorAuditRead,
+    PreviewOperatorBootstrapStatus,
+    ProviderCreate,
+    ProviderRead,
+    ProviderUpdate,
+)
+
+_PREVIEW_BOOTSTRAP_BRANCH = "partgraph-mvp-consolidation"
+_PREVIEW_BOOTSTRAP_LOCK = 731_947_211
 
 
 def _credential_storage(provider: ProviderConnection) -> str | None:
@@ -50,7 +61,27 @@ def serialize_audit_event(event: OperatorAuditEvent) -> OperatorAuditRead:
     )
 
 
-def _record_audit(
+def _record_audit_event(
+    session: AsyncSession,
+    *,
+    actor_id: UUID,
+    action: str,
+    target_type: str,
+    target_id: UUID,
+    event_data: dict[str, object] | None = None,
+) -> None:
+    session.add(
+        OperatorAuditEvent(
+            actor_user_id=actor_id,
+            action=action,
+            target_type=target_type,
+            target_id=target_id,
+            event_data=event_data or {},
+        )
+    )
+
+
+def _record_provider_audit(
     session: AsyncSession,
     *,
     actor_id: UUID,
@@ -58,15 +89,71 @@ def _record_audit(
     provider: ProviderConnection,
     event_data: dict[str, object] | None = None,
 ) -> None:
-    session.add(
-        OperatorAuditEvent(
-            actor_user_id=actor_id,
-            action=action,
-            target_type="provider",
-            target_id=provider.id,
-            event_data=event_data or {},
-        )
+    _record_audit_event(
+        session,
+        actor_id=actor_id,
+        action=action,
+        target_type="provider",
+        target_id=provider.id,
+        event_data=event_data,
     )
+
+
+def _preview_bootstrap_environment() -> bool:
+    return (
+        os.getenv("VERCEL") == "1"
+        and os.getenv("VERCEL_ENV") == "preview"
+        and os.getenv("VERCEL_GIT_COMMIT_REF") == _PREVIEW_BOOTSTRAP_BRANCH
+    )
+
+
+async def preview_operator_bootstrap_status(
+    session: AsyncSession,
+) -> PreviewOperatorBootstrapStatus:
+    if not _preview_bootstrap_environment():
+        return PreviewOperatorBootstrapStatus(available=False)
+    operator_id = await session.scalar(
+        select(User.id).where(User.role == "operator_admin").limit(1)
+    )
+    return PreviewOperatorBootstrapStatus(available=operator_id is None)
+
+
+async def bootstrap_preview_operator(
+    session: AsyncSession,
+    *,
+    user: User,
+) -> None:
+    if not _preview_bootstrap_environment():
+        raise PartGraphError(
+            code=ErrorCode.REQUEST_NOT_FOUND,
+            message="Preview operator bootstrap is unavailable.",
+            status_code=404,
+        )
+
+    await session.execute(text("SELECT pg_advisory_xact_lock(:lock_id)"), {"lock_id": _PREVIEW_BOOTSTRAP_LOCK})
+    if user.role == "operator_admin":
+        return
+
+    operator_id = await session.scalar(
+        select(User.id).where(User.role == "operator_admin").limit(1)
+    )
+    if operator_id is not None:
+        raise PartGraphError(
+            code=ErrorCode.REQUEST_CONFLICT,
+            message="A preview operator has already been established.",
+            status_code=409,
+        )
+
+    user.role = "operator_admin"
+    _record_audit_event(
+        session,
+        actor_id=user.id,
+        action="preview_operator_bootstrap",
+        target_type="user",
+        target_id=user.id,
+        event_data={"environment": "preview", "branch": _PREVIEW_BOOTSTRAP_BRANCH},
+    )
+    await session.flush()
 
 
 def _clear_encrypted_credential(provider: ProviderConnection) -> None:
@@ -149,7 +236,7 @@ async def create_provider(
             status_code=409,
         ) from exc
 
-    _record_audit(
+    _record_provider_audit(
         session,
         actor_id=actor_id,
         action="provider_created",
@@ -209,7 +296,7 @@ async def update_provider(
 
     non_state_fields = sorted(field for field in changes if field != "enabled")
     if non_state_fields:
-        _record_audit(
+        _record_provider_audit(
             session,
             actor_id=actor_id,
             action="provider_updated",
@@ -220,7 +307,7 @@ async def update_provider(
             },
         )
     if "enabled" in changes and provider.enabled != previous_enabled:
-        _record_audit(
+        _record_provider_audit(
             session,
             actor_id=actor_id,
             action="provider_enabled" if provider.enabled else "provider_disabled",
@@ -229,7 +316,7 @@ async def update_provider(
         )
     if credential_changed:
         storage = _credential_storage(provider)
-        _record_audit(
+        _record_provider_audit(
             session,
             actor_id=actor_id,
             action="provider_credential_saved" if storage is not None else "provider_credential_removed",
