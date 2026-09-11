@@ -31,6 +31,7 @@ from .repair_experience.router import router as repair_session_router
 logger = logging.getLogger("partgraph.api")
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 AUTH_BODY_LIMIT_BYTES = 16 * 1024
+OPERATOR_BODY_LIMIT_BYTES = 64 * 1024
 USER_VEHICLE_BODY_LIMIT_BYTES = 32 * 1024
 REPAIR_SESSION_BODY_LIMIT_BYTES = 16 * 1024
 PHOTO_MULTIPART_OVERHEAD_BYTES = 256 * 1024
@@ -91,6 +92,8 @@ def _request_body_limit(request: Request) -> tuple[int, str] | None:
         return None
     if request.url.path.startswith("/api/v1/auth/"):
         return AUTH_BODY_LIMIT_BYTES, "Authentication request payload is too large."
+    if request.url.path.startswith("/api/v1/operator"):
+        return OPERATOR_BODY_LIMIT_BYTES, "Operator request payload is too large."
     if request.url.path.startswith("/api/v1/user-vehicles"):
         return USER_VEHICLE_BODY_LIMIT_BYTES, "Vehicle request payload is too large."
     if request.url.path.startswith("/api/v1/repair-sessions"):
