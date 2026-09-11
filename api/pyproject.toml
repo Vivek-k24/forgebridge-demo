@@ -28,7 +28,7 @@ include = ["partgraph*"]
 
 [tool.ruff]
 target-version = "py314"
-line-length = 101
+line-length = 120
 
 [tool.ruff.lint]
 select = ["B", "E", "F", "I", "UP"]
