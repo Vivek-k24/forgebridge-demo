@@ -147,6 +147,41 @@
   text-transform: capitalize;
 }
 
+.admin-credential-editor {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.8rem;
+  border: 1px solid rgba(100, 116, 139, 0.16);
+  border-radius: 10px;
+  background: rgba(100, 116, 139, 0.05);
+}
+
+.admin-credential-editor label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.admin-credential-editor label > span {
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.admin-credential-editor input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.admin-credential-editor > small {
+  font-size: 0.72rem;
+  opacity: 0.65;
+}
+
+.admin-credential-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .admin-provider-form form {
   display: grid;
   gap: 0.85rem;
