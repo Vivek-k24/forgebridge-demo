@@ -182,6 +182,25 @@ Untrusted until promoted:
 
 Collector services must not have direct canonical publishing authority.
 
+### 4.4 Provider and connector boundary
+
+PartGraph treats data sources as replaceable backend connectors. Product behavior must not depend on a provider name, URL or credential being embedded in frontend or application logic.
+
+For the MVP:
+- canonical vehicle and repair data may be served from PartGraph database tables or approved backend data files
+- those local sources must enter through the same provider/connector boundary used by future external integrations
+- public external services may be called only from backend adapters with bounded timeouts and explicit fallback behavior
+- no provider secret belongs in the web bundle or vehicle-data records
+
+For the production product:
+- commercial vehicle-data providers, AI providers and manufacturer integrations are registered and configured through an authenticated operator/admin surface
+- provider capabilities, endpoints, status and non-secret metadata may be stored in configuration tables
+- API keys and credentials are referenced from protected server-side secret storage; they are not stored in source code, frontend bundles or ordinary canonical/private vehicle rows
+- provider adapters can write immutable raw/candidate evidence into staging but never publish directly into canonical truth
+- AI providers may assist extraction, normalization and explanation but have no direct canonical-publish authority and no deterministic next-step authority
+
+This design allows MVP file/database sources to be replaced by licensed APIs later without rewriting the Garage, repair-session or guided-repair engines.
+
 ## 5. Authorization and isolation
 
 Defense in depth:
