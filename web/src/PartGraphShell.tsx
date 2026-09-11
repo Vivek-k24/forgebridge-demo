@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react'
 import { GarageWorkspace } from './GarageWorkspace'
 import { GuidedRepairWorkspace } from './GuidedRepair'
+import { HomeWorkspace } from './HomeWorkspace'
 import { RepairLogWorkspace } from './RepairLog'
 import { RepairMemoryWorkspace } from './RepairMemory'
 import { ResumeRepairWorkspace } from './ResumeRepair'
 import { StartRepairWorkspace } from './StartRepair'
 import './partgraph-shell.css'
 
-type PageKey = 'garage' | 'start' | 'resume' | 'readiness' | 'guidance' | 'log'
-type NavGroup = 'vehicle' | 'repair'
+type PageKey = 'home' | 'garage' | 'start' | 'resume' | 'readiness' | 'guidance' | 'log'
+type NavGroup = 'overview' | 'vehicle' | 'repair'
 
 type NavItem = {
   key: PageKey
@@ -17,6 +18,7 @@ type NavItem = {
 }
 
 const NAV_ITEMS: NavItem[] = [
+  { key: 'home', label: 'Home', group: 'overview' },
   { key: 'garage', label: 'Garage', group: 'vehicle' },
   { key: 'start', label: 'Start repair', group: 'repair' },
   { key: 'resume', label: 'Resume repair', group: 'repair' },
@@ -26,6 +28,7 @@ const NAV_ITEMS: NavItem[] = [
 ]
 
 const GROUP_LABELS: Record<NavGroup, string> = {
+  overview: 'Workspace',
   vehicle: 'Vehicle',
   repair: 'Repair',
 }
@@ -34,7 +37,7 @@ const PAGE_KEYS = new Set<PageKey>(NAV_ITEMS.map((item) => item.key))
 
 function pageFromHash(): PageKey {
   const value = window.location.hash.replace(/^#\/?/, '') as PageKey
-  return PAGE_KEYS.has(value) ? value : 'resume'
+  return PAGE_KEYS.has(value) ? value : 'home'
 }
 
 export default function PartGraphShell() {
@@ -74,7 +77,18 @@ export default function PartGraphShell() {
   )
 
   let content: React.ReactNode
-  if (page === 'garage') {
+  if (page === 'home') {
+    content = (
+      <HomeWorkspace
+        onOpenGarage={() => navigate('garage')}
+        onStartRepair={() => {
+          setPreferredVehicleId(null)
+          navigate('start')
+        }}
+        onResumeRepair={() => navigate('resume')}
+      />
+    )
+  } else if (page === 'garage') {
     content = (
       <GarageWorkspace
         initialMarket="US"
@@ -98,7 +112,12 @@ export default function PartGraphShell() {
   } else if (page === 'readiness') {
     content = <RepairMemoryWorkspace />
   } else if (page === 'guidance') {
-    content = <GuidedRepairWorkspace onOpenReadiness={() => navigate('readiness')} onStartRepair={() => navigate('start')} />
+    content = (
+      <GuidedRepairWorkspace
+        onOpenReadiness={() => navigate('readiness')}
+        onStartRepair={() => navigate('start')}
+      />
+    )
   } else if (page === 'log') {
     content = <RepairLogWorkspace />
   } else {
@@ -127,6 +146,7 @@ export default function PartGraphShell() {
           </div>
         </div>
         <nav className="partgraph-nav">
+          {navigation('overview')}
           {navigation('vehicle')}
           {navigation('repair')}
         </nav>
