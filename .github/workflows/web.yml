@@ -23,8 +23,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: Web test + security + container smoke
+  build:
+    name: Web build + security + container smoke
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -113,7 +113,7 @@ jobs:
   publish:
     name: Publish Web image
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: test
+    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
