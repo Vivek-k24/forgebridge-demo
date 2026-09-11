@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { AccountSettingsWorkspace } from './AccountSettings'
 import { GarageWorkspace } from './GarageWorkspace'
 import { GuidedRepairWorkspace } from './GuidedRepair'
 import { HomeWorkspace } from './HomeWorkspace'
@@ -8,7 +9,7 @@ import { ResumeRepairWorkspace } from './ResumeRepair'
 import { StartRepairWorkspace } from './StartRepair'
 import './partgraph-shell.css'
 
-type PageKey = 'home' | 'garage' | 'start' | 'resume' | 'readiness' | 'guidance' | 'log'
+type PageKey = 'home' | 'settings' | 'garage' | 'start' | 'resume' | 'readiness' | 'guidance' | 'log'
 type NavGroup = 'overview' | 'vehicle' | 'repair'
 
 type NavItem = {
@@ -19,6 +20,7 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { key: 'home', label: 'Home', group: 'overview' },
+  { key: 'settings', label: 'Settings', group: 'overview' },
   { key: 'garage', label: 'Garage', group: 'vehicle' },
   { key: 'start', label: 'Start repair', group: 'repair' },
   { key: 'resume', label: 'Resume repair', group: 'repair' },
@@ -97,6 +99,8 @@ export default function PartGraphShell() {
         onResumeRepair={() => navigate('resume')}
       />
     )
+  } else if (page === 'settings') {
+    content = <AccountSettingsWorkspace />
   } else if (page === 'garage') {
     content = (
       <GarageWorkspace
