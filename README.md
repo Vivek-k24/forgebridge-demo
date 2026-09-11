@@ -114,4 +114,6 @@ For implementation sequencing and project planning, see:
 
 ## License
 
-No license has been declared for this repository unless a separate license file is added.
+Copyright © 2026 Vivek-k24. All rights reserved.
+
+No license is granted to use, copy, modify, distribute, sublicense, or commercially exploit the PartGraph source code or project data without explicit permission from the copyright holder.
