@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { activeRepairSessionId, preferredRepairSessionId, setActiveRepairSessionId } from './active-repair'
 import { apiRequest, formatApiFailure } from './api'
-import { repairMutationHeaders } from './repair-client'
+import { repairDeviceId, repairMutationHeaders } from './repair-client'
 import './repair-workspaces.css'
 
 type RepairSession = { id: string; title: string; status: 'active' | 'paused' | 'archived'; current_sequence: number }
@@ -16,6 +16,26 @@ type EventPage = { items: EventItem[]; next_after_sequence: number | null }
 
 const OBSERVATION_CATEGORIES = ['general', 'condition', 'damage', 'part_number', 'before', 'after', 'removed_part', 'current_step'] as const
 const PHOTO_PURPOSES = ['current_step', 'removed_part', 'fastener', 'damage', 'part_number', 'before', 'after', 'general'] as const
+
+async function loadEventHistory(sessionId: string): Promise<EventItem[]> {
+  const items: EventItem[] = []
+  let afterSequence: number | null = null
+
+  while (true) {
+    const cursor = afterSequence === null ? '' : `&after_sequence=${afterSequence}`
+    const page = await apiRequest<EventPage>(
+      `/api/v1/repair-sessions/${sessionId}/events?limit=100${cursor}`,
+      undefined,
+      { retryIdempotent: true },
+    )
+    items.push(...page.items)
+    if (page.next_after_sequence === null) return items
+    if (page.next_after_sequence === afterSequence) {
+      throw new Error('Repair event pagination did not advance.')
+    }
+    afterSequence = page.next_after_sequence
+  }
+}
 
 export function RepairLogWorkspace() {
   const [sessions, setSessions] = useState<RepairSession[]>([])
@@ -66,19 +86,23 @@ export function RepairLogWorkspace() {
     setError(null)
     try {
       const [resumeResult, storageResult, fastenerResult, observationResult, photoResult, eventResult] = await Promise.all([
-        apiRequest<ResumeSnapshot>(`/api/v1/repair-sessions/${sessionId}/resume`, undefined, { retryIdempotent: true }),
+        apiRequest<ResumeSnapshot>(
+          `/api/v1/repair-sessions/${sessionId}/resume`,
+          { headers: { 'X-PartGraph-Device-ID': repairDeviceId() } },
+          { retryIdempotent: true },
+        ),
         apiRequest<StorageLocation[]>(`/api/v1/repair-sessions/${sessionId}/storage-locations`, undefined, { retryIdempotent: true }),
         apiRequest<Fastener[]>(`/api/v1/repair-sessions/${sessionId}/fasteners`, undefined, { retryIdempotent: true }),
         apiRequest<Observation[]>(`/api/v1/repair-sessions/${sessionId}/observations`, undefined, { retryIdempotent: true }),
         apiRequest<Photo[]>(`/api/v1/repair-sessions/${sessionId}/photos`, undefined, { retryIdempotent: true }),
-        apiRequest<EventPage>(`/api/v1/repair-sessions/${sessionId}/events?limit=100`, undefined, { retryIdempotent: true }),
+        loadEventHistory(sessionId),
       ])
       setResume(resumeResult)
       setStorage(storageResult)
       setFasteners(fastenerResult)
       setObservations(observationResult)
       setPhotos(photoResult)
-      setEvents(eventResult.items)
+      setEvents(eventResult)
       setTargetStorageId((current) => storageResult.some((location) => location.id === current) ? current : storageResult[0]?.id || '')
       setActiveRepairSessionId(sessionId)
     } catch (failure) {
