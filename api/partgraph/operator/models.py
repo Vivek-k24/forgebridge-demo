@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, String, Uuid, func
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, LargeBinary, SmallInteger, String, Uuid, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -18,6 +18,17 @@ class ProviderConnection(Base):
         CheckConstraint(
             "provider_key ~ '^[a-z0-9][a-z0-9_-]{1,95}$'",
             name="ck_provider_connections_key_format",
+        ),
+        CheckConstraint(
+            "(credential_ciphertext IS NULL AND credential_nonce IS NULL AND credential_key_version IS NULL "
+            "AND credential_fingerprint IS NULL AND credential_hint IS NULL) OR "
+            "(credential_ciphertext IS NOT NULL AND credential_nonce IS NOT NULL AND credential_key_version IS NOT NULL "
+            "AND credential_fingerprint IS NOT NULL AND credential_hint IS NOT NULL)",
+            name="ck_provider_connections_encrypted_credential_complete",
+        ),
+        CheckConstraint(
+            "credential_key_version IS NULL OR credential_key_version >= 1",
+            name="ck_provider_connections_credential_key_version",
         ),
     )
 
@@ -48,6 +59,11 @@ class ProviderConnection(Base):
         server_default="[]",
     )
     secret_ref: Mapped[str | None] = mapped_column(String(255))
+    credential_ciphertext: Mapped[bytes | None] = mapped_column(LargeBinary)
+    credential_nonce: Mapped[bytes | None] = mapped_column(LargeBinary)
+    credential_key_version: Mapped[int | None] = mapped_column(SmallInteger)
+    credential_fingerprint: Mapped[str | None] = mapped_column(String(64))
+    credential_hint: Mapped[str | None] = mapped_column(String(16))
     notes: Mapped[str | None] = mapped_column(String(500))
     created_by: Mapped[UUID] = mapped_column(
         Uuid(as_uuid=True),
