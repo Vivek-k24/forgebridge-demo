@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { AccountSettingsWorkspace } from './AccountSettings'
+import { AdminWorkspace } from './AdminWorkspace'
+import { apiRequest } from './api'
 import { GarageWorkspace } from './GarageWorkspace'
 import { GuidedRepairWorkspace } from './GuidedRepair'
 import { HomeWorkspace } from './HomeWorkspace'
@@ -9,13 +11,20 @@ import { ResumeRepairWorkspace } from './ResumeRepair'
 import { StartRepairWorkspace } from './StartRepair'
 import './partgraph-shell.css'
 
-type PageKey = 'home' | 'settings' | 'garage' | 'start' | 'resume' | 'readiness' | 'guidance' | 'log'
+type PageKey = 'home' | 'settings' | 'admin' | 'garage' | 'start' | 'resume' | 'readiness' | 'guidance' | 'log'
 type NavGroup = 'overview' | 'vehicle' | 'repair'
+type UserRole = 'owner' | 'contributor' | 'reviewer' | 'curator' | 'operator_admin'
 
 type NavItem = {
   key: PageKey
   label: string
   group: NavGroup
+}
+
+type AuthResult = {
+  user: {
+    role: UserRole
+  }
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -44,7 +53,7 @@ const GROUP_LABELS: Record<NavGroup, string> = {
   repair: 'Repair',
 }
 
-const PAGE_KEYS = new Set<PageKey>(NAV_ITEMS.map((item) => item.key))
+const PAGE_KEYS = new Set<PageKey>([...NAV_ITEMS.map((item) => item.key), 'admin'])
 
 function pageFromHash(): PageKey {
   const value = window.location.hash.replace(/^#\/?/, '') as PageKey
@@ -54,11 +63,24 @@ function pageFromHash(): PageKey {
 export default function PartGraphShell() {
   const [page, setPage] = useState<PageKey>(pageFromHash)
   const [preferredVehicleId, setPreferredVehicleId] = useState<string | null>(null)
+  const [isOperatorAdmin, setIsOperatorAdmin] = useState(false)
 
   useEffect(() => {
     const onHashChange = () => setPage(pageFromHash())
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    apiRequest<AuthResult>('/api/v1/auth/me')
+      .then((result) => {
+        if (active) setIsOperatorAdmin(result.user.role === 'operator_admin')
+      })
+      .catch(() => {
+        if (active) setIsOperatorAdmin(false)
+      })
+    return () => { active = false }
   }, [])
 
   function navigate(next: PageKey) {
@@ -84,6 +106,16 @@ export default function PartGraphShell() {
           </button>
         )
       })}
+      {group === 'overview' && isOperatorAdmin && (
+        <button
+          type="button"
+          className={page === 'admin' ? 'partgraph-nav-item partgraph-nav-item--active' : 'partgraph-nav-item'}
+          aria-current={page === 'admin' ? 'page' : undefined}
+          onClick={() => navigate('admin')}
+        >
+          <span>Admin</span>
+        </button>
+      )}
     </>
   )
 
@@ -101,6 +133,8 @@ export default function PartGraphShell() {
     )
   } else if (page === 'settings') {
     content = <AccountSettingsWorkspace />
+  } else if (page === 'admin') {
+    content = <AdminWorkspace />
   } else if (page === 'garage') {
     content = (
       <GarageWorkspace
