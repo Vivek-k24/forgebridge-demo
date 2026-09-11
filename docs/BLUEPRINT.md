@@ -1,6 +1,6 @@
 # PartGraph System Blueprint
 
-Status: Canonical architecture draft for consolidation  
+Status: Canonical architecture contract  
 Roadmap: `docs/ROADMAP.md`
 
 ## 1. Product definition
@@ -22,7 +22,19 @@ The first deep validation configuration is the 2009 Honda Civic Hybrid.
 
 ### 2.1 Code contains behavior; data contains automotive facts
 
-Do not hard-code real year, make, model, trim, engine, transmission, drivetrain, OEM part number, vehicle-specific torque/capacity/specification or repair-procedure facts in application logic, frontend logic, tests or CI logic.
+Do not hard-code real:
+- year
+- make
+- model
+- trim
+- engine
+- transmission
+- drivetrain
+- OEM part number
+- vehicle-specific torque/capacity/specification
+- repair procedure fact
+
+in application logic, frontend logic, tests or CI logic.
 
 Reference vehicles are loaded through fixtures/data records.
 
@@ -30,11 +42,26 @@ Reference vehicles are loaded through fixtures/data records.
 
 PartGraph must never infer a mechanical fact merely because an answer is expected.
 
-A fact may be verified, staged, needs-review, conflicting, rejected, superseded or missing. Missing/conflicting truth is a valid runtime result.
+A fact may be:
+- verified
+- staged
+- needs review
+- conflicting
+- rejected
+- superseded
+- missing
+
+Missing/conflicting truth is a valid runtime result.
 
 ### 2.3 Deterministic execution
 
-Once a repair definition is verified, deterministic code chooses readiness, blockers, next action, prerequisites, downstream required operations and completion state.
+Once a repair definition is verified, deterministic code chooses:
+- readiness
+- blockers
+- next action
+- prerequisites
+- downstream required operations
+- completion state
 
 An LLM may explain or propose candidate knowledge. It does not choose the next repair step and cannot directly write canonical truth.
 
@@ -112,7 +139,21 @@ No external collector or LLM is required on the normal guided-repair execution p
 
 Shared across users and read-only to ordinary user workflows.
 
-Includes vehicle configurations, systems/assemblies, components/parts, fitment, specifications, sources, evidence, mechanical claims, repair definitions, operations, requirements, procedure actions/dependencies, downstream dependencies and capability policies.
+Includes:
+- vehicle configurations
+- systems/assemblies
+- components/parts
+- fitment
+- specifications
+- sources
+- evidence
+- mechanical claims
+- repair definitions
+- operations
+- requirements
+- procedure actions/dependencies
+- downstream dependencies
+- capability policies
 
 ### 4.2 Private owner state
 
@@ -165,7 +206,11 @@ PostgreSQL FORCE ROW LEVEL SECURITY
 Owner-private rows
 ```
 
-Every new private table must contain an owner key or derive ownership through a protected relation, use RLS or an equally strong database-enforced boundary, be queried through authenticated API services, and receive adversarial cross-owner tests.
+Every new private table must:
+1. contain an owner key or derive ownership through a protected relation
+2. use RLS or an equally strong database-enforced boundary
+3. be queried through authenticated API services
+4. receive adversarial cross-owner tests
 
 ### Human RBAC
 
@@ -226,7 +271,18 @@ Rules:
 
 Error codes are an API contract and must come from a central registry.
 
-Families include REQUEST_*, AUTH_*, VEHICLE_*, VIN_*, USER_VEHICLE_*, REPAIR_SESSION_*, storage/memory errors, KNOWLEDGE_*, PROCEDURE_*, RBAC_* and OFFLINE_/SYNC_*.
+Examples of families:
+- REQUEST_*
+- AUTH_*
+- VEHICLE_*
+- VIN_*
+- USER_VEHICLE_*
+- REPAIR_SESSION_*
+- STORAGE_/FASTENER_/INVENTORY_/OBSERVATION_/PHOTO_*
+- KNOWLEDGE_*
+- PROCEDURE_*
+- RBAC_*
+- OFFLINE_/SYNC_*
 
 ## 7. Timeout, retry and recovery contract
 
@@ -245,9 +301,11 @@ External services receive smaller dedicated timeout budgets. Their timeout must 
 
 ### Retry rules
 
-Safe/idempotent reads may use bounded automatic retries.
+Safe/idempotent reads:
+- bounded automatic retry is allowed
 
-Mutations must never be blindly retried after an ambiguous timeout.
+Mutations:
+- never blindly retry an ambiguous write
 
 Required write-timeout flow:
 
@@ -290,20 +348,33 @@ Private cached state:
 
 ### Offline UI requirements
 
-Always show OFFLINE state, last successful sync time and repair-definition/version identifier.
+Always show:
+- OFFLINE state
+- last successful sync time
+- repair-definition/version identifier
 
-Never invent newer canonical knowledge, report unsynced server writes as committed, or bypass a safety boundary.
+Never:
+- invent newer canonical knowledge
+- report unsynced server writes as committed
+- bypass a safety boundary
 
 ### Offline writes
 
 Initial MVP offline mode should be read-safe.
 
-If offline mutation is enabled later, it requires local immutable event journaling, local event IDs/idempotency keys, server base sequence, device identity, conflict detection, deterministic reconciliation and explicit user resolution where automatic merge is unsafe.
+If offline mutation is enabled later, it requires:
+- local immutable event journal
+- local event IDs/idempotency keys
+- server base sequence
+- device identity
+- conflict detection
+- deterministic reconciliation
+- explicit user resolution where automatic merge is unsafe
 
 ## 9. The 18-domain automotive data model
 
 ### Domain 1 — Vehicle identity and exact configuration
-market, model year, make, model, trim/series, generation/platform, body style, engine, transmission, drivetrain and VIN-derived observations.
+market, model year, make, model, trim/series, generation/platform, body style, engine, transmission, drivetrain, VIN-derived observations.
 
 ### Domain 2 — Systems, subsystems, assemblies and subassemblies
 physical hierarchy and placement.
@@ -359,63 +430,94 @@ all private state needed to execute and resume a real repair.
 ## 10. Software modules
 
 ### Application composition
-`partgraph.main`: application construction, middleware, routers, health/version endpoints.
+`partgraph.main`
+- application construction
+- middleware
+- routers
+- health/version endpoints
 
-`partgraph.database`: engine/session configuration and transaction infrastructure.
+`partgraph.database`
+- engine/session configuration
+- transaction infrastructure
 
-`partgraph.orm_registry`: complete ORM metadata registration.
+`partgraph.orm_registry`
+- complete ORM metadata registration
 
 ### Identity
-`partgraph.identity.auth`: registration/login/session, password hashing, CSRF/origin, owner context and human-RBAC integration.
+`partgraph.identity.auth`
+- registration/login/session
+- password hashing
+- CSRF/origin
+- owner context
+- human RBAC integration
 
-`partgraph.identity.vehicle`: canonical identity, normalization, exact resolution and data-driven selectable coverage.
+`partgraph.identity.vehicle`
+- canonical identity
+- normalization
+- exact resolution
+- data-driven selectable coverage
 
-`partgraph.identity.user_vehicle`: private Garage vehicle, VIN encryption/cache, archive and duplicate protection.
+`partgraph.identity.user_vehicle`
+- private Garage vehicle
+- VIN encryption/cache
+- archive/duplicate protection
 
 ### Knowledge
-Target modules:
-- sources
-- staging
-- evidence
-- claims
-- vehicle_structure
-- parts
-- fitment
-- interchange
-- relationships
-- hardware
-- requirements
-- repair
-- procedure
-- downstream
-- diagnostics
-- electrical
-- specifications
-- materials
-- capability
+`partgraph.knowledge.sources`
+`partgraph.knowledge.staging`
+`partgraph.knowledge.evidence`
+`partgraph.knowledge.claims`
+`partgraph.knowledge.vehicle_structure`
+`partgraph.knowledge.parts`
+`partgraph.knowledge.fitment`
+`partgraph.knowledge.interchange`
+`partgraph.knowledge.relationships`
+`partgraph.knowledge.hardware`
+`partgraph.knowledge.requirements`
+`partgraph.knowledge.repair`
+`partgraph.knowledge.procedure`
+`partgraph.knowledge.downstream`
+`partgraph.knowledge.diagnostics`
+`partgraph.knowledge.electrical`
+`partgraph.knowledge.specifications`
+`partgraph.knowledge.materials`
+`partgraph.knowledge.capability`
 
 ### Repair experience
-Target modules:
-- sessions
-- events
-- projection
-- lease
-- readiness
-- inventory
-- progress
-- memory
-- media
-- reorientation
-- offline
+`partgraph.repair_experience.sessions`
+`partgraph.repair_experience.events`
+`partgraph.repair_experience.projection`
+`partgraph.repair_experience.lease`
+`partgraph.repair_experience.readiness`
+`partgraph.repair_experience.inventory`
+`partgraph.repair_experience.progress`
+`partgraph.repair_experience.memory`
+`partgraph.repair_experience.media`
+`partgraph.repair_experience.reorientation`
+`partgraph.repair_experience.offline`
 
 ### Assistance
-`partgraph.assistance` explains deterministic canonical state and has no authority to change repair truth.
+`partgraph.assistance`
+- deterministic explanation of canonical state
+- no authority to change repair truth
 
 ### Intelligence
-`partgraph.intelligence` is an optional provider-neutral AI gateway for extraction/proposal/explanation assistance with invocation audit. It cannot directly write canonical truth or select next repair actions.
+`partgraph.intelligence`
+- optional provider-neutral AI gateway
+- extraction/proposal/explanation assistance
+- invocation audit
+- no direct canonical writes
+- no next-step authority
 
 ### Data curation/operator path
-source acquisition -> immutable raw storage -> extraction -> candidate generation -> review -> conflict resolution -> promotion -> repair materialization.
+- source acquisition
+- immutable raw storage
+- extraction
+- candidate generation
+- review
+- conflict resolution
+- promotion
+- repair materialization
 
 ## 11. Core user workflows
 
