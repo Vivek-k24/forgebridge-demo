@@ -272,26 +272,59 @@ Required gates:
 
 ## 4. Branch consolidation policy
 
-Do not merge historical branches wholesale.
+Do not merge historical branches wholesale. The following ledger was re-verified against the live repository on 2026-09-11.
 
-Selective-source branches:
+### Keep
+
+- `main` — production/default line
+- `partgraph-mvp-consolidation` — active consolidation implementation line
+
+### Keep temporarily for selective salvage
+
+- `partgraph-hosted-parity-hardening` — durable private photo-storage implementation still to port
+- `partgraph-local-catalog-workbench` — newest surviving workbench/identity-catalog line; useful generic acquisition/schema ideas must be reviewed selectively
+- `partgraph-raw-catalog-collectors` — generic staging/collector ideas must be reviewed selectively; old source-policy assumptions are not automatically inherited
+- `partgraph-reference-fleet-mvp` — 16 commits on top of the local-catalog-workbench line; preserve external reference-fleet data and generic support-boundary ideas before retirement
+
+### Ready to retire
+
+These branches are either already fully represented in newer history, are duplicate temporary refs, or contain experiments explicitly rejected/superseded by the current architecture:
+
+- `noop-ignore`
+- `partgraph-canada-model-supplement`
+- `partgraph-catalog-coverage-dashboard-backend`
 - `partgraph-fix-garage-selects-vin-fallback`
-- `partgraph-hosted-parity-hardening`
-- `partgraph-reference-fleet-mvp`
-- `partgraph-raw-catalog-collectors`
-- `partgraph-local-catalog-workbench`
+- `partgraph-fix-light-card-contrast`
+- `partgraph-github-pages-preview`
+- `partgraph-local-acceptance-harness`
+- `partgraph-local-acceptance-harness-v2`
+- `partgraph-platform-ci-cd`
+- `partgraph-production-acceptance-run`
+- `partgraph-reference-civic-hybrid-profile`
+- `partgraph-repair-session-foundation`
+- `partgraph-restore-garage-theme-fix-vin`
+- `partgraph-review-gemini-workbook`
+- `partgraph-trim-catalog-probe`
+- `partgraph-trim-catalog-provider`
+- `partgraph-ui-blueprint`
+- `partgraph-verify-workbook-exact-selection`
+- `tmp-test-ignore2`
+- `tmp-test-ignore3`
+- `tmp-test-ignore4`
+- `tmp-test-ignore5`
+- `tmp-test-ignore6`
+- `tmp-test-ignore7`
 
-Expected retirement after useful code/data is accounted for:
-- old acceptance-harness branches
-- old UI/theme branches
-- old Pages/deployment probes
-- old catalog dashboard branches
-- one-time production probes
-- CarsXE trim branches
-- workbook review branches after datasets are preserved
-- temporary `tmp-test-ignore*` branches
+Verification notes:
+- `partgraph-local-acceptance-harness`, `partgraph-local-acceptance-harness-v2`, `partgraph-fix-light-card-contrast`, `partgraph-github-pages-preview`, `partgraph-platform-ci-cd`, `partgraph-reference-civic-hybrid-profile`, `partgraph-repair-session-foundation`, and `partgraph-verify-workbook-exact-selection` are zero commits ahead of current `main`.
+- `noop-ignore` and all `tmp-test-ignore2` through `tmp-test-ignore7` resolve to the same old workbench commit; that commit is fully contained in `partgraph-local-catalog-workbench`, which is retained.
+- `partgraph-catalog-coverage-dashboard-backend` contains catalog-coverage files already present byte-for-byte on `main`.
+- `partgraph-production-acceptance-run` is obsolete acceptance-test infrastructure and is retired under the decision to rebuild tests after the functional MVP.
+- `partgraph-review-gemini-workbook` contains only an obsolete review workflow; the workbook/data asset is already preserved independently.
+- `partgraph-trim-catalog-provider` and its probe line are retired with the CarsXE path.
+- the Garage/VIN fallback branch has been selectively accounted for: verified canonical matching and decode-only fallback are retained in consolidation; the path that would save VIN-derived identity without protected VIN storage is intentionally not adopted because protected persistence must fail closed without crypto keys.
 
-No branch is deleted until its unique commits/data are accounted for.
+No branch in the temporary-salvage set is retired until its useful generic code/data is explicitly accounted for.
 
 ## 5. No-deviation rule
 
