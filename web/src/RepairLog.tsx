@@ -22,8 +22,8 @@ async function loadEventHistory(sessionId: string): Promise<EventItem[]> {
   let afterSequence: number | null = null
 
   while (true) {
-    const cursor = afterSequence === null ? '' : `&after_sequence=${afterSequence}`
-    const page = await apiRequest<EventPage>(
+    const cursor: string = afterSequence === null ? '' : `&after_sequence=${afterSequence}`
+    const page: EventPage = await apiRequest<EventPage>(
       `/api/v1/repair-sessions/${sessionId}/events?limit=100${cursor}`,
       undefined,
       { retryIdempotent: true },
@@ -279,7 +279,7 @@ export function RepairLogWorkspace() {
 
           <section className="repair-panel panel repair-span-2">
             <p className="eyebrow">FASTENERS & SMALL PARTS</p><h2>Physical state</h2>
-            <form className="compact-form compact-form--wide" onSubmit={(event) => void createFastener(event)}><select disabled={!canEdit} value={fastenerKind} onChange={(event) => setFastenerKind(event.target.value as 'fastener' | 'small_part')}><option value="fastener">Fastener</option><option value="small_part">Small part</option></select><input disabled={!canEdit} value={fastenerLabel} placeholder="Upper support 10 mm bolt" onChange={(event) => setFastenerLabel(event.target.value)} /><input disabled={!canEdit} value={fastenerOrigin} placeholder="Origin / position" onChange={(event) => setFastenerOrigin(event.target.value)} /><button disabled={!canEdit || busy}>Record removed item</button></form>
+            <form className="compact-form compact-form--wide" onSubmit={(event) => void createFastener(event)}><select disabled={!canEdit} value={fastenerKind} onChange={(event) => setFastenerKind(event.target.value as 'fastener' | 'small_part')}><option value="fastener">Fastener</option><option value="small_part">Small part</option></select><input disabled={!canEdit} value={fastenerLabel} placeholder="Fastener label" onChange={(event) => setFastenerLabel(event.target.value)} /><input disabled={!canEdit} value={fastenerOrigin} placeholder="Origin / position" onChange={(event) => setFastenerOrigin(event.target.value)} /><button disabled={!canEdit || busy}>Record removed item</button></form>
             {fasteners.length === 0 ? <p className="muted">No hardware recorded yet.</p> : <div className="hardware-grid">{fasteners.map((fastener) => <article key={fastener.id} className="hardware-card"><div><strong>{fastener.label}</strong><span>{fastener.kind.replace('_', ' ')} · {fastener.physical_state}</span>{fastener.origin && <small>{fastener.origin}</small>}</div><div className="repair-button-row"><button type="button" className="secondary" disabled={!canEdit || busy} onClick={() => void updateFastener(fastener, 'removed')}>Removed</button><button type="button" className="secondary" disabled={!canEdit || busy || !targetStorageId} onClick={() => void updateFastener(fastener, 'stored')}>Stored</button><button type="button" disabled={!canEdit || busy} onClick={() => void updateFastener(fastener, 'installed')}>Installed</button><button type="button" className="secondary" disabled={!canEdit || busy} onClick={() => void updateFastener(fastener, 'missing')}>Missing</button></div></article>)}</div>}
           </section>
 
