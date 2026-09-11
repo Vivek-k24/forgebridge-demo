@@ -95,7 +95,8 @@ class OperatorAuditEvent(Base):
     __table_args__ = (
         CheckConstraint(
             "action IN ('provider_created', 'provider_updated', 'provider_enabled', "
-            "'provider_disabled', 'provider_credential_saved', 'provider_credential_removed')",
+            "'provider_disabled', 'provider_credential_saved', 'provider_credential_removed', "
+            "'preview_operator_bootstrap')",
             name="ck_operator_audit_events_action",
         ),
     )
