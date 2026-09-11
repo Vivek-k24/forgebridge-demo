@@ -13,6 +13,7 @@ OperatorAuditAction = Literal[
     "provider_disabled",
     "provider_credential_saved",
     "provider_credential_removed",
+    "preview_operator_bootstrap",
 ]
 PROVIDER_KEY_PATTERN = r"^[a-z0-9][a-z0-9_-]{1,95}$"
 
@@ -174,3 +175,7 @@ class OperatorAuditRead(BaseModel):
     target_id: UUID
     event_data: dict[str, object]
     created_at: datetime
+
+
+class PreviewOperatorBootstrapStatus(BaseModel):
+    available: bool
