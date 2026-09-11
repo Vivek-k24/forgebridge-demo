@@ -2,9 +2,10 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, SecretStr, field_validator, model_validator
 
 ProviderKind = Literal["internal_data", "vehicle_data", "ai", "manufacturer"]
+ProviderCredentialStorage = Literal["encrypted_database", "external_reference"]
 PROVIDER_KEY_PATTERN = r"^[a-z0-9][a-z0-9_-]{1,95}$"
 
 
@@ -22,6 +23,7 @@ class ProviderCreate(BaseModel):
     base_url: str | None = Field(default=None, max_length=1024)
     enabled: bool = False
     capabilities: list[str] = Field(default_factory=list, max_length=32)
+    credential: SecretStr | None = Field(default=None)
     secret_ref: str | None = Field(default=None, max_length=255)
     notes: str | None = Field(default=None, max_length=500)
 
@@ -48,6 +50,16 @@ class ProviderCreate(BaseModel):
     def clean_optional_text(cls, value: str | None) -> str | None:
         return _clean_optional(value)
 
+    @field_validator("credential")
+    @classmethod
+    def validate_credential(cls, value: SecretStr | None) -> SecretStr | None:
+        if value is None:
+            return None
+        raw = value.get_secret_value()
+        if not 4 <= len(raw) <= 8192:
+            raise ValueError("credential must be 4-8192 characters")
+        return value
+
     @field_validator("capabilities")
     @classmethod
     def clean_capabilities(cls, values: list[str]) -> list[str]:
@@ -60,12 +72,20 @@ class ProviderCreate(BaseModel):
                 cleaned.append(item)
         return cleaned
 
+    @model_validator(mode="after")
+    def one_credential_source(self):
+        if self.credential is not None and self.secret_ref is not None:
+            raise ValueError("credential and secret_ref cannot both be supplied")
+        return self
+
 
 class ProviderUpdate(BaseModel):
     display_name: str | None = Field(default=None, min_length=1, max_length=160)
     base_url: str | None = Field(default=None, max_length=1024)
     enabled: bool | None = None
     capabilities: list[str] | None = Field(default=None, max_length=32)
+    credential: SecretStr | None = None
+    clear_credential: bool = False
     secret_ref: str | None = Field(default=None, max_length=255)
     notes: str | None = Field(default=None, max_length=500)
 
@@ -89,6 +109,16 @@ class ProviderUpdate(BaseModel):
     def clean_optional_text(cls, value: str | None) -> str | None:
         return _clean_optional(value)
 
+    @field_validator("credential")
+    @classmethod
+    def validate_credential(cls, value: SecretStr | None) -> SecretStr | None:
+        if value is None:
+            return None
+        raw = value.get_secret_value()
+        if not 4 <= len(raw) <= 8192:
+            raise ValueError("credential must be 4-8192 characters")
+        return value
+
     @field_validator("capabilities")
     @classmethod
     def clean_capabilities(cls, values: list[str] | None) -> list[str] | None:
@@ -103,6 +133,14 @@ class ProviderUpdate(BaseModel):
                 cleaned.append(item)
         return cleaned
 
+    @model_validator(mode="after")
+    def valid_credential_change(self):
+        if self.credential is not None and self.clear_credential:
+            raise ValueError("credential and clear_credential cannot both be supplied")
+        if self.credential is not None and self.secret_ref is not None:
+            raise ValueError("credential and secret_ref cannot both be supplied")
+        return self
+
 
 class ProviderRead(BaseModel):
     id: UUID
@@ -113,6 +151,8 @@ class ProviderRead(BaseModel):
     enabled: bool
     capabilities: list[str]
     secret_configured: bool
+    secret_storage: ProviderCredentialStorage | None
+    secret_hint: str | None
     notes: str | None
     created_at: datetime
     updated_at: datetime
