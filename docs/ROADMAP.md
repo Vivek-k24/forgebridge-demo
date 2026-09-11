@@ -1,8 +1,7 @@
 # PartGraph MVP Roadmap
 
-Status: Active implementation plan  
-Architecture authority: `docs/BLUEPRINT.md`  
-Branch: `partgraph-mvp-consolidation`
+Status: Canonical implementation plan  
+Architecture authority: `docs/BLUEPRINT.md`
 
 ## 1. Definition of done
 
@@ -66,7 +65,7 @@ Major gaps:
 
 Goal: one coherent implementation line before new automotive data work.
 
-1. Work only from `partgraph-mvp-consolidation`.
+1. Work from a single consolidation line.
 2. Replace stale documentation with `ROADMAP.md` and `BLUEPRINT.md`.
 3. Preserve all spreadsheets/JSON/CSV/database data assets.
 4. Remove obsolete narrative docs, old architectural instructions and obsolete prototypes.
@@ -81,7 +80,7 @@ Exit gate:
 - no useful code remains stranded on an old branch
 - no stale documentation competes with the Blueprint
 - data assets are preserved
-- main can later receive one coherent consolidation PR
+- main can receive one coherent consolidation result
 
 ### Phase 1 — Correct existing behavioral defects
 
@@ -123,7 +122,12 @@ Network loss cannot make PartGraph guess, lose the user's place, or falsely repo
 2. Preserve collector staging-only privilege.
 3. Preserve transaction-local owner context.
 4. Extend FORCE RLS to every new private table.
-5. Define human roles: owner/user, contributor, reviewer, curator, operator/admin.
+5. Define human roles:
+   - owner/user
+   - contributor
+   - reviewer
+   - curator
+   - operator/admin
 6. Enforce roles in API services.
 7. Enforce database privileges where practical.
 8. Do not expose operator workbench functionality before RBAC is present.
@@ -201,7 +205,22 @@ Rules:
 
 Use the 2009 Honda Civic Hybrid as the deepest first validation configuration.
 
-Build enough canonical coverage to exercise identity, systems/assemblies, parts and hardware, tools, fluids/materials, specifications, repair requirements, procedures, readiness, blockers, downstream operations, observations/photos, pause/resume, capability boundaries and completion.
+Build enough canonical coverage to exercise:
+- identity
+- systems/assemblies
+- parts and hardware
+- tools
+- fluids/materials
+- specifications
+- repair requirements
+- procedures
+- readiness
+- blockers
+- downstream operations
+- observations/photos
+- pause/resume
+- capability boundaries
+- completion
 
 Exit gate:
 Representative repairs work start-to-finish without vehicle-specific code changes.
@@ -272,8 +291,19 @@ No branch is deleted until its unique commits/data are accounted for.
 
 ## 5. No-deviation rule
 
-`docs/BLUEPRINT.md` defines the architecture. This file defines implementation sequence.
+`docs/BLUEPRINT.md` defines the architecture.  
+This file defines implementation sequence.
 
 A bug may change task detail. It does not automatically change architecture.
 
-Any change to ownership model, canonical-vs-private data boundary, source authority, offline authority, repair completion semantics, safety/capability boundary, RBAC model or deterministic repair execution requires an explicit architecture decision before implementation.
+Any change to:
+- ownership model
+- canonical-vs-private data boundary
+- source authority
+- offline authority
+- repair completion semantics
+- safety/capability boundary
+- RBAC model
+- deterministic repair execution
+
+requires an explicit architecture decision before implementation.
