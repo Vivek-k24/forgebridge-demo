@@ -1,18 +1,68 @@
-from fastapi import APIRouter
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, status
 
 from ..errors import ErrorEnvelope
-from ..identity.auth.dependencies import CurrentUserDep
+from ..identity.auth.dependencies import AuthSessionDep, CurrentUserDep, require_csrf
 from ..identity.auth.roles import require_role
 from ..identity.auth.schemas import AdminAccessRead
+from .schemas import ProviderCreate, ProviderRead, ProviderUpdate
+from .service import create_provider, list_providers, update_provider
 
 router = APIRouter(
     prefix="/api/v1/operator",
     tags=["Operator"],
     responses={401: {"model": ErrorEnvelope}, 403: {"model": ErrorEnvelope}},
 )
+CsrfDep = Depends(require_csrf)
+
+
+def _operator(user: CurrentUserDep):
+    return require_role(user, {"operator_admin"})
 
 
 @router.get("/access", response_model=AdminAccessRead)
 async def access(user: CurrentUserDep) -> AdminAccessRead:
-    require_role(user, {"operator_admin"})
+    _operator(user)
     return AdminAccessRead()
+
+
+@router.get("/providers", response_model=list[ProviderRead])
+async def providers(user: CurrentUserDep, session: AuthSessionDep) -> list[ProviderRead]:
+    _operator(user)
+    return await list_providers(session)
+
+
+@router.post(
+    "/providers",
+    response_model=ProviderRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[CsrfDep],
+)
+async def add_provider(
+    payload: ProviderCreate,
+    user: CurrentUserDep,
+    session: AuthSessionDep,
+) -> ProviderRead:
+    operator = _operator(user)
+    return await create_provider(session, actor_id=operator.id, payload=payload)
+
+
+@router.patch(
+    "/providers/{provider_id}",
+    response_model=ProviderRead,
+    dependencies=[CsrfDep],
+)
+async def change_provider(
+    provider_id: UUID,
+    payload: ProviderUpdate,
+    user: CurrentUserDep,
+    session: AuthSessionDep,
+) -> ProviderRead:
+    operator = _operator(user)
+    return await update_provider(
+        session,
+        actor_id=operator.id,
+        provider_id=provider_id,
+        payload=payload,
+    )
