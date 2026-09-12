@@ -105,16 +105,31 @@ def _engine_oil_rows() -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
     for _, (formulation, grades) in ENGINE_OIL_GRADES.items():
         formulation_search = formulation.lower().replace("-", " ")
+        high_mileage_base = (
+            formulation_search.removeprefix("high mileage ")
+            if formulation_search.startswith("high mileage ")
+            else None
+        )
         for grade in grades:
             compact_grade = grade.replace("-", "").lower()
+            aliases = [
+                f"{formulation_search} {compact_grade}",
+                f"{compact_grade} {formulation_search}",
+            ]
+            if high_mileage_base is not None:
+                aliases.extend(
+                    [
+                        f"high mileage {compact_grade}",
+                        f"{high_mileage_base} high mileage {compact_grade}",
+                    ]
+                )
             rows.append(
                 _row(
                     "engine-oil",
                     f"{formulation} engine oil SAE {grade}",
                     (
                         f"motor oil engine lubricant SAE {grade} {compact_grade} "
-                        f"{formulation_search} {formulation_search} {compact_grade} "
-                        f"{compact_grade} {formulation_search}"
+                        f"{formulation_search} {' '.join(aliases)}"
                     ),
                     "oil",
                 )
