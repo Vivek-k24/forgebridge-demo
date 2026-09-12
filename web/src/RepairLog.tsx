@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { activeRepairSessionId, preferredRepairSessionId, setActiveRepairSessionId } from './active-repair'
 import { apiRequest, formatApiFailure } from './api'
-import { repairDeviceId, repairMutationHeaders } from './repair-client'
+import { recoverableRepairMutation, repairDeviceId, repairMutationHeaders } from './repair-client'
 import './repair-workspaces.css'
 
 type RepairSession = { id: string; title: string; status: 'active' | 'paused' | 'archived'; current_sequence: number }
@@ -151,11 +151,15 @@ export function RepairLogWorkspace() {
     setBusy(true)
     setError(null)
     try {
-      await apiRequest(`/api/v1/repair-sessions/${selectedId}/storage-locations`, {
-        method: 'POST',
-        headers: repairMutationHeaders({ json: true }),
-        body: JSON.stringify({ label: storageLabel.trim(), notes: storageNotes.trim() || undefined }),
-      })
+      await recoverableRepairMutation(
+        selectedId,
+        `/api/v1/repair-sessions/${selectedId}/storage-locations`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ label: storageLabel.trim(), notes: storageNotes.trim() || undefined }),
+        },
+        { json: true, prefix: 'storage_location' },
+      )
       setStorageLabel('')
       setStorageNotes('')
       await loadMemory(selectedId)
@@ -172,11 +176,15 @@ export function RepairLogWorkspace() {
     setBusy(true)
     setError(null)
     try {
-      await apiRequest(`/api/v1/repair-sessions/${selectedId}/fasteners`, {
-        method: 'POST',
-        headers: repairMutationHeaders({ json: true }),
-        body: JSON.stringify({ kind: fastenerKind, label: fastenerLabel.trim(), origin: fastenerOrigin.trim() || undefined, physical_state: 'removed' }),
-      })
+      await recoverableRepairMutation(
+        selectedId,
+        `/api/v1/repair-sessions/${selectedId}/fasteners`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ kind: fastenerKind, label: fastenerLabel.trim(), origin: fastenerOrigin.trim() || undefined, physical_state: 'removed' }),
+        },
+        { json: true, prefix: 'fastener_record' },
+      )
       setFastenerLabel('')
       setFastenerOrigin('')
       await loadMemory(selectedId)
@@ -197,11 +205,15 @@ export function RepairLogWorkspace() {
     setBusy(true)
     setError(null)
     try {
-      await apiRequest(`/api/v1/repair-sessions/${selectedId}/fasteners/${fastener.id}`, {
-        method: 'PATCH',
-        headers: repairMutationHeaders({ json: true }),
-        body: JSON.stringify({ physical_state: state, storage_location_id: storageId }),
-      })
+      await recoverableRepairMutation(
+        selectedId,
+        `/api/v1/repair-sessions/${selectedId}/fasteners/${fastener.id}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ physical_state: state, storage_location_id: storageId }),
+        },
+        { json: true, prefix: 'fastener_state' },
+      )
       await loadMemory(selectedId)
     } catch (failure) {
       setError(formatApiFailure(failure, 'Could not update hardware state.'))
@@ -216,11 +228,15 @@ export function RepairLogWorkspace() {
     setBusy(true)
     setError(null)
     try {
-      await apiRequest(`/api/v1/repair-sessions/${selectedId}/observations`, {
-        method: 'POST',
-        headers: repairMutationHeaders({ json: true }),
-        body: JSON.stringify({ category: observationCategory, text: observationText.trim() }),
-      })
+      await recoverableRepairMutation(
+        selectedId,
+        `/api/v1/repair-sessions/${selectedId}/observations`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ category: observationCategory, text: observationText.trim() }),
+        },
+        { json: true, prefix: 'observation' },
+      )
       setObservationText('')
       await loadMemory(selectedId)
     } catch (failure) {
@@ -239,7 +255,12 @@ export function RepairLogWorkspace() {
     setBusy(true)
     setError(null)
     try {
-      await apiRequest(`/api/v1/repair-sessions/${selectedId}/photos`, { method: 'POST', headers: repairMutationHeaders(), body })
+      await recoverableRepairMutation(
+        selectedId,
+        `/api/v1/repair-sessions/${selectedId}/photos`,
+        { method: 'POST', body },
+        { prefix: 'photo_add' },
+      )
       setPhotoFile(null)
       await loadMemory(selectedId)
     } catch (failure) {
@@ -254,7 +275,12 @@ export function RepairLogWorkspace() {
     setBusy(true)
     setError(null)
     try {
-      await apiRequest(`/api/v1/repair-sessions/${selectedId}/photos/${photoId}`, { method: 'DELETE', headers: repairMutationHeaders() })
+      await recoverableRepairMutation(
+        selectedId,
+        `/api/v1/repair-sessions/${selectedId}/photos/${photoId}`,
+        { method: 'DELETE' },
+        { prefix: 'photo_delete' },
+      )
       await loadMemory(selectedId)
     } catch (failure) {
       setError(formatApiFailure(failure, 'Could not remove this photo.'))
