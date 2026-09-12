@@ -63,11 +63,17 @@ jobs:
       - name: Audit Python dependencies
         run: pip-audit --skip-editable --progress-spinner off
 
-      - name: Lint API and migrations
-        run: ruff check api/partgraph api/migrations api/tests/test_provider_credentials.py
+      - name: Lint API, migrations, and security tests
+        run: >-
+          ruff check api/partgraph api/migrations
+          api/tests/test_provider_credentials.py
+          api/tests/test_operator_preview_bootstrap.py
 
       - name: Test provider credential encryption
         run: python -m unittest discover -s api/tests -p 'test_provider_credentials.py'
+
+      - name: Test preview operator bootstrap guardrails
+        run: python -m unittest discover -s api/tests -p 'test_operator_preview_bootstrap.py'
 
       - name: Apply database migrations
         env:
