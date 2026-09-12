@@ -4,7 +4,7 @@ from collections.abc import Sequence
 
 from alembic import op
 
-revision: str = "0025_preview_operator_bootstrap_audit"
+revision: str = "0025_preview_bootstrap"
 down_revision: str | None = "0024_operator_audit"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
