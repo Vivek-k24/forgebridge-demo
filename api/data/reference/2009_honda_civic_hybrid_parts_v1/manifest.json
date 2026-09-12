@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2009-honda-civic-hybrid-oem-parts-v1",
+  "vehicle": {
+    "vehicle_configuration_id": "7feb13e9-bca0-5d8b-b701-f0260cce5da1",
+    "market": "US",
+    "year": 2009,
+    "make": "Honda",
+    "model": "CIVIC",
+    "trim": "HYBRID",
+    "body_style": "Sedan",
+    "doors": 4,
+    "engine": "1.3L I4 HYBRID",
+    "transmission": "CVT",
+    "drivetrain": "FWD"
+  },
+  "review": {
+    "status": "approved_for_mvp_reference",
+    "reviewed_on": "2026-09-12",
+    "reviewed_by": "project_owner_manual_verification",
+    "note": "Project owner manually verified the collected OEM part numbers side by side with the source catalog list and approved them for PartGraph reference data."
+  },
+  "sources": [
+    {"key":"hpn_radiator_denso","source_class":"oem_parts","url":"https://www.hondapartsnow.com/parts-list/2009-honda-civic--4dr_mx_hybrid-ka_cvt/electrical_exhaust_heater_fuel/radiator_denso.html"},
+    {"key":"hpn_radiator_hose_reserve","source_class":"oem_parts","url":"https://www.hondapartsnow.com/parts-list/2009-honda-civic--4dr_mx_hybrid-ka_cvt/electrical_exhaust_heater_fuel/radiator_hose_reserve_tank.html"},
+    {"key":"hpn_water_pump","source_class":"oem_parts","url":"https://www.hondapartsnow.com/parts-list/2009-honda-civic--4dr_mx_hybrid-ka_cvt/engine/water_pump.html"},
+    {"key":"hpn_water_valve","source_class":"oem_parts","url":"https://www.hondapartsnow.com/parts-list/2009-honda-civic--4dr_mx_hybrid-ka_cvt/electrical_exhaust_heater_fuel/water_valve.html"},
+    {"key":"hpn_ac_compressor","source_class":"oem_parts","url":"https://www.hondapartsnow.com/parts-list/2009-honda-civic--4dr_mx_hybrid-ka_cvt/body_air_conditioning/a_c_compressor.html"},
+    {"key":"hpn_ac_condenser","source_class":"oem_parts","url":"https://www.hondapartsnow.com/parts-list/2009-honda-civic--4dr_mx_hybrid-ka_cvt/body_air_conditioning/a_c_condenser.html"},
+    {"key":"hpn_ac_hoses","source_class":"oem_parts","url":"https://www.hondapartsnow.com/parts-list/2009-honda-civic--4dr_mx_hybrid-ka_cvt/body_air_conditioning/a_c_hoses_pipes.html"},
+    {"key":"hpn_heater_unit","source_class":"oem_parts","url":"https://www.hondapartsnow.com/parts-list/2009-honda-civic--4dr_mx_hybrid-ka_cvt/electrical_exhaust_heater_fuel/heater_unit.html"},
+    {"key":"hpn_heater_blower","source_class":"oem_parts","url":"https://www.hondapartsnow.com/parts-list/2009-honda-civic--4dr_mx_hybrid-ka_cvt/electrical_exhaust_heater_fuel/heater_blower.html"},
+    {"key":"hpn_ac_sensor","source_class":"oem_parts","url":"https://www.hondapartsnow.com/parts-list/2009-honda-civic--4dr_mx_hybrid-ka_cvt/body_air_conditioning/a_c_sensor.html"},
+    {"key":"hpn_auto_ac_control","source_class":"oem_parts","url":"https://www.hondapartsnow.com/parts-list/2009-honda-civic--4dr_mx_hybrid-ka_cvt/electrical_exhaust_heater_fuel/auto_air_conditioner_control.html"},
+    {"key":"oemparts_air_intake","source_class":"oem_parts","url":"https://honda.oempartsonline.com/v-2009-honda-civic--hybrid-l--1-3l-l4-electric-gas/air-and-fuel-delivery--hardware-fasteners-and-fittings"},
+    {"key":"hpn_front_brake","source_class":"oem_parts","url":"https://www.hondapartsnow.com/parts-list/2009-honda-civic--4dr_mx_hybrid-ka_cvt/chassis/front_brake.html"},
+    {"key":"hpn_rear_brake","source_class":"oem_parts","url":"https://www.hondapartsnow.com/parts-list/2009-honda-civic--4dr_mx_hybrid_navi-ka_cvt/chassis/rear_brake_disk.html"},
+    {"key":"hpn_brake_lines","source_class":"oem_parts","url":"https://www.hondapartsnow.com/parts-list/2009-honda-civic--4dr_mx_hybrid-ka_cvt/chassis/brake_lines_vsa.html"},
+    {"key":"hpn_brake_master","source_class":"oem_parts","url":"https://www.hondapartsnow.com/parts-list/2009-honda-civic--4dr_mx_hybrid-ka_cvt/chassis/brake_master_cylinder_master_power.html"},
+    {"key":"hpn_brake_power_unit","source_class":"oem_parts","url":"https://www.hondapartsnow.com/parts-list/2009-honda-civic--4dr_mx_hybrid-ka_cvt/chassis/brake_power_unit.html"},
+    {"key":"hpn_vsa_modulator","source_class":"oem_parts","url":"https://www.hondapartsnow.com/parts-list/2009-honda-civic--4dr_mx_hybrid-ka_cvt/chassis/vsa_modulator.html"},
+    {"key":"hpn_front_shock","source_class":"oem_parts","url":"https://www.hondapartsnow.com/parts-list/2009-honda-civic--4dr_mx_hybrid-ka_cvt/chassis/front_shock_absorber.html"},
+    {"key":"hpn_knuckle","source_class":"oem_parts","url":"https://www.hondapartsnow.com/parts-list/2009-honda-civic--4dr_mx_hybrid-ka_cvt/chassis/knuckle.html"},
+    {"key":"hpn_rear_shock","source_class":"oem_parts","url":"https://www.hondapartsnow.com/parts-list/2009-honda-civic--4dr_mx_hybrid-ka_cvt/chassis/rear_shock_absorber.html"},
+    {"key":"honda_parts_direct_rear_knuckle","source_class":"oem_parts","url":"https://www.hondacarpartsdirect.com/oem-parts/honda-suspension-knuckle-52215snaa50"}
+  ],
+  "exclusions": [{"oem_part_numbers":["52210-SNC-J00","52215-SNC-J00"],"reason":"GX/rear-drum knuckles; not applicable to the rear-disc 2009 Civic Hybrid configuration."}],
+  "notes": [
+    "19010-RRH-901 is the radiator assembly anchor requested by the project owner.",
+    "79961-SNC-A41 is the separate electric heater water pump; it is not the engine water pump 19200-RMX-003.",
+    "Control/electronic HVAC and VSA components are cataloged as physical parts only; their presence does not make unsupported computer/service-tool procedures DIY-supported.",
+    "Superseded numbers are preserved as interchange/supersession observations rather than duplicate current parts."
+  ],
+  "component_files": {
+    "cooling": {"path":"cooling.json","count":58},
+    "hvac": {"path":"hvac.json","count":69},
+    "air_intake": {"path":"air_intake.json","count":18},
+    "brakes": {"path":"brakes.json","count":65},
+    "suspension": {"path":"suspension.json","count":57}
+  }
+}
