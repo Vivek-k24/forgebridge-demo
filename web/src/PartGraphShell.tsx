@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { AccountSettingsWorkspace } from './AccountSettings'
 import { AdminWorkspace } from './AdminWorkspace'
 import { apiRequest } from './api'
+import { EquipmentInventoryWorkspace } from './EquipmentInventory'
 import { GarageRepairContext } from './GarageRepairContext'
 import { GarageWorkspace } from './GarageWorkspace'
 import { GuidedRepairWorkspace } from './GuidedRepair'
@@ -13,7 +14,7 @@ import { ResumeRepairWorkspace } from './ResumeRepair'
 import { StartRepairWorkspace } from './StartRepair'
 import './partgraph-shell.css'
 
-type PageKey = 'home' | 'settings' | 'admin' | 'garage' | 'start' | 'resume' | 'readiness' | 'guidance' | 'completion' | 'log'
+type PageKey = 'home' | 'settings' | 'admin' | 'garage' | 'inventory' | 'start' | 'resume' | 'readiness' | 'guidance' | 'completion' | 'log'
 type UserRole = 'owner' | 'contributor' | 'reviewer' | 'curator' | 'operator_admin'
 type NavItem = { key: PageKey; label: string }
 type AuthResult = { user: { role: UserRole } }
@@ -21,7 +22,7 @@ type PreviewOperatorBootstrapStatus = { available: boolean }
 
 const PRIMARY_NAV_ITEMS: NavItem[] = [
   { key: 'garage', label: 'Garage' },
-  { key: 'readiness', label: 'Inventory' },
+  { key: 'inventory', label: 'Inventory' },
   { key: 'log', label: 'Repair log' },
 ]
 
@@ -41,6 +42,7 @@ const PAGE_KEYS = new Set<PageKey>([
   'settings',
   'admin',
   'garage',
+  'inventory',
   'start',
   'resume',
   'readiness',
@@ -129,6 +131,8 @@ export default function PartGraphShell() {
         <GarageWorkspace initialMarket="US" onStartRepair={(vehicleId) => { setPreferredVehicleId(vehicleId); navigate('start') }} />
       </>
     )
+  } else if (page === 'inventory') {
+    content = <EquipmentInventoryWorkspace />
   } else if (page === 'start') {
     content = <StartRepairWorkspace preferredVehicleId={preferredVehicleId ?? ''} onOpenGarage={() => navigate('garage')} onCreated={() => { setPreferredVehicleId(null); navigate('resume') }} />
   } else if (page === 'readiness') {

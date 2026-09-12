@@ -5,6 +5,7 @@ single bootstrap point for model-registration side effects; callers should not
 maintain independent lists of domain-model imports.
 """
 
+import partgraph.equipment.models  # noqa: F401
 import partgraph.identity.auth.models  # noqa: F401
 import partgraph.identity.user_vehicle.models  # noqa: F401
 import partgraph.identity.vehicle.models  # noqa: F401

@@ -19,6 +19,7 @@ import partgraph.orm_registry  # noqa: F401
 from .assistance.router import router as assistance_router
 from .config import settings
 from .database import database_readiness, engine
+from .equipment.router import router as equipment_router
 from .errors import ErrorCode, PartGraphError, error_response
 from .identity.auth.router import router as auth_router
 from .identity.user_vehicle.router import router as user_vehicle_router
@@ -85,6 +86,7 @@ app.include_router(auth_router)
 app.include_router(operator_router)
 app.include_router(vehicle_router)
 app.include_router(user_vehicle_router)
+app.include_router(equipment_router)
 app.include_router(catalog_coverage_router)
 app.include_router(repair_session_router)
 app.include_router(repair_recovery_router)
@@ -182,6 +184,7 @@ def _finish_response(request: Request, response: Response, duration_ms: float) -
             "/api/v1/account",
             "/api/v1/operator",
             "/api/v1/user-vehicles",
+            "/api/v1/equipment",
             "/api/v1/repair-sessions",
             "/api/v1/repair-recovery",
         )
