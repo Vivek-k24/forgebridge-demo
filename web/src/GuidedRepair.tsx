@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { activeRepairSessionId, preferredRepairSessionId, setActiveRepairSessionId } from './active-repair'
 import { AssistanceExplanation } from './AssistanceExplanation'
 import { ApiFailure, apiRequest, CSRF_HEADERS, formatApiFailure } from './api'
-import { newIdempotencyKey, partGraphDeviceId } from './device'
+import { partGraphDeviceId } from './device'
+import { recoverableRepairMutation } from './repair-client'
 import './guided-repair.css'
 
 type SessionStatus = 'active' | 'paused' | 'archived'
@@ -109,11 +110,10 @@ const EXPECTED_BOUNDARIES: Record<string, Omit<Boundary, 'code' | 'detail'>> = {
   },
 }
 
-function requestHeaders(deviceId: string, idempotencyKey?: string): Record<string, string> {
+function requestHeaders(deviceId: string): Record<string, string> {
   return {
     ...CSRF_HEADERS,
     'X-PartGraph-Device-ID': deviceId,
-    ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
   }
 }
 
@@ -277,16 +277,14 @@ export function GuidedRepairWorkspace({
       const payload = progressState === 'blocked'
         ? { progress_state: progressState, blocker_code: 'owner_reported_problem' }
         : { progress_state: progressState }
-      await apiRequest<Guidance>(
+      await recoverableRepairMutation<Guidance>(
+        selectedId,
         `/api/v1/repair-sessions/${selectedId}/guidance/actions/${action.action_id}`,
         {
           method: 'PUT',
-          headers: {
-            ...requestHeaders(deviceId, newIdempotencyKey(`guided_${progressState}`)),
-            'Content-Type': 'application/json',
-          },
           body: JSON.stringify(payload),
         },
+        { json: true, prefix: `guided_${progressState}` },
       )
       setMessage(
         progressState === 'completed'

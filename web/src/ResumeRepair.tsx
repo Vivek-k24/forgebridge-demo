@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { activeRepairSessionId, preferredRepairSessionId, setActiveRepairSessionId } from './active-repair'
 import { apiRequest, formatApiFailure } from './api'
-import { repairDeviceId, repairMutationHeaders } from './repair-client'
+import { recoverableRepairMutation, repairDeviceId, repairMutationHeaders } from './repair-client'
 import './repair-workspaces.css'
 
 type SessionStatus = 'active' | 'paused' | 'archived'
@@ -181,10 +181,12 @@ export function ResumeRepairWorkspace({
     setBusy(true)
     setError(null)
     try {
-      await apiRequest(`/api/v1/repair-sessions/${selectedId}/${action}`, {
-        method: action === 'archive' ? 'PATCH' : 'POST',
-        headers: repairMutationHeaders(),
-      })
+      await recoverableRepairMutation(
+        selectedId,
+        `/api/v1/repair-sessions/${selectedId}/${action}`,
+        { method: action === 'archive' ? 'PATCH' : 'POST' },
+        { prefix: `session_${action}` },
+      )
       window.dispatchEvent(new CustomEvent('partgraph:repair-sessions-changed'))
       await loadSessions()
       if (action !== 'archive') await loadSnapshot(selectedId)
