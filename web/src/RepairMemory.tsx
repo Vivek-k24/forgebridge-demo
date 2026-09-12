@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { activeRepairSessionId, preferredRepairSessionId, setActiveRepairSessionId } from './active-repair'
 import { apiRequest, CSRF_HEADERS, formatApiFailure } from './api'
-import { newIdempotencyKey, partGraphDeviceId } from './device'
+import { partGraphDeviceId } from './device'
+import { recoverableRepairMutation } from './repair-client'
 import './repair-memory.css'
 
 type LeaseStatus = 'available' | 'owned' | 'held_by_other'
@@ -90,15 +91,6 @@ type RepairReadiness = {
 
 const PROCUREMENT_STATES: ProcurementState[] = ['needed', 'ordered', 'available', 'unavailable']
 const READINESS_STATES: ReadinessState[] = ['have', 'missing', 'ordered', 'unavailable']
-
-function jsonHeaders(deviceId: string, prefix: string): Record<string, string> {
-  return {
-    ...CSRF_HEADERS,
-    'Content-Type': 'application/json',
-    'X-PartGraph-Device-ID': deviceId,
-    'Idempotency-Key': newIdempotencyKey(prefix),
-  }
-}
 
 function vehicleLabel(snapshot: ResumeSnapshot | null): string {
   if (!snapshot) return ''
@@ -285,22 +277,17 @@ export function RepairMemoryWorkspace() {
     try {
       setBusy(true)
       setError(null)
-      const updated = await apiRequest<RepairReadiness>(
+      await recoverableRepairMutation<RepairReadiness>(
+        sessionId,
         `/api/v1/repair-sessions/${sessionId}/readiness/${item.requirement_definition_id}`,
         {
           method: 'PUT',
-          headers: jsonHeaders(deviceId, 'verified_readiness'),
           body: JSON.stringify({ readiness_state: state }),
         },
+        { json: true, prefix: 'verified_readiness' },
       )
-      setReadiness(updated)
+      await loadReadiness(sessionId)
       setMessage(`${item.display_name}: ${readinessLabel(state)}.`)
-      const resume = await apiRequest<ResumeSnapshot>(
-        `/api/v1/repair-sessions/${sessionId}/resume`,
-        { headers: { 'X-PartGraph-Device-ID': deviceId } },
-        { retryIdempotent: true },
-      )
-      setSnapshot(resume)
     } catch (failure) {
       setError(formatApiFailure(failure, 'Could not update repair readiness.'))
     } finally {
@@ -314,16 +301,20 @@ export function RepairMemoryWorkspace() {
     try {
       setBusy(true)
       setError(null)
-      await apiRequest(`/api/v1/repair-sessions/${sessionId}/inventory`, {
-        method: 'POST',
-        headers: jsonHeaders(deviceId, 'readiness_inventory'),
-        body: JSON.stringify({
-          name: inventoryName.trim(),
-          quantity: inventoryQuantity,
-          procurement_state: inventoryState,
-          reference: inventoryReference.trim() || null,
-        }),
-      })
+      await recoverableRepairMutation(
+        sessionId,
+        `/api/v1/repair-sessions/${sessionId}/inventory`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            name: inventoryName.trim(),
+            quantity: inventoryQuantity,
+            procurement_state: inventoryState,
+            reference: inventoryReference.trim() || null,
+          }),
+        },
+        { json: true, prefix: 'readiness_inventory' },
+      )
       setInventoryName('')
       setInventoryQuantity(1)
       setInventoryState('needed')
@@ -342,11 +333,15 @@ export function RepairMemoryWorkspace() {
     try {
       setBusy(true)
       setError(null)
-      await apiRequest(`/api/v1/repair-sessions/${sessionId}/inventory/${item.id}`, {
-        method: 'PATCH',
-        headers: jsonHeaders(deviceId, 'readiness_inventory_state'),
-        body: JSON.stringify({ procurement_state: state, quantity: item.quantity, notes: item.notes }),
-      })
+      await recoverableRepairMutation(
+        sessionId,
+        `/api/v1/repair-sessions/${sessionId}/inventory/${item.id}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ procurement_state: state, quantity: item.quantity, notes: item.notes }),
+        },
+        { json: true, prefix: 'readiness_inventory_state' },
+      )
       setMessage(`${item.name}: ${procurementLabel(state)}.`)
       await loadReadiness(sessionId)
     } catch (failure) {
