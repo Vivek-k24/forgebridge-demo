@@ -70,6 +70,7 @@ jobs:
           api/tests/test_operator_preview_bootstrap.py
           api/tests/test_operator_local_bootstrap.py
           api/tests/test_auth_origins.py
+          api/tests/test_equipment_catalog_seed.py
 
       - name: Test provider credential encryption
         run: python -m unittest discover -s api/tests -p 'test_provider_credentials.py'
@@ -82,6 +83,9 @@ jobs:
 
       - name: Test authentication origin isolation
         run: python -m unittest discover -s api/tests -p 'test_auth_origins.py'
+
+      - name: Test equipment catalog seed
+        run: python -m unittest discover -s api/tests -p 'test_equipment_catalog_seed.py'
 
       - name: Apply database migrations
         env:
