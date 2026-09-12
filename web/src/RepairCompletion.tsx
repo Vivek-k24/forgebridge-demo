@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { activeRepairSessionId, preferredRepairSessionId, setActiveRepairSessionId } from './active-repair'
-import { apiRequest, CSRF_HEADERS, formatApiFailure } from './api'
+import { ApiFailure, apiRequest, CSRF_HEADERS, formatApiFailure } from './api'
 import { partGraphDeviceId } from './device'
 
 type RepairSession = { id: string; title: string }
@@ -43,6 +43,8 @@ type Completion = {
   downstream_requirements: DownstreamRequirement[]
 }
 
+const RECOVERY_DELAYS_MS = [0, 350, 1_000]
+
 function statusLabel(status: CompletionStatus): string {
   if (status === 'not_started') return 'Repair work has not started'
   if (status === 'active') return 'Repair is in progress'
@@ -59,6 +61,48 @@ function supportLabel(state: DownstreamRequirement['support_state']): string {
   if (state === 'supported') return 'Supported in PartGraph'
   if (state === 'professional_required') return 'Professional service required'
   return 'Outside PartGraph support'
+}
+
+function ambiguousTransportFailure(error: unknown): error is ApiFailure {
+  return error instanceof ApiFailure
+    && (error.code === 'CLIENT_REQUEST_TIMEOUT' || error.code === 'CLIENT_NETWORK_FAILURE')
+}
+
+function uncertainCompletionWrite(error: ApiFailure): ApiFailure {
+  return new ApiFailure(
+    'PartGraph could not confirm whether the completion change committed. Reload completion before trying again.',
+    {
+      code: 'CLIENT_WRITE_STATE_UNCERTAIN',
+      requestId: error.requestId,
+      retryable: false,
+      status: error.status,
+    },
+  )
+}
+
+async function wait(milliseconds: number): Promise<void> {
+  if (milliseconds <= 0) return
+  await new Promise((resolve) => window.setTimeout(resolve, milliseconds))
+}
+
+async function recoverCompletion(
+  sessionId: string,
+  committed: (value: Completion) => boolean,
+): Promise<Completion | null> {
+  for (const delay of RECOVERY_DELAYS_MS) {
+    await wait(delay)
+    try {
+      const value = await apiRequest<Completion>(
+        `/api/v1/repair-sessions/${sessionId}/completion`,
+        {},
+        { retryIdempotent: true },
+      )
+      if (committed(value)) return value
+    } catch {
+      // Recovery is best-effort. If it cannot establish the result, surface uncertainty.
+    }
+  }
+  return null
 }
 
 export function RepairCompletionWorkspace() {
@@ -159,14 +203,26 @@ export function RepairCompletionWorkspace() {
     try {
       setBusy(true)
       setError(null)
-      const result = await apiRequest<Completion>(
-        `/api/v1/repair-sessions/${selectedId}/completion/downstream/${item.requirement_id}/start`,
-        {
-          method: 'POST',
-          headers: { ...CSRF_HEADERS, 'X-PartGraph-Device-ID': deviceId },
-        },
-      )
-      setCompletion(result)
+      try {
+        const result = await apiRequest<Completion>(
+          `/api/v1/repair-sessions/${selectedId}/completion/downstream/${item.requirement_id}/start`,
+          {
+            method: 'POST',
+            headers: { ...CSRF_HEADERS, 'X-PartGraph-Device-ID': deviceId },
+          },
+        )
+        setCompletion(result)
+      } catch (failure) {
+        if (!ambiguousTransportFailure(failure)) throw failure
+        const recovered = await recoverCompletion(selectedId, (value) => {
+          const target = value.downstream_requirements.find(
+            (requirement) => requirement.requirement_id === item.requirement_id,
+          )
+          return target?.state === 'satisfied' || target?.resolution_session_id !== null
+        })
+        if (!recovered) throw uncertainCompletionWrite(failure)
+        setCompletion(recovered)
+      }
       setMessage('Required PartGraph repair started and linked to this repair.')
     } catch (failure) {
       setError(formatApiFailure(failure, 'Could not start the required repair.'))
@@ -178,24 +234,35 @@ export function RepairCompletionWorkspace() {
   async function resolve(item: DownstreamRequirement) {
     if (!selectedId) return
     const linked = item.support_state === 'supported'
+    const resolutionKind = linked ? 'linked_session_complete' : 'external_service_confirmed'
     try {
       setBusy(true)
       setError(null)
-      const result = await apiRequest<Completion>(
-        `/api/v1/repair-sessions/${selectedId}/completion/downstream/${item.requirement_id}`,
-        {
-          method: 'PUT',
-          headers: {
-            ...CSRF_HEADERS,
-            'Content-Type': 'application/json',
-            'X-PartGraph-Device-ID': deviceId,
+      try {
+        const result = await apiRequest<Completion>(
+          `/api/v1/repair-sessions/${selectedId}/completion/downstream/${item.requirement_id}`,
+          {
+            method: 'PUT',
+            headers: {
+              ...CSRF_HEADERS,
+              'Content-Type': 'application/json',
+              'X-PartGraph-Device-ID': deviceId,
+            },
+            body: JSON.stringify({ resolution_kind: resolutionKind }),
           },
-          body: JSON.stringify({
-            resolution_kind: linked ? 'linked_session_complete' : 'external_service_confirmed',
-          }),
-        },
-      )
-      setCompletion(result)
+        )
+        setCompletion(result)
+      } catch (failure) {
+        if (!ambiguousTransportFailure(failure)) throw failure
+        const recovered = await recoverCompletion(selectedId, (value) => {
+          const target = value.downstream_requirements.find(
+            (requirement) => requirement.requirement_id === item.requirement_id,
+          )
+          return target?.state === 'satisfied' && target.resolution_kind === resolutionKind
+        })
+        if (!recovered) throw uncertainCompletionWrite(failure)
+        setCompletion(recovered)
+      }
       setMessage(linked ? 'Linked repair verified complete.' : 'External completion recorded.')
     } catch (failure) {
       setError(formatApiFailure(failure, 'Could not resolve this required follow-up.'))
