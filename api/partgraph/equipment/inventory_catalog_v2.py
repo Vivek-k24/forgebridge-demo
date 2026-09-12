@@ -104,13 +104,18 @@ def _row(category: str, name: str, keywords: str, visual_key: str) -> dict[str, 
 def _engine_oil_rows() -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
     for _, (formulation, grades) in ENGINE_OIL_GRADES.items():
+        formulation_search = formulation.lower().replace("-", " ")
         for grade in grades:
             compact_grade = grade.replace("-", "").lower()
             rows.append(
                 _row(
                     "engine-oil",
                     f"{formulation} engine oil SAE {grade}",
-                    f"motor oil engine lubricant SAE {grade} {compact_grade} {formulation.lower()}",
+                    (
+                        f"motor oil engine lubricant SAE {grade} {compact_grade} "
+                        f"{formulation_search} {formulation_search} {compact_grade} "
+                        f"{compact_grade} {formulation_search}"
+                    ),
                     "oil",
                 )
             )
@@ -144,15 +149,21 @@ def _washer_rows() -> list[dict[str, str]]:
 
 
 def _lug_nut_rows() -> list[dict[str, str]]:
-    return [
-        _row(
-            "wheel-hardware",
-            f"Wheel lug nut {thread_size}",
-            f"wheel lug nut wheel nut stud nut thread {thread_size.replace(' ', '')}",
-            "lug",
+    rows: list[dict[str, str]] = []
+    for thread_size in LUG_NUT_THREAD_SIZES:
+        compact_thread = thread_size.replace(" ", "")
+        rows.append(
+            _row(
+                "wheel-hardware",
+                f"Wheel lug nut {thread_size}",
+                (
+                    f"wheel lug nut wheel nut stud nut thread {compact_thread} "
+                    f"{compact_thread} lug nut lug nut {compact_thread}"
+                ),
+                "lug",
+            )
         )
-        for thread_size in LUG_NUT_THREAD_SIZES
-    ]
+    return rows
 
 
 def _ac_service_rows() -> list[dict[str, str]]:
@@ -160,25 +171,37 @@ def _ac_service_rows() -> list[dict[str, str]]:
         _row(
             "specialty-automotive",
             "R-134a A/C refrigerant recover recycle recharge machine",
-            "R134a R-134a air conditioning AC A/C refrigerant recovery recycling evacuation recharge service machine SAE J2788",
+            (
+                "R134a R-134a air conditioning AC A/C refrigerant recovery recycling evacuation "
+                "recharge service machine SAE J2788 R134a recovery recharge machine"
+            ),
             "specialty",
         ),
         _row(
             "specialty-automotive",
             "R-1234yf A/C refrigerant recover recycle recharge machine",
-            "R1234yf R-1234yf air conditioning AC A/C refrigerant recovery recycling evacuation recharge service machine SAE J2843",
+            (
+                "R1234yf R-1234yf air conditioning AC A/C refrigerant recovery recycling evacuation "
+                "recharge service machine SAE J2843 R1234yf recovery recharge machine"
+            ),
             "specialty",
         ),
         _row(
             "specialty-automotive",
             "R-134a / R-1234yf dual-refrigerant A/C service machine",
-            "R134a R-134a R1234yf R-1234yf dual refrigerant air conditioning AC A/C recovery recycling evacuation recharge service machine SAE J3030",
+            (
+                "R134a R-134a R1234yf R-1234yf dual refrigerant air conditioning AC A/C recovery "
+                "recycling evacuation recharge service machine SAE J3030 R134a R1234yf dual refrigerant machine"
+            ),
             "specialty",
         ),
         _row(
             "specialty-automotive",
             "R-744 (CO2) A/C recharge/service station",
-            "R744 R-744 CO2 carbon dioxide air conditioning AC A/C recharge service station high pressure",
+            (
+                "R744 R-744 CO2 carbon dioxide air conditioning AC A/C recharge service station "
+                "high pressure R744 CO2 recharge station"
+            ),
             "specialty",
         ),
     ]
