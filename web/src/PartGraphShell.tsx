@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AccountSettingsWorkspace } from './AccountSettings'
 import { AdminWorkspace } from './AdminWorkspace'
-import { apiRequest } from './api'
+import { type ApiAvailability, apiRequest, probeApiAvailability } from './api'
 import { EquipmentInventoryWorkspace } from './EquipmentInventory'
 import { GarageRepairContext } from './GarageRepairContext'
 import { GarageWorkspace } from './GarageWorkspace'
@@ -61,12 +61,39 @@ export default function PartGraphShell() {
   const [preferredVehicleId, setPreferredVehicleId] = useState<string | null>(null)
   const [isOperatorAdmin, setIsOperatorAdmin] = useState(false)
   const [isAdminSetupAvailable, setIsAdminSetupAvailable] = useState(false)
+  const [availability, setAvailability] = useState<ApiAvailability | null>(null)
+  const [checkingAvailability, setCheckingAvailability] = useState(false)
+
+  const refreshAvailability = useCallback(async () => {
+    setCheckingAvailability(true)
+    try {
+      setAvailability(await probeApiAvailability())
+    } finally {
+      setCheckingAvailability(false)
+    }
+  }, [])
 
   useEffect(() => {
     const onHashChange = () => setPage(pageFromHash())
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
+
+  useEffect(() => {
+    void refreshAvailability()
+    const interval = window.setInterval(() => void refreshAvailability(), 30_000)
+    const onConnectivityChange = () => void refreshAvailability()
+    const onFocus = () => void refreshAvailability()
+    window.addEventListener('online', onConnectivityChange)
+    window.addEventListener('offline', onConnectivityChange)
+    window.addEventListener('focus', onFocus)
+    return () => {
+      window.clearInterval(interval)
+      window.removeEventListener('online', onConnectivityChange)
+      window.removeEventListener('offline', onConnectivityChange)
+      window.removeEventListener('focus', onFocus)
+    }
+  }, [refreshAvailability])
 
   useEffect(() => {
     let active = true
@@ -156,6 +183,15 @@ export default function PartGraphShell() {
     )
   }
 
+  const runtimeState = availability?.state ?? 'checking'
+  const runtimeLabel = runtimeState === 'ready'
+    ? 'live workspace'
+    : runtimeState === 'degraded'
+      ? 'service degraded'
+      : runtimeState === 'unavailable'
+        ? 'service unavailable'
+        : 'checking service'
+
   return (
     <div className="partgraph-app-shell">
       <aside className="partgraph-sidebar" aria-label="PartGraph workspace navigation">
@@ -179,9 +215,28 @@ export default function PartGraphShell() {
             )}
           </div>
         </nav>
-        <div className="partgraph-runtime-note" aria-label="Production truth policy"><span><i aria-hidden="true" /> live workspace</span><p>Verified guidance stays explicit. Private repair memory remains owner-scoped.</p></div>
+        <div className="partgraph-runtime-note" aria-label="PartGraph service state">
+          <span className={`partgraph-runtime-state partgraph-runtime-state--${runtimeState}`}><i aria-hidden="true" /> {runtimeLabel}</span>
+          <p>Verified guidance stays explicit. Private repair memory remains owner-scoped.</p>
+        </div>
       </aside>
       <div className="partgraph-main">
+        {availability && availability.state !== 'ready' && (
+          <section
+            className={`partgraph-availability-banner partgraph-availability-banner--${availability.state}`}
+            role={availability.state === 'unavailable' ? 'alert' : 'status'}
+            aria-live="polite"
+          >
+            <div>
+              <strong>{availability.state === 'unavailable' ? 'PartGraph is unavailable' : 'PartGraph is degraded'}</strong>
+              <p>{availability.message}</p>
+              {availability.code && <small>{availability.code}</small>}
+            </div>
+            <button type="button" onClick={() => void refreshAvailability()} disabled={checkingAvailability}>
+              {checkingAvailability ? 'Checking…' : 'Retry'}
+            </button>
+          </section>
+        )}
         {REPAIR_WORKSPACE_KEYS.has(page) && (
           <nav className="partgraph-repair-nav" aria-label="Current repair workspace">
             <span>Current repair</span>

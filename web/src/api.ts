@@ -33,6 +33,22 @@ export class ApiFailure extends Error {
   }
 }
 
+export type ApiAvailabilityState = 'ready' | 'degraded' | 'unavailable'
+
+export type ApiAvailability = {
+  state: ApiAvailabilityState
+  code: string | null
+  message: string
+  checkedAt: string
+}
+
+type ReadyHealth = {
+  service: string
+  status: string
+  database: string
+  database_ms: number
+}
+
 function clientRequestId(): string {
   return crypto.randomUUID().replaceAll('-', '')
 }
@@ -138,4 +154,64 @@ export async function apiRequest<T>(
   }
 
   throw lastFailure ?? new ApiFailure('Unknown client failure.', { code: 'CLIENT_UNKNOWN_FAILURE' })
+}
+
+export async function probeApiAvailability(): Promise<ApiAvailability> {
+  const checkedAt = new Date().toISOString()
+  try {
+    const health = await apiRequest<ReadyHealth>('/api/v1/health/ready')
+    if (health.status === 'ready' && health.database === 'ready') {
+      return {
+        state: 'ready',
+        code: null,
+        message: 'PartGraph is ready.',
+        checkedAt,
+      }
+    }
+    return {
+      state: 'degraded',
+      code: 'CLIENT_READINESS_DEGRADED',
+      message: 'PartGraph is online, but one or more required services are not ready.',
+      checkedAt,
+    }
+  } catch (error) {
+    if (!(error instanceof ApiFailure)) {
+      return {
+        state: 'unavailable',
+        code: 'CLIENT_UNKNOWN_FAILURE',
+        message: 'PartGraph cannot confirm service availability right now.',
+        checkedAt,
+      }
+    }
+    if (error.code === 'CLIENT_NETWORK_FAILURE') {
+      return {
+        state: 'unavailable',
+        code: error.code,
+        message: 'PartGraph cannot reach the API. Keep this screen open while connectivity recovers.',
+        checkedAt,
+      }
+    }
+    if (error.code === 'CLIENT_REQUEST_TIMEOUT') {
+      return {
+        state: 'degraded',
+        code: error.code,
+        message: 'PartGraph is responding too slowly. Server-backed actions may be temporarily unavailable.',
+        checkedAt,
+      }
+    }
+    if (error.code === 'DATABASE_UNAVAILABLE') {
+      return {
+        state: 'degraded',
+        code: error.code,
+        message: 'PartGraph is online, but saved vehicle and repair data are temporarily unavailable.',
+        checkedAt,
+      }
+    }
+    return {
+      state: 'degraded',
+      code: error.code,
+      message: 'PartGraph is temporarily degraded. Existing local screen state is preserved.',
+      checkedAt,
+    }
+  }
 }
