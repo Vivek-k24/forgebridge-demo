@@ -1,4 +1,5 @@
 import logging
+import os
 import re
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -307,6 +308,10 @@ async def ready() -> ReadyHealth:
         database="ready",
         database_ms=database_ms,
     )
+
+
+if os.getenv("VERCEL") == "1":
+    app.frontend("/", directory="public")  # type: ignore[attr-defined]
 
 
 @app.get("/", include_in_schema=False)
