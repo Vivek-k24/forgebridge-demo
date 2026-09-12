@@ -14,7 +14,7 @@ from partgraph.equipment.manual_reference_v1 import (
     reference_keywords,
 )
 
-revision: str = "0028_equipment_reference_coverage"
+revision: str = "0028_equipment_reference"
 down_revision: str | None = "0027_equipment_inventory"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
