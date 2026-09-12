@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { activeRepairSessionId, setActiveRepairSessionId } from './active-repair'
 import { apiRequest, formatApiFailure } from './api'
-import { repairMutationHeaders } from './repair-client'
+import {
+  recoverableRepairSessionCreation,
+  repairDeviceId,
+  repairMutationHeaders,
+} from './repair-client'
 import './repair-workspaces.css'
 import './start-repair.css'
 
@@ -131,14 +135,24 @@ export function StartRepairWorkspace({
       setSelectedRepairKey('')
       setVehicleResolution(null)
 
-      const created = await apiRequest<RepairSessionResume>('/api/v1/repair-sessions', {
-        method: 'POST',
-        headers: repairMutationHeaders({ json: true }),
-        body: JSON.stringify({
-          user_vehicle_id: selectedVehicleId,
-          title: title.trim(),
-        }),
-      })
+      const creation = await recoverableRepairSessionCreation<RepairSessionResume>(
+        '/api/v1/repair-sessions',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            user_vehicle_id: selectedVehicleId,
+            title: title.trim(),
+          }),
+        },
+        { json: true, prefix: 'start_repair' },
+      )
+      const created = creation.kind === 'response'
+        ? creation.value
+        : await apiRequest<RepairSessionResume>(
+            `/api/v1/repair-sessions/${creation.sessionId}/resume`,
+            { headers: { 'X-PartGraph-Device-ID': repairDeviceId() } },
+            { retryIdempotent: true },
+          )
       const session = created.session
       setActiveRepairSessionId(session.id)
       window.dispatchEvent(new CustomEvent('partgraph:repair-sessions-changed'))
