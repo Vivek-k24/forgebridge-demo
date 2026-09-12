@@ -66,13 +66,13 @@ class EquipmentCatalogSeedTests(unittest.TestCase):
         rows = current_inventory_catalog(
             augment_equipment_catalog_rows(build_equipment_catalog_seed())
         )
-        self.assertEqual(len(rows), 1174)
+        self.assertEqual(len(rows), 1178)
         self.assertEqual(len({row["catalog_key"] for row in rows}), len(rows))
         self.assertFalse(RETIRED_CATALOG_KEYS & {row["catalog_key"] for row in rows})
 
         counts = Counter(row["category"] for row in rows)
         self.assertEqual(counts["engine-oil"], 42)
-        self.assertEqual(counts["coolant-antifreeze"], 10)
+        self.assertEqual(counts["coolant-antifreeze"], 12)
         self.assertEqual(counts["washer-fluid"], 4)
         self.assertEqual(counts["wheel-hardware"], len(LUG_NUT_THREAD_SIZES))
         self.assertTrue({"engine-oil", "coolant-antifreeze", "washer-fluid", "wheel-hardware"}.issubset(ACTIVE_CATEGORY_META))
@@ -101,6 +101,14 @@ class EquipmentCatalogSeedTests(unittest.TestCase):
         self.assertIn(
             "r-1234yf-a-c-refrigerant-recover-recycle-recharge-machine",
             _matches(rows, "R1234yf recovery recharge machine"),
+        )
+        self.assertIn(
+            "r-134a-r-1234yf-dual-refrigerant-a-c-service-machine",
+            _matches(rows, "R134a R1234yf dual refrigerant machine"),
+        )
+        self.assertIn(
+            "r-744-co2-a-c-recharge-service-station",
+            _matches(rows, "R744 CO2 recharge station"),
         )
 
 

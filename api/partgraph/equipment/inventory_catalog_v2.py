@@ -38,6 +38,7 @@ COOLANT_CHEMISTRIES: tuple[tuple[str, str], ...] = (
     ("IAT", "inorganic additive technology"),
     ("OAT", "organic acid technology"),
     ("HOAT", "hybrid organic acid technology"),
+    ("Phosphate-free HOAT", "NAP-free hybrid organic acid technology"),
     ("P-HOAT", "phosphated hybrid organic acid technology"),
     ("Si-OAT", "silicated organic acid technology"),
 )
@@ -118,20 +119,20 @@ def _engine_oil_rows() -> list[dict[str, str]]:
 
 def _coolant_rows() -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
-    for abbreviation, expansion in COOLANT_CHEMISTRIES:
+    for chemistry, expansion in COOLANT_CHEMISTRIES:
         rows.append(
             _row(
                 "coolant-antifreeze",
-                f"{abbreviation} coolant/antifreeze concentrate",
-                f"engine coolant antifreeze concentrate {abbreviation} {expansion}",
+                f"{chemistry} coolant/antifreeze concentrate",
+                f"engine coolant antifreeze concentrate {chemistry} {expansion}",
                 "coolant",
             )
         )
         rows.append(
             _row(
                 "coolant-antifreeze",
-                f"{abbreviation} coolant/antifreeze 50/50 prediluted",
-                f"engine coolant antifreeze premix premixed prediluted 50/50 {abbreviation} {expansion}",
+                f"{chemistry} coolant/antifreeze 50/50 prediluted",
+                f"engine coolant antifreeze premix premixed prediluted 50/50 {chemistry} {expansion}",
                 "coolant",
             )
         )
@@ -159,13 +160,25 @@ def _ac_service_rows() -> list[dict[str, str]]:
         _row(
             "specialty-automotive",
             "R-134a A/C refrigerant recover recycle recharge machine",
-            "R134a R-134a air conditioning AC A/C refrigerant recovery recycling evacuation recharge service machine",
+            "R134a R-134a air conditioning AC A/C refrigerant recovery recycling evacuation recharge service machine SAE J2788",
             "specialty",
         ),
         _row(
             "specialty-automotive",
             "R-1234yf A/C refrigerant recover recycle recharge machine",
-            "R1234yf R-1234yf air conditioning AC A/C refrigerant recovery recycling evacuation recharge service machine",
+            "R1234yf R-1234yf air conditioning AC A/C refrigerant recovery recycling evacuation recharge service machine SAE J2843",
+            "specialty",
+        ),
+        _row(
+            "specialty-automotive",
+            "R-134a / R-1234yf dual-refrigerant A/C service machine",
+            "R134a R-134a R1234yf R-1234yf dual refrigerant air conditioning AC A/C recovery recycling evacuation recharge service machine SAE J3030",
+            "specialty",
+        ),
+        _row(
+            "specialty-automotive",
+            "R-744 (CO2) A/C recharge/service station",
+            "R744 R-744 CO2 carbon dioxide air conditioning AC A/C recharge service station high pressure",
             "specialty",
         ),
     ]
