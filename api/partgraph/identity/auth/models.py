@@ -14,12 +14,22 @@ class User(Base):
             "username ~ '^[a-z0-9_]+$' AND char_length(username) BETWEEN 3 AND 32",
             name="ck_users_username_format",
         ),
+        CheckConstraint(
+            "role IN ('owner', 'contributor', 'reviewer', 'curator', 'operator_admin')",
+            name="ck_users_role",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
     email: Mapped[str] = mapped_column(String(320), nullable=False, unique=True, index=True)
     username: Mapped[str] = mapped_column(String(32), nullable=False, unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(512), nullable=False)
+    role: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default="owner",
+        server_default="owner",
+    )
     is_active: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,

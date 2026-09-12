@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from dataclasses import dataclass
 
-CANONICALIZATION_VERSION = 2
+CANONICALIZATION_VERSION = 3
 
 
 class VehicleIdentityError(ValueError):
@@ -16,86 +15,8 @@ class UnsupportedMarketError(VehicleIdentityError):
 
 
 class UnsupportedBrandError(VehicleIdentityError):
-    pass
+    """Compatibility error type; make coverage is data-driven, not code-scoped."""
 
-
-@dataclass(frozen=True, slots=True)
-class BrandDefinition:
-    name: str
-    status: str
-    aliases: tuple[str, ...] = ()
-
-
-SUPPORTED_BRANDS: tuple[BrandDefinition, ...] = (
-    BrandDefinition("Acura", "active"),
-    BrandDefinition("Buick", "active"),
-    BrandDefinition("Cadillac", "active"),
-    BrandDefinition("Chevrolet", "active", ("Chevy",)),
-    BrandDefinition("Chrysler", "active"),
-    BrandDefinition("Dodge", "active"),
-    BrandDefinition("Ford", "active"),
-    BrandDefinition("Genesis", "active"),
-    BrandDefinition("GMC", "active"),
-    BrandDefinition("Honda", "active"),
-    BrandDefinition("Hyundai", "active"),
-    BrandDefinition("Infiniti", "active"),
-    BrandDefinition("Jeep", "active"),
-    BrandDefinition("Kia", "active"),
-    BrandDefinition("Lexus", "active"),
-    BrandDefinition("Lincoln", "active"),
-    BrandDefinition("Mazda", "active"),
-    BrandDefinition("Mitsubishi", "active"),
-    BrandDefinition("Nissan", "active"),
-    BrandDefinition("Ram", "active", ("Ram Trucks",)),
-    BrandDefinition("Subaru", "active"),
-    BrandDefinition("Toyota", "active"),
-    BrandDefinition("Volkswagen", "active", ("VW",)),
-    BrandDefinition("Volvo", "active"),
-    BrandDefinition("Hummer", "legacy"),
-    BrandDefinition("Isuzu", "legacy"),
-    BrandDefinition("Mercury", "legacy"),
-    BrandDefinition("Pontiac", "legacy"),
-    BrandDefinition("Saturn", "legacy"),
-    BrandDefinition("Scion", "legacy"),
-    BrandDefinition("Suzuki", "legacy"),
-)
-
-EXCLUDED_EUROPEAN_PREMIUM_BRANDS: tuple[str, ...] = (
-    "Alfa Romeo",
-    "Aston Martin",
-    "Audi",
-    "Bentley",
-    "BMW",
-    "Bugatti",
-    "Ferrari",
-    "INEOS",
-    "Jaguar",
-    "Koenigsegg",
-    "Lamborghini",
-    "Land Rover",
-    "Range Rover",
-    "Lotus",
-    "Maserati",
-    "Maybach",
-    "McLaren",
-    "Mercedes-Benz",
-    "MINI",
-    "Morgan",
-    "Pagani",
-    "Polestar",
-    "Porsche",
-    "Rimac",
-    "Rolls-Royce",
-)
-
-EXCLUDED_MODERN_EV_BRANDS: tuple[str, ...] = (
-    "Tesla",
-    "Tesla Motors",
-    "Rivian",
-    "Rivian Automotive",
-    "Lucid",
-    "Lucid Motors",
-)
 
 _MARKET_ALIASES = {
     "us": "US",
@@ -227,46 +148,12 @@ def canonical_market(value: str) -> str:
         ) from exc
 
 
-def _build_brand_maps() -> tuple[dict[str, BrandDefinition], set[str]]:
-    supported: dict[str, BrandDefinition] = {}
-    for brand in SUPPORTED_BRANDS:
-        for label in (brand.name, *brand.aliases):
-            supported[compact_key(label)] = brand
-
-    excluded = {
-        compact_key(label)
-        for label in (
-            *EXCLUDED_EUROPEAN_PREMIUM_BRANDS,
-            *EXCLUDED_MODERN_EV_BRANDS,
-        )
-    }
-    excluded.update({"mercedes", "benz", "landrover", "rangerover", "rollsroyce"})
-    return supported, excluded
-
-
-_SUPPORTED_BRAND_MAP, _EXCLUDED_BRAND_KEYS = _build_brand_maps()
-
-
 def canonical_make(value: str) -> str:
-    key = compact_key(value)
-    if key in _EXCLUDED_BRAND_KEYS:
-        raise UnsupportedBrandError(
-            "This brand is outside the current PartGraph scope."
-        )
-
-    brand = _SUPPORTED_BRAND_MAP.get(key)
-    if brand is None:
-        raise UnsupportedBrandError(
-            "This brand is not in the current US/Canada PartGraph scope."
-        )
-    return brand.name
-
-
-def supported_brand_records() -> list[dict[str, str]]:
-    return [
-        {"name": brand.name, "status": brand.status}
-        for brand in SUPPORTED_BRANDS
-    ]
+    """Normalize shape only; actual make coverage and display identity come from stored data."""
+    cleaned = clean_display(value)
+    if not cleaned:
+        raise VehicleIdentityError("make cannot be blank")
+    return cleaned
 
 
 def canonical_model(value: str) -> str:

@@ -1,0 +1,201 @@
+{
+  "version": 1,
+  "status": "mvp_reference_fleet",
+  "market": "US",
+  "created_at": "2026-09-10",
+  "product_rules": {
+    "computer_service": "unsupported_indefinitely",
+    "computer_service_message": "PartGraph does not support computer-dependent diagnostics, relearn, coding, programming, calibration, or service-tool operations.",
+    "guided_physical_bleeding": true,
+    "deferred_service_manual_only_details": [
+      "calibration",
+      "initialization",
+      "aiming",
+      "adjustment",
+      "priming",
+      "torque_sequence"
+    ],
+    "high_voltage_hybrid_service": "unsupported",
+    "repair_completion_rule": "A physical replacement is not represented as fully complete when a known required downstream operation is outside PartGraph support."
+  },
+  "required_mvp_domains": [
+    "routine_maintenance",
+    "cooling",
+    "brakes",
+    "suspension_steering",
+    "engine_peripheral",
+    "lighting_body",
+    "hvac_safe_mechanical",
+    "sensor_simple_electrical",
+    "fluids_and_bleeding",
+    "post_replacement_dependency_boundary"
+  ],
+  "vehicles": [
+    {
+      "key": "2009-honda-civic-hybrid-sedan",
+      "year": 2009,
+      "make": "Honda",
+      "model": "Civic",
+      "trim": "Hybrid",
+      "body_style": "Sedan",
+      "engine": "1.3L inline-4 gasoline/electric hybrid",
+      "transmission": "CVT",
+      "drivetrain": "FWD",
+      "configuration_status": "verified_reference",
+      "mvp_scope_note": "High-voltage battery, inverter, motor-control, and high-voltage diagnostic/service work is excluded. Conventional mechanical service is eligible only when it does not require high-voltage interaction.",
+      "evidence": [
+        {
+          "source": "Honda",
+          "source_class": "manufacturer",
+          "url": "https://automobiles.honda.com/images/2009/civic-hybrid/downloads/2009-civic-hybrid-factsheet.pdf",
+          "supports": ["trim", "body_style", "engine", "transmission", "drivetrain", "chassis", "tires", "brakes"]
+        },
+        {
+          "source": "Honda",
+          "source_class": "manufacturer_owner_manual",
+          "url": "https://techinfo.honda.com/rjanisis/pubs/OM/NC0909/NC0909OM.PDF",
+          "supports": ["maintenance", "fluids", "owner-service boundaries"]
+        }
+      ],
+      "mvp_domains": ["routine_maintenance", "cooling", "fluids_and_bleeding"]
+    },
+    {
+      "key": "2015-toyota-camry-le-25-fwd",
+      "year": 2015,
+      "make": "Toyota",
+      "model": "Camry",
+      "trim": "LE",
+      "body_style": "Sedan",
+      "engine": "2.5L inline-4 gasoline",
+      "transmission": "6-speed automatic",
+      "drivetrain": "FWD",
+      "configuration_status": "verified_reference",
+      "evidence": [
+        {
+          "source": "Toyota USA Newsroom",
+          "source_class": "manufacturer",
+          "url": "https://pressroom.toyota.com/2015-toyota-camry-pricing/",
+          "supports": ["trim", "engine", "transmission"]
+        },
+        {
+          "source": "Edmunds",
+          "source_class": "vehicle_reference",
+          "url": "https://www.edmunds.com/toyota/camry/2015/st-200693838/features-specs/",
+          "supports": ["trim", "body_style", "engine", "transmission", "drivetrain"]
+        },
+        {
+          "source": "Toyota",
+          "source_class": "manufacturer_maintenance",
+          "url": "https://assets.sia.toyota.com/publications/en/omms-s/T-MMS-15Camry/pdf/2015_Toyota_Camry_WMG_lr.pdf",
+          "supports": ["maintenance", "engine_oil_and_filter", "chassis_body_inspection"]
+        }
+      ],
+      "mvp_domains": ["routine_maintenance", "engine_peripheral", "sensor_simple_electrical", "post_replacement_dependency_boundary"]
+    },
+    {
+      "key": "2018-subaru-forester-25i-cvt-awd",
+      "year": 2018,
+      "make": "Subaru",
+      "model": "Forester",
+      "trim": "2.5i",
+      "body_style": "SUV",
+      "engine": "2.5L H4 gasoline",
+      "engine_description": "2.5L horizontally-opposed four-cylinder Subaru BOXER",
+      "transmission": "Lineartronic CVT",
+      "drivetrain": "AWD",
+      "configuration_status": "verified_reference",
+      "evidence": [
+        {
+          "source": "Subaru",
+          "source_class": "manufacturer",
+          "url": "https://subarumedia.iconicweb.com/mediasite/specs/2018_Forester_specs-Final.pdf",
+          "supports": ["trim", "engine", "transmission", "drivetrain"]
+        },
+        {
+          "source": "Edmunds",
+          "source_class": "vehicle_reference",
+          "url": "https://www.edmunds.com/subaru/forester/2018/st-401716088/features-specs/",
+          "supports": ["trim", "body_style", "engine", "transmission", "drivetrain", "suspension"]
+        },
+        {
+          "source": "Subaru",
+          "source_class": "manufacturer_maintenance",
+          "url": "https://contactus.subaru.com/knowledgebase/article/1001833/en-us",
+          "supports": ["maintenance", "brake_fluid", "brake_inspection", "steering_suspension_inspection", "wheel_bearing_inspection", "coolant_interval"]
+        }
+      ],
+      "mvp_domains": ["brakes", "suspension_steering", "fluids_and_bleeding"]
+    },
+    {
+      "key": "2020-hyundai-tucson-se-20-fwd",
+      "year": 2020,
+      "make": "Hyundai",
+      "model": "Tucson",
+      "trim": "SE",
+      "body_style": "SUV",
+      "engine": "2.0L GDI inline-4 gasoline",
+      "transmission": "6-speed automatic SHIFTRONIC",
+      "drivetrain": "FWD",
+      "configuration_status": "verified_reference",
+      "evidence": [
+        {
+          "source": "Hyundai Motor America",
+          "source_class": "manufacturer",
+          "url": "https://www.hyundainews.com/releases/2635?lang=en_US",
+          "supports": ["SE configuration family", "engine", "transmission", "drivetrain", "tire_size", "steering"]
+        },
+        {
+          "source": "Edmunds",
+          "source_class": "vehicle_reference",
+          "url": "https://www.edmunds.com/hyundai/tucson/2020/st-401822966/features-specs/",
+          "supports": ["trim", "body_style", "engine", "transmission"]
+        },
+        {
+          "source": "Edmunds",
+          "source_class": "vehicle_reference",
+          "url": "https://www.edmunds.com/hyundai/tucson/2020/suv/features-specs/",
+          "supports": ["FWD configuration", "engine", "transmission", "drivetrain"]
+        }
+      ],
+      "mvp_domains": ["lighting_body", "hvac_safe_mechanical", "sensor_simple_electrical"]
+    },
+    {
+      "key": "2017-toyota-tacoma-sr5-v6-4wd",
+      "year": 2017,
+      "make": "Toyota",
+      "model": "Tacoma",
+      "trim": "SR5",
+      "body_style": "Pickup",
+      "engine": "3.5L V6 gasoline",
+      "transmission": "6-speed automatic",
+      "drivetrain": "4WD",
+      "drivetrain_description": "4WDemand part-time 4WD with electronically controlled transfer case",
+      "configuration_qualifiers": {
+        "cab_style": "Double Cab",
+        "bed_length_in": 73.7
+      },
+      "configuration_status": "verified_reference",
+      "evidence": [
+        {
+          "source": "Toyota USA Newsroom",
+          "source_class": "manufacturer",
+          "url": "https://pressroom.toyota.com/2017-tacoma-welcomes-new-trd-pro-lineup/",
+          "supports": ["trim_family", "engine", "4WD_system", "frame", "suspension"]
+        },
+        {
+          "source": "Toyota USA Newsroom",
+          "source_class": "manufacturer",
+          "url": "https://pressroom.toyota.com/2017-tacoma-product-specifications/",
+          "supports": ["model_year_configuration"]
+        },
+        {
+          "source": "Edmunds",
+          "source_class": "vehicle_reference",
+          "url": "https://www.edmunds.com/toyota/tacoma/2017/st-401659190/features-specs/",
+          "supports": ["SR5", "Double Cab", "3.5L V6", "6-speed automatic", "4WD", "73.7-inch bed"]
+        }
+      ],
+      "mvp_domains": ["suspension_steering", "engine_peripheral", "lighting_body"]
+    }
+  ]
+}

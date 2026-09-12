@@ -1,12 +1,17 @@
+import asyncio
 import logging
+import os
 import re
 from contextlib import asynccontextmanager
+from pathlib import Path
 from time import perf_counter
 from uuid import uuid4
 
 from fastapi import FastAPI, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -15,25 +20,32 @@ import partgraph.orm_registry  # noqa: F401
 from .assistance.router import router as assistance_router
 from .config import settings
 from .database import database_readiness, engine
+from .equipment.router import router as equipment_router
 from .errors import ErrorCode, PartGraphError, error_response
 from .identity.auth.router import router as auth_router
 from .identity.user_vehicle.router import router as user_vehicle_router
 from .identity.vehicle.router import router as vehicle_router
 from .knowledge.coverage_router import router as catalog_coverage_router
 from .knowledge.router import router as repair_definition_router
+from .operator.router import router as operator_router
+from .repair_experience.completion import router as repair_completion_router
 from .repair_experience.guidance import router as repair_guidance_router
 from .repair_experience.memory.router import router as repair_memory_router
 from .repair_experience.readiness import router as repair_readiness_router
+from .repair_experience.recovery import router as repair_recovery_router
 from .repair_experience.repair_definition_binding import router as repair_definition_binding_router
 from .repair_experience.router import router as repair_session_router
 
 logger = logging.getLogger("partgraph.api")
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 AUTH_BODY_LIMIT_BYTES = 16 * 1024
+OPERATOR_BODY_LIMIT_BYTES = 64 * 1024
 USER_VEHICLE_BODY_LIMIT_BYTES = 32 * 1024
 REPAIR_SESSION_BODY_LIMIT_BYTES = 16 * 1024
 PHOTO_MULTIPART_OVERHEAD_BYTES = 256 * 1024
 API_VERSION = "v1"
+WEB_PUBLIC_ROOT = Path(__file__).resolve().parent / "frontend"
+WEB_ASSETS_ROOT = WEB_PUBLIC_ROOT / "assets"
 
 
 class LiveHealth(BaseModel):
@@ -59,7 +71,7 @@ app = FastAPI(
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.web_origin],
+    allow_origins=list(settings.allowed_web_origins),
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=[
@@ -72,15 +84,19 @@ app.add_middleware(
     expose_headers=["X-Request-ID", "X-PartGraph-API-Version", "Retry-After"],
 )
 app.include_router(auth_router)
+app.include_router(operator_router)
 app.include_router(vehicle_router)
 app.include_router(user_vehicle_router)
+app.include_router(equipment_router)
 app.include_router(catalog_coverage_router)
 app.include_router(repair_session_router)
+app.include_router(repair_recovery_router)
 app.include_router(repair_memory_router)
 app.include_router(repair_definition_router)
 app.include_router(repair_definition_binding_router)
 app.include_router(repair_readiness_router)
 app.include_router(repair_guidance_router)
+app.include_router(repair_completion_router)
 app.include_router(assistance_router)
 
 
@@ -89,6 +105,8 @@ def _request_body_limit(request: Request) -> tuple[int, str] | None:
         return None
     if request.url.path.startswith("/api/v1/auth/"):
         return AUTH_BODY_LIMIT_BYTES, "Authentication request payload is too large."
+    if request.url.path.startswith("/api/v1/operator"):
+        return OPERATOR_BODY_LIMIT_BYTES, "Operator request payload is too large."
     if request.url.path.startswith("/api/v1/user-vehicles"):
         return USER_VEHICLE_BODY_LIMIT_BYTES, "Vehicle request payload is too large."
     if request.url.path.startswith("/api/v1/repair-sessions"):
@@ -148,7 +166,37 @@ async def platform_boundary(request: Request, call_next) -> Response:
             return _finish_response(request, response, 0.0)
 
     started = perf_counter()
-    response = await call_next(request)
+    if request.url.path.startswith("/api/"):
+        deadline = asyncio.timeout(settings.request_deadline_seconds)
+        try:
+            async with deadline:
+                response = await call_next(request)
+        except TimeoutError:
+            if not deadline.expired():
+                raise
+            duration_ms = (perf_counter() - started) * 1000
+            logger.warning(
+                "code=REQUEST_DEADLINE_EXCEEDED request_id=%s method=%s path=%s duration_ms=%.2f",
+                request.state.request_id,
+                request.method,
+                request.url.path,
+                duration_ms,
+            )
+            response = error_response(
+                request,
+                PartGraphError(
+                    code=ErrorCode.REQUEST_DEADLINE_EXCEEDED,
+                    message="Request exceeded PartGraph's server processing deadline.",
+                    status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                    retryable=True,
+                    details={"deadline_seconds": settings.request_deadline_seconds},
+                    headers={"Retry-After": "1"},
+                ),
+            )
+            return _finish_response(request, response, duration_ms)
+    else:
+        response = await call_next(request)
+
     duration_ms = (perf_counter() - started) * 1000
     return _finish_response(request, response, duration_ms)
 
@@ -165,8 +213,11 @@ def _finish_response(request: Request, response: Response, duration_ms: float) -
         (
             "/api/v1/auth",
             "/api/v1/account",
+            "/api/v1/operator",
             "/api/v1/user-vehicles",
+            "/api/v1/equipment",
             "/api/v1/repair-sessions",
+            "/api/v1/repair-recovery",
         )
     ):
         response.headers["Cache-Control"] = "no-store"
@@ -290,4 +341,29 @@ async def ready() -> ReadyHealth:
         status="ready",
         database="ready",
         database_ms=database_ms,
+    )
+
+
+if os.getenv("VERCEL") == "1":
+    app.frontend("/", directory="partgraph/frontend")  # type: ignore[attr-defined]
+
+
+@app.get("/", include_in_schema=False)
+@app.get("/index.html", include_in_schema=False)
+async def web_index() -> Response:
+    index_file = WEB_PUBLIC_ROOT / "index.html"
+    if not index_file.is_file():
+        raise StarletteHTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return FileResponse(
+        index_file,
+        media_type="text/html",
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
+if WEB_ASSETS_ROOT.is_dir():
+    app.mount(
+        "/assets",
+        StaticFiles(directory=WEB_ASSETS_ROOT),
+        name="partgraph-web-assets",
     )

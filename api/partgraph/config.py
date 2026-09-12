@@ -54,10 +54,18 @@ def _database_url() -> str:
     return database_url
 
 
+def _validate_origin(value: str, *, source: str) -> str:
+    normalized = value.strip().rstrip("/")
+    parsed = urlparse(normalized)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc or parsed.path:
+        raise ValueError(f"{source} must be one exact http(s) origin without a path")
+    return normalized
+
+
 def _web_origin() -> str:
     explicit_origin = os.getenv("PARTGRAPH_WEB_ORIGIN")
     if explicit_origin is not None:
-        value = explicit_origin.strip().rstrip("/")
+        value = explicit_origin
     else:
         vercel_production_host = os.getenv("VERCEL_PROJECT_PRODUCTION_URL")
         value = (
@@ -65,11 +73,24 @@ def _web_origin() -> str:
             if vercel_production_host
             else DEFAULT_WEB_ORIGIN
         )
+    return _validate_origin(value, source="PARTGRAPH_WEB_ORIGIN")
 
-    parsed = urlparse(value)
-    if parsed.scheme not in {"http", "https"} or not parsed.netloc or parsed.path:
-        raise ValueError("PARTGRAPH_WEB_ORIGIN must be one exact http(s) origin without a path")
-    return value
+
+def _allowed_web_origins(primary_origin: str) -> frozenset[str]:
+    origins = {primary_origin.rstrip("/")}
+    if os.getenv("VERCEL") != "1" or os.getenv("VERCEL_ENV") != "preview":
+        return frozenset(origins)
+
+    for variable_name in ("VERCEL_BRANCH_URL", "VERCEL_URL"):
+        host = os.getenv(variable_name)
+        if not host:
+            continue
+        origin = _validate_origin(
+            f"https://{host.strip().rstrip('/')}",
+            source=variable_name,
+        )
+        origins.add(origin)
+    return frozenset(origins)
 
 
 def _http_base_url(name: str, default: str) -> str:
@@ -92,6 +113,7 @@ class Settings:
     database_url: str
     database_pooling: bool
     web_origin: str
+    allowed_web_origins: frozenset[str]
     cookie_secure: bool
     session_days: int
     auth_rate_limit_attempts: int
@@ -99,9 +121,12 @@ class Settings:
     vin_encryption_keys: str | None
     vin_active_key_version: int
     vin_lookup_key: str | None
+    provider_credential_keys: str | None
+    provider_credential_active_key_version: int
     vin_cache_hours: int
     nhtsa_base_url: str
     nhtsa_timeout_seconds: float
+    request_deadline_seconds: float
     repair_edit_lease_seconds: int
     media_root: str
     photo_max_bytes: int
@@ -111,6 +136,7 @@ def _load_settings() -> Settings:
     database_url = _database_url()
 
     web_origin = _web_origin()
+    allowed_web_origins = _allowed_web_origins(web_origin)
     running_on_vercel = os.getenv("VERCEL") == "1"
     cookie_secure = _bool_env("PARTGRAPH_COOKIE_SECURE", running_on_vercel)
     if web_origin.startswith("https://") and not cookie_secure:
@@ -118,11 +144,13 @@ def _load_settings() -> Settings:
 
     vin_encryption_keys = os.getenv("PARTGRAPH_VIN_ENCRYPTION_KEYS")
     vin_lookup_key = os.getenv("PARTGRAPH_VIN_LOOKUP_KEY")
+    provider_credential_keys = os.getenv("PARTGRAPH_PROVIDER_CREDENTIAL_KEYS")
 
     return Settings(
         database_url=database_url,
         database_pooling=_bool_env("PARTGRAPH_DATABASE_POOLING", True),
         web_origin=web_origin,
+        allowed_web_origins=allowed_web_origins,
         cookie_secure=cookie_secure,
         session_days=_int_env("PARTGRAPH_SESSION_DAYS", 30, minimum=1, maximum=90),
         auth_rate_limit_attempts=_int_env(
@@ -136,6 +164,15 @@ def _load_settings() -> Settings:
             "PARTGRAPH_VIN_ACTIVE_KEY_VERSION", 1, minimum=1, maximum=32_767
         ),
         vin_lookup_key=vin_lookup_key.strip() if vin_lookup_key else None,
+        provider_credential_keys=(
+            provider_credential_keys.strip() if provider_credential_keys else None
+        ),
+        provider_credential_active_key_version=_int_env(
+            "PARTGRAPH_PROVIDER_CREDENTIAL_ACTIVE_KEY_VERSION",
+            1,
+            minimum=1,
+            maximum=32_767,
+        ),
         vin_cache_hours=_int_env("PARTGRAPH_VIN_CACHE_HOURS", 720, minimum=1, maximum=2_160),
         nhtsa_base_url=_http_base_url(
             "PARTGRAPH_NHTSA_BASE_URL",
@@ -144,15 +181,18 @@ def _load_settings() -> Settings:
         nhtsa_timeout_seconds=_float_env(
             "PARTGRAPH_NHTSA_TIMEOUT_SECONDS", 4.0, minimum=0.5, maximum=8.0
         ),
+        request_deadline_seconds=_float_env(
+            "PARTGRAPH_REQUEST_DEADLINE_SECONDS", 8.0, minimum=1.0, maximum=9.0
+        ),
         repair_edit_lease_seconds=_int_env(
             "PARTGRAPH_REPAIR_EDIT_LEASE_SECONDS", 300, minimum=30, maximum=3_600
         ),
         media_root=_path_env("PARTGRAPH_MEDIA_ROOT", "/tmp/partgraph-media"),
         photo_max_bytes=_int_env(
             "PARTGRAPH_PHOTO_MAX_BYTES",
-            15 * 1024 * 1024,
+            4 * 1024 * 1024,
             minimum=1024,
-            maximum=25 * 1024 * 1024,
+            maximum=4 * 1024 * 1024,
         ),
     )
 

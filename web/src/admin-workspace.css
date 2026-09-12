@@ -1,0 +1,290 @@
+.admin-shell {
+  width: min(1080px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 2rem 0 5rem;
+}
+
+.admin-heading {
+  max-width: 780px;
+  margin-bottom: 1.25rem;
+}
+
+.admin-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.admin-status-grid article {
+  display: grid;
+  gap: 0.35rem;
+  min-height: 130px;
+  align-content: center;
+  padding: 1.25rem;
+}
+
+.admin-status-grid span,
+.admin-status-grid small {
+  font-size: 0.78rem;
+  opacity: 0.68;
+}
+
+.admin-status-grid strong {
+  font-size: 1.35rem;
+  text-transform: capitalize;
+}
+
+.admin-access-state {
+  max-width: 640px;
+  margin: 5rem auto;
+  padding: 1.5rem;
+}
+
+.admin-access-state h1 {
+  margin-top: 0;
+}
+
+.admin-provider-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.admin-provider-list,
+.admin-provider-form,
+.admin-audit-panel {
+  padding: 1.25rem;
+}
+
+.admin-section-heading,
+.admin-provider-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.admin-section-heading h2,
+.admin-provider-form h2 {
+  margin: 0.25rem 0 0.75rem;
+}
+
+.admin-section-heading > span {
+  min-width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(95, 157, 124, 0.28);
+}
+
+.admin-empty {
+  margin-top: 1rem;
+  padding: 1.25rem;
+  border: 1px dashed var(--line, #d8dde6);
+  border-radius: 12px;
+}
+
+.admin-empty p {
+  margin-bottom: 0;
+  opacity: 0.72;
+}
+
+.admin-provider-cards {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.admin-provider-card {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--line, #d8dde6);
+  border-radius: 12px;
+}
+
+.admin-provider-card--enabled {
+  border-color: rgba(95, 157, 124, 0.38);
+  box-shadow: inset 3px 0 0 #5f9d7c;
+}
+
+.admin-provider-card__head > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.admin-provider-card__head span,
+.admin-provider-card__head small,
+.admin-provider-meta,
+.admin-provider-notes {
+  font-size: 0.78rem;
+  opacity: 0.7;
+}
+
+.admin-provider-card p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-provider-meta,
+.admin-capabilities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.admin-provider-meta span,
+.admin-capabilities span {
+  padding: 5px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(100, 116, 139, 0.18);
+}
+
+.admin-capabilities span {
+  font-size: 0.75rem;
+  text-transform: capitalize;
+}
+
+.admin-credential-editor {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.8rem;
+  border: 1px solid rgba(100, 116, 139, 0.16);
+  border-radius: 10px;
+  background: rgba(100, 116, 139, 0.05);
+}
+
+.admin-credential-editor label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.admin-credential-editor label > span {
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.admin-credential-editor input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.admin-credential-editor > small {
+  font-size: 0.72rem;
+  opacity: 0.65;
+}
+
+.admin-credential-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.admin-provider-form form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.admin-provider-form label:not(.admin-toggle) {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.admin-provider-form label > span {
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.admin-provider-form input,
+.admin-provider-form select,
+.admin-provider-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.admin-provider-form label small {
+  opacity: 0.65;
+}
+
+.admin-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.admin-toggle input {
+  width: auto;
+}
+
+.admin-audit-panel {
+  margin-top: 1rem;
+}
+
+.admin-muted {
+  opacity: 0.68;
+}
+
+.admin-audit-list {
+  list-style: none;
+  display: grid;
+  gap: 0;
+  padding: 0;
+  margin: 0.75rem 0 0;
+}
+
+.admin-audit-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--line, #e2e8f0);
+}
+
+.admin-audit-list li:last-child {
+  border-bottom: 0;
+}
+
+.admin-audit-list div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.admin-audit-list span,
+.admin-audit-list time {
+  font-size: 0.76rem;
+  opacity: 0.66;
+}
+
+.admin-audit-list time {
+  white-space: nowrap;
+}
+
+@media (max-width: 850px) {
+  .admin-provider-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .admin-shell {
+    width: min(100% - 1rem, 1080px);
+    padding-top: 1rem;
+  }
+
+  .admin-status-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-provider-card__head,
+  .admin-audit-list li {
+    flex-direction: column;
+  }
+
+  .admin-audit-list time {
+    white-space: normal;
+  }
+}

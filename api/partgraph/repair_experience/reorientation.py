@@ -7,15 +7,16 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..errors import PartGraphError
-from ..repair_memory.models import (
+from .guidance import RepairGuidanceRead, _guidance_view
+from .memory_models import (
     RepairFastener,
     RepairInventoryItem,
     RepairObservation,
     RepairPhotoEvidence,
     RepairStorageLocation,
 )
-from .guidance import RepairGuidanceRead, _guidance_view
-from .models import RepairSessionEvent
+from .models import RepairSession, RepairSessionEvent
+from .readiness import RepairReadinessRead, _readiness_view
 from .schemas import (
     RepairSessionReorientationRead,
     ResumeActivityRead,
@@ -78,9 +79,9 @@ def _activity_label(
     if event.event_type in {"inventory_item_recorded", "inventory_state_changed"}:
         row = inventory.get(_payload_uuid(event, "inventory_item_id"))
         if row is None:
-            return "Parts readiness updated"
+            return "Additional item updated"
         state = row.procurement_state.replace("_", " ")
-        return f"{row.name} · {state}"
+        return f"Additional item · {row.name} · {state}"
     if event.event_type == "procedure_action_state_changed":
         action_key = str(event.payload.get("action_key") or "guided action").replace("-", " ")
         progress = str(event.payload.get("progress_state") or "updated").replace("_", " ")
@@ -169,6 +170,47 @@ async def _resume_next_verified_action(
     )
 
 
+async def _verified_readiness(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    repair_session: RepairSession,
+) -> RepairReadinessRead | None:
+    try:
+        readiness = await _readiness_view(
+            session,
+            user_id=user_id,
+            repair_session=repair_session,
+        )
+    except PartGraphError:
+        return None
+    return readiness if readiness.binding_status == "bound" else None
+
+
+def _append_verified_readiness_attention(
+    attention: list[ResumeAttentionItemRead],
+    readiness: RepairReadinessRead,
+) -> None:
+    for item in readiness.requirements:
+        if item.necessity != "required" or item.readiness_state == "have":
+            continue
+        severity = "waiting" if item.readiness_state == "ordered" else "blocking"
+        detail_parts = ["Verified repair requirement"]
+        if item.required_quantity is not None:
+            quantity = f"{item.required_quantity:g}"
+            detail_parts.append(f"need {quantity}{f' {item.unit}' if item.unit else ''}")
+        attention.append(
+            ResumeAttentionItemRead(
+                kind="inventory",
+                id=item.requirement_definition_id,
+                label=item.display_name,
+                state=item.readiness_state,
+                severity=severity,
+                detail=" · ".join(detail_parts),
+            )
+        )
+
+
 async def build_reorientation(
     session: AsyncSession,
     *,
@@ -176,6 +218,19 @@ async def build_reorientation(
     session_id: UUID,
     last_event: RepairSessionEvent,
 ) -> RepairSessionReorientationRead:
+    repair_session = await session.scalar(
+        select(RepairSession).where(
+            RepairSession.id == session_id,
+            RepairSession.user_id == user_id,
+        )
+    )
+    if repair_session is None:
+        raise PartGraphError(
+            code="REPAIR_SESSION_NOT_FOUND",
+            message="Repair session not found.",
+            status_code=404,
+        )
+
     fastener_rows = list(
         await session.scalars(
             select(RepairFastener)
@@ -250,6 +305,11 @@ async def build_reorientation(
     inventory = {row.id: row for row in inventory_rows}
     locations = {row.id: row for row in location_rows}
     observations = {row.id: row for row in observation_rows}
+    readiness = await _verified_readiness(
+        session,
+        user_id=user_id,
+        repair_session=repair_session,
+    )
 
     attention: list[ResumeAttentionItemRead] = []
     for row in fastener_rows:
@@ -276,15 +336,18 @@ async def build_reorientation(
                 )
             )
 
+    if readiness is not None:
+        _append_verified_readiness_attention(attention, readiness)
+
     for row in inventory_rows:
         if row.procurement_state in {"needed", "unavailable"}:
             attention.append(
                 ResumeAttentionItemRead(
                     kind="inventory",
                     id=row.id,
-                    label=row.name,
+                    label=f"Additional item · {row.name}",
                     state=row.procurement_state,
-                    severity="blocking",
+                    severity="attention" if readiness is not None else "blocking",
                     detail=row.reference,
                 )
             )
@@ -293,7 +356,7 @@ async def build_reorientation(
                 ResumeAttentionItemRead(
                     kind="inventory",
                     id=row.id,
-                    label=row.name,
+                    label=f"Additional item · {row.name}",
                     state="ordered",
                     severity="waiting",
                     detail=row.reference,
@@ -335,9 +398,14 @@ async def build_reorientation(
     loose = sum(
         row.physical_state == "removed" and row.storage_location_id is None for row in fastener_rows
     )
-    procurement_blockers = sum(
-        row.procurement_state in {"needed", "ordered", "unavailable"} for row in inventory_rows
-    )
+    if readiness is not None:
+        verified_readiness_blockers = readiness.summary.blocked
+    else:
+        verified_readiness_blockers = sum(
+            row.procurement_state in {"needed", "ordered", "unavailable"}
+            for row in inventory_rows
+        )
+
     next_verified_action = await _resume_next_verified_action(
         session,
         user_id=user_id,
@@ -390,8 +458,8 @@ async def build_reorientation(
             hardware_not_installed=not_installed,
             hardware_stored=stored,
             hardware_loose=loose,
-            inventory_total=len(inventory_rows),
-            procurement_blockers=procurement_blockers,
+            supplemental_inventory_total=len(inventory_rows),
+            verified_readiness_blockers=verified_readiness_blockers,
             observations_total=len(observation_rows),
             photos_total=len(photo_rows),
         ),

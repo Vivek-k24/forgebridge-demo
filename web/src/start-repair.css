@@ -1,0 +1,245 @@
+.start-repair-shell {
+  padding-bottom: 5rem;
+}
+
+.start-repair-loading {
+  margin-top: 2rem;
+  color: #84989f;
+}
+
+.start-repair-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin: 1rem 0;
+}
+
+.start-step {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 46px;
+  border: 1px solid rgba(100, 140, 127, 0.14);
+  border-radius: 11px;
+  padding: 0 0.85rem;
+  color: #647b83;
+  background: #132126;
+  font-size: 0.74rem;
+  font-weight: 720;
+}
+
+.start-step b {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid rgba(116, 143, 134, 0.24);
+  border-radius: 999px;
+  color: #6f858d;
+  font-size: 0.68rem;
+}
+
+.start-step--active {
+  border-color: rgba(120, 214, 166, 0.34);
+  color: #dce8e4;
+  background: rgba(61, 109, 84, 0.16);
+}
+
+.start-step--active b,
+.start-step--done b {
+  border-color: rgba(120, 214, 166, 0.4);
+  color: #9bdfbb;
+}
+
+.start-step--done {
+  color: #86a99a;
+}
+
+.start-repair-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.72fr) minmax(0, 1.28fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.start-vehicle-card {
+  position: sticky;
+  top: 68px;
+}
+
+.start-vehicle-card h2 {
+  margin: 0;
+  color: #edf4f5;
+  font-size: 1.25rem;
+}
+
+.start-vehicle-card > p:not(.eyebrow) {
+  margin: 0.45rem 0 1rem;
+  color: #768d94;
+  line-height: 1.5;
+}
+
+.start-vehicle-card dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin: 0;
+}
+
+.start-vehicle-card dl div {
+  border: 1px solid rgba(100, 140, 127, 0.12);
+  border-radius: 9px;
+  padding: 0.7rem;
+  background: #16252a;
+}
+
+.start-vehicle-card dt {
+  color: #617880;
+  font-size: 0.62rem;
+  font-weight: 760;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.start-vehicle-card dd {
+  margin: 0.3rem 0 0;
+  color: #d8e2e5;
+  font-size: 0.8rem;
+  font-weight: 680;
+}
+
+.start-session-card .compact-form {
+  gap: 1rem;
+}
+
+.start-existing-session {
+  display: grid;
+  gap: 0.25rem;
+  border: 1px solid rgba(192, 158, 74, 0.2);
+  border-radius: 10px;
+  padding: 0.8rem;
+  background: rgba(116, 91, 32, 0.1);
+}
+
+.start-existing-session strong {
+  color: #dccb94;
+  font-size: 0.76rem;
+}
+
+.start-existing-session span {
+  color: #928664;
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+
+.start-context-panel {
+  display: grid;
+  gap: 1.2rem;
+}
+
+.start-context-summary {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1.1rem;
+  border-bottom: 1px solid rgba(100, 140, 127, 0.14);
+}
+
+.start-context-summary h2 {
+  margin: 0;
+  color: #edf4f5;
+}
+
+.start-context-summary p:not(.eyebrow) {
+  margin: 0.35rem 0 0;
+  color: #748b92;
+}
+
+.start-verified-block {
+  display: grid;
+  gap: 1rem;
+}
+
+.start-verified-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.start-verified-heading h3 {
+  margin: 0;
+  color: #dde8ea;
+  font-size: 1rem;
+}
+
+.start-verified-heading > span {
+  border-radius: 999px;
+  padding: 0.32rem 0.55rem;
+  color: #91c9aa;
+  background: rgba(77, 143, 107, 0.14);
+  font: 720 0.6rem/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  text-transform: uppercase;
+}
+
+.start-repair-select {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.start-repair-select > span {
+  color: #80969d;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.start-repair-select select {
+  min-height: 44px;
+}
+
+.start-helper {
+  margin: 0;
+  color: #687f87;
+  font-size: 0.72rem;
+  line-height: 1.55;
+}
+
+.start-no-guidance,
+.start-repair-empty {
+  text-align: left;
+}
+
+@media (max-width: 860px) {
+  .start-repair-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .start-vehicle-card {
+    position: static;
+  }
+}
+
+@media (max-width: 620px) {
+  .start-repair-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .start-step {
+    min-height: 40px;
+  }
+
+  .start-context-summary,
+  .start-verified-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .start-verified-heading > span {
+    align-self: start;
+  }
+
+  .start-vehicle-card dl {
+    grid-template-columns: 1fr;
+  }
+}

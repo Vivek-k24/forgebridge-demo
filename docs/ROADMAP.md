@@ -40,24 +40,25 @@ Major existing strengths:
 - immutable repair-session event stream and projections
 - pause/resume and device edit leases
 - repair memory
-- requirement/readiness structure
+- verified requirement/readiness structure with supplemental owner-added items kept separate
 - deterministic procedure engine
+- unsupported computer/service-tool boundaries are non-completable
+- first-class downstream/cross-repair requirements and mechanically honest completion state
 - structured error envelope and request IDs
 - staging/canonical privilege separation
+- private photo storage implementation with hosted Blob support and local private-volume fallback
 
 Major gaps:
 - no broad canonical repair library
-- generalized cross-repair/downstream dependency model missing
-- computer/service-tool boundary can currently be falsely completed
-- frontend resume/repair-log device identity bugs
-- inventory/readiness dual truth
-- event-history pagination
-- durable private photo storage
+- authoritative recovery for timed-out writes is not complete
+- server-side request/deadline behavior is not complete
+- hosted durable photo persistence still needs environment/configuration proof before production cutover
 - browser E2E
 - true offline repair packs/reconnect flow
-- human reviewer/curator/admin RBAC
+- human reviewer/curator authorization remains incomplete
 - canonical evidence-to-repair materialization
-- source-code vehicle-data invariant not yet enforced
+- source-code vehicle-data invariant not yet enforced automatically
+- clean migration baseline and production-copy migration proof remain outstanding
 
 ## 3. Fixed implementation order
 
@@ -84,6 +85,11 @@ Exit gate:
 - main can receive one coherent consolidation result
 
 ### Phase 1 — Correct existing behavioral defects
+
+Status on `partgraph-mvp-consolidation`:
+- items 1-8 and 10 are implemented and have passed the current build/migration/container-smoke gates
+- item 9's private local/hosted storage implementation is present; hosted persistence still requires environment-level proof before production cutover
+- item 11 remains intentionally deferred to the fresh final validation suite
 
 1. Make unsupported computer/service-tool boundaries non-completable.
 2. Add first-class downstream/cross-repair required-operation relationships.
@@ -285,7 +291,7 @@ Required gates:
 
 ## 4. Branch consolidation policy
 
-Do not merge historical branches wholesale. The following ledger was re-verified against the live repository on 2026-09-11.
+Do not merge historical branches wholesale. The following ledger was re-verified against the live repository on 2026-09-12.
 
 ### Keep
 
@@ -294,10 +300,9 @@ Do not merge historical branches wholesale. The following ledger was re-verified
 
 ### Keep temporarily for selective salvage
 
-- `partgraph-hosted-parity-hardening` — durable private photo-storage implementation still to port
 - `partgraph-local-catalog-workbench` — newest surviving workbench/identity-catalog line; useful generic acquisition/schema ideas must be reviewed selectively
 - `partgraph-raw-catalog-collectors` — generic staging/collector ideas must be reviewed selectively; old source-policy assumptions are not automatically inherited
-- `partgraph-reference-fleet-mvp` — 16 commits on top of the local-catalog-workbench line; preserve external reference-fleet data and generic support-boundary ideas before retirement
+- `partgraph-reference-fleet-mvp` — preserve external reference-fleet data and generic support-boundary ideas before retirement
 
 ### Ready to retire
 
@@ -309,6 +314,7 @@ These branches are either already fully represented in newer history, are duplic
 - `partgraph-fix-garage-selects-vin-fallback`
 - `partgraph-fix-light-card-contrast`
 - `partgraph-github-pages-preview`
+- `partgraph-hosted-parity-hardening`
 - `partgraph-local-acceptance-harness`
 - `partgraph-local-acceptance-harness-v2`
 - `partgraph-platform-ci-cd`
@@ -329,13 +335,14 @@ These branches are either already fully represented in newer history, are duplic
 - `tmp-test-ignore7`
 
 Verification notes:
-- `partgraph-local-acceptance-harness`, `partgraph-local-acceptance-harness-v2`, `partgraph-fix-light-card-contrast`, `partgraph-github-pages-preview`, `partgraph-platform-ci-cd`, `partgraph-reference-civic-hybrid-profile`, `partgraph-repair-session-foundation`, and `partgraph-verify-workbook-exact-selection` are zero commits ahead of current `main`.
+- `partgraph-local-acceptance-harness`, `partgraph-local-acceptance-harness-v2`, `partgraph-fix-light-card-contrast`, `partgraph-github-pages-preview`, `partgraph-platform-ci-cd`, `partgraph-reference-civic-hybrid-profile`, `partgraph-repair-session-foundation`, and `partgraph-verify-workbook-exact-selection` are zero commits ahead of current `main` at the time verified.
 - `noop-ignore` and all `tmp-test-ignore2` through `tmp-test-ignore7` resolve to the same old workbench commit; that commit is fully contained in `partgraph-local-catalog-workbench`, which is retained.
-- `partgraph-catalog-coverage-dashboard-backend` contains catalog-coverage files already present byte-for-byte on `main`.
+- `partgraph-catalog-coverage-dashboard-backend` contains catalog-coverage files already represented on the active implementation line.
 - `partgraph-production-acceptance-run` is obsolete acceptance-test infrastructure and is retired under the decision to rebuild tests after the functional MVP.
 - `partgraph-review-gemini-workbook` contains only an obsolete review workflow; the workbook/data asset is already preserved independently.
 - `partgraph-trim-catalog-provider` and its probe line are retired with the CarsXE path.
 - the Garage/VIN fallback branch has been selectively accounted for: verified canonical matching and decode-only fallback are retained in consolidation; the path that would save VIN-derived identity without protected VIN storage is intentionally not adopted because protected persistence must fail closed without crypto keys.
+- `partgraph-hosted-parity-hardening` has been selectively accounted for: its private Vercel Blob/local-volume storage implementation is present byte-for-byte in consolidation; its old GitHub Pages root redirect is intentionally superseded; its old hosted-photo test is not revived because the final test suite is intentionally rebuilt in Phase 9; and its old web API-base fallback is superseded by the current explicit/same-origin configuration.
 
 No branch in the temporary-salvage set is retired until its useful generic code/data is explicitly accounted for.
 

@@ -1,6 +1,7 @@
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '')
 const HARD_TIMEOUT_MS = 10_000
 const EXPECTED_API_VERSION = 'v1'
+const SERVER_DEADLINE_CODE = 'REQUEST_DEADLINE_EXCEEDED'
 
 export const CSRF_HEADERS = { 'X-PartGraph-CSRF': '1' }
 
@@ -32,6 +33,22 @@ export class ApiFailure extends Error {
   }
 }
 
+export type ApiAvailabilityState = 'ready' | 'degraded' | 'unavailable'
+
+export type ApiAvailability = {
+  state: ApiAvailabilityState
+  code: string | null
+  message: string
+  checkedAt: string
+}
+
+type ReadyHealth = {
+  service: string
+  status: string
+  database: string
+  database_ms: number
+}
+
 function clientRequestId(): string {
   return crypto.randomUUID().replaceAll('-', '')
 }
@@ -52,7 +69,7 @@ export async function apiRequest<T>(
   options: { retryIdempotent?: boolean } = {},
 ): Promise<T> {
   const method = (init.method ?? 'GET').toUpperCase()
-  const retryIdempotent = options.retryIdempotent ?? method === 'GET'
+  const retryIdempotent = options.retryIdempotent ?? (method === 'GET' || method === 'PUT')
   const attempts = retryIdempotent ? 2 : 1
   let lastFailure: ApiFailure | null = null
 
@@ -100,8 +117,10 @@ export async function apiRequest<T>(
             status: response.status,
           })
         }
+        const serverCode = envelope.error?.code ?? `HTTP_${response.status}`
+        const clientCode = serverCode === SERVER_DEADLINE_CODE ? 'CLIENT_REQUEST_TIMEOUT' : serverCode
         throw new ApiFailure(envelope.error?.message ?? `API returned HTTP ${response.status}.`, {
-          code: envelope.error?.code ?? `HTTP_${response.status}`,
+          code: clientCode,
           requestId: envelope.error?.request_id ?? responseRequestId,
           retryable: envelope.error?.retryable ?? response.status >= 500,
           status: response.status,
@@ -135,4 +154,64 @@ export async function apiRequest<T>(
   }
 
   throw lastFailure ?? new ApiFailure('Unknown client failure.', { code: 'CLIENT_UNKNOWN_FAILURE' })
+}
+
+export async function probeApiAvailability(): Promise<ApiAvailability> {
+  const checkedAt = new Date().toISOString()
+  try {
+    const health = await apiRequest<ReadyHealth>('/api/v1/health/ready')
+    if (health.status === 'ready' && health.database === 'ready') {
+      return {
+        state: 'ready',
+        code: null,
+        message: 'PartGraph is ready.',
+        checkedAt,
+      }
+    }
+    return {
+      state: 'degraded',
+      code: 'CLIENT_READINESS_DEGRADED',
+      message: 'PartGraph is online, but one or more required services are not ready.',
+      checkedAt,
+    }
+  } catch (error) {
+    if (!(error instanceof ApiFailure)) {
+      return {
+        state: 'unavailable',
+        code: 'CLIENT_UNKNOWN_FAILURE',
+        message: 'PartGraph cannot confirm service availability right now.',
+        checkedAt,
+      }
+    }
+    if (error.code === 'CLIENT_NETWORK_FAILURE') {
+      return {
+        state: 'unavailable',
+        code: error.code,
+        message: 'PartGraph cannot reach the API. Keep this screen open while connectivity recovers.',
+        checkedAt,
+      }
+    }
+    if (error.code === 'CLIENT_REQUEST_TIMEOUT') {
+      return {
+        state: 'degraded',
+        code: error.code,
+        message: 'PartGraph is responding too slowly. Server-backed actions may be temporarily unavailable.',
+        checkedAt,
+      }
+    }
+    if (error.code === 'DATABASE_UNAVAILABLE') {
+      return {
+        state: 'degraded',
+        code: error.code,
+        message: 'PartGraph is online, but saved vehicle and repair data are temporarily unavailable.',
+        checkedAt,
+      }
+    }
+    return {
+      state: 'degraded',
+      code: error.code,
+      message: 'PartGraph is temporarily degraded. Existing local screen state is preserved.',
+      checkedAt,
+    }
+  }
 }

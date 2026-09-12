@@ -2,20 +2,17 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import AuthGate from './AuthGate'
 import PartGraphShell from './PartGraphShell'
-import ProductionLaunch from './ProductionLaunch'
+import { initializeUiPreferences } from './ui-preferences'
 import './app.css'
 import './light-panel-contrast.css'
+import './accessibility-ui.css'
 
-const app = <PartGraphShell />
-const directPagesPreview = import.meta.env.MODE === 'pages'
-  && window.location.hostname.endsWith('github.io')
+initializeUiPreferences()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {directPagesPreview ? (
-      <ProductionLaunch />
-    ) : (
-      <AuthGate>{app}</AuthGate>
-    )}
+    <AuthGate>
+      <PartGraphShell />
+    </AuthGate>
   </StrictMode>,
 )
