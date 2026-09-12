@@ -1,12 +1,15 @@
 import logging
 import re
 from contextlib import asynccontextmanager
+from pathlib import Path
 from time import perf_counter
 from uuid import uuid4
 
 from fastapi import FastAPI, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -38,6 +41,8 @@ USER_VEHICLE_BODY_LIMIT_BYTES = 32 * 1024
 REPAIR_SESSION_BODY_LIMIT_BYTES = 16 * 1024
 PHOTO_MULTIPART_OVERHEAD_BYTES = 256 * 1024
 API_VERSION = "v1"
+WEB_PUBLIC_ROOT = Path(__file__).resolve().parent.parent / "public"
+WEB_ASSETS_ROOT = WEB_PUBLIC_ROOT / "assets"
 
 
 class LiveHealth(BaseModel):
@@ -301,4 +306,25 @@ async def ready() -> ReadyHealth:
         status="ready",
         database="ready",
         database_ms=database_ms,
+    )
+
+
+@app.get("/", include_in_schema=False)
+@app.get("/index.html", include_in_schema=False)
+async def web_index() -> Response:
+    index_file = WEB_PUBLIC_ROOT / "index.html"
+    if not index_file.is_file():
+        raise StarletteHTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return FileResponse(
+        index_file,
+        media_type="text/html",
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
+if WEB_ASSETS_ROOT.is_dir():
+    app.mount(
+        "/assets",
+        StaticFiles(directory=WEB_ASSETS_ROOT),
+        name="partgraph-web-assets",
     )
