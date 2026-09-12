@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import re
@@ -165,7 +166,34 @@ async def platform_boundary(request: Request, call_next) -> Response:
             return _finish_response(request, response, 0.0)
 
     started = perf_counter()
-    response = await call_next(request)
+    try:
+        if request.url.path.startswith("/api/"):
+            async with asyncio.timeout(settings.request_deadline_seconds):
+                response = await call_next(request)
+        else:
+            response = await call_next(request)
+    except TimeoutError:
+        duration_ms = (perf_counter() - started) * 1000
+        logger.warning(
+            "code=REQUEST_DEADLINE_EXCEEDED request_id=%s method=%s path=%s duration_ms=%.2f",
+            request.state.request_id,
+            request.method,
+            request.url.path,
+            duration_ms,
+        )
+        response = error_response(
+            request,
+            PartGraphError(
+                code=ErrorCode.REQUEST_DEADLINE_EXCEEDED,
+                message="Request exceeded PartGraph's server processing deadline.",
+                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                retryable=True,
+                details={"deadline_seconds": settings.request_deadline_seconds},
+                headers={"Retry-After": "1"},
+            ),
+        )
+        return _finish_response(request, response, duration_ms)
+
     duration_ms = (perf_counter() - started) * 1000
     return _finish_response(request, response, duration_ms)
 

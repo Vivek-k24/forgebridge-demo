@@ -1,6 +1,7 @@
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '')
 const HARD_TIMEOUT_MS = 10_000
 const EXPECTED_API_VERSION = 'v1'
+const SERVER_DEADLINE_CODE = 'REQUEST_DEADLINE_EXCEEDED'
 
 export const CSRF_HEADERS = { 'X-PartGraph-CSRF': '1' }
 
@@ -100,8 +101,10 @@ export async function apiRequest<T>(
             status: response.status,
           })
         }
+        const serverCode = envelope.error?.code ?? `HTTP_${response.status}`
+        const clientCode = serverCode === SERVER_DEADLINE_CODE ? 'CLIENT_REQUEST_TIMEOUT' : serverCode
         throw new ApiFailure(envelope.error?.message ?? `API returned HTTP ${response.status}.`, {
-          code: envelope.error?.code ?? `HTTP_${response.status}`,
+          code: clientCode,
           requestId: envelope.error?.request_id ?? responseRequestId,
           retryable: envelope.error?.retryable ?? response.status >= 500,
           status: response.status,

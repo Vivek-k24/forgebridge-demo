@@ -126,6 +126,7 @@ class Settings:
     vin_cache_hours: int
     nhtsa_base_url: str
     nhtsa_timeout_seconds: float
+    request_deadline_seconds: float
     repair_edit_lease_seconds: int
     media_root: str
     photo_max_bytes: int
@@ -179,6 +180,9 @@ def _load_settings() -> Settings:
         ),
         nhtsa_timeout_seconds=_float_env(
             "PARTGRAPH_NHTSA_TIMEOUT_SECONDS", 4.0, minimum=0.5, maximum=8.0
+        ),
+        request_deadline_seconds=_float_env(
+            "PARTGRAPH_REQUEST_DEADLINE_SECONDS", 8.0, minimum=1.0, maximum=9.0
         ),
         repair_edit_lease_seconds=_int_env(
             "PARTGRAPH_REPAIR_EDIT_LEASE_SECONDS", 300, minimum=30, maximum=3_600
