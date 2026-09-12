@@ -7,6 +7,7 @@ from partgraph.equipment.catalog_seed_v1 import (
     EXPECTED_ITEM_COUNT,
     build_equipment_catalog_seed,
 )
+from partgraph.equipment.service import _search_without_whitespace
 
 
 class EquipmentCatalogSeedTests(unittest.TestCase):
@@ -21,6 +22,11 @@ class EquipmentCatalogSeedTests(unittest.TestCase):
 
         counts = Counter(row["category"] for row in rows)
         self.assertEqual(counts, Counter(CATEGORY_LIMITS))
+
+    def test_equipment_search_ignores_spacing(self) -> None:
+        self.assertEqual(_search_without_whitespace("10 mm"), "10mm")
+        self.assertEqual(_search_without_whitespace("10mm"), "10mm")
+        self.assertEqual(_search_without_whitespace("  3/8   in  drive "), "3/8indrive")
 
 
 if __name__ == "__main__":
