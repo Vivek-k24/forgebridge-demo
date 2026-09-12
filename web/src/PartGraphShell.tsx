@@ -27,6 +27,10 @@ type AuthResult = {
   }
 }
 
+type PreviewOperatorBootstrapStatus = {
+  available: boolean
+}
+
 const NAV_ITEMS: NavItem[] = [
   { key: 'home', label: 'Home', group: 'overview' },
   { key: 'settings', label: 'Settings', group: 'overview' },
@@ -64,6 +68,7 @@ export default function PartGraphShell() {
   const [page, setPage] = useState<PageKey>(pageFromHash)
   const [preferredVehicleId, setPreferredVehicleId] = useState<string | null>(null)
   const [isOperatorAdmin, setIsOperatorAdmin] = useState(false)
+  const [isAdminSetupAvailable, setIsAdminSetupAvailable] = useState(false)
 
   useEffect(() => {
     const onHashChange = () => setPage(pageFromHash())
@@ -73,13 +78,32 @@ export default function PartGraphShell() {
 
   useEffect(() => {
     let active = true
-    apiRequest<AuthResult>('/api/v1/auth/me')
-      .then((result) => {
-        if (active) setIsOperatorAdmin(result.user.role === 'operator_admin')
-      })
-      .catch(() => {
-        if (active) setIsOperatorAdmin(false)
-      })
+    async function loadAdminState() {
+      try {
+        const result = await apiRequest<AuthResult>('/api/v1/auth/me')
+        if (!active) return
+        const operator = result.user.role === 'operator_admin'
+        setIsOperatorAdmin(operator)
+        if (operator) {
+          setIsAdminSetupAvailable(false)
+          return
+        }
+
+        try {
+          const bootstrap = await apiRequest<PreviewOperatorBootstrapStatus>(
+            '/api/v1/operator/preview-bootstrap/status',
+          )
+          if (active) setIsAdminSetupAvailable(bootstrap.available)
+        } catch {
+          if (active) setIsAdminSetupAvailable(false)
+        }
+      } catch {
+        if (!active) return
+        setIsOperatorAdmin(false)
+        setIsAdminSetupAvailable(false)
+      }
+    }
+    void loadAdminState()
     return () => { active = false }
   }, [])
 
@@ -106,14 +130,14 @@ export default function PartGraphShell() {
           </button>
         )
       })}
-      {group === 'overview' && isOperatorAdmin && (
+      {group === 'overview' && (isOperatorAdmin || isAdminSetupAvailable) && (
         <button
           type="button"
           className={page === 'admin' ? 'partgraph-nav-item partgraph-nav-item--active' : 'partgraph-nav-item'}
           aria-current={page === 'admin' ? 'page' : undefined}
           onClick={() => navigate('admin')}
         >
-          <span>Admin</span>
+          <span>{isOperatorAdmin ? 'Admin' : 'Admin setup'}</span>
         </button>
       )}
     </>
