@@ -37,4 +37,4 @@ select = ["B", "E", "F", "I", "UP"]
 entrypoint = "partgraph.main:app"
 
 [tool.vercel.scripts]
-build = "sh -c 'if [ \"$VERCEL_ENV\" = \"production\" ]; then alembic -c alembic.ini upgrade head; else echo Skipping database migrations for Vercel preview; fi'"
+build = "sh -c 'npm --prefix ../web ci && npm --prefix ../web run build && rm -rf public && mkdir -p public && cp -R ../web/dist/. public/ && if [ \"$VERCEL_ENV\" = \"production\" ]; then alembic -c alembic.ini upgrade head; else echo Skipping database migrations for Vercel preview; fi'"
