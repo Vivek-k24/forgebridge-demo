@@ -43,6 +43,24 @@ type ResumeSnapshot = {
   }
 }
 
+type CompletionSummary = {
+  completion_status:
+    | 'not_started'
+    | 'active'
+    | 'blocked'
+    | 'physical_replacement_performed'
+    | 'supported_work_complete'
+    | 'downstream_required_pending'
+    | 'unsupported_or_professional_pending'
+    | 'fully_mechanically_complete'
+    | 'archived'
+  physical_replacement_expected: boolean
+  physical_replacement_performed: boolean
+  supported_partgraph_work_complete: boolean
+  downstream_pending: number
+  fully_mechanically_complete: boolean
+}
+
 function vehicleLabel(snapshot: ResumeSnapshot) {
   const identity = snapshot.vehicle.identity
   return snapshot.vehicle.nickname || [identity.year, identity.make, identity.model, identity.trim].filter(Boolean).join(' ')
@@ -52,22 +70,37 @@ function human(value: string): string {
   return value.replaceAll('_', ' ')
 }
 
+function completionLabel(status: CompletionSummary['completion_status']): string {
+  if (status === 'fully_mechanically_complete') return 'Mechanically complete'
+  if (status === 'downstream_required_pending') return 'Required follow-up remains'
+  if (status === 'unsupported_or_professional_pending') return 'Outside service remains'
+  if (status === 'physical_replacement_performed') return 'Replacement done · repair continues'
+  if (status === 'supported_work_complete') return 'PartGraph-supported work complete'
+  if (status === 'blocked') return 'Repair blocked'
+  if (status === 'active') return 'Repair in progress'
+  if (status === 'archived') return 'Archived'
+  return 'Not started'
+}
+
 export function ResumeRepairWorkspace({
   onStartRepair,
   onOpenGarage,
   onOpenReadiness,
   onOpenGuidance,
+  onOpenCompletion,
   onOpenLog,
 }: {
   onStartRepair: () => void
   onOpenGarage: () => void
   onOpenReadiness: () => void
   onOpenGuidance: () => void
+  onOpenCompletion: () => void
   onOpenLog: () => void
 }) {
   const [sessions, setSessions] = useState<RepairSession[]>([])
   const [selectedId, setSelectedId] = useState(() => activeRepairSessionId() || '')
   const [snapshot, setSnapshot] = useState<ResumeSnapshot | null>(null)
+  const [completion, setCompletion] = useState<CompletionSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -90,20 +123,30 @@ export function ResumeRepairWorkspace({
   const loadSnapshot = useCallback(async (sessionId: string) => {
     if (!sessionId) {
       setSnapshot(null)
+      setCompletion(null)
       setActiveRepairSessionId(null)
       return
     }
     setError(null)
     try {
-      const value = await apiRequest<ResumeSnapshot>(
-        `/api/v1/repair-sessions/${sessionId}/resume`,
-        { headers: { 'X-PartGraph-Device-ID': repairDeviceId() } },
-        { retryIdempotent: true },
-      )
+      const [value, completionValue] = await Promise.all([
+        apiRequest<ResumeSnapshot>(
+          `/api/v1/repair-sessions/${sessionId}/resume`,
+          { headers: { 'X-PartGraph-Device-ID': repairDeviceId() } },
+          { retryIdempotent: true },
+        ),
+        apiRequest<CompletionSummary>(
+          `/api/v1/repair-sessions/${sessionId}/completion`,
+          {},
+          { retryIdempotent: true },
+        ).catch(() => null),
+      ])
       setSnapshot(value)
+      setCompletion(completionValue)
       setActiveRepairSessionId(sessionId)
     } catch (failure) {
       setSnapshot(null)
+      setCompletion(null)
       setError(formatApiFailure(failure, 'Could not build the repair resume view.'))
     }
   }, [])
@@ -184,6 +227,30 @@ export function ResumeRepairWorkspace({
               <button type="button" className="secondary" onClick={onOpenLog}>Open repair log</button>
             </div>
           </section>
+
+          {completion && (
+            <section className="repair-panel panel">
+              <div className="section-heading-row">
+                <div>
+                  <p className="eyebrow">REPAIR COMPLETION</p>
+                  <h2>{completionLabel(completion.completion_status)}</h2>
+                  <p>
+                    {completion.fully_mechanically_complete
+                      ? 'PartGraph has no unresolved required work for this repair.'
+                      : completion.downstream_pending > 0
+                        ? `${completion.downstream_pending} required follow-up item${completion.downstream_pending === 1 ? '' : 's'} still remain.`
+                        : completion.physical_replacement_performed
+                          ? 'The physical replacement is recorded, but this repair is not mechanically complete yet.'
+                          : 'Completion is calculated separately from session activity and replacement progress.'}
+                  </p>
+                </div>
+                <span className={`status-pill status-pill--${completion.fully_mechanically_complete ? 'ok' : 'warn'}`}>
+                  {completion.fully_mechanically_complete ? 'Complete' : 'Work remains'}
+                </span>
+              </div>
+              <div className="repair-button-row"><button type="button" onClick={onOpenCompletion}>Review completion</button></div>
+            </section>
+          )}
 
           {snapshot.reorientation && (
             <section className="repair-dashboard-grid">
