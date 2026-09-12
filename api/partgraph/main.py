@@ -26,6 +26,7 @@ from .repair_experience.completion import router as repair_completion_router
 from .repair_experience.guidance import router as repair_guidance_router
 from .repair_experience.memory.router import router as repair_memory_router
 from .repair_experience.readiness import router as repair_readiness_router
+from .repair_experience.recovery import router as repair_recovery_router
 from .repair_experience.repair_definition_binding import router as repair_definition_binding_router
 from .repair_experience.router import router as repair_session_router
 
@@ -80,6 +81,7 @@ app.include_router(vehicle_router)
 app.include_router(user_vehicle_router)
 app.include_router(catalog_coverage_router)
 app.include_router(repair_session_router)
+app.include_router(repair_recovery_router)
 app.include_router(repair_memory_router)
 app.include_router(repair_definition_router)
 app.include_router(repair_definition_binding_router)
@@ -175,6 +177,7 @@ def _finish_response(request: Request, response: Response, duration_ms: float) -
             "/api/v1/operator",
             "/api/v1/user-vehicles",
             "/api/v1/repair-sessions",
+            "/api/v1/repair-recovery",
         )
     ):
         response.headers["Cache-Control"] = "no-store"
