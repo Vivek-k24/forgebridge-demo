@@ -1,3 +1,4 @@
+import unittest
 from collections import Counter
 
 from partgraph.equipment.catalog_seed_v1 import (
@@ -8,13 +9,19 @@ from partgraph.equipment.catalog_seed_v1 import (
 )
 
 
-def test_equipment_catalog_seed_is_stable_and_unique() -> None:
-    rows = build_equipment_catalog_seed()
+class EquipmentCatalogSeedTests(unittest.TestCase):
+    def test_equipment_catalog_seed_is_stable_and_unique(self) -> None:
+        rows = build_equipment_catalog_seed()
 
-    assert len(rows) == EXPECTED_ITEM_COUNT == 1107
-    assert len({row["catalog_key"] for row in rows}) == EXPECTED_ITEM_COUNT
-    assert all(row["name"].strip() for row in rows)
-    assert all(row["category"] in CATEGORY_META for row in rows)
+        self.assertEqual(len(rows), EXPECTED_ITEM_COUNT)
+        self.assertEqual(EXPECTED_ITEM_COUNT, 1107)
+        self.assertEqual(len({row["catalog_key"] for row in rows}), EXPECTED_ITEM_COUNT)
+        self.assertTrue(all(row["name"].strip() for row in rows))
+        self.assertTrue(all(row["category"] in CATEGORY_META for row in rows))
 
-    counts = Counter(row["category"] for row in rows)
-    assert counts == Counter(CATEGORY_LIMITS)
+        counts = Counter(row["category"] for row in rows)
+        self.assertEqual(counts, Counter(CATEGORY_LIMITS))
+
+
+if __name__ == "__main__":
+    unittest.main()
