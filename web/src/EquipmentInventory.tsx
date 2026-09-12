@@ -12,7 +12,7 @@ type Recognition = { lang: string; continuous: boolean; interimResults: boolean;
 type RecognitionCtor = new () => Recognition
 
 const PAGE_SIZE = 100
-const GLYPHS: Record<string, string> = { wrench: 'W', socket: 'S', ratchet: 'R', extension: 'E', screwdriver: 'D', bit: 'B', hex: 'H', pliers: 'P', power: 'PWR', light: 'L', jack: 'J', stand: 'ST', ramp: 'RP', drill: 'DR', oil: 'OIL', fluid: 'FL', fastener: 'F', bolt: 'BT', nut: 'N', washer: 'WS', clip: 'CL', rivet: 'RV', hose: 'HS', oring: 'O', measure: 'M', shop: 'SH', specialty: 'SP', other: 'OT' }
+const GLYPHS: Record<string, string> = { wrench: 'W', socket: 'S', ratchet: 'R', extension: 'E', screwdriver: 'D', bit: 'B', hex: 'H', pliers: 'P', power: 'PWR', light: 'L', jack: 'J', stand: 'ST', ramp: 'RP', drill: 'DR', oil: 'OIL', fluid: 'FL', coolant: 'CLT', 'washer-fluid': 'WSH', lug: 'LUG', fastener: 'F', bolt: 'BT', nut: 'N', washer: 'WS', clip: 'CL', rivet: 'RV', hose: 'HS', oring: 'O', measure: 'M', shop: 'SH', specialty: 'SP', other: 'OT' }
 
 function recognitionCtor(): RecognitionCtor | null {
   const value = window as unknown as { SpeechRecognition?: RecognitionCtor; webkitSpeechRecognition?: RecognitionCtor }
@@ -44,7 +44,7 @@ export function EquipmentInventoryWorkspace() {
       setItems((current) => append ? [...current, ...page.items] : page.items)
       setTotal(page.total)
     } catch (failure) {
-      setError(formatApiFailure(failure, 'Could not load the equipment catalog.'))
+      setError(formatApiFailure(failure, 'Could not load the inventory catalog.'))
       if (!append) { setItems([]); setTotal(0) }
     } finally {
       setCatalogLoading(false)
@@ -55,7 +55,7 @@ export function EquipmentInventoryWorkspace() {
     let active = true
     apiRequest<Category[]>('/api/v1/equipment/categories', undefined, { retryIdempotent: true })
       .then((rows) => { if (active) setCategories(rows) })
-      .catch((failure) => { if (active) setError(formatApiFailure(failure, 'Could not load equipment categories.')) })
+      .catch((failure) => { if (active) setError(formatApiFailure(failure, 'Could not load inventory categories.')) })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [])
@@ -117,23 +117,23 @@ export function EquipmentInventoryWorkspace() {
 
   return <main className="equipment-shell">
     <header className="equipment-heading">
-      <div><p className="eyebrow">PARTGRAPH · INVENTORY</p><h1>Tools and equipment</h1><p>Choose a category, find what you own, and check it once.</p></div>
+      <div><p className="eyebrow">PARTGRAPH · INVENTORY</p><h1>Tools, fluids & supplies</h1><p>Choose a category, find what you own, and check it once.</p></div>
       <div className="equipment-owned-count"><strong>{ownedCount}</strong><span>in your inventory</span></div>
     </header>
     {error && <div className="workspace-alert workspace-alert--error">{error}</div>}
     {message && <div className="workspace-alert workspace-alert--success" aria-live="polite">{message}</div>}
     <section className="equipment-controls panel">
       <label><span>Category</span><select value={category} onChange={(event) => chooseCategory(event.target.value)}><option value="">Choose a category</option>{categories.map((row) => <option key={row.key} value={row.key}>{row.label} · {row.total_count}</option>)}</select></label>
-      <label><span>Search equipment</span><div className="equipment-search-box"><span aria-hidden="true">⌕</span><input type="search" value={query} disabled={!category} placeholder={category ? 'Search this category' : 'Choose a category first'} onChange={(event) => setQuery(event.target.value)} /><button type="button" disabled={!category} className={listening ? 'equipment-mic active' : 'equipment-mic'} aria-label="Search equipment by voice" title="Search by voice" onClick={voiceSearch}><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z" /><path d="M5.5 10.5v.5a6.5 6.5 0 0 0 13 0v-.5M12 17.5V21M9 21h6" /></svg></button></div></label>
+      <label><span>Search inventory</span><div className="equipment-search-box"><span aria-hidden="true">⌕</span><input type="search" value={query} disabled={!category} placeholder={category ? 'Search this category' : 'Choose a category first'} onChange={(event) => setQuery(event.target.value)} /><button type="button" disabled={!category} className={listening ? 'equipment-mic active' : 'equipment-mic'} aria-label="Search inventory by voice" title="Search by voice" onClick={voiceSearch}><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z" /><path d="M5.5 10.5v.5a6.5 6.5 0 0 0 13 0v-.5M12 17.5V21M9 21h6" /></svg></button></div></label>
     </section>
     {!category ? <section className="equipment-empty panel"><h2>Select a category to begin.</h2><p>Search turns on after a category is selected.</p></section> : <section className="equipment-catalog panel">
       <div className="equipment-list-heading"><div><p className="eyebrow">CATALOG</p><h2>{categories.find((row) => row.key === category)?.label}</h2></div><span>{total} items</span></div>
-      <div className="equipment-table" role="table" aria-label="Equipment catalog">
-        <div className="equipment-table-row equipment-table-header" role="row"><div role="columnheader">Add to inventory</div><div role="columnheader">Tool or equipment</div></div>
-        {items.map((item) => <div className={item.in_inventory ? 'equipment-table-row owned' : 'equipment-table-row'} role="row" key={item.id}><div className="equipment-check-cell" role="cell"><input type="checkbox" checked={item.in_inventory} disabled={busy.has(item.id)} aria-label={`${item.in_inventory ? 'Remove' : 'Add'} ${item.name}`} onChange={(event) => void toggle(item, event.target.checked)} /></div><div className="equipment-name-cell" role="cell"><span className="equipment-visual" aria-hidden="true">{GLYPHS[item.visual_key] ?? 'T'}</span><strong>{item.name}</strong>{item.in_inventory && <span className="equipment-owned-pill">In inventory</span>}</div></div>)}
+      <div className="equipment-table" role="table" aria-label="Inventory catalog">
+        <div className="equipment-table-row equipment-table-header" role="row"><div role="columnheader">Add to inventory</div><div role="columnheader">Inventory item</div></div>
+        {items.map((item) => <div className={item.in_inventory ? 'equipment-table-row owned' : 'equipment-table-row'} role="row" key={item.id}><div className="equipment-check-cell" role="cell"><input type="checkbox" checked={item.in_inventory} disabled={busy.has(item.id)} aria-label={`${item.in_inventory ? 'Remove' : 'Add'} ${item.name}`} onChange={(event) => void toggle(item, event.target.checked)} /></div><div className="equipment-name-cell" role="cell"><span className="equipment-visual" aria-hidden="true">{GLYPHS[item.visual_key] ?? 'I'}</span><strong>{item.name}</strong>{item.in_inventory && <span className="equipment-owned-pill">In inventory</span>}</div></div>)}
       </div>
-      {catalogLoading && items.length === 0 && <p className="muted equipment-loading">Searching equipment…</p>}
-      {!catalogLoading && items.length === 0 && <div className="equipment-no-results">No matching equipment in this category.</div>}
+      {catalogLoading && items.length === 0 && <p className="muted equipment-loading">Searching inventory…</p>}
+      {!catalogLoading && items.length === 0 && <div className="equipment-no-results">No matching items in this category.</div>}
       {items.length < total && <button type="button" className="secondary equipment-load-more" disabled={catalogLoading} onClick={() => void loadCatalog(category, query, items.length, true)}>{catalogLoading ? 'Loading…' : `Load more · ${total - items.length} remaining`}</button>}
     </section>}
   </main>

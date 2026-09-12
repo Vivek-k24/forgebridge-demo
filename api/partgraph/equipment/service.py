@@ -8,7 +8,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..errors import ErrorCode, PartGraphError
-from .catalog_seed_v1 import CATEGORY_META
+from .catalog_meta import CATEGORY_META
 from .models import EquipmentCatalogItem, OwnerEquipmentItem
 from .schemas import EquipmentCatalogItemRead, EquipmentCatalogPage, EquipmentCategoryRead
 
@@ -57,7 +57,7 @@ async def list_catalog(
     if category not in CATEGORY_META:
         raise PartGraphError(
             code=ErrorCode.REQUEST_VALIDATION_FAILED,
-            message="Choose a valid equipment category before searching.",
+            message="Choose a valid inventory category before searching.",
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         )
     normalized_query = " ".join(query.strip().split())[:120]
@@ -141,7 +141,7 @@ async def set_inventory_state(
     if item is None:
         raise PartGraphError(
             code=ErrorCode.REQUEST_NOT_FOUND,
-            message="Equipment item not found.",
+            message="Inventory item not found.",
             status_code=status.HTTP_404_NOT_FOUND,
         )
 
