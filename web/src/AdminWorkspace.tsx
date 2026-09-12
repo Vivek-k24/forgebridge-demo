@@ -7,6 +7,10 @@ type OperatorAccess = {
   role: 'operator_admin'
 }
 
+type PreviewOperatorBootstrapStatus = {
+  available: boolean
+}
+
 type ReadyHealth = {
   service: string
   status: string
@@ -39,6 +43,7 @@ type OperatorAuditAction =
   | 'provider_disabled'
   | 'provider_credential_saved'
   | 'provider_credential_removed'
+  | 'preview_operator_bootstrap'
 
 type OperatorAuditEvent = {
   id: string
@@ -79,6 +84,7 @@ function auditLabel(action: OperatorAuditAction): string {
     case 'provider_disabled': return 'Provider disabled'
     case 'provider_credential_saved': return 'Provider credential saved'
     case 'provider_credential_removed': return 'Provider credential removed'
+    case 'preview_operator_bootstrap': return 'Preview administrator enabled'
   }
 }
 
@@ -89,6 +95,8 @@ function auditProviderKey(event: OperatorAuditEvent): string | null {
 
 export function AdminWorkspace() {
   const [access, setAccess] = useState<AccessState>('checking')
+  const [bootstrapAvailable, setBootstrapAvailable] = useState(false)
+  const [bootstrapBusy, setBootstrapBusy] = useState(false)
   const [health, setHealth] = useState<ReadyHealth | null>(null)
   const [providers, setProviders] = useState<Provider[]>([])
   const [auditEvents, setAuditEvents] = useState<OperatorAuditEvent[]>([])
@@ -146,6 +154,14 @@ export function AdminWorkspace() {
         if (!active) return
         if (failure instanceof ApiFailure && failure.status === 403) {
           setAccess('denied')
+          try {
+            const bootstrap = await apiRequest<PreviewOperatorBootstrapStatus>(
+              '/api/v1/operator/preview-bootstrap/status',
+            )
+            if (active) setBootstrapAvailable(bootstrap.available)
+          } catch {
+            if (active) setBootstrapAvailable(false)
+          }
           return
         }
         setAccess('failed')
@@ -155,6 +171,22 @@ export function AdminWorkspace() {
     void load()
     return () => { active = false }
   }, [])
+
+  async function claimPreviewOperator() {
+    try {
+      setBootstrapBusy(true)
+      setError(null)
+      await apiRequest<OperatorAccess>('/api/v1/operator/preview-bootstrap', {
+        method: 'POST',
+        headers: { ...CSRF_HEADERS, 'Content-Type': 'application/json' },
+      })
+      window.location.reload()
+    } catch (failure) {
+      setError(formatApiFailure(failure, 'Preview administrator access could not be enabled.'))
+    } finally {
+      setBootstrapBusy(false)
+    }
+  }
 
   async function createProvider(event: FormEvent) {
     event.preventDefault()
@@ -260,7 +292,23 @@ export function AdminWorkspace() {
   }
 
   if (access === 'denied') {
-    return <main className="admin-shell"><section className="panel admin-access-state"><h1>Access unavailable.</h1><p>This account does not have access to operator tools.</p></section></main>
+    return (
+      <main className="admin-shell">
+        <section className="panel admin-access-state">
+          <h1>Access unavailable.</h1>
+          <p>This account does not have access to operator tools.</p>
+          {bootstrapAvailable && (
+            <>
+              <p>This isolated PartGraph preview does not have an administrator yet.</p>
+              <button type="button" disabled={bootstrapBusy} onClick={() => void claimPreviewOperator()}>
+                {bootstrapBusy ? 'Enabling…' : 'Enable admin for this preview'}
+              </button>
+            </>
+          )}
+          {error && <div className="workspace-alert workspace-alert--error">{error}</div>}
+        </section>
+      </main>
+    )
   }
 
   if (access === 'failed') {
