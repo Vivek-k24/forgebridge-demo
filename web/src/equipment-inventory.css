@@ -110,16 +110,48 @@
 }
 
 .equipment-mic {
-  min-height: 34px;
-  margin-right: 4px;
-  padding: 0 10px;
-  border-radius: 8px;
-  color: #082117;
-  background: #9eddbd;
-  border: 1px solid #b8f4d6;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  margin-right: 3px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  color: #b8c8cd;
+  background: transparent;
+  cursor: pointer;
+}
+
+.equipment-mic svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.equipment-mic:hover:not(:disabled) {
+  color: #e8fff3;
+  background: rgba(168, 240, 204, .10);
+}
+
+.equipment-mic:focus-visible {
+  outline: 2px solid #b8f4d6;
+  outline-offset: -2px;
+}
+
+.equipment-mic:disabled {
+  color: #657a80;
+  cursor: not-allowed;
 }
 
 .equipment-mic.active {
+  color: #082117;
+  background: #9eddbd;
   box-shadow: 0 0 0 3px rgba(168, 240, 204, .18);
 }
 

@@ -13,6 +13,10 @@ from .models import EquipmentCatalogItem, OwnerEquipmentItem
 from .schemas import EquipmentCatalogItemRead, EquipmentCatalogPage, EquipmentCategoryRead
 
 
+def _search_without_whitespace(value: str) -> str:
+    return "".join(value.lower().split())
+
+
 async def list_categories(session: AsyncSession, *, user_id: UUID) -> list[EquipmentCategoryRead]:
     catalog_counts = dict(
         (await session.execute(
@@ -63,7 +67,25 @@ async def list_catalog(
     ]
     if normalized_query:
         pattern = f"%{normalized_query}%"
-        filters.append(or_(EquipmentCatalogItem.name.ilike(pattern), EquipmentCatalogItem.keywords.ilike(pattern)))
+        compact_pattern = f"%{_search_without_whitespace(normalized_query)}%"
+        filters.append(
+            or_(
+                EquipmentCatalogItem.name.ilike(pattern),
+                EquipmentCatalogItem.keywords.ilike(pattern),
+                func.regexp_replace(
+                    func.lower(EquipmentCatalogItem.name),
+                    "[[:space:]]+",
+                    "",
+                    "g",
+                ).like(compact_pattern),
+                func.regexp_replace(
+                    func.lower(EquipmentCatalogItem.keywords),
+                    "[[:space:]]+",
+                    "",
+                    "g",
+                ).like(compact_pattern),
+            )
+        )
 
     total = int(await session.scalar(select(func.count(EquipmentCatalogItem.id)).where(*filters)) or 0)
     rows = (
