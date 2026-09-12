@@ -68,12 +68,16 @@ jobs:
           ruff check api/partgraph api/migrations
           api/tests/test_provider_credentials.py
           api/tests/test_operator_preview_bootstrap.py
+          api/tests/test_auth_origins.py
 
       - name: Test provider credential encryption
         run: python -m unittest discover -s api/tests -p 'test_provider_credentials.py'
 
       - name: Test preview operator bootstrap guardrails
         run: python -m unittest discover -s api/tests -p 'test_operator_preview_bootstrap.py'
+
+      - name: Test authentication origin isolation
+        run: python -m unittest discover -s api/tests -p 'test_auth_origins.py'
 
       - name: Apply database migrations
         env:
