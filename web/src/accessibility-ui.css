@@ -50,6 +50,7 @@ body {
 }
 
 .partgraph-main h2 {
+  color: #9eddbd;
   font-size: clamp(1.15rem, 1.5vw, 1.35rem);
   line-height: 1.25;
   letter-spacing: -0.012em;
@@ -66,7 +67,7 @@ body {
 }
 
 .partgraph-main .eyebrow {
-  color: var(--pg-accent-ink);
+  color: #a8f0cc;
   font-weight: 600;
   letter-spacing: 0.08em;
 }
@@ -154,6 +155,7 @@ body {
   box-shadow: 0 0 0 4px rgba(168, 240, 204, 0.1);
 }
 
+/* The current-repair strip is on a light surface, so its green text stays darker for contrast. */
 .partgraph-repair-nav > span,
 .partgraph-repair-nav__item {
   font-weight: 500;
@@ -176,6 +178,54 @@ body {
   border-color: rgba(104, 201, 151, 0.58);
   background: var(--pg-accent-fill);
   color: #205f42;
+}
+
+/* Supersede the older muted-green dark repair theme with the brighter accessible accent. */
+.repair-workspace-shell .panel h2,
+.repair-workspace-shell .panel .eyebrow {
+  color: #a8f0cc;
+}
+
+.repair-workspace-shell .next-action-card {
+  border-color: rgba(168, 240, 204, 0.5);
+  box-shadow: inset 3px 0 #86dcb3;
+}
+
+.repair-workspace-shell .start-repair-form input:focus,
+.repair-workspace-shell .start-repair-form select:focus,
+.repair-workspace-shell .compact-form input:focus,
+.repair-workspace-shell .compact-form select:focus,
+.repair-workspace-shell .compact-form textarea:focus,
+.repair-workspace-shell .repair-panel select:focus {
+  border-color: #86dcb3;
+  box-shadow: 0 0 0 3px rgba(168, 240, 204, 0.14);
+}
+
+.repair-workspace-shell button:not(.text-button):not(.secondary) {
+  color: #082117;
+  background: #9eddbd;
+  border-color: #b8f4d6;
+  box-shadow: inset 0 -2px rgba(19, 91, 61, 0.2);
+}
+
+.repair-workspace-shell button:not(.text-button):not(.secondary):hover:not(:disabled) {
+  color: #082117;
+  background: #b2ebd0;
+  border-color: #c5f6df;
+}
+
+.repair-workspace-shell .text-button {
+  color: #a8f0cc !important;
+}
+
+.memory-readiness-score {
+  color: #b8f4d6;
+  border-color: rgba(168, 240, 204, 0.38);
+  background: rgba(168, 240, 204, 0.09);
+}
+
+.memory-progress > span {
+  background: #86dcb3;
 }
 
 button:not(.partgraph-brand):not(.partgraph-nav-item):not(.partgraph-repair-nav__item):not(.settings-choice):not(.settings-text-scale) {
