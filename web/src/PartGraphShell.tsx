@@ -5,13 +5,14 @@ import { apiRequest } from './api'
 import { GarageWorkspace } from './GarageWorkspace'
 import { GuidedRepairWorkspace } from './GuidedRepair'
 import { HomeWorkspace } from './HomeWorkspace'
+import { RepairCompletionWorkspace } from './RepairCompletion'
 import { RepairLogWorkspace } from './RepairLog'
 import { RepairMemoryWorkspace } from './RepairMemory'
 import { ResumeRepairWorkspace } from './ResumeRepair'
 import { StartRepairWorkspace } from './StartRepair'
 import './partgraph-shell.css'
 
-type PageKey = 'home' | 'settings' | 'admin' | 'garage' | 'start' | 'resume' | 'readiness' | 'guidance' | 'log'
+type PageKey = 'home' | 'settings' | 'admin' | 'garage' | 'start' | 'resume' | 'readiness' | 'guidance' | 'completion' | 'log'
 type NavGroup = 'overview' | 'vehicle' | 'repair'
 type UserRole = 'owner' | 'contributor' | 'reviewer' | 'curator' | 'operator_admin'
 
@@ -39,6 +40,7 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'resume', label: 'Resume repair', group: 'repair' },
   { key: 'readiness', label: 'Readiness & inventory', group: 'repair' },
   { key: 'guidance', label: 'Guided repair', group: 'repair' },
+  { key: 'completion', label: 'Completion', group: 'repair' },
   { key: 'log', label: 'Repair log', group: 'repair' },
 ]
 
@@ -46,6 +48,7 @@ const REPAIR_WORKSPACE_ITEMS: Array<{ key: PageKey; label: string }> = [
   { key: 'resume', label: 'Overview' },
   { key: 'readiness', label: 'Readiness' },
   { key: 'guidance', label: 'Guided repair' },
+  { key: 'completion', label: 'Completion' },
   { key: 'log', label: 'Repair log' },
 ]
 
@@ -189,6 +192,8 @@ export default function PartGraphShell() {
         onStartRepair={() => navigate('start')}
       />
     )
+  } else if (page === 'completion') {
+    content = <RepairCompletionWorkspace />
   } else if (page === 'log') {
     content = <RepairLogWorkspace />
   } else {
