@@ -42,7 +42,7 @@ USER_VEHICLE_BODY_LIMIT_BYTES = 32 * 1024
 REPAIR_SESSION_BODY_LIMIT_BYTES = 16 * 1024
 PHOTO_MULTIPART_OVERHEAD_BYTES = 256 * 1024
 API_VERSION = "v1"
-WEB_PUBLIC_ROOT = Path(__file__).resolve().parent.parent / "public"
+WEB_PUBLIC_ROOT = Path(__file__).resolve().parent / "frontend"
 WEB_ASSETS_ROOT = WEB_PUBLIC_ROOT / "assets"
 
 
