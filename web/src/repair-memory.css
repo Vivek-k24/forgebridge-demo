@@ -32,13 +32,9 @@
   border-color: rgba(92, 166, 121, 0.45);
 }
 
+/* Current repair selection belongs to Garage. Keep this legacy block hidden until Inventory is replaced by the equipment catalog UI. */
 .memory-session-bar {
-  display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) auto;
-  align-items: end;
-  gap: 16px;
-  margin-bottom: 14px;
-  padding: 16px;
+  display: none;
 }
 
 .memory-session-bar label,
@@ -226,11 +222,6 @@
 
   .memory-heading {
     display: grid;
-  }
-
-  .memory-session-bar {
-    grid-template-columns: 1fr;
-    align-items: stretch;
   }
 
   .memory-grid {
