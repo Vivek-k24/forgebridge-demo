@@ -311,7 +311,7 @@ async def ready() -> ReadyHealth:
 
 
 if os.getenv("VERCEL") == "1":
-    app.frontend("/", directory="public")  # type: ignore[attr-defined]
+    app.frontend("/", directory="partgraph/frontend")  # type: ignore[attr-defined]
 
 
 @app.get("/", include_in_schema=False)
