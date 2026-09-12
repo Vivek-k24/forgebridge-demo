@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { apiRequest, CSRF_HEADERS, formatApiFailure } from './api'
+import { applyTextScale, readTextScale, TEXT_SCALE_OPTIONS, type TextScalePercent } from './ui-preferences'
 import './account-settings.css'
 
 type UnitPreference = 'us_customary' | 'metric'
@@ -19,6 +20,7 @@ function unitLabel(units: UnitPreference): string {
 export function AccountSettingsWorkspace() {
   const [user, setUser] = useState<User | null>(null)
   const [units, setUnits] = useState<UnitPreference | null>(null)
+  const [textScale, setTextScale] = useState<TextScalePercent>(() => readTextScale())
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -68,12 +70,19 @@ export function AccountSettingsWorkspace() {
     }
   }
 
+  function changeTextScale(next: TextScalePercent) {
+    setTextScale(next)
+    applyTextScale(next)
+    setError(null)
+    setMessage(`Text size changed to ${next}%.`)
+  }
+
   return (
     <main className="settings-shell">
       <header className="workspace-hero settings-heading">
         <p className="eyebrow">PARTGRAPH · SETTINGS</p>
-        <h1>Your account and repair preferences.</h1>
-        <p>These settings apply to your private PartGraph workspace.</p>
+        <h1>Account and display settings</h1>
+        <p>Adjust PartGraph for this account and the screen you are using.</p>
       </header>
 
       {error && <div className="workspace-alert workspace-alert--error">{error}</div>}
@@ -95,10 +104,31 @@ export function AccountSettingsWorkspace() {
           <section className="panel settings-panel">
             <p className="eyebrow">MEASUREMENTS</p>
             <h2>Units</h2>
-            <p className="muted">PartGraph uses this preference when presenting measurements that support unit conversion.</p>
+            <p className="muted">Choose how supported measurements are displayed.</p>
             <div className="settings-choice-grid" role="radiogroup" aria-label="Measurement units">
               <button type="button" role="radio" aria-checked={units === 'us_customary'} className={units === 'us_customary' ? 'settings-choice settings-choice--active' : 'settings-choice'} disabled={busy} onClick={() => void changeUnits('us_customary')}><strong>US customary</strong><span>Use US customary measurements.</span></button>
               <button type="button" role="radio" aria-checked={units === 'metric'} className={units === 'metric' ? 'settings-choice settings-choice--active' : 'settings-choice'} disabled={busy} onClick={() => void changeUnits('metric')}><strong>Metric</strong><span>Use metric measurements.</span></button>
+            </div>
+          </section>
+
+          <section className="panel settings-panel settings-span-all">
+            <p className="eyebrow">ACCESSIBILITY</p>
+            <h2>Text size</h2>
+            <p className="muted">Choose a comfortable reading size. This display preference is saved in this browser on this device and does not replace your browser's zoom controls.</p>
+            <div className="settings-text-scale-grid" role="radiogroup" aria-label="Text size">
+              {TEXT_SCALE_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={textScale === option.value}
+                  className={textScale === option.value ? 'settings-text-scale settings-text-scale--active' : 'settings-text-scale'}
+                  onClick={() => changeTextScale(option.value)}
+                >
+                  <span>{option.label}</span>
+                  <small>{option.description}</small>
+                </button>
+              ))}
             </div>
           </section>
 

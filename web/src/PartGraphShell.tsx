@@ -13,36 +13,40 @@ import { StartRepairWorkspace } from './StartRepair'
 import './partgraph-shell.css'
 
 type PageKey = 'home' | 'settings' | 'admin' | 'garage' | 'start' | 'resume' | 'readiness' | 'guidance' | 'completion' | 'log'
-type NavGroup = 'overview' | 'vehicle' | 'repair'
 type UserRole = 'owner' | 'contributor' | 'reviewer' | 'curator' | 'operator_admin'
-
-type NavItem = { key: PageKey; label: string; group: NavGroup }
+type NavItem = { key: PageKey; label: string }
 type AuthResult = { user: { role: UserRole } }
 type PreviewOperatorBootstrapStatus = { available: boolean }
 
-const NAV_ITEMS: NavItem[] = [
-  { key: 'home', label: 'Home', group: 'overview' },
-  { key: 'settings', label: 'Settings', group: 'overview' },
-  { key: 'garage', label: 'Garage', group: 'vehicle' },
-  { key: 'start', label: 'Start repair', group: 'repair' },
-  { key: 'resume', label: 'Resume repair', group: 'repair' },
-  { key: 'readiness', label: 'Readiness & inventory', group: 'repair' },
-  { key: 'guidance', label: 'Guided repair', group: 'repair' },
-  { key: 'completion', label: 'Completion', group: 'repair' },
-  { key: 'log', label: 'Repair log', group: 'repair' },
+const PRIMARY_NAV_ITEMS: NavItem[] = [
+  { key: 'garage', label: 'Garage' },
+  { key: 'readiness', label: 'Inventory' },
+  { key: 'log', label: 'Repair log' },
 ]
 
-const REPAIR_WORKSPACE_ITEMS: Array<{ key: PageKey; label: string }> = [
+const UTILITY_NAV_ITEMS: NavItem[] = [
+  { key: 'settings', label: 'Settings' },
+]
+
+const REPAIR_WORKSPACE_ITEMS: NavItem[] = [
   { key: 'resume', label: 'Overview' },
-  { key: 'readiness', label: 'Readiness' },
   { key: 'guidance', label: 'Guided repair' },
-  { key: 'completion', label: 'Completion' },
   { key: 'log', label: 'Repair log' },
 ]
 
 const REPAIR_WORKSPACE_KEYS = new Set<PageKey>(REPAIR_WORKSPACE_ITEMS.map((item) => item.key))
-const GROUP_LABELS: Record<NavGroup, string> = { overview: 'Workspace', vehicle: 'Vehicle', repair: 'Repair' }
-const PAGE_KEYS = new Set<PageKey>([...NAV_ITEMS.map((item) => item.key), 'admin'])
+const PAGE_KEYS = new Set<PageKey>([
+  'home',
+  'settings',
+  'admin',
+  'garage',
+  'start',
+  'resume',
+  'readiness',
+  'guidance',
+  'completion',
+  'log',
+])
 
 function pageFromHash(): PageKey {
   const value = window.location.hash.replace(/^#\/?/, '') as PageKey
@@ -95,24 +99,20 @@ export default function PartGraphShell() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const navigation = (group: NavGroup) => (
-    <>
-      <p>{GROUP_LABELS[group]}</p>
-      {NAV_ITEMS.filter((item) => item.group === group).map((item) => {
-        const active = item.key === page
-        return (
-          <button key={item.key} type="button" className={active ? 'partgraph-nav-item partgraph-nav-item--active' : 'partgraph-nav-item'} aria-current={active ? 'page' : undefined} onClick={() => navigate(item.key)}>
-            <span>{item.label}</span>
-          </button>
-        )
-      })}
-      {group === 'overview' && (isOperatorAdmin || isAdminSetupAvailable) && (
-        <button type="button" className={page === 'admin' ? 'partgraph-nav-item partgraph-nav-item--active' : 'partgraph-nav-item'} aria-current={page === 'admin' ? 'page' : undefined} onClick={() => navigate('admin')}>
-          <span>{isOperatorAdmin ? 'Admin' : 'Admin setup'}</span>
-        </button>
-      )}
-    </>
-  )
+  function navButton(item: NavItem) {
+    const active = item.key === page
+    return (
+      <button
+        key={item.key}
+        type="button"
+        className={active ? 'partgraph-nav-item partgraph-nav-item--active' : 'partgraph-nav-item'}
+        aria-current={active ? 'page' : undefined}
+        onClick={() => navigate(item.key)}
+      >
+        <span>{item.label}</span>
+      </button>
+    )
+  }
 
   let content: React.ReactNode
   if (page === 'home') {
@@ -149,8 +149,26 @@ export default function PartGraphShell() {
   return (
     <div className="partgraph-app-shell">
       <aside className="partgraph-sidebar" aria-label="PartGraph workspace navigation">
-        <div className="partgraph-brand"><div className="partgraph-brand-mark" aria-hidden="true">PG</div><div><strong>PartGraph</strong><span>Repair continuity</span></div></div>
-        <nav className="partgraph-nav">{navigation('overview')}{navigation('vehicle')}{navigation('repair')}</nav>
+        <button type="button" className="partgraph-brand" aria-label="PartGraph home" onClick={() => navigate('home')}>
+          <div className="partgraph-brand-mark" aria-hidden="true">PG</div>
+          <div><strong>PartGraph</strong><span>Repair continuity</span></div>
+        </button>
+        <nav className="partgraph-nav">
+          <div className="partgraph-nav-primary">{PRIMARY_NAV_ITEMS.map(navButton)}</div>
+          <div className="partgraph-nav-utility">
+            {UTILITY_NAV_ITEMS.map(navButton)}
+            {(isOperatorAdmin || isAdminSetupAvailable) && (
+              <button
+                type="button"
+                className={page === 'admin' ? 'partgraph-nav-item partgraph-nav-item--active' : 'partgraph-nav-item'}
+                aria-current={page === 'admin' ? 'page' : undefined}
+                onClick={() => navigate('admin')}
+              >
+                <span>{isOperatorAdmin ? 'Admin' : 'Admin setup'}</span>
+              </button>
+            )}
+          </div>
+        </nav>
         <div className="partgraph-runtime-note" aria-label="Production truth policy"><span><i aria-hidden="true" /> live workspace</span><p>Verified guidance stays explicit. Private repair memory remains owner-scoped.</p></div>
       </aside>
       <div className="partgraph-main">
