@@ -53,7 +53,7 @@ export async function apiRequest<T>(
   options: { retryIdempotent?: boolean } = {},
 ): Promise<T> {
   const method = (init.method ?? 'GET').toUpperCase()
-  const retryIdempotent = options.retryIdempotent ?? method === 'GET'
+  const retryIdempotent = options.retryIdempotent ?? (method === 'GET' || method === 'PUT')
   const attempts = retryIdempotent ? 2 : 1
   let lastFailure: ApiFailure | null = null
 
