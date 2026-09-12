@@ -22,6 +22,7 @@ from .identity.vehicle.router import router as vehicle_router
 from .knowledge.coverage_router import router as catalog_coverage_router
 from .knowledge.router import router as repair_definition_router
 from .operator.router import router as operator_router
+from .repair_experience.completion import router as repair_completion_router
 from .repair_experience.guidance import router as repair_guidance_router
 from .repair_experience.memory.router import router as repair_memory_router
 from .repair_experience.readiness import router as repair_readiness_router
@@ -61,7 +62,7 @@ app = FastAPI(
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.web_origin],
+    allow_origins=list(settings.allowed_web_origins),
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=[
@@ -84,6 +85,7 @@ app.include_router(repair_definition_router)
 app.include_router(repair_definition_binding_router)
 app.include_router(repair_readiness_router)
 app.include_router(repair_guidance_router)
+app.include_router(repair_completion_router)
 app.include_router(assistance_router)
 
 
