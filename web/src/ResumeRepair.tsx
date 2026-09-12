@@ -34,8 +34,8 @@ type ResumeSnapshot = {
       hardware_not_installed: number
       hardware_stored: number
       hardware_loose: number
-      inventory_total: number
-      procurement_blockers: number
+      supplemental_inventory_total: number
+      verified_readiness_blockers: number
       observations_total: number
       photos_total: number
     }
@@ -258,7 +258,7 @@ export function ResumeRepairWorkspace({
                 <p className="eyebrow">WHERE YOU LEFT OFF</p><h2>{snapshot.reorientation.checkpoint.label}</h2><p>{human(snapshot.reorientation.checkpoint.event_type)} · {new Date(snapshot.reorientation.checkpoint.created_at).toLocaleString()}</p>
                 <div className="next-action-card"><strong>Next verified action</strong>{snapshot.reorientation.next_verified_action.status === 'available' ? <span>{snapshot.reorientation.next_verified_action.label}</span> : <span>{snapshot.reorientation.next_verified_action.reason || 'No verified next action is available.'}</span>}</div>
               </article>
-              <article className="repair-panel panel"><p className="eyebrow">PHYSICAL STATE</p><h3>What PartGraph is tracking</h3><dl className="count-grid"><div><dt>Hardware</dt><dd>{snapshot.reorientation.counts.fasteners_total}</dd></div><div><dt>Not installed</dt><dd>{snapshot.reorientation.counts.hardware_not_installed}</dd></div><div><dt>Items needed</dt><dd>{snapshot.reorientation.counts.inventory_total}</dd></div><div><dt>Blockers</dt><dd>{snapshot.reorientation.counts.procurement_blockers}</dd></div><div><dt>Notes</dt><dd>{snapshot.reorientation.counts.observations_total}</dd></div><div><dt>Photos</dt><dd>{snapshot.reorientation.counts.photos_total}</dd></div></dl></article>
+              <article className="repair-panel panel"><p className="eyebrow">PHYSICAL STATE</p><h3>What PartGraph is tracking</h3><dl className="count-grid"><div><dt>Hardware</dt><dd>{snapshot.reorientation.counts.fasteners_total}</dd></div><div><dt>Not installed</dt><dd>{snapshot.reorientation.counts.hardware_not_installed}</dd></div><div><dt>Extra items</dt><dd>{snapshot.reorientation.counts.supplemental_inventory_total}</dd></div><div><dt>Verified blockers</dt><dd>{snapshot.reorientation.counts.verified_readiness_blockers}</dd></div><div><dt>Notes</dt><dd>{snapshot.reorientation.counts.observations_total}</dd></div><div><dt>Photos</dt><dd>{snapshot.reorientation.counts.photos_total}</dd></div></dl></article>
               <article className="repair-panel panel"><p className="eyebrow">ATTENTION</p><h3>What still needs attention</h3>{snapshot.reorientation.attention.length === 0 ? <p className="muted">Nothing flagged.</p> : <ul className="repair-list">{snapshot.reorientation.attention.map((item) => <li key={`${item.kind}-${item.id}`}><strong>{item.label}</strong><span>{human(item.state)}</span>{item.detail && <small>{item.detail}</small>}</li>)}</ul>}</article>
               <article className="repair-panel panel"><p className="eyebrow">STORAGE</p><h3>Where removed hardware is stored</h3>{snapshot.reorientation.storage_groups.length === 0 ? <p className="muted">No stored groups.</p> : <ul className="repair-list">{snapshot.reorientation.storage_groups.map((group) => <li key={group.storage_location_id}><strong>{group.label}</strong><span>{group.item_count} item{group.item_count === 1 ? '' : 's'}</span></li>)}</ul>}</article>
               <article className="repair-panel panel"><p className="eyebrow">RECENT NOTES</p><h3>Latest observations</h3>{snapshot.reorientation.recent_observations.length === 0 ? <p className="muted">No observations yet.</p> : <ul className="repair-list">{snapshot.reorientation.recent_observations.map((observation) => <li key={observation.id}><strong>{human(observation.category)}</strong><span>{observation.text}</span></li>)}</ul>}</article>
