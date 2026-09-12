@@ -40,4 +40,4 @@ entrypoint = "partgraph.main:app"
 cdn = false
 
 [tool.vercel.scripts]
-build = "sh -c 'npm --prefix ../web ci && npm --prefix ../web run build && rm -rf partgraph/frontend && mkdir -p partgraph/frontend && cp -R ../web/dist/. partgraph/frontend/ && if [ \"$VERCEL_ENV\" = \"production\" ]; then alembic -c alembic.ini upgrade head; else echo Skipping database migrations for Vercel preview; fi'"
+build = "sh -c 'python -m unittest discover -s tests -p \"test_equipment_catalog_seed.py\" && npm --prefix ../web ci && npm --prefix ../web run build && rm -rf partgraph/frontend && mkdir -p partgraph/frontend && cp -R ../web/dist/. partgraph/frontend/ && if [ \"$VERCEL_ENV\" = \"production\" ]; then alembic -c alembic.ini upgrade head; elif [ \"$VERCEL_ENV\" = \"preview\" ] && [ \"$VERCEL_GIT_COMMIT_REF\" = \"partgraph-mvp-consolidation\" ]; then alembic -c alembic.ini upgrade head; else echo Skipping database migrations for this Vercel deployment; fi'"
