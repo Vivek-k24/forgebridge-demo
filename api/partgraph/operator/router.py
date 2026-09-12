@@ -6,6 +6,11 @@ from ..errors import ErrorEnvelope
 from ..identity.auth.dependencies import AuthSessionDep, CurrentUserDep, require_csrf
 from ..identity.auth.roles import require_role
 from ..identity.auth.schemas import AdminAccessRead
+from .local_bootstrap import (
+    bootstrap_local_operator,
+    local_operator_bootstrap_environment,
+    local_operator_bootstrap_status,
+)
 from .schemas import OperatorAuditRead, PreviewOperatorBootstrapStatus, ProviderCreate, ProviderRead, ProviderUpdate
 from .service import (
     bootstrap_preview_operator,
@@ -40,6 +45,8 @@ async def preview_bootstrap_status(
     session: AuthSessionDep,
 ) -> PreviewOperatorBootstrapStatus:
     del user
+    if local_operator_bootstrap_environment():
+        return await local_operator_bootstrap_status(session)
     return await preview_operator_bootstrap_status(session)
 
 
@@ -52,7 +59,10 @@ async def preview_bootstrap(
     user: CurrentUserDep,
     session: AuthSessionDep,
 ) -> AdminAccessRead:
-    await bootstrap_preview_operator(session, user=user)
+    if local_operator_bootstrap_environment():
+        await bootstrap_local_operator(session, user=user)
+    else:
+        await bootstrap_preview_operator(session, user=user)
     return AdminAccessRead()
 
 
