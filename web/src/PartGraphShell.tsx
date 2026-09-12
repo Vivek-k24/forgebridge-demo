@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { AccountSettingsWorkspace } from './AccountSettings'
 import { AdminWorkspace } from './AdminWorkspace'
 import { apiRequest } from './api'
+import { GarageRepairContext } from './GarageRepairContext'
 import { GarageWorkspace } from './GarageWorkspace'
 import { GuidedRepairWorkspace } from './GuidedRepair'
 import { HomeWorkspace } from './HomeWorkspace'
@@ -122,7 +123,12 @@ export default function PartGraphShell() {
   } else if (page === 'admin') {
     content = <AdminWorkspace />
   } else if (page === 'garage') {
-    content = <GarageWorkspace initialMarket="US" onStartRepair={(vehicleId) => { setPreferredVehicleId(vehicleId); navigate('start') }} />
+    content = (
+      <>
+        <GarageRepairContext />
+        <GarageWorkspace initialMarket="US" onStartRepair={(vehicleId) => { setPreferredVehicleId(vehicleId); navigate('start') }} />
+      </>
+    )
   } else if (page === 'start') {
     content = <StartRepairWorkspace preferredVehicleId={preferredVehicleId ?? ''} onOpenGarage={() => navigate('garage')} onCreated={() => { setPreferredVehicleId(null); navigate('resume') }} />
   } else if (page === 'readiness') {
