@@ -20,6 +20,7 @@ import partgraph.knowledge.models  # noqa: F401
 import partgraph.knowledge.parts  # noqa: F401
 import partgraph.knowledge.relationships  # noqa: F401
 import partgraph.knowledge.requirements  # noqa: F401
+import partgraph.knowledge.specifications  # noqa: F401
 import partgraph.knowledge.vehicle_structure  # noqa: F401
 import partgraph.operator.models  # noqa: F401
 import partgraph.repair_experience.completion_models  # noqa: F401
