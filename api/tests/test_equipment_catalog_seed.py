@@ -75,7 +75,13 @@ class EquipmentCatalogSeedTests(unittest.TestCase):
         self.assertEqual(counts["coolant-antifreeze"], 12)
         self.assertEqual(counts["washer-fluid"], 4)
         self.assertEqual(counts["wheel-hardware"], len(LUG_NUT_THREAD_SIZES))
-        self.assertTrue({"engine-oil", "coolant-antifreeze", "washer-fluid", "wheel-hardware"}.issubset(ACTIVE_CATEGORY_META))
+        expected_categories = {
+            "engine-oil",
+            "coolant-antifreeze",
+            "washer-fluid",
+            "wheel-hardware",
+        }
+        self.assertTrue(expected_categories.issubset(ACTIVE_CATEGORY_META))
 
     def test_engine_oil_grade_and_formulation_combinations_are_searchable(self) -> None:
         rows = current_inventory_catalog(
@@ -85,8 +91,14 @@ class EquipmentCatalogSeedTests(unittest.TestCase):
         self.assertEqual(expected_oil_count, 42)
         self.assertIn("full-synthetic-engine-oil-sae-0w-20", _matches(rows, "full synthetic 0w20"))
         self.assertIn("full-synthetic-engine-oil-sae-0w-12", _matches(rows, "0w12"))
-        self.assertIn("high-mileage-synthetic-blend-engine-oil-sae-20w-50", _matches(rows, "high mileage 20w50"))
-        self.assertIn("high-mileage-conventional-engine-oil-sae-10w-40", _matches(rows, "conventional high mileage 10w40"))
+        self.assertIn(
+            "high-mileage-synthetic-blend-engine-oil-sae-20w-50",
+            _matches(rows, "high mileage 20w50"),
+        )
+        self.assertIn(
+            "high-mileage-conventional-engine-oil-sae-10w-40",
+            _matches(rows, "conventional high mileage 10w40"),
+        )
 
     def test_coolant_funnel_lug_nuts_and_refrigerant_specific_ac_equipment_are_covered(self) -> None:
         rows = current_inventory_catalog(
