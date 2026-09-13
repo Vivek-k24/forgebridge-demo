@@ -177,11 +177,11 @@ The functional Phase 3 exit gate is satisfied for operations that currently exis
 
 ### Phase 4 — Complete the 18-domain canonical schema
 
-Status: **Next phase; not started.** Existing tables are foundations only until each domain is audited against the Blueprint and the Phase 4 exit gate.
+Status: **In progress.** Domain 1 has been audited against the Blueprint, ORM models, fresh-migration CI and the live preview schema.
 
 Implement the Blueprint domains without vehicle-specific application code:
 
-- [ ] exact vehicle identity
+- [x] exact vehicle identity
 - [ ] systems/assemblies
 - [ ] parts/components
 - [ ] fitment/applicability
