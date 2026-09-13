@@ -73,6 +73,72 @@ class ErrorCode(StrEnum):
     PHOTO_CONTENT_UNAVAILABLE = "PHOTO_CONTENT_UNAVAILABLE"
 
 
+class ErrorOwner(StrEnum):
+    PLATFORM = "partgraph.main"
+    AUTH = "partgraph.identity.auth"
+    VEHICLE_IDENTITY = "partgraph.identity.vehicle"
+    USER_VEHICLE = "partgraph.identity.user_vehicle"
+    REPAIR_SESSION = "partgraph.repair_experience"
+    REPAIR_BINDING = "partgraph.repair_experience.repair_definition_binding"
+    REPAIR_READINESS = "partgraph.repair_experience.readiness"
+    REPAIR_GUIDANCE = "partgraph.repair_experience.guidance"
+    REPAIR_COMPLETION = "partgraph.repair_experience.completion"
+    REPAIR_RECOVERY = "partgraph.repair_experience.recovery"
+    REPAIR_MEMORY = "partgraph.repair_experience.memory"
+    OFFLINE = "partgraph.repair_experience.offline"
+    KNOWLEDGE = "partgraph.knowledge"
+    EQUIPMENT = "partgraph.equipment"
+    OPERATOR = "partgraph.operator"
+
+
+ERROR_FAMILY_OWNERS: tuple[tuple[str, ErrorOwner], ...] = (
+    ("VEHICLE_MODEL_", ErrorOwner.VEHICLE_IDENTITY),
+    ("USER_VEHICLE_", ErrorOwner.USER_VEHICLE),
+    ("VIN_", ErrorOwner.USER_VEHICLE),
+    ("REPAIR_DEFINITION_", ErrorOwner.REPAIR_BINDING),
+    ("REPAIR_READINESS_", ErrorOwner.REPAIR_READINESS),
+    ("REPAIR_PROCEDURE_", ErrorOwner.REPAIR_GUIDANCE),
+    ("REPAIR_GUIDANCE_", ErrorOwner.REPAIR_GUIDANCE),
+    ("REPAIR_COMPLETION_", ErrorOwner.REPAIR_COMPLETION),
+    ("REPAIR_RECOVERY_", ErrorOwner.REPAIR_RECOVERY),
+    ("REPAIR_SESSION_", ErrorOwner.REPAIR_SESSION),
+    ("STORAGE_LOCATION_", ErrorOwner.REPAIR_MEMORY),
+    ("FASTENER_", ErrorOwner.REPAIR_MEMORY),
+    ("INVENTORY_ITEM_", ErrorOwner.REPAIR_MEMORY),
+    ("OBSERVATION_", ErrorOwner.REPAIR_MEMORY),
+    ("PHOTO_", ErrorOwner.REPAIR_MEMORY),
+    ("OFFLINE_", ErrorOwner.OFFLINE),
+    ("KNOWLEDGE_", ErrorOwner.KNOWLEDGE),
+    ("EQUIPMENT_", ErrorOwner.EQUIPMENT),
+    ("PROVIDER_", ErrorOwner.OPERATOR),
+    ("OPERATOR_", ErrorOwner.OPERATOR),
+    ("RBAC_", ErrorOwner.AUTH),
+    ("AUTH_", ErrorOwner.AUTH),
+    ("REQUEST_", ErrorOwner.PLATFORM),
+    ("RATE_LIMITED", ErrorOwner.PLATFORM),
+    ("DATABASE_", ErrorOwner.PLATFORM),
+    ("INTERNAL_", ErrorOwner.PLATFORM),
+)
+
+
+def error_code_owner(code: ErrorCode | str) -> ErrorOwner | None:
+    value = str(code)
+    for prefix, owner in ERROR_FAMILY_OWNERS:
+        if value.startswith(prefix):
+            return owner
+    return None
+
+
+UNOWNED_REGISTERED_ERROR_CODES = tuple(
+    code for code in ErrorCode if error_code_owner(code) is None
+)
+if UNOWNED_REGISTERED_ERROR_CODES:
+    raise RuntimeError(
+        "Registered PartGraph error codes must have a module owner: "
+        + ", ".join(str(code) for code in UNOWNED_REGISTERED_ERROR_CODES)
+    )
+
+
 class ErrorBody(BaseModel):
     code: str
     message: str
