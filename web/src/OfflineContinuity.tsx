@@ -3,6 +3,7 @@ import { activeRepairSessionId, ACTIVE_REPAIR_SESSION_EVENT } from './active-rep
 import { probeApiAvailability } from './api'
 import { OfflineRepairWorkspace } from './OfflineRepair'
 import { loadCachedOfflineRepairPack, refreshOfflineRepairPack, type OfflineRepairPack } from './offline-repair'
+import { REPAIR_STATE_CHANGED_EVENT } from './repair-client'
 import './offline-continuity.css'
 
 const SECTIONS = ['resume', 'readiness', 'guidance', 'completion', 'log'] as const
@@ -42,6 +43,7 @@ export default function OfflineContinuity({ children }: { children: ReactNode })
     window.addEventListener('online', changed)
     window.addEventListener('offline', changed)
     window.addEventListener(ACTIVE_REPAIR_SESSION_EVENT, changed)
+    window.addEventListener(REPAIR_STATE_CHANGED_EVENT, changed)
     window.addEventListener('hashchange', hash)
     return () => {
       active = false
@@ -49,6 +51,7 @@ export default function OfflineContinuity({ children }: { children: ReactNode })
       window.removeEventListener('online', changed)
       window.removeEventListener('offline', changed)
       window.removeEventListener(ACTIVE_REPAIR_SESSION_EVENT, changed)
+      window.removeEventListener(REPAIR_STATE_CHANGED_EVENT, changed)
       window.removeEventListener('hashchange', hash)
     }
   }, [])
