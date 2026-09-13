@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, UniqueConstraint, Uuid, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, UniqueConstraint, Uuid, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -63,7 +63,11 @@ class ToolEquipmentRequirementBinding(Base):
     __table_args__ = (
         UniqueConstraint(
             "requirement_definition_id",
-            name="uq_tool_equipment_requirement_bindings_requirement",
+            name="uq_tool_req_bindings_requirement",
+        ),
+        Index(
+            "ix_tool_req_bindings_tool_id",
+            "tool_equipment_definition_id",
         ),
     )
 
@@ -77,7 +81,6 @@ class ToolEquipmentRequirementBinding(Base):
         Uuid(as_uuid=True),
         ForeignKey("tool_equipment_definitions.id", ondelete="RESTRICT"),
         nullable=False,
-        index=True,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -91,7 +94,11 @@ class WorkspaceRequirementBinding(Base):
     __table_args__ = (
         UniqueConstraint(
             "requirement_definition_id",
-            name="uq_workspace_requirement_bindings_requirement",
+            name="uq_workspace_req_bindings_requirement",
+        ),
+        Index(
+            "ix_workspace_req_bindings_workspace_id",
+            "workspace_definition_id",
         ),
     )
 
@@ -105,7 +112,6 @@ class WorkspaceRequirementBinding(Base):
         Uuid(as_uuid=True),
         ForeignKey("workspace_definitions.id", ondelete="RESTRICT"),
         nullable=False,
-        index=True,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
