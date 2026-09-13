@@ -79,6 +79,12 @@ def upgrade() -> None:
     op.execute(sa.text(f"GRANT INSERT ON public.mechanical_claims TO {CURATOR_ROLE}"))
     op.execute(
         sa.text(
+            f"GRANT UPDATE (promotion_state, reviewed_at, reviewed_by) "
+            f"ON public.mechanical_claims TO {CURATOR_ROLE}"
+        )
+    )
+    op.execute(
+        sa.text(
             f"GRANT INSERT ON public.canonical_conflicts, public.canonical_conflict_items "
             f"TO {CURATOR_ROLE}"
         )
