@@ -29,6 +29,7 @@ def upgrade() -> None:
         )
     )
     op.execute(sa.text(f"GRANT {REVIEWER_ROLE} TO CURRENT_USER WITH INHERIT FALSE, SET TRUE"))
+    op.execute(sa.text(f"GRANT USAGE ON SCHEMA public TO {REVIEWER_ROLE}"))
     op.execute(sa.text(f"GRANT USAGE ON SCHEMA {STAGING_SCHEMA} TO {REVIEWER_ROLE}"))
     op.execute(
         sa.text(
@@ -82,5 +83,6 @@ def downgrade() -> None:
         )
     )
     op.execute(sa.text(f"REVOKE USAGE ON SCHEMA {STAGING_SCHEMA} FROM {REVIEWER_ROLE}"))
+    op.execute(sa.text(f"REVOKE USAGE ON SCHEMA public FROM {REVIEWER_ROLE}"))
     op.execute(sa.text(f"REVOKE {REVIEWER_ROLE} FROM CURRENT_USER"))
     op.execute(sa.text(f"DROP ROLE IF EXISTS {REVIEWER_ROLE}"))
