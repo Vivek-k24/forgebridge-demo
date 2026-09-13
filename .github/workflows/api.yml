@@ -67,6 +67,7 @@ jobs:
         run: >-
           ruff check api/partgraph api/migrations
           api/scripts/validate_schema_baseline.py
+          api/scripts/verify_persisted_history_upgrade.py
           api/tests/test_provider_credentials.py
           api/tests/test_operator_preview_bootstrap.py
           api/tests/test_operator_local_bootstrap.py
@@ -114,6 +115,23 @@ jobs:
           test -s /tmp/partgraph-baseline/upgrade-0020-to-head.sql
           grep -q '0045_provenance_conflicts' \
             /tmp/partgraph-baseline/upgrade-0020-to-head.sql
+
+      - name: Test persisted 0020 owner-state upgrade
+        env:
+          PGPASSWORD: partgraph
+        run: |
+          docker run --rm --network host \
+            -e PGPASSWORD="$PGPASSWORD" \
+            postgres:18.6-alpine \
+            psql --host=127.0.0.1 --port=5432 --username=partgraph --dbname=postgres \
+              --set=ON_ERROR_STOP=1 --command='CREATE DATABASE partgraph_persisted'
+          export PARTGRAPH_DATABASE_URL='postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph_persisted'
+          alembic -c api/alembic.ini upgrade 0020_catalog_coverage
+          python api/scripts/verify_persisted_history_upgrade.py seed
+          EXPECTED_HEAD="$(alembic -c api/alembic.ini heads | awk 'NR == 1 {print $1}')"
+          alembic -c api/alembic.ini upgrade head
+          python api/scripts/verify_persisted_history_upgrade.py verify \
+            --expected-revision "$EXPECTED_HEAD"
 
       - name: Test database RBAC privilege boundaries
         env:
