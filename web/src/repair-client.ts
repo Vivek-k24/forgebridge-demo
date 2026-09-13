@@ -2,6 +2,7 @@ import { ApiFailure, apiRequest, CSRF_HEADERS } from './api'
 import { newIdempotencyKey, partGraphDeviceId } from './device'
 
 export const repairDeviceId = partGraphDeviceId
+export const REPAIR_STATE_CHANGED_EVENT = 'partgraph:repair-state-changed'
 
 const RECOVERY_DELAYS_MS = [0, 350, 1_000]
 
@@ -29,16 +30,17 @@ export type RecoverableCreationResult<T> =
   | { kind: 'response'; value: T; idempotencyKey: string }
   | { kind: 'recovered'; sessionId: string; idempotencyKey: string }
 
-function headersForKey(
-  idempotencyKey: string,
-  options: { json?: boolean } = {},
-): Record<string, string> {
+function headersForKey(idempotencyKey: string, options: { json?: boolean } = {}): Record<string, string> {
   return {
     ...CSRF_HEADERS,
     'X-PartGraph-Device-ID': partGraphDeviceId(),
     'Idempotency-Key': idempotencyKey,
     ...(options.json ? { 'Content-Type': 'application/json' } : {}),
   }
+}
+
+function signalRepairStateChanged(sessionId: string): void {
+  window.dispatchEvent(new CustomEvent(REPAIR_STATE_CHANGED_EVENT, { detail: { sessionId } }))
 }
 
 export function repairMutationHeaders(options: { json?: boolean } = {}): Record<string, string> {
@@ -53,12 +55,7 @@ function ambiguousTransportFailure(error: unknown): error is ApiFailure {
 function uncertainWriteFailure(error: ApiFailure): ApiFailure {
   return new ApiFailure(
     'PartGraph could not confirm whether the change committed. Reload the repair before trying again.',
-    {
-      code: 'CLIENT_WRITE_STATE_UNCERTAIN',
-      requestId: error.requestId,
-      retryable: false,
-      status: error.status,
-    },
+    { code: 'CLIENT_WRITE_STATE_UNCERTAIN', requestId: error.requestId, retryable: false, status: error.status },
   )
 }
 
@@ -67,10 +64,7 @@ async function wait(milliseconds: number): Promise<void> {
   await new Promise((resolve) => window.setTimeout(resolve, milliseconds))
 }
 
-async function committedSessionMutation(
-  sessionId: string,
-  idempotencyKey: string,
-): Promise<boolean> {
+async function committedSessionMutation(sessionId: string, idempotencyKey: string): Promise<boolean> {
   for (const delay of RECOVERY_DELAYS_MS) {
     await wait(delay)
     try {
@@ -81,7 +75,7 @@ async function committedSessionMutation(
       )
       if (recovery.state === 'committed') return true
     } catch {
-      // Recovery itself is best-effort. The caller will surface an uncertain-write state.
+      // Recovery is best-effort; an unresolved write is surfaced instead of guessed.
     }
   }
   return false
@@ -98,7 +92,7 @@ async function committedSessionCreation(idempotencyKey: string): Promise<string 
       )
       if (recovery.state === 'committed' && recovery.session_id) return recovery.session_id
     } catch {
-      // Recovery itself is best-effort. The caller will surface an uncertain-write state.
+      // Recovery is best-effort; an unresolved write is surfaced instead of guessed.
     }
   }
   return null
@@ -111,17 +105,16 @@ export async function recoverableRepairMutation<T>(
   options: { json?: boolean; prefix?: string } = {},
 ): Promise<RecoverableMutationResult<T>> {
   const idempotencyKey = newIdempotencyKey(options.prefix ?? 'web')
-  const headers = {
-    ...headersForKey(idempotencyKey, { json: options.json }),
-    ...(init.headers ?? {}),
-  }
+  const headers = { ...headersForKey(idempotencyKey, { json: options.json }), ...(init.headers ?? {}) }
 
   try {
     const value = await apiRequest<T>(path, { ...init, headers })
+    signalRepairStateChanged(sessionId)
     return { kind: 'response', value, idempotencyKey }
   } catch (error) {
     if (!ambiguousTransportFailure(error)) throw error
     if (await committedSessionMutation(sessionId, idempotencyKey)) {
+      signalRepairStateChanged(sessionId)
       return { kind: 'recovered', value: null, idempotencyKey }
     }
     throw uncertainWriteFailure(error)
@@ -134,10 +127,7 @@ export async function recoverableRepairSessionCreation<T>(
   options: { json?: boolean; prefix?: string } = {},
 ): Promise<RecoverableCreationResult<T>> {
   const idempotencyKey = newIdempotencyKey(options.prefix ?? 'start_repair')
-  const headers = {
-    ...headersForKey(idempotencyKey, { json: options.json }),
-    ...(init.headers ?? {}),
-  }
+  const headers = { ...headersForKey(idempotencyKey, { json: options.json }), ...(init.headers ?? {}) }
 
   try {
     const value = await apiRequest<T>(path, { ...init, headers })
@@ -145,7 +135,10 @@ export async function recoverableRepairSessionCreation<T>(
   } catch (error) {
     if (!ambiguousTransportFailure(error)) throw error
     const sessionId = await committedSessionCreation(idempotencyKey)
-    if (sessionId) return { kind: 'recovered', sessionId, idempotencyKey }
+    if (sessionId) {
+      signalRepairStateChanged(sessionId)
+      return { kind: 'recovered', sessionId, idempotencyKey }
+    }
     throw uncertainWriteFailure(error)
   }
 }
