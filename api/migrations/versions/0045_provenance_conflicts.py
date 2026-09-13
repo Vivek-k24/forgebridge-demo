@@ -1,4 +1,4 @@
-"""Add canonical provenance, versioning, and conflict representation."""
+"""Add canonical provenance, authority, versioning, and conflict representation."""
 
 from collections.abc import Sequence
 
@@ -13,7 +13,7 @@ depends_on: str | Sequence[str] | None = None
 APP_ROLE = "partgraph_app"
 REVIEWER_ROLE = "partgraph_reviewer"
 SHARED_TABLES = (
-    "canonical_record_versions, canonical_record_evidence, "
+    "source_authority_policies, canonical_record_versions, canonical_record_evidence, "
     "canonical_conflicts, canonical_conflict_items"
 )
 DOMAIN_CHECK = (
@@ -21,9 +21,75 @@ DOMAIN_CHECK = (
     "'physical_relationship', 'hardware', 'requirement', 'material', 'specification', "
     "'repair', 'procedure', 'downstream', 'diagnostic', 'electrical', 'capability')"
 )
+SOURCE_CLASS_CHECK = (
+    "('government', 'oem_service', 'licensed_oem_derived', 'oem_parts', "
+    "'industry_standard', 'retailer', 'community')"
+)
 
 
 def upgrade() -> None:
+    op.create_table(
+        "source_authority_policies",
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("policy_key", sa.String(length=160), nullable=False),
+        sa.Column("canonical_domain", sa.String(length=32), nullable=False),
+        sa.Column("source_class", sa.String(length=32), nullable=False),
+        sa.Column("risk_class", sa.String(length=24), nullable=False),
+        sa.Column("authority_state", sa.String(length=16), nullable=False),
+        sa.Column(
+            "requires_exact_applicability",
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.true(),
+        ),
+        sa.Column(
+            "minimum_evidence_count",
+            sa.Integer(),
+            nullable=False,
+            server_default="1",
+        ),
+        sa.Column("rationale", sa.String(length=500), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+        sa.CheckConstraint(
+            f"canonical_domain IN {DOMAIN_CHECK}",
+            name="ck_source_authority_policies_domain",
+        ),
+        sa.CheckConstraint(
+            f"source_class IN {SOURCE_CLASS_CHECK}",
+            name="ck_source_authority_policies_source_class",
+        ),
+        sa.CheckConstraint(
+            "risk_class IN ('normal', 'safety_critical')",
+            name="ck_source_authority_policies_risk",
+        ),
+        sa.CheckConstraint(
+            "authority_state IN ('accepted', 'conditional', 'rejected')",
+            name="ck_source_authority_policies_state",
+        ),
+        sa.CheckConstraint(
+            "minimum_evidence_count >= 1",
+            name="ck_source_authority_policies_evidence_count",
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("policy_key"),
+        sa.UniqueConstraint(
+            "canonical_domain",
+            "source_class",
+            "risk_class",
+            name="uq_source_authority_policies_scope",
+        ),
+    )
+    op.create_index(
+        "ix_source_authority_policies_domain",
+        "source_authority_policies",
+        ["canonical_domain"],
+    )
+
     op.create_table(
         "canonical_record_versions",
         sa.Column("id", sa.Uuid(), nullable=False),
@@ -264,3 +330,8 @@ def downgrade() -> None:
         table_name="canonical_record_versions",
     )
     op.drop_table("canonical_record_versions")
+    op.drop_index(
+        "ix_source_authority_policies_domain",
+        table_name="source_authority_policies",
+    )
+    op.drop_table("source_authority_policies")
