@@ -25,13 +25,13 @@ These percentages are strict MVP completion estimates, not code-volume estimates
 
 | Area | Completion |
 |---|---:|
-| Core software/platform architecture | 78% |
+| Core software/platform architecture | 80% |
 | Security, ownership and data isolation | 86% |
-| Error/timeout/degraded resilience | 58% |
+| Error/timeout/degraded resilience | 86% |
 | Human RBAC | 42% |
 | Canonical automotive data pipeline | 30% |
 | Broad canonical automotive knowledge | 8-10% |
-| Five-model consumer MVP | 46% |
+| Five-model consumer MVP | 48% |
 
 Major existing strengths:
 - authentication and server-side sessions
@@ -44,17 +44,17 @@ Major existing strengths:
 - deterministic procedure engine
 - unsupported computer/service-tool boundaries are non-completable
 - first-class downstream/cross-repair requirements and mechanically honest completion state
-- structured error envelope and request IDs
+- structured error envelope, request IDs and formal backend error-family ownership
+- bounded client retries, server request deadlines and authoritative ambiguous-write recovery
+- standardized degraded/unavailable UI state
+- versioned, owner-scoped read-only offline repair packs with public-shell-only service-worker caching
 - staging/canonical privilege separation
 - private photo storage implementation with hosted Blob support and local private-volume fallback
 
 Major gaps:
 - no broad canonical repair library
-- authoritative recovery for timed-out writes is not complete
-- server-side request/deadline behavior is not complete
 - hosted durable photo persistence still needs environment/configuration proof before production cutover
-- browser E2E
-- true offline repair packs/reconnect flow
+- browser E2E and final offline/degraded regression coverage
 - human reviewer/curator authorization remains incomplete
 - canonical evidence-to-repair materialization
 - source-code vehicle-data invariant not yet enforced automatically
@@ -108,6 +108,14 @@ PartGraph can no longer report a mechanically incomplete or unsupported repair a
 
 ### Phase 2 — Restore the resilience contract
 
+Status on `partgraph-mvp-consolidation`:
+- items 1-9 and 11 are implemented in the active application line
+- item 10 is intentionally inactive because MVP offline mode is read-only; no offline mutation journal is enabled
+- offline repair pack v1 is generated from server-authoritative resume, readiness and verified guidance state and is versioned by repair-definition version and confirmed session sequence
+- private offline pack state is kept in tab-scoped `sessionStorage`; confirmed logout/session invalidation clears it
+- the service worker caches only the public application shell and explicitly excludes `/api/` responses; same-tab reload can reopen an already cached repair while the network is unavailable
+- final browser/offline/degraded regression proof remains a Phase 9 validation responsibility
+
 1. Preserve the central machine-readable error registry.
 2. Formalize error-code ownership by module.
 3. Keep request IDs end-to-end.
@@ -122,6 +130,8 @@ PartGraph can no longer report a mechanically incomplete or unsupported repair a
 
 Exit gate:
 Network loss cannot make PartGraph guess, lose the user's place, or falsely report a mutation.
+
+The functional Phase 2 exit gate is satisfied for the current read-only offline policy. Final browser-level regression proof is deferred to Phase 9 rather than rebuilding the retired test suite during active MVP construction.
 
 ### Phase 3 — Complete security and RBAC boundaries
 
