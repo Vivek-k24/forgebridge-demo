@@ -1,4 +1,4 @@
-import { apiRequest } from './api'
+import { apiRequest, AUTH_STATE_CLEARED_EVENT } from './api'
 
 const PACK_KEY = 'partgraph:offline-repair-pack:v1'
 const OWNER_KEY = 'partgraph:offline-owner:v1'
@@ -151,3 +151,5 @@ export async function refreshOfflineRepairPack(sessionId: string): Promise<Offli
   cacheOfflineRepairPack(pack)
   return pack
 }
+
+window.addEventListener(AUTH_STATE_CLEARED_EVENT, clearOfflineRepairCache)
