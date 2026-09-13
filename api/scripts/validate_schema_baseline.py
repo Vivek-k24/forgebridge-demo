@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import difflib
 import hashlib
 import json
 import re
@@ -47,6 +48,23 @@ def write_manifest(schema_path: Path, alembic_head: str) -> Path:
     return manifest_path
 
 
+def write_schema_diff(
+    schema_path: Path,
+    schema_text: str,
+    recreated_path: Path,
+    recreated_text: str,
+) -> Path:
+    diff_path = schema_path.with_name("schema-diff.txt")
+    diff = difflib.unified_diff(
+        normalized_schema(schema_text).splitlines(keepends=True),
+        normalized_schema(recreated_text).splitlines(keepends=True),
+        fromfile=schema_path.name,
+        tofile=recreated_path.name,
+    )
+    diff_path.write_text("".join(diff), encoding="utf-8")
+    return diff_path
+
+
 def main(argv: list[str]) -> int:
     if len(argv) not in {3, 4}:
         print(
@@ -66,7 +84,16 @@ def main(argv: list[str]) -> int:
         recreated_text = recreated_path.read_text(encoding="utf-8")
         validate_schema_only(recreated_text)
         if normalized_schema(schema_text) != normalized_schema(recreated_text):
-            raise ValueError("recreated baseline schema differs from migrated schema")
+            diff_path = write_schema_diff(
+                schema_path,
+                schema_text,
+                recreated_path,
+                recreated_text,
+            )
+            raise ValueError(
+                "recreated baseline schema differs from migrated schema; "
+                f"inspect {diff_path}"
+            )
 
     return 0
 
