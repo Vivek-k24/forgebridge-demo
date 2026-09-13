@@ -21,6 +21,7 @@ import partgraph.knowledge.interchange  # noqa: F401
 import partgraph.knowledge.materials  # noqa: F401
 import partgraph.knowledge.models  # noqa: F401
 import partgraph.knowledge.parts  # noqa: F401
+import partgraph.knowledge.provenance  # noqa: F401
 import partgraph.knowledge.relationships  # noqa: F401
 import partgraph.knowledge.requirements  # noqa: F401
 import partgraph.knowledge.specifications  # noqa: F401
