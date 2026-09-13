@@ -177,7 +177,7 @@ The functional Phase 3 exit gate is satisfied for operations that currently exis
 
 ### Phase 4 — Complete the 18-domain canonical schema
 
-Status: **In progress.** Domains 1-7 are complete. Exact identity, structure, part identity, fitment, interchange and the typed physical relationship graph have dedicated relational models. Migration `0038_hardware_fasteners` adds canonical hardware definitions for fasteners, clips, seals and related small hardware; optional OEM/manufacturer part-identity mappings; typed hardware entities that participate in the same physical graph; and an optional canonical hardware link on owner-private repair fastener state so an unresolved observed fastener can remain unresolved instead of being guessed. The Domain 7 implementation passed API CI #590, Web CI #453, preview migration and least-privilege database checks on `deb84f768c476f3ad89c84863e4afc6ba65a026e`.
+Status: **In progress.** Domains 1-8 are complete. Exact identity, structure, part identity, fitment, interchange, the typed physical relationship graph and canonical hardware all have dedicated relational models. Migration `0039_tools_equipment_workspace` adds structured canonical tool/equipment and workspace resources plus bindings to the existing requirement model. Professional equipment remains a physical resource classification only and does not grant DIY procedure support. The Domain 8 implementation passed API CI #597 and Web CI #460, including fresh PostgreSQL migration, least-privilege database checks and container smoke, on `264b9d5d8ee028f359db7e3211de36775b393876`.
 
 Implement the Blueprint domains without vehicle-specific application code:
 
@@ -188,7 +188,7 @@ Implement the Blueprint domains without vehicle-specific application code:
 - [x] interchange/supersession
 - [x] physical relationship graph
 - [x] hardware/fasteners
-- [ ] tools/equipment/workspace
+- [x] tools/equipment/workspace
 - [ ] fluids/materials/consumables
 - [ ] specifications/limits
 - [ ] repair definitions/operations
