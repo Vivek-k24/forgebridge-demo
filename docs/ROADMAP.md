@@ -177,7 +177,7 @@ The functional Phase 3 exit gate is satisfied for operations that currently exis
 
 ### Phase 4 — Complete the 18-domain canonical schema
 
-Status: **In progress.** Domains 1-6 are complete. Exact identity, structure, part identity, fitment and interchange have dedicated relational models; migration `0037_physical_relationship_graph` adds a typed physical-entity registry and configuration-scoped relationship edges for containment, attachment, seals, fasteners, fluid/electrical connections, removal ordering and related physical links. The typed registry is intentionally extensible so later hardware and electrical domains can join the same graph without weakening foreign-key integrity. The Domain 6 implementation passed API CI, Web CI, preview migration and least-privilege database checks on `2f3fb225ea34f59ef88dd7a511e9b8a2d9b254f5`.
+Status: **In progress.** Domains 1-7 are complete. Exact identity, structure, part identity, fitment, interchange and the typed physical relationship graph have dedicated relational models. Migration `0038_hardware_fasteners` adds canonical hardware definitions for fasteners, clips, seals and related small hardware; optional OEM/manufacturer part-identity mappings; typed hardware entities that participate in the same physical graph; and an optional canonical hardware link on owner-private repair fastener state so an unresolved observed fastener can remain unresolved instead of being guessed. The Domain 7 implementation passed API CI #590, Web CI #453, preview migration and least-privilege database checks on `deb84f768c476f3ad89c84863e4afc6ba65a026e`.
 
 Implement the Blueprint domains without vehicle-specific application code:
 
@@ -187,7 +187,7 @@ Implement the Blueprint domains without vehicle-specific application code:
 - [x] fitment/applicability
 - [x] interchange/supersession
 - [x] physical relationship graph
-- [ ] hardware/fasteners
+- [x] hardware/fasteners
 - [ ] tools/equipment/workspace
 - [ ] fluids/materials/consumables
 - [ ] specifications/limits
