@@ -104,6 +104,17 @@ jobs:
           PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
         run: alembic -c api/alembic.ini upgrade head
 
+      - name: Build production-copy upgrade SQL
+        env:
+          PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
+        run: |
+          mkdir -p /tmp/partgraph-baseline
+          alembic -c api/alembic.ini upgrade 0020_catalog_coverage:head --sql \
+            > /tmp/partgraph-baseline/upgrade-0020-to-head.sql
+          test -s /tmp/partgraph-baseline/upgrade-0020-to-head.sql
+          grep -q '0045_provenance_conflicts' \
+            /tmp/partgraph-baseline/upgrade-0020-to-head.sql
+
       - name: Test database RBAC privilege boundaries
         env:
           PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
@@ -168,6 +179,7 @@ jobs:
             /tmp/partgraph-baseline/recreated-schema.sql
             /tmp/partgraph-baseline/schema-diff.txt
             /tmp/partgraph-baseline/manifest.json
+            /tmp/partgraph-baseline/upgrade-0020-to-head.sql
           if-no-files-found: ignore
           retention-days: 7
 
