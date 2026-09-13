@@ -66,6 +66,7 @@ jobs:
       - name: Lint API, migrations, and security tests
         run: >-
           ruff check api/partgraph api/migrations
+          api/scripts/validate_schema_baseline.py
           api/tests/test_provider_credentials.py
           api/tests/test_operator_preview_bootstrap.py
           api/tests/test_operator_local_bootstrap.py
@@ -117,6 +118,54 @@ jobs:
         env:
           PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
         run: python -m unittest discover -s api/tests -p 'test_provenance_database_privileges.py'
+
+      - name: Build and verify schema-only baseline candidate
+        env:
+          PGPASSWORD: partgraph
+        run: |
+          mkdir -p /tmp/partgraph-baseline
+          docker run --rm --network host \
+            -e PGPASSWORD="$PGPASSWORD" \
+            postgres:18.6-alpine \
+            pg_dump --host=127.0.0.1 --port=5432 --username=partgraph --dbname=partgraph \
+              --schema-only --no-owner --no-comments \
+            > /tmp/partgraph-baseline/schema.sql
+          python api/scripts/validate_schema_baseline.py \
+            /tmp/partgraph-baseline/schema.sql 0045_provenance_conflicts
+
+          docker run --rm --network host \
+            -e PGPASSWORD="$PGPASSWORD" \
+            postgres:18.6-alpine \
+            psql --host=127.0.0.1 --port=5432 --username=partgraph --dbname=postgres \
+              --set=ON_ERROR_STOP=1 --command='CREATE DATABASE partgraph_baseline'
+          cat api/migrations/baseline/roles.sql | docker run --rm -i --network host \
+            -e PGPASSWORD="$PGPASSWORD" \
+            postgres:18.6-alpine \
+            psql --host=127.0.0.1 --port=5432 --username=partgraph \
+              --dbname=partgraph_baseline --set=ON_ERROR_STOP=1
+          cat /tmp/partgraph-baseline/schema.sql | docker run --rm -i --network host \
+            -e PGPASSWORD="$PGPASSWORD" \
+            postgres:18.6-alpine \
+            psql --host=127.0.0.1 --port=5432 --username=partgraph \
+              --dbname=partgraph_baseline --set=ON_ERROR_STOP=1
+          docker run --rm --network host \
+            -e PGPASSWORD="$PGPASSWORD" \
+            postgres:18.6-alpine \
+            pg_dump --host=127.0.0.1 --port=5432 --username=partgraph \
+              --dbname=partgraph_baseline --schema-only --no-owner --no-comments \
+            > /tmp/partgraph-baseline/recreated-schema.sql
+          python api/scripts/validate_schema_baseline.py \
+            /tmp/partgraph-baseline/schema.sql 0045_provenance_conflicts \
+            /tmp/partgraph-baseline/recreated-schema.sql
+
+      - name: Upload schema baseline candidate
+        uses: actions/upload-artifact@v6
+        with:
+          name: partgraph-schema-baseline-${{ github.sha }}
+          path: |
+            /tmp/partgraph-baseline/schema.sql
+            /tmp/partgraph-baseline/manifest.json
+          retention-days: 7
 
       - name: Build API container
         run: docker build -t partgraph-api:ci ./api
