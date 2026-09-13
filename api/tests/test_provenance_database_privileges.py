@@ -40,6 +40,7 @@ class ProvenanceDatabasePrivilegeTests(unittest.TestCase):
 
     def test_app_and_reviewer_can_read_publication_provenance(self) -> None:
         for role in (APP_ROLE, REVIEWER_ROLE):
+            self._allowed(role, "SELECT id FROM public.source_authority_policies LIMIT 1")
             self._allowed(role, "SELECT id FROM public.canonical_record_versions LIMIT 1")
             self._allowed(role, "SELECT id FROM public.canonical_record_evidence LIMIT 1")
             self._allowed(role, "SELECT id FROM public.canonical_conflicts LIMIT 1")
@@ -47,6 +48,11 @@ class ProvenanceDatabasePrivilegeTests(unittest.TestCase):
 
     def test_app_and_reviewer_cannot_mutate_publication_provenance(self) -> None:
         for role in (APP_ROLE, REVIEWER_ROLE):
+            self._denied(
+                role,
+                "UPDATE public.source_authority_policies "
+                "SET authority_state = authority_state WHERE false",
+            )
             self._denied(
                 role,
                 "UPDATE public.canonical_record_versions "
