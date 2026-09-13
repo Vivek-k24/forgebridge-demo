@@ -89,6 +89,15 @@ class DatabasePrivilegeBoundaryTests(unittest.TestCase):
             APP_ROLE,
             "SELECT id FROM public.workspace_requirement_bindings LIMIT 1",
         )
+        self._allowed(APP_ROLE, "SELECT id FROM public.material_definitions LIMIT 1")
+        self._allowed(
+            APP_ROLE,
+            "SELECT id FROM public.vehicle_material_applicability LIMIT 1",
+        )
+        self._allowed(
+            APP_ROLE,
+            "SELECT id FROM public.material_requirement_bindings LIMIT 1",
+        )
 
     def test_app_cannot_read_internal_coverage_or_staging(self) -> None:
         self._denied(
@@ -154,6 +163,13 @@ class DatabasePrivilegeBoundaryTests(unittest.TestCase):
                 )
                 cursor.execute(
                     "SELECT id FROM public.workspace_requirement_bindings LIMIT 1"
+                )
+                cursor.execute("SELECT id FROM public.material_definitions LIMIT 1")
+                cursor.execute(
+                    "SELECT id FROM public.vehicle_material_applicability LIMIT 1"
+                )
+                cursor.execute(
+                    "SELECT id FROM public.material_requirement_bindings LIMIT 1"
                 )
 
     def test_reviewer_cannot_mutate_coverage_or_canonical_truth(self) -> None:
@@ -228,6 +244,19 @@ class DatabasePrivilegeBoundaryTests(unittest.TestCase):
         self._denied(
             REVIEWER_ROLE,
             "DELETE FROM public.workspace_requirement_bindings WHERE false",
+        )
+        self._denied(
+            REVIEWER_ROLE,
+            "UPDATE public.material_definitions SET display_name = display_name WHERE false",
+        )
+        self._denied(
+            REVIEWER_ROLE,
+            "UPDATE public.vehicle_material_applicability "
+            "SET applicability_state = applicability_state WHERE false",
+        )
+        self._denied(
+            REVIEWER_ROLE,
+            "DELETE FROM public.material_requirement_bindings WHERE false",
         )
 
 
