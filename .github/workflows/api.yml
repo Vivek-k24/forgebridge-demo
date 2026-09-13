@@ -158,13 +158,17 @@ jobs:
             /tmp/partgraph-baseline/schema.sql 0045_provenance_conflicts \
             /tmp/partgraph-baseline/recreated-schema.sql
 
-      - name: Upload schema baseline candidate
+      - name: Upload schema baseline diagnostics
+        if: always()
         uses: actions/upload-artifact@v6
         with:
           name: partgraph-schema-baseline-${{ github.sha }}
           path: |
             /tmp/partgraph-baseline/schema.sql
+            /tmp/partgraph-baseline/recreated-schema.sql
+            /tmp/partgraph-baseline/schema-diff.txt
             /tmp/partgraph-baseline/manifest.json
+          if-no-files-found: ignore
           retention-days: 7
 
       - name: Build API container
