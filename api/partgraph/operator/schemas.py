@@ -2,7 +2,9 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, SecretStr, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr, field_validator, model_validator
+
+from ..identity.auth.schemas import UserRole
 
 ProviderKind = Literal["internal_data", "vehicle_data", "ai", "manufacturer"]
 ProviderCredentialStorage = Literal["encrypted_database", "external_reference"]
@@ -14,6 +16,7 @@ OperatorAuditAction = Literal[
     "provider_credential_saved",
     "provider_credential_removed",
     "preview_operator_bootstrap",
+    "user_role_changed",
 ]
 PROVIDER_KEY_PATTERN = r"^[a-z0-9][a-z0-9_-]{1,95}$"
 
@@ -175,6 +178,21 @@ class OperatorAuditRead(BaseModel):
     target_id: UUID
     event_data: dict[str, object]
     created_at: datetime
+
+
+class OperatorUserRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    email: EmailStr
+    username: str
+    role: UserRole
+    is_active: bool
+    created_at: datetime
+
+
+class UserRoleUpdate(BaseModel):
+    role: UserRole
 
 
 class PreviewOperatorBootstrapStatus(BaseModel):
