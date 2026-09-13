@@ -2,8 +2,10 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '
 const HARD_TIMEOUT_MS = 10_000
 const EXPECTED_API_VERSION = 'v1'
 const SERVER_DEADLINE_CODE = 'REQUEST_DEADLINE_EXCEEDED'
+const SESSION_FAILURE_CODES = new Set(['AUTH_REQUIRED', 'AUTH_SESSION_EXPIRED', 'AUTH_SESSION_REVOKED'])
 
 export const CSRF_HEADERS = { 'X-PartGraph-CSRF': '1' }
+export const AUTH_STATE_CLEARED_EVENT = 'partgraph:auth-state-cleared'
 
 type ErrorEnvelope = {
   error?: {
@@ -51,6 +53,10 @@ type ReadyHealth = {
 
 function clientRequestId(): string {
   return crypto.randomUUID().replaceAll('-', '')
+}
+
+function signalAuthStateCleared(reason: string): void {
+  window.dispatchEvent(new CustomEvent(AUTH_STATE_CLEARED_EVENT, { detail: { reason } }))
 }
 
 async function sleep(milliseconds: number) {
@@ -118,6 +124,7 @@ export async function apiRequest<T>(
           })
         }
         const serverCode = envelope.error?.code ?? `HTTP_${response.status}`
+        if (SESSION_FAILURE_CODES.has(serverCode)) signalAuthStateCleared(serverCode)
         const clientCode = serverCode === SERVER_DEADLINE_CODE ? 'CLIENT_REQUEST_TIMEOUT' : serverCode
         throw new ApiFailure(envelope.error?.message ?? `API returned HTTP ${response.status}.`, {
           code: clientCode,
@@ -127,6 +134,7 @@ export async function apiRequest<T>(
         })
       }
 
+      if (path === '/api/v1/auth/logout' && method === 'POST') signalAuthStateCleared('AUTH_LOGOUT_CONFIRMED')
       if (response.status === 204) return undefined as T
       return (await response.json()) as T
     } catch (error) {
@@ -161,12 +169,7 @@ export async function probeApiAvailability(): Promise<ApiAvailability> {
   try {
     const health = await apiRequest<ReadyHealth>('/api/v1/health/ready')
     if (health.status === 'ready' && health.database === 'ready') {
-      return {
-        state: 'ready',
-        code: null,
-        message: 'PartGraph is ready.',
-        checkedAt,
-      }
+      return { state: 'ready', code: null, message: 'PartGraph is ready.', checkedAt }
     }
     return {
       state: 'degraded',
