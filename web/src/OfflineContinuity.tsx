@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { activeRepairSessionId, ACTIVE_REPAIR_SESSION_EVENT } from './active-repair'
-import { AUTH_STATE_CLEARED_EVENT, probeApiAvailability } from './api'
+import { AUTH_STATE_CLEARED_EVENT, probeApiAvailability, REPAIR_API_MUTATION_EVENT } from './api'
 import { OfflineRepairWorkspace } from './OfflineRepair'
 import { loadCachedOfflineRepairPack, refreshOfflineRepairPack, type OfflineRepairPack } from './offline-repair'
 import { REPAIR_STATE_CHANGED_EVENT } from './repair-client'
@@ -45,6 +45,7 @@ export default function OfflineContinuity({ children }: { children: ReactNode })
     window.addEventListener('offline', changed)
     window.addEventListener(ACTIVE_REPAIR_SESSION_EVENT, changed)
     window.addEventListener(REPAIR_STATE_CHANGED_EVENT, changed)
+    window.addEventListener(REPAIR_API_MUTATION_EVENT, changed)
     window.addEventListener(AUTH_STATE_CLEARED_EVENT, clear)
     window.addEventListener('hashchange', hash)
     return () => {
@@ -54,6 +55,7 @@ export default function OfflineContinuity({ children }: { children: ReactNode })
       window.removeEventListener('offline', changed)
       window.removeEventListener(ACTIVE_REPAIR_SESSION_EVENT, changed)
       window.removeEventListener(REPAIR_STATE_CHANGED_EVENT, changed)
+      window.removeEventListener(REPAIR_API_MUTATION_EVENT, changed)
       window.removeEventListener(AUTH_STATE_CLEARED_EVENT, clear)
       window.removeEventListener('hashchange', hash)
     }
