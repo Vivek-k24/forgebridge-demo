@@ -25,6 +25,8 @@ from .errors import ErrorCode, PartGraphError, error_response
 from .identity.auth.router import router as auth_router
 from .identity.user_vehicle.router import router as user_vehicle_router
 from .identity.vehicle.router import router as vehicle_router
+from .knowledge.claim_publication import router as claim_publication_router
+from .knowledge.contribution import router as knowledge_contribution_router
 from .knowledge.coverage_router import router as catalog_coverage_router
 from .knowledge.curation import router as knowledge_curation_router
 from .knowledge.router import router as repair_definition_router
@@ -41,6 +43,7 @@ logger = logging.getLogger("partgraph.api")
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 AUTH_BODY_LIMIT_BYTES = 16 * 1024
 OPERATOR_BODY_LIMIT_BYTES = 64 * 1024
+KNOWLEDGE_BODY_LIMIT_BYTES = 256 * 1024
 USER_VEHICLE_BODY_LIMIT_BYTES = 32 * 1024
 REPAIR_SESSION_BODY_LIMIT_BYTES = 16 * 1024
 PHOTO_MULTIPART_OVERHEAD_BYTES = 256 * 1024
@@ -91,6 +94,8 @@ app.include_router(user_vehicle_router)
 app.include_router(equipment_router)
 app.include_router(catalog_coverage_router)
 app.include_router(knowledge_curation_router)
+app.include_router(knowledge_contribution_router)
+app.include_router(claim_publication_router)
 app.include_router(repair_session_router)
 app.include_router(repair_recovery_router)
 app.include_router(repair_memory_router)
@@ -109,6 +114,8 @@ def _request_body_limit(request: Request) -> tuple[int, str] | None:
         return AUTH_BODY_LIMIT_BYTES, "Authentication request payload is too large."
     if request.url.path.startswith("/api/v1/operator"):
         return OPERATOR_BODY_LIMIT_BYTES, "Operator request payload is too large."
+    if request.url.path.startswith(("/api/v1/curation", "/api/v1/contributions")):
+        return KNOWLEDGE_BODY_LIMIT_BYTES, "Knowledge-pipeline request payload is too large."
     if request.url.path.startswith("/api/v1/user-vehicles"):
         return USER_VEHICLE_BODY_LIMIT_BYTES, "Vehicle request payload is too large."
     if request.url.path.startswith("/api/v1/repair-sessions"):
@@ -217,6 +224,7 @@ def _finish_response(request: Request, response: Response, duration_ms: float) -
             "/api/v1/account",
             "/api/v1/operator",
             "/api/v1/curation",
+            "/api/v1/contributions",
             "/api/v1/user-vehicles",
             "/api/v1/equipment",
             "/api/v1/repair-sessions",
