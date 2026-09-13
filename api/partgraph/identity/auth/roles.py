@@ -2,6 +2,8 @@ from collections.abc import Callable
 from typing import Annotated
 
 from fastapi import Depends, status
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..errors import ErrorCode, PartGraphError
 from .dependencies import CurrentUserDep
@@ -10,6 +12,7 @@ from .models import User
 REVIEW_ROLES = frozenset({"reviewer", "curator", "operator_admin"})
 CURATION_PUBLISH_ROLES = frozenset({"curator", "operator_admin"})
 CONTRIBUTION_ROLES = frozenset({"contributor", "reviewer", "curator", "operator_admin"})
+REVIEWER_DATABASE_ROLE = "partgraph_reviewer"
 
 
 def require_any_role(*allowed_roles: str) -> Callable[[CurrentUserDep], User]:
@@ -32,6 +35,11 @@ def require_any_role(*allowed_roles: str) -> Callable[[CurrentUserDep], User]:
 
 def require_role(role: str) -> Callable[[CurrentUserDep], User]:
     return require_any_role(role)
+
+
+async def assume_reviewer_database_role(session: AsyncSession) -> None:
+    """Narrow the current transaction to the reviewer database privilege set."""
+    await session.execute(text(f"SET LOCAL ROLE {REVIEWER_DATABASE_ROLE}"))
 
 
 ReviewerUserDep = Annotated[
