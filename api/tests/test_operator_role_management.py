@@ -44,7 +44,7 @@ class FakeSession:
 def _user(*, role: str = "owner") -> User:
     return User(
         id=uuid4(),
-        email=f"{uuid4().hex}@example.invalid",
+        email=f"{uuid4().hex}@example.com",
         username=f"user_{uuid4().hex[:8]}",
         password_hash="unused-test-hash",
         role=role,
