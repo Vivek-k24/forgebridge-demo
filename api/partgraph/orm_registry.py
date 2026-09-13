@@ -15,6 +15,7 @@ import partgraph.knowledge.coverage_models  # noqa: F401
 import partgraph.knowledge.fitment  # noqa: F401
 import partgraph.knowledge.hardware  # noqa: F401
 import partgraph.knowledge.interchange  # noqa: F401
+import partgraph.knowledge.materials  # noqa: F401
 import partgraph.knowledge.models  # noqa: F401
 import partgraph.knowledge.parts  # noqa: F401
 import partgraph.knowledge.relationships  # noqa: F401
