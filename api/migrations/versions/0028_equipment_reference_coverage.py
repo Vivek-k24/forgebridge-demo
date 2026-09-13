@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from uuid import NAMESPACE_URL, uuid5
 
 import sqlalchemy as sa
-from alembic import op
+from alembic import context, op
 from sqlalchemy.dialects.postgresql import insert
 
 from partgraph.equipment.manual_reference_v1 import (
@@ -45,7 +45,7 @@ def upgrade() -> None:
             .where(catalog.c.catalog_key == catalog_key)
             .values(keywords=reference_keywords(catalog_key))
         )
-        if result.rowcount != 1:
+        if not context.is_offline_mode() and result.rowcount != 1:
             raise RuntimeError(f"equipment reference alias target is missing: {catalog_key}")
 
     rows = [
