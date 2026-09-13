@@ -13,6 +13,7 @@ import partgraph.intelligence.models  # noqa: F401
 import partgraph.knowledge.completion_models  # noqa: F401
 import partgraph.knowledge.coverage_models  # noqa: F401
 import partgraph.knowledge.fitment  # noqa: F401
+import partgraph.knowledge.interchange  # noqa: F401
 import partgraph.knowledge.models  # noqa: F401
 import partgraph.knowledge.parts  # noqa: F401
 import partgraph.knowledge.vehicle_structure  # noqa: F401
