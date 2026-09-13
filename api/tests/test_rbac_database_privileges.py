@@ -39,10 +39,7 @@ class DatabasePrivilegeBoundaryTests(unittest.TestCase):
                     cursor.execute(statement)
 
     def test_app_can_read_shared_vehicle_knowledge(self) -> None:
-        self._allowed(
-            APP_ROLE,
-            "SELECT id FROM public.vehicle_configurations LIMIT 1",
-        )
+        self._allowed(APP_ROLE, "SELECT id FROM public.vehicle_configurations LIMIT 1")
         self._allowed(
             APP_ROLE,
             "SELECT id FROM public.vehicle_specification_profiles LIMIT 1",
@@ -50,6 +47,15 @@ class DatabasePrivilegeBoundaryTests(unittest.TestCase):
         self._allowed(
             APP_ROLE,
             "SELECT id FROM public.vehicle_structure_nodes LIMIT 1",
+        )
+        self._allowed(
+            APP_ROLE,
+            "SELECT id FROM public.component_definitions LIMIT 1",
+        )
+        self._allowed(APP_ROLE, "SELECT id FROM public.part_identities LIMIT 1")
+        self._allowed(
+            APP_ROLE,
+            "SELECT id FROM public.component_part_roles LIMIT 1",
         )
 
     def test_app_cannot_read_internal_coverage_or_staging(self) -> None:
@@ -84,6 +90,15 @@ class DatabasePrivilegeBoundaryTests(unittest.TestCase):
                 cursor.execute(
                     "SELECT id FROM public.vehicle_structure_nodes LIMIT 1"
                 )
+                cursor.execute(
+                    "SELECT id FROM public.component_definitions LIMIT 1"
+                )
+                cursor.execute(
+                    "SELECT id FROM public.part_identities LIMIT 1"
+                )
+                cursor.execute(
+                    "SELECT id FROM public.component_part_roles LIMIT 1"
+                )
 
     def test_reviewer_cannot_mutate_coverage_or_canonical_truth(self) -> None:
         self._denied(
@@ -101,6 +116,18 @@ class DatabasePrivilegeBoundaryTests(unittest.TestCase):
         self._denied(
             REVIEWER_ROLE,
             "UPDATE public.vehicle_structure_nodes SET display_name = display_name WHERE false",
+        )
+        self._denied(
+            REVIEWER_ROLE,
+            "UPDATE public.component_definitions SET display_name = display_name WHERE false",
+        )
+        self._denied(
+            REVIEWER_ROLE,
+            "UPDATE public.part_identities SET display_name = display_name WHERE false",
+        )
+        self._denied(
+            REVIEWER_ROLE,
+            "DELETE FROM public.component_part_roles WHERE false",
         )
 
 
