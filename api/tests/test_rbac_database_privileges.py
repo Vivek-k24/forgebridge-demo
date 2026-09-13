@@ -59,6 +59,20 @@ class DatabasePrivilegeBoundaryTests(unittest.TestCase):
         )
         self._allowed(APP_ROLE, "SELECT id FROM public.part_fitments LIMIT 1")
         self._allowed(APP_ROLE, "SELECT id FROM public.part_relationships LIMIT 1")
+        self._allowed(APP_ROLE, "SELECT id FROM public.physical_entities LIMIT 1")
+        self._allowed(
+            APP_ROLE,
+            "SELECT entity_id FROM public.physical_entity_structure_nodes LIMIT 1",
+        )
+        self._allowed(
+            APP_ROLE,
+            "SELECT entity_id FROM public.physical_entity_components LIMIT 1",
+        )
+        self._allowed(
+            APP_ROLE,
+            "SELECT entity_id FROM public.physical_entity_parts LIMIT 1",
+        )
+        self._allowed(APP_ROLE, "SELECT id FROM public.physical_relationships LIMIT 1")
 
     def test_app_cannot_read_internal_coverage_or_staging(self) -> None:
         self._denied(
@@ -101,6 +115,17 @@ class DatabasePrivilegeBoundaryTests(unittest.TestCase):
                 )
                 cursor.execute("SELECT id FROM public.part_fitments LIMIT 1")
                 cursor.execute("SELECT id FROM public.part_relationships LIMIT 1")
+                cursor.execute("SELECT id FROM public.physical_entities LIMIT 1")
+                cursor.execute(
+                    "SELECT entity_id FROM public.physical_entity_structure_nodes LIMIT 1"
+                )
+                cursor.execute(
+                    "SELECT entity_id FROM public.physical_entity_components LIMIT 1"
+                )
+                cursor.execute(
+                    "SELECT entity_id FROM public.physical_entity_parts LIMIT 1"
+                )
+                cursor.execute("SELECT id FROM public.physical_relationships LIMIT 1")
 
     def test_reviewer_cannot_mutate_coverage_or_canonical_truth(self) -> None:
         self._denied(
@@ -138,6 +163,14 @@ class DatabasePrivilegeBoundaryTests(unittest.TestCase):
         self._denied(
             REVIEWER_ROLE,
             "DELETE FROM public.part_relationships WHERE false",
+        )
+        self._denied(
+            REVIEWER_ROLE,
+            "UPDATE public.physical_entities SET entity_kind = entity_kind WHERE false",
+        )
+        self._denied(
+            REVIEWER_ROLE,
+            "DELETE FROM public.physical_relationships WHERE false",
         )
 
 
