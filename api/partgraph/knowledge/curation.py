@@ -10,7 +10,7 @@ from sqlalchemy import select, text
 from ..errors import ErrorCode, ErrorEnvelope, PartGraphError
 from ..identity.auth.dependencies import AuthSessionDep, require_csrf
 from ..identity.auth.roles import ReviewerUserDep
-from .models import CatalogIngestionBatch, CatalogSourceRecord, CatalogVerifiedEvidence
+from .models import CatalogIngestionBatch, CatalogSourceRecord
 from .staging import CatalogStagingError, promote_verified_record, reject_staging_record
 
 ReviewStatus = Literal["pending", "verified", "rejected"]
