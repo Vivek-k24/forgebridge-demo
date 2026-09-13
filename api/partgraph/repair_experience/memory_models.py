@@ -34,6 +34,11 @@ class RepairFastener(Base):
     session_id: Mapped[UUID] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("repair_sessions.id", ondelete="CASCADE"), nullable=False
     )
+    hardware_definition_id: Mapped[UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("hardware_definitions.id", ondelete="RESTRICT"),
+        index=True,
+    )
     kind: Mapped[str] = mapped_column(String(16), nullable=False)
     label: Mapped[str] = mapped_column(String(120), nullable=False)
     origin: Mapped[str | None] = mapped_column(String(160))
