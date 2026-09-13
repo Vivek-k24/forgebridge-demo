@@ -18,6 +18,16 @@ type ReadyHealth = {
   database_ms: number
 }
 
+type UserRole = 'owner' | 'contributor' | 'reviewer' | 'curator' | 'operator_admin'
+type OperatorUser = {
+  id: string
+  email: string
+  username: string
+  role: UserRole
+  is_active: boolean
+  created_at: string
+}
+
 type ProviderKind = 'internal_data' | 'vehicle_data' | 'ai' | 'manufacturer'
 type ProviderCredentialStorage = 'encrypted_database' | 'external_reference'
 type Provider = {
@@ -44,6 +54,7 @@ type OperatorAuditAction =
   | 'provider_credential_saved'
   | 'provider_credential_removed'
   | 'preview_operator_bootstrap'
+  | 'user_role_changed'
 
 type OperatorAuditEvent = {
   id: string
@@ -56,6 +67,14 @@ type OperatorAuditEvent = {
 }
 
 type AccessState = 'checking' | 'granted' | 'denied' | 'failed'
+
+const USER_ROLES: Array<{ value: UserRole; label: string }> = [
+  { value: 'owner', label: 'Owner / user' },
+  { value: 'contributor', label: 'Contributor' },
+  { value: 'reviewer', label: 'Reviewer' },
+  { value: 'curator', label: 'Curator' },
+  { value: 'operator_admin', label: 'Operator / admin' },
+]
 
 const PROVIDER_KINDS: Array<{ value: ProviderKind; label: string }> = [
   { value: 'internal_data', label: 'PartGraph internal data' },
@@ -85,12 +104,19 @@ function auditLabel(action: OperatorAuditAction): string {
     case 'provider_credential_saved': return 'Provider credential saved'
     case 'provider_credential_removed': return 'Provider credential removed'
     case 'preview_operator_bootstrap': return 'Preview administrator enabled'
+    case 'user_role_changed': return 'User role changed'
   }
 }
 
-function auditProviderKey(event: OperatorAuditEvent): string | null {
-  const value = event.event_data.provider_key
-  return typeof value === 'string' ? value : null
+function auditContext(event: OperatorAuditEvent): string | null {
+  const providerKey = event.event_data.provider_key
+  if (typeof providerKey === 'string') return providerKey
+  const previousRole = event.event_data.previous_role
+  const newRole = event.event_data.new_role
+  if (typeof previousRole === 'string' && typeof newRole === 'string') {
+    return `${previousRole.replaceAll('_', ' ')} → ${newRole.replaceAll('_', ' ')}`
+  }
+  return null
 }
 
 export function AdminWorkspace() {
@@ -98,6 +124,9 @@ export function AdminWorkspace() {
   const [bootstrapAvailable, setBootstrapAvailable] = useState(false)
   const [bootstrapBusy, setBootstrapBusy] = useState(false)
   const [health, setHealth] = useState<ReadyHealth | null>(null)
+  const [users, setUsers] = useState<OperatorUser[]>([])
+  const [roleDrafts, setRoleDrafts] = useState<Record<string, UserRole>>({})
+  const [roleBusyId, setRoleBusyId] = useState<string | null>(null)
   const [providers, setProviders] = useState<Provider[]>([])
   const [auditEvents, setAuditEvents] = useState<OperatorAuditEvent[]>([])
   const [providerBusy, setProviderBusy] = useState(false)
@@ -115,11 +144,18 @@ export function AdminWorkspace() {
   const [notes, setNotes] = useState('')
   const [enabled, setEnabled] = useState(false)
 
+  function storeUsers(rows: OperatorUser[]) {
+    setUsers(rows)
+    setRoleDrafts(Object.fromEntries(rows.map((item) => [item.id, item.role])))
+  }
+
   async function loadOperatorData() {
-    const [providerRows, auditRows] = await Promise.all([
+    const [userRows, providerRows, auditRows] = await Promise.all([
+      apiRequest<OperatorUser[]>('/api/v1/operator/users'),
       apiRequest<Provider[]>('/api/v1/operator/providers'),
       apiRequest<OperatorAuditEvent[]>('/api/v1/operator/audit'),
     ])
+    storeUsers(userRows)
     setProviders(providerRows)
     setAuditEvents(auditRows)
   }
@@ -134,17 +170,21 @@ export function AdminWorkspace() {
         if (!active || grant.access !== 'granted' || grant.role !== 'operator_admin') return
         setAccess('granted')
 
-        const [healthResult, providerResult, auditResult] = await Promise.allSettled([
+        const [healthResult, userResult, providerResult, auditResult] = await Promise.allSettled([
           apiRequest<ReadyHealth>('/api/v1/health/ready'),
+          apiRequest<OperatorUser[]>('/api/v1/operator/users'),
           apiRequest<Provider[]>('/api/v1/operator/providers'),
           apiRequest<OperatorAuditEvent[]>('/api/v1/operator/audit'),
         ])
         if (!active) return
         if (healthResult.status === 'fulfilled') setHealth(healthResult.value)
+        if (userResult.status === 'fulfilled') storeUsers(userResult.value)
         if (providerResult.status === 'fulfilled') setProviders(providerResult.value)
         if (auditResult.status === 'fulfilled') setAuditEvents(auditResult.value)
         if (healthResult.status === 'rejected') {
           setError(formatApiFailure(healthResult.reason, 'Platform status could not be loaded.'))
+        } else if (userResult.status === 'rejected') {
+          setError(formatApiFailure(userResult.reason, 'User roles could not be loaded.'))
         } else if (providerResult.status === 'rejected') {
           setError(formatApiFailure(providerResult.reason, 'Provider registry could not be loaded.'))
         } else if (auditResult.status === 'rejected') {
@@ -185,6 +225,28 @@ export function AdminWorkspace() {
       setError(formatApiFailure(failure, 'Preview administrator access could not be enabled.'))
     } finally {
       setBootstrapBusy(false)
+    }
+  }
+
+  async function saveUserRole(account: OperatorUser) {
+    const nextRole = roleDrafts[account.id] ?? account.role
+    if (nextRole === account.role) return
+    try {
+      setRoleBusyId(account.id)
+      setError(null)
+      setMessage(null)
+      await apiRequest<OperatorUser>(`/api/v1/operator/users/${account.id}/role`, {
+        method: 'PATCH',
+        headers: { ...CSRF_HEADERS, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: nextRole }),
+      })
+      await loadOperatorData()
+      setMessage(`${account.username} is now ${nextRole.replaceAll('_', ' ')}.`)
+    } catch (failure) {
+      setRoleDrafts((current) => ({ ...current, [account.id]: account.role }))
+      setError(formatApiFailure(failure, 'User role could not be changed.'))
+    } finally {
+      setRoleBusyId(null)
     }
   }
 
@@ -320,7 +382,7 @@ export function AdminWorkspace() {
       <header className="workspace-hero admin-heading">
         <p className="eyebrow">PARTGRAPH · ADMIN</p>
         <h1>Operator workspace.</h1>
-        <p>Manage PartGraph data connections here without putting provider configuration or credentials into application source.</p>
+        <p>Manage human access and PartGraph data connections without putting provider configuration or credentials into application source.</p>
       </header>
 
       {error && <div className="workspace-alert workspace-alert--error">{error}</div>}
@@ -329,7 +391,50 @@ export function AdminWorkspace() {
       <section className="admin-status-grid" aria-label="Platform status">
         <article className="panel"><span>API</span><strong>{health?.status ?? 'Unavailable'}</strong><small>{health?.service ?? 'Status not loaded'}</small></article>
         <article className="panel"><span>Database</span><strong>{health?.database ?? 'Unavailable'}</strong><small>{health ? `${health.database_ms.toFixed(1)} ms readiness` : 'Status not loaded'}</small></article>
+        <article className="panel"><span>Users</span><strong>{users.length}</strong><small>{users.filter((item) => item.is_active).length} active</small></article>
         <article className="panel"><span>Providers</span><strong>{providers.length}</strong><small>{providers.filter((item) => item.enabled).length} enabled</small></article>
+      </section>
+
+      <section className="panel admin-user-panel">
+        <div className="admin-section-heading"><div><p className="eyebrow">HUMAN ACCESS</p><h2>Account roles</h2></div><span>{users.length}</span></div>
+        <p className="admin-muted">Reviewers can verify evidence, curators are reserved for canonical publishing authority, and operator administrators manage platform access. The last active operator administrator cannot be demoted.</p>
+        {users.length === 0 ? <p className="admin-muted">No accounts are available.</p> : (
+          <div className="admin-user-list">
+            {users.map((account) => {
+              const draft = roleDrafts[account.id] ?? account.role
+              const busy = roleBusyId === account.id
+              return (
+                <article key={account.id} className="admin-user-row">
+                  <div className="admin-user-identity">
+                    <strong>{account.username}</strong>
+                    <span>{account.email}</span>
+                    <small>{account.is_active ? 'Active account' : 'Inactive account'}</small>
+                  </div>
+                  <div className="admin-user-role-editor">
+                    <select
+                      aria-label={`Role for ${account.username}`}
+                      value={draft}
+                      disabled={busy}
+                      onChange={(event) => setRoleDrafts((current) => ({
+                        ...current,
+                        [account.id]: event.target.value as UserRole,
+                      }))}
+                    >
+                      {USER_ROLES.map((role) => <option key={role.value} value={role.value}>{role.label}</option>)}
+                    </select>
+                    <button
+                      type="button"
+                      disabled={busy || draft === account.role}
+                      onClick={() => void saveUserRole(account)}
+                    >
+                      {busy ? 'Saving…' : 'Save role'}
+                    </button>
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+        )}
       </section>
 
       <section className="admin-provider-layout">
@@ -380,7 +485,7 @@ export function AdminWorkspace() {
           <ol className="admin-audit-list">
             {auditEvents.map((event) => (
               <li key={event.id}>
-                <div><strong>{auditLabel(event.action)}</strong>{auditProviderKey(event) && <span>{auditProviderKey(event)}</span>}</div>
+                <div><strong>{auditLabel(event.action)}</strong>{auditContext(event) && <span>{auditContext(event)}</span>}</div>
                 <time dateTime={event.created_at}>{new Date(event.created_at).toLocaleString()}</time>
               </li>
             ))}
