@@ -177,14 +177,14 @@ The functional Phase 3 exit gate is satisfied for operations that currently exis
 
 ### Phase 4 — Complete the 18-domain canonical schema
 
-Status: **In progress.** Domains 1-3 are complete. Exact identity was audited against the existing canonical/private VIN model; migration `0033_vehicle_structure` adds the system/assembly hierarchy; migration `0034_parts_components` adds canonical component definitions, manufacturer part identities and component/part position roles. The Domain 3 implementation passed API CI, Web CI, preview migration and least-privilege database checks on `f34d44b01885b74da9db0b05dadd3bbfdf313942`.
+Status: **In progress.** Domains 1-4 are complete. Exact identity was audited against the existing canonical/private VIN model; migration `0033_vehicle_structure` adds the system/assembly hierarchy; migration `0034_parts_components` adds canonical component definitions, manufacturer part identities and component/part position roles; migration `0035_part_fitment` adds exact-configuration applicability, explicit exclusions and qualified fitment. The Domain 4 implementation passed API CI, Web CI, preview migration and least-privilege database checks on `bc43d5d2e5594f9212726cea0c201510019d5ebb`.
 
 Implement the Blueprint domains without vehicle-specific application code:
 
 - [x] exact vehicle identity
 - [x] systems/assemblies
 - [x] parts/components
-- [ ] fitment/applicability
+- [x] fitment/applicability
 - [ ] interchange/supersession
 - [ ] physical relationship graph
 - [ ] hardware/fasteners
