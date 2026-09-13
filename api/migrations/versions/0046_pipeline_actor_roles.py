@@ -1,4 +1,4 @@
-"""Add least-privilege database roles for candidate submission and claim publication."""
+"""Repair legacy 0045 history and add least-privilege Phase 6 actor roles."""
 
 from collections.abc import Sequence
 
@@ -10,9 +10,20 @@ down_revision: str | None = "0045_provenance_conflicts"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
+APP_ROLE = "partgraph_app"
+REVIEWER_ROLE = "partgraph_reviewer"
 CONTRIBUTOR_ROLE = "partgraph_contributor"
 CURATOR_ROLE = "partgraph_curator"
 STAGING_SCHEMA = "catalog_staging"
+DOMAIN_CHECK = (
+    "('vehicle_identity', 'structure', 'part_identity', 'fitment', 'interchange', "
+    "'physical_relationship', 'hardware', 'requirement', 'material', 'specification', "
+    "'repair', 'procedure', 'downstream', 'diagnostic', 'electrical', 'capability')"
+)
+SOURCE_CLASS_CHECK = (
+    "('government', 'oem_service', 'licensed_oem_derived', 'oem_parts', "
+    "'industry_standard', 'retailer', 'community')"
+)
 
 
 def _ensure_role(role: str) -> None:
@@ -32,7 +43,67 @@ def _ensure_role(role: str) -> None:
     op.execute(sa.text(f"GRANT {role} TO CURRENT_USER WITH INHERIT FALSE, SET TRUE"))
 
 
+def _repair_legacy_source_authority_history() -> None:
+    """Repair databases stamped 0045 before its authority-policy table was finalized.
+
+    Current fresh 0045 databases already contain this table, so the IF NOT EXISTS
+    path is a no-op there. This forward repair intentionally lives after 0045
+    instead of rewriting persisted migration history.
+    """
+
+    op.execute(
+        sa.text(
+            f"""
+            CREATE TABLE IF NOT EXISTS public.source_authority_policies (
+                id UUID NOT NULL,
+                policy_key VARCHAR(160) NOT NULL,
+                canonical_domain VARCHAR(32) NOT NULL,
+                source_class VARCHAR(32) NOT NULL,
+                risk_class VARCHAR(24) NOT NULL,
+                authority_state VARCHAR(16) NOT NULL,
+                requires_exact_applicability BOOLEAN DEFAULT TRUE NOT NULL,
+                minimum_evidence_count INTEGER DEFAULT 1 NOT NULL,
+                rationale VARCHAR(500) NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+                PRIMARY KEY (id),
+                UNIQUE (policy_key),
+                CONSTRAINT uq_source_authority_policies_scope
+                    UNIQUE (canonical_domain, source_class, risk_class),
+                CONSTRAINT ck_source_authority_policies_domain
+                    CHECK (canonical_domain IN {DOMAIN_CHECK}),
+                CONSTRAINT ck_source_authority_policies_source_class
+                    CHECK (source_class IN {SOURCE_CLASS_CHECK}),
+                CONSTRAINT ck_source_authority_policies_risk
+                    CHECK (risk_class IN ('normal', 'safety_critical')),
+                CONSTRAINT ck_source_authority_policies_state
+                    CHECK (authority_state IN ('accepted', 'conditional', 'rejected')),
+                CONSTRAINT ck_source_authority_policies_evidence_count
+                    CHECK (minimum_evidence_count >= 1)
+            )
+            """
+        )
+    )
+    op.execute(
+        sa.text(
+            "CREATE INDEX IF NOT EXISTS ix_source_authority_policies_domain "
+            "ON public.source_authority_policies (canonical_domain)"
+        )
+    )
+    op.execute(
+        sa.text(
+            f"GRANT SELECT ON public.source_authority_policies TO {APP_ROLE}, {REVIEWER_ROLE}"
+        )
+    )
+    op.execute(
+        sa.text(
+            f"REVOKE INSERT, UPDATE, DELETE ON public.source_authority_policies "
+            f"FROM {APP_ROLE}, {REVIEWER_ROLE}"
+        )
+    )
+
+
 def upgrade() -> None:
+    _repair_legacy_source_authority_history()
     _ensure_role(CONTRIBUTOR_ROLE)
     _ensure_role(CURATOR_ROLE)
 
