@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2009-honda-civic-hybrid-profile-v1",
+  "vehicle_configuration_id": "7feb13e9-bca0-5d8b-b701-f0260cce5da1",
+  "purpose": "External data fixture preserving the reviewed reference-vehicle identity, profile, and source observations that legacy migrations 0016, 0018, and 0019 embedded directly in migration code.",
+  "review": {
+    "status": "historical_verified_reference",
+    "externalized_on": "2026-09-13",
+    "note": "The legacy migrations remain unchanged for production upgrade compatibility. Future clean-baseline installs must consume reference facts from data fixtures or the canonical ingestion pipeline rather than schema migrations."
+  },
+  "historical_migrations": [
+    "0016_curated_vehicle_identity_bootstrap.py",
+    "0018_reference_civic_hybrid_profile.py",
+    "0019_civic_observations.py"
+  ],
+  "files": {
+    "identity_evidence": "identity_evidence.json",
+    "profile": "profile.json",
+    "observations": "observations.json"
+  }
+}
