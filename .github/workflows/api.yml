@@ -69,6 +69,7 @@ jobs:
           api/tests/test_provider_credentials.py
           api/tests/test_operator_preview_bootstrap.py
           api/tests/test_operator_local_bootstrap.py
+          api/tests/test_operator_role_management.py
           api/tests/test_auth_origins.py
           api/tests/test_equipment_catalog_seed.py
 
@@ -80,6 +81,9 @@ jobs:
 
       - name: Test local operator bootstrap guardrails
         run: python -m unittest discover -s api/tests -p 'test_operator_local_bootstrap.py'
+
+      - name: Test operator role management guardrails
+        run: python -m unittest discover -s api/tests -p 'test_operator_role_management.py'
 
       - name: Test authentication origin isolation
         run: python -m unittest discover -s api/tests -p 'test_auth_origins.py'
