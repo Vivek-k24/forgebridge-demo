@@ -4,6 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Query, status
 
 from ..auth.dependencies import AuthSessionDep, CurrentUserDep
+from ..auth.roles import ReviewerUserDep, assume_reviewer_database_role
 from .policy import validate_supported_year
 from .reconciliation import reconcile_vehicle_specification_profile
 from .schemas import (
@@ -173,10 +174,11 @@ async def configurations(
 )
 async def configuration_profile_reconciliation(
     configuration_id: UUID,
-    user: CurrentUserDep,
+    user: ReviewerUserDep,
     session: AuthSessionDep,
 ) -> dict[str, object]:
     del user
+    await assume_reviewer_database_role(session)
     item = await get_configuration(session, configuration_id)
     if item is None:
         raise HTTPException(
