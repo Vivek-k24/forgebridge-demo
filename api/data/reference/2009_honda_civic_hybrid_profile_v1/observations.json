@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "vehicle_configuration_id": "7feb13e9-bca0-5d8b-b701-f0260cce5da1",
+  "captured_at": "2026-09-03T00:00:00Z",
+  "sources": {
+    "honda_2009_hybrid_fact_sheet": {
+      "source_type": "manufacturer",
+      "source_class": "manufacturer",
+      "url": "https://automobiles.honda.com/images/2009/civic-hybrid/downloads/2009-civic-hybrid-factsheet.pdf",
+      "fields": {
+        "identity.trim": "HYBRID",
+        "identity.body_style": "Sedan",
+        "identity.drivetrain": "FWD",
+        "identity.transmission": "CVT",
+        "powertrain.engine": "1.3L I4 HYBRID",
+        "powertrain.displacement_cc": 1339,
+        "powertrain.combined_horsepower_hp": 110,
+        "powertrain.combined_torque_lb_ft": 123,
+        "efficiency.epa_city_mpg": 40,
+        "efficiency.epa_highway_mpg": 45,
+        "efficiency.epa_combined_mpg": 42,
+        "efficiency.fuel_tank_gallons": 12.3,
+        "dimensions_weight.wheelbase_in": 106.3,
+        "dimensions_weight.length_in": 177.3,
+        "dimensions_weight.curb_weight_lb": 2877,
+        "chassis.front_suspension": "MacPherson strut",
+        "chassis.rear_suspension": "Multi-link",
+        "chassis.tires": "P195/65 R15 89S"
+      }
+    },
+    "edmunds_2009_civic_hybrid": {
+      "source_type": "vehicle_reference",
+      "source_class": "vehicle_reference",
+      "url": "https://www.edmunds.com/honda/civic/2009/sedan/st-101061181/features-specs/",
+      "fields": {
+        "identity.trim": "HYBRID",
+        "identity.body_style": "Sedan",
+        "identity.drivetrain": "FWD",
+        "identity.transmission": "CVT",
+        "powertrain.engine": "1.3L I4 HYBRID",
+        "powertrain.displacement_cc": 1339,
+        "powertrain.combined_horsepower_hp": 110,
+        "powertrain.combined_torque_lb_ft": 123,
+        "efficiency.epa_city_mpg": 40,
+        "efficiency.epa_highway_mpg": 45,
+        "efficiency.epa_combined_mpg": 42,
+        "efficiency.fuel_tank_gallons": 12.3,
+        "dimensions_weight.wheelbase_in": 106.3,
+        "dimensions_weight.length_in": 177.3,
+        "dimensions_weight.curb_weight_lb": 2877,
+        "chassis.front_suspension": "MacPherson strut",
+        "chassis.rear_suspension": "Multi-link",
+        "chassis.tires": "P195/65 R15 89S"
+      }
+    },
+    "kbb_2009_civic_hybrid": {
+      "source_type": "vehicle_reference",
+      "source_class": "vehicle_reference",
+      "url": "https://www.kbb.com/honda/civic/2009/hybrid-sedan-4d/",
+      "fields": {
+        "identity.trim": "HYBRID",
+        "identity.body_style": "Sedan",
+        "identity.drivetrain": "FWD",
+        "identity.transmission": "CVT",
+        "powertrain.engine": "1.3L I4 HYBRID",
+        "powertrain.displacement_cc": 1339,
+        "powertrain.combined_horsepower_hp": 110,
+        "powertrain.combined_torque_lb_ft": 123,
+        "efficiency.epa_city_mpg": 40,
+        "efficiency.epa_highway_mpg": 45,
+        "efficiency.epa_combined_mpg": 42,
+        "efficiency.fuel_tank_gallons": 12.3,
+        "dimensions_weight.wheelbase_in": 106.3,
+        "dimensions_weight.length_in": 177.3,
+        "dimensions_weight.curb_weight_lb": 2877
+      }
+    },
+    "cars_2009_civic_hybrid": {
+      "source_type": "vehicle_reference",
+      "source_class": "vehicle_reference",
+      "url": "https://www.cars.com/research/honda-civic_hybrid-2009/specs/",
+      "fields": {
+        "identity.trim": "HYBRID",
+        "identity.body_style": "Sedan",
+        "identity.drivetrain": "FWD",
+        "identity.transmission": "CVT",
+        "powertrain.engine": "1.3L I4 HYBRID",
+        "powertrain.displacement_cc": 1339,
+        "powertrain.combined_horsepower_hp": 110,
+        "powertrain.combined_torque_lb_ft": 123,
+        "efficiency.epa_city_mpg": 40,
+        "efficiency.epa_highway_mpg": 45,
+        "efficiency.epa_combined_mpg": 42,
+        "efficiency.fuel_tank_gallons": 12.3,
+        "dimensions_weight.length_in": 177.0,
+        "chassis.front_suspension": "MacPherson strut",
+        "chassis.rear_suspension": "Multi-link",
+        "chassis.tires": "P195/65 R15 89S"
+      }
+    },
+    "honda_2009_hybrid_owner_manual": {
+      "source_type": "manufacturer",
+      "source_class": "manufacturer",
+      "url": "https://techinfo.honda.com/rjanisis/pubs/OM/NC0909/NC0909OM.pdf",
+      "fields": {
+        "dimensions_weight.length_in": 176.7,
+        "manufacturer_service_specifications.engine_oil_change_with_filter_us_qt": {
+          "value": 3.4,
+          "kind": "manufacturer_reported"
+        },
+        "manufacturer_service_specifications.transmission_fluid_change_us_qt": {
+          "value": 3.0,
+          "kind": "manufacturer_reported"
+        }
+      }
+    }
+  }
+}
