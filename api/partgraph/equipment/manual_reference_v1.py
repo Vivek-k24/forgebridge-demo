@@ -74,7 +74,10 @@ REFERENCE_ADDITIONS: tuple[dict[str, str], ...] = (
         "catalog_key": "a-c-refrigerant-recovery-recharge-machine",
         "category": "specialty-automotive",
         "name": "A/C refrigerant recovery/recharge machine",
-        "keywords": "Certified refrigerant recovery/recharge equipment AC A/C refrigerant recovery recharge service machine",
+        "keywords": (
+            "Certified refrigerant recovery/recharge equipment AC A/C refrigerant "
+            "recovery recharge service machine"
+        ),
         "visual_key": "specialty",
     },
     {
