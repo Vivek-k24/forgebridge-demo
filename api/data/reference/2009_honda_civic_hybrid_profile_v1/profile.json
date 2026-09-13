@@ -1,0 +1,192 @@
+{
+  "schema_version": 1,
+  "profile_id": "48a527db-2d90-52f9-a9da-0aa761718703",
+  "vehicle_configuration_id": "7feb13e9-bca0-5d8b-b701-f0260cce5da1",
+  "profile_version": 1,
+  "verification_status": "verified",
+  "source_match_count": 4,
+  "profile": {
+    "identity": {
+      "year": 2009,
+      "market": "US",
+      "make": "Honda",
+      "model": "CIVIC",
+      "trim": "HYBRID",
+      "body_style": "Sedan",
+      "doors": 4,
+      "seating_capacity": 5,
+      "drivetrain": "FWD",
+      "transmission": "CVT",
+      "canonical_trim_note": "HYBRID is the canonical trim. Leather and navigation were option/package combinations, not separate canonical PartGraph trims.",
+      "generation_note": "Generation is intentionally not used as canonical identity here because sources may describe the eighth-generation Civic platform or the second-generation Civic Hybrid lineage."
+    },
+    "powertrain": {
+      "engine": "1.3L I4 HYBRID",
+      "displacement_cc": 1339,
+      "cylinders": 4,
+      "configuration": "Inline",
+      "block_head_material": "Aluminum alloy",
+      "compression_ratio": "10.8:1",
+      "valvetrain": "8-valve SOHC i-VTEC",
+      "drive_by_wire": true,
+      "combined_horsepower_hp": 110,
+      "horsepower_rpm": 6000,
+      "combined_torque_lb_ft": 123,
+      "torque_rpm_range": "1000-2500",
+      "electric_motor_type": "Permanent magnet",
+      "hybrid_battery_chemistry": "Nickel-Metal Hydride (Ni-MH)",
+      "hybrid_battery_output_volts": 158,
+      "emissions_rating": "AT-PZEV",
+      "fuel": "Regular unleaded"
+    },
+    "efficiency": {
+      "epa_city_mpg": 40,
+      "epa_highway_mpg": 45,
+      "epa_combined_mpg": 42,
+      "fuel_tank_gallons": 12.3
+    },
+    "dimensions_weight": {
+      "wheelbase_in": 106.3,
+      "length_in": 177.3,
+      "width_in": 69.0,
+      "height_in": 56.3,
+      "track_front_in": 59.1,
+      "track_rear_in": 60.2,
+      "curb_weight_lb": 2877
+    },
+    "interior": {
+      "passenger_volume_cu_ft": 90.9,
+      "cargo_volume_cu_ft": 10.4,
+      "headroom_front_rear_in": [39.4, 37.4],
+      "legroom_front_rear_in": [42.2, 34.6],
+      "shoulder_room_front_rear_in": [53.6, 52.3],
+      "hiproom_front_rear_in": [51.9, 51.0]
+    },
+    "chassis": {
+      "construction": "Unit-body",
+      "front_suspension": "MacPherson strut",
+      "rear_suspension": "Multi-link",
+      "stabilizer_bar_front_rear_mm": [24.2, 12.0],
+      "steering": "Electric power-assisted rack-and-pinion",
+      "steering_turns_lock_to_lock": 2.71,
+      "turning_diameter_curb_to_curb_ft": 34.8,
+      "front_brakes": "10.3 in ventilated disc",
+      "rear_brakes": "10.2 in solid disc",
+      "wheels": "15 in lightweight alloy",
+      "tires": "P195/65 R15 89S"
+    },
+    "safety": {
+      "abs": true,
+      "electronic_brake_distribution": true,
+      "vehicle_stability_assist": true,
+      "traction_control": true,
+      "brake_assist": true,
+      "tire_pressure_monitoring": true,
+      "daytime_running_lights": true,
+      "front_airbags": true,
+      "front_side_airbags": true,
+      "side_curtain_airbags": true,
+      "active_front_head_restraints": true,
+      "ace_body_structure": true,
+      "latch": true
+    },
+    "factory_features_options": {
+      "automatic_climate_control": true,
+      "navigation_available": true,
+      "bluetooth_with_navigation": true,
+      "leather_trim_available": true,
+      "heated_front_seats_with_leather": true,
+      "heated_side_mirrors_with_leather": true,
+      "rear_decklid_spoiler": true,
+      "mirror_turn_indicators": true,
+      "audio": "160-watt AM/FM/CD, 6 speakers",
+      "usb_audio_interface": true
+    },
+    "manufacturer_service_specifications": {
+      "engine_bore_stroke_in": [2.87, 3.15],
+      "engine_oil_change_with_filter_us_qt": 3.4,
+      "engine_oil_change_without_filter_us_qt": 3.2,
+      "engine_coolant_change_us_gal": 1.255,
+      "engine_coolant_total_us_gal": 1.59,
+      "transmission_fluid_change_us_qt": 3.0,
+      "transmission_fluid_total_us_qt": 5.4,
+      "spark_plugs": ["NGK ILFR6J-11K", "DENSO SK20HPR-L11"]
+    }
+  },
+  "source_matrix": {
+    "rule": "Ordinary vehicle identity/specification fields are treated as corroborated when at least three independent sources agree. Manufacturer-only details are retained separately as manufacturer-reported rather than silently promoted.",
+    "sources": [
+      {
+        "id": "honda_2009_hybrid_fact_sheet",
+        "source_class": "manufacturer",
+        "url": "https://automobiles.honda.com/images/2009/civic-hybrid/downloads/2009-civic-hybrid-factsheet.pdf"
+      },
+      {
+        "id": "honda_2009_hybrid_owner_manual",
+        "source_class": "manufacturer",
+        "url": "https://techinfo.honda.com/rjanisis/pubs/OM/NC0909/NC0909OM.pdf"
+      },
+      {
+        "id": "nhtsa_honda_tech_line",
+        "source_class": "government_hosted_manufacturer",
+        "url": "https://static.nhtsa.gov/odi/inv/2010/INRD-DP10004-48962P.pdf"
+      },
+      {
+        "id": "edmunds_2009_civic_hybrid",
+        "source_class": "vehicle_reference",
+        "url": "https://www.edmunds.com/honda/civic/2009/sedan/st-101061181/features-specs/"
+      },
+      {
+        "id": "kbb_2009_civic_hybrid",
+        "source_class": "vehicle_reference",
+        "url": "https://www.kbb.com/honda/civic/2009/hybrid-sedan-4d/"
+      },
+      {
+        "id": "cars_2009_civic_hybrid",
+        "source_class": "vehicle_reference",
+        "url": "https://www.cars.com/research/honda-civic_hybrid-2009/specs/"
+      }
+    ],
+    "corroborated_groups": {
+      "core_identity": {
+        "match_count": 4,
+        "sources": ["honda_2009_hybrid_fact_sheet", "edmunds_2009_civic_hybrid", "kbb_2009_civic_hybrid", "cars_2009_civic_hybrid"]
+      },
+      "engine_performance": {
+        "match_count": 4,
+        "sources": ["honda_2009_hybrid_fact_sheet", "edmunds_2009_civic_hybrid", "kbb_2009_civic_hybrid", "cars_2009_civic_hybrid"]
+      },
+      "fuel_efficiency": {
+        "match_count": 4,
+        "sources": ["honda_2009_hybrid_fact_sheet", "edmunds_2009_civic_hybrid", "kbb_2009_civic_hybrid", "cars_2009_civic_hybrid"]
+      },
+      "dimensions_weight": {
+        "match_count": 3,
+        "sources": ["honda_2009_hybrid_fact_sheet", "edmunds_2009_civic_hybrid", "kbb_2009_civic_hybrid"]
+      },
+      "interior": {
+        "match_count": 3,
+        "sources": ["honda_2009_hybrid_fact_sheet", "edmunds_2009_civic_hybrid", "kbb_2009_civic_hybrid"]
+      },
+      "chassis": {
+        "match_count": 3,
+        "sources": ["honda_2009_hybrid_fact_sheet", "edmunds_2009_civic_hybrid", "cars_2009_civic_hybrid"]
+      }
+    },
+    "manufacturer_reported_groups": {
+      "electrification_details": ["honda_2009_hybrid_fact_sheet"],
+      "factory_feature_availability": ["honda_2009_hybrid_fact_sheet"],
+      "service_specifications": ["honda_2009_hybrid_owner_manual"]
+    },
+    "preserved_conflicts": {
+      "overall_length_in": {
+        "selected_value": 177.3,
+        "selected_reason": "Honda fact sheet, Edmunds, and KBB agree on 177.3 in; Cars.com rounds this to 177 in.",
+        "conflicting_observation": {
+          "value": 176.7,
+          "source": "honda_2009_hybrid_owner_manual"
+        }
+      }
+    }
+  }
+}
