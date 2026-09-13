@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import AuthGate from './AuthGate'
+import OfflineBootstrap from './OfflineBootstrap'
 import OfflineContinuity from './OfflineContinuity'
 import PartGraphShell from './PartGraphShell'
 import { initializeUiPreferences } from './ui-preferences'
@@ -12,10 +13,12 @@ initializeUiPreferences()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AuthGate>
-      <OfflineContinuity>
-        <PartGraphShell />
-      </OfflineContinuity>
-    </AuthGate>
+    <OfflineBootstrap>
+      <AuthGate>
+        <OfflineContinuity>
+          <PartGraphShell />
+        </OfflineContinuity>
+      </AuthGate>
+    </OfflineBootstrap>
   </StrictMode>,
 )
