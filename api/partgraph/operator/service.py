@@ -12,14 +12,17 @@ from .credentials import ProviderCredentialError, protect_provider_credential
 from .models import OperatorAuditEvent, ProviderConnection
 from .schemas import (
     OperatorAuditRead,
+    OperatorUserRead,
     PreviewOperatorBootstrapStatus,
     ProviderCreate,
     ProviderRead,
     ProviderUpdate,
+    UserRoleUpdate,
 )
 
 _PREVIEW_BOOTSTRAP_BRANCH = "partgraph-mvp-consolidation"
 _PREVIEW_BOOTSTRAP_LOCK = 731_947_211
+_ROLE_MANAGEMENT_LOCK = 731_947_212
 
 
 def _credential_storage(provider: ProviderConnection) -> str | None:
@@ -59,6 +62,10 @@ def serialize_audit_event(event: OperatorAuditEvent) -> OperatorAuditRead:
         event_data=dict(event.event_data or {}),
         created_at=event.created_at,
     )
+
+
+def serialize_operator_user(user: User) -> OperatorUserRead:
+    return OperatorUserRead.model_validate(user)
 
 
 def _record_audit_event(
@@ -130,7 +137,10 @@ async def bootstrap_preview_operator(
             status_code=404,
         )
 
-    await session.execute(text("SELECT pg_advisory_xact_lock(:lock_id)"), {"lock_id": _PREVIEW_BOOTSTRAP_LOCK})
+    await session.execute(
+        text("SELECT pg_advisory_xact_lock(:lock_id)"),
+        {"lock_id": _PREVIEW_BOOTSTRAP_LOCK},
+    )
     if user.role == "operator_admin":
         return
 
@@ -192,6 +202,82 @@ async def list_providers(session: AsyncSession) -> list[ProviderRead]:
         )
     )
     return [serialize_provider(row) for row in rows]
+
+
+async def list_operator_users(
+    session: AsyncSession,
+    *,
+    limit: int = 100,
+) -> list[OperatorUserRead]:
+    rows = list(
+        await session.scalars(
+            select(User)
+            .order_by(User.created_at.asc(), User.id.asc())
+            .limit(limit)
+        )
+    )
+    return [serialize_operator_user(row) for row in rows]
+
+
+async def change_user_role(
+    session: AsyncSession,
+    *,
+    actor_id: UUID,
+    target_user_id: UUID,
+    payload: UserRoleUpdate,
+) -> OperatorUserRead:
+    await session.execute(
+        text("SELECT pg_advisory_xact_lock(:lock_id)"),
+        {"lock_id": _ROLE_MANAGEMENT_LOCK},
+    )
+    target = (
+        await session.execute(
+            select(User).where(User.id == target_user_id).with_for_update()
+        )
+    ).scalar_one_or_none()
+    if target is None:
+        raise PartGraphError(
+            code=ErrorCode.OPERATOR_USER_NOT_FOUND,
+            message="User account not found.",
+            status_code=404,
+        )
+
+    previous_role = target.role
+    if previous_role == payload.role:
+        return serialize_operator_user(target)
+
+    if previous_role == "operator_admin" and payload.role != "operator_admin" and target.is_active:
+        active_operator_ids = list(
+            await session.scalars(
+                select(User.id)
+                .where(
+                    User.role == "operator_admin",
+                    User.is_active.is_(True),
+                )
+                .with_for_update()
+            )
+        )
+        if len(active_operator_ids) <= 1:
+            raise PartGraphError(
+                code=ErrorCode.OPERATOR_LAST_ADMIN_REQUIRED,
+                message="At least one active operator administrator must remain.",
+                status_code=409,
+            )
+
+    target.role = payload.role
+    _record_audit_event(
+        session,
+        actor_id=actor_id,
+        action="user_role_changed",
+        target_type="user",
+        target_id=target.id,
+        event_data={
+            "previous_role": previous_role,
+            "new_role": payload.role,
+        },
+    )
+    await session.flush()
+    return serialize_operator_user(target)
 
 
 async def list_operator_audit(session: AsyncSession, *, limit: int = 50) -> list[OperatorAuditRead]:
