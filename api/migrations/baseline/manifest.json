@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "alembic_head": "0045_provenance_conflicts",
+  "schema_sha256": "91a61f54ad5f34a61d1398050d94f8a737ba55e9230e46d09e78ac10acdfe60e",
+  "schema_only": true,
+  "reference_data_included": false,
+  "role_bootstrap": "api/migrations/baseline/roles.sql",
+  "revision_stamp": "api/migrations/baseline/stamp.sql",
+  "source_commit": "f95b725f48ec1731aa0027cdf7215a4af75b0669",
+  "adoption_state": "adopted"
+}
