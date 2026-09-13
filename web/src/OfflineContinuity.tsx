@@ -3,6 +3,7 @@ import { activeRepairSessionId, ACTIVE_REPAIR_SESSION_EVENT } from './active-rep
 import { probeApiAvailability } from './api'
 import { OfflineRepairWorkspace } from './OfflineRepair'
 import { loadCachedOfflineRepairPack, refreshOfflineRepairPack, type OfflineRepairPack } from './offline-repair'
+import './offline-continuity.css'
 
 const SECTIONS = ['resume', 'readiness', 'guidance', 'completion', 'log'] as const
 type Section = (typeof SECTIONS)[number]
