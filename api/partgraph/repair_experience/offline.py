@@ -2,12 +2,12 @@ from datetime import UTC, datetime
 from typing import Literal
 from uuid import UUID
 
-from fastapi import APIRouter, status
+from fastapi import status
 from pydantic import BaseModel
 from sqlalchemy import select
 
-from ..identity.auth.dependencies import AuthSessionDep, CurrentUserDep
-from ..errors import ErrorCode, ErrorEnvelope, PartGraphError
+from ..identity.auth.dependencies import AuthSessionDep
+from ..errors import ErrorCode, PartGraphError
 from .guidance import RepairGuidancePlanRead, _guidance_view
 from .models import RepairSession, RepairSessionEvent
 from .readiness import RepairReadinessRead, _readiness_view
@@ -32,18 +32,6 @@ class RepairOfflinePackRead(BaseModel):
     resume: RepairSessionResumeRead
     readiness: RepairReadinessRead
     guidance: RepairGuidancePlanRead
-
-
-router = APIRouter(
-    prefix="/api/v1/repair-sessions",
-    tags=["Offline Repair Pack"],
-    responses={
-        401: {"model": ErrorEnvelope},
-        404: {"model": ErrorEnvelope},
-        409: {"model": ErrorEnvelope},
-        500: {"model": ErrorEnvelope},
-    },
-)
 
 
 async def build_offline_repair_pack(
@@ -138,17 +126,4 @@ async def build_offline_repair_pack(
         resume=snapshot,
         readiness=readiness,
         guidance=guidance,
-    )
-
-
-@router.get("/{session_id}/offline-pack", response_model=RepairOfflinePackRead)
-async def offline_repair_pack(
-    session_id: UUID,
-    user: CurrentUserDep,
-    db: AuthSessionDep,
-) -> RepairOfflinePackRead:
-    return await build_offline_repair_pack(
-        db,
-        user_id=user.id,
-        session_id=session_id,
     )
