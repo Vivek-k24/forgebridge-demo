@@ -70,6 +70,7 @@ jobs:
           api/tests/test_operator_preview_bootstrap.py
           api/tests/test_operator_local_bootstrap.py
           api/tests/test_operator_role_management.py
+          api/tests/test_rbac_database_privileges.py
           api/tests/test_auth_origins.py
           api/tests/test_equipment_catalog_seed.py
 
@@ -95,6 +96,11 @@ jobs:
         env:
           PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
         run: alembic -c api/alembic.ini upgrade head
+
+      - name: Test database RBAC privilege boundaries
+        env:
+          PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
+        run: python -m unittest discover -s api/tests -p 'test_rbac_database_privileges.py'
 
       - name: Build API container
         run: docker build -t partgraph-api:ci ./api
