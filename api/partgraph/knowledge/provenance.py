@@ -2,6 +2,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -35,6 +36,59 @@ CANONICAL_DOMAINS = (
     "capability",
 )
 _CANONICAL_DOMAIN_SQL = ", ".join(f"'{item}'" for item in CANONICAL_DOMAINS)
+_SOURCE_CLASS_SQL = (
+    "'government', 'oem_service', 'licensed_oem_derived', 'oem_parts', "
+    "'industry_standard', 'retailer', 'community'"
+)
+
+
+class SourceAuthorityPolicy(Base):
+    """Policy describing whether a source class is acceptable for a canonical domain/risk."""
+
+    __tablename__ = "source_authority_policies"
+    __table_args__ = (
+        CheckConstraint(
+            f"canonical_domain IN ({_CANONICAL_DOMAIN_SQL})",
+            name="ck_source_authority_policies_domain",
+        ),
+        CheckConstraint(
+            f"source_class IN ({_SOURCE_CLASS_SQL})",
+            name="ck_source_authority_policies_source_class",
+        ),
+        CheckConstraint(
+            "risk_class IN ('normal', 'safety_critical')",
+            name="ck_source_authority_policies_risk",
+        ),
+        CheckConstraint(
+            "authority_state IN ('accepted', 'conditional', 'rejected')",
+            name="ck_source_authority_policies_state",
+        ),
+        CheckConstraint(
+            "minimum_evidence_count >= 1",
+            name="ck_source_authority_policies_evidence_count",
+        ),
+        UniqueConstraint(
+            "canonical_domain",
+            "source_class",
+            "risk_class",
+            name="uq_source_authority_policies_scope",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
+    policy_key: Mapped[str] = mapped_column(String(160), nullable=False, unique=True)
+    canonical_domain: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    source_class: Mapped[str] = mapped_column(String(32), nullable=False)
+    risk_class: Mapped[str] = mapped_column(String(24), nullable=False)
+    authority_state: Mapped[str] = mapped_column(String(16), nullable=False)
+    requires_exact_applicability: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True
+    )
+    minimum_evidence_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    rationale: Mapped[str] = mapped_column(String(500), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
 
 
 class CanonicalRecordVersion(Base):
