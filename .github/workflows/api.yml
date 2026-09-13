@@ -75,6 +75,7 @@ jobs:
           api/tests/test_provenance_database_privileges.py
           api/tests/test_auth_origins.py
           api/tests/test_equipment_catalog_seed.py
+          api/tests/test_reference_fixture_externalization.py
 
       - name: Test provider credential encryption
         run: python -m unittest discover -s api/tests -p 'test_provider_credentials.py'
@@ -93,6 +94,9 @@ jobs:
 
       - name: Test equipment catalog seed
         run: python -m unittest discover -s api/tests -p 'test_equipment_catalog_seed.py'
+
+      - name: Test reference fixture externalization
+        run: python -m unittest discover -s api/tests -p 'test_reference_fixture_externalization.py'
 
       - name: Apply database migrations
         env:
