@@ -10,6 +10,7 @@ import partgraph.identity.auth.models  # noqa: F401
 import partgraph.identity.user_vehicle.models  # noqa: F401
 import partgraph.identity.vehicle.models  # noqa: F401
 import partgraph.intelligence.models  # noqa: F401
+import partgraph.knowledge.capability  # noqa: F401
 import partgraph.knowledge.completion_models  # noqa: F401
 import partgraph.knowledge.coverage_models  # noqa: F401
 import partgraph.knowledge.diagnostics  # noqa: F401
