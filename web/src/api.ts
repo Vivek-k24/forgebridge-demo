@@ -6,6 +6,7 @@ const SESSION_FAILURE_CODES = new Set(['AUTH_REQUIRED', 'AUTH_SESSION_EXPIRED', 
 
 export const CSRF_HEADERS = { 'X-PartGraph-CSRF': '1' }
 export const AUTH_STATE_CLEARED_EVENT = 'partgraph:auth-state-cleared'
+export const REPAIR_API_MUTATION_EVENT = 'partgraph:repair-api-mutation'
 
 type ErrorEnvelope = {
   error?: {
@@ -57,6 +58,12 @@ function clientRequestId(): string {
 
 function signalAuthStateCleared(reason: string): void {
   window.dispatchEvent(new CustomEvent(AUTH_STATE_CLEARED_EVENT, { detail: { reason } }))
+}
+
+function signalRepairMutation(path: string, method: string): void {
+  if (path.startsWith('/api/v1/repair-sessions/') && method !== 'GET') {
+    window.dispatchEvent(new CustomEvent(REPAIR_API_MUTATION_EVENT, { detail: { path, method } }))
+  }
 }
 
 async function sleep(milliseconds: number) {
@@ -135,6 +142,7 @@ export async function apiRequest<T>(
       }
 
       if (path === '/api/v1/auth/logout' && method === 'POST') signalAuthStateCleared('AUTH_LOGOUT_CONFIRMED')
+      signalRepairMutation(path, method)
       if (response.status === 204) return undefined as T
       return (await response.json()) as T
     } catch (error) {
