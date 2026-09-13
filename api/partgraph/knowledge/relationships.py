@@ -113,6 +113,30 @@ class PhysicalEntityPart(Base):
     )
 
 
+class PhysicalEntityHardware(Base):
+    __tablename__ = "physical_entity_hardware"
+    __table_args__ = (
+        CheckConstraint(
+            "entity_kind = 'hardware'",
+            name="ck_physical_entity_hardware_kind",
+        ),
+        ForeignKeyConstraint(
+            ["entity_id", "entity_kind"],
+            ["physical_entities.id", "physical_entities.entity_kind"],
+            ondelete="CASCADE",
+        ),
+    )
+
+    entity_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True)
+    entity_kind: Mapped[str] = mapped_column(String(24), nullable=False, default="hardware")
+    hardware_definition_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("hardware_definitions.id", ondelete="RESTRICT"),
+        nullable=False,
+        unique=True,
+    )
+
+
 class PhysicalRelationship(Base):
     """Configuration-scoped edge between typed physical entities."""
 
