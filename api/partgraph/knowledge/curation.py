@@ -5,16 +5,15 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
 from pydantic import BaseModel
-from sqlalchemy import select, text
+from sqlalchemy import select
 
 from ..errors import ErrorCode, ErrorEnvelope, PartGraphError
 from ..identity.auth.dependencies import AuthSessionDep, require_csrf
-from ..identity.auth.roles import ReviewerUserDep
+from ..identity.auth.roles import ReviewerUserDep, assume_reviewer_database_role
 from .models import CatalogIngestionBatch, CatalogSourceRecord
 from .staging import CatalogStagingError, promote_verified_record, reject_staging_record
 
 ReviewStatus = Literal["pending", "verified", "rejected"]
-REVIEWER_DATABASE_ROLE = "partgraph_reviewer"
 
 
 class CurationRecordSummaryRead(BaseModel):
@@ -65,10 +64,6 @@ router = APIRouter(
     },
 )
 CsrfDep = Depends(require_csrf)
-
-
-async def _assume_reviewer_database_role(db: AuthSessionDep) -> None:
-    await db.execute(text(f"SET LOCAL ROLE {REVIEWER_DATABASE_ROLE}"))
 
 
 def _actor(user: ReviewerUserDep) -> str:
@@ -155,7 +150,7 @@ async def list_staging_records(
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> list[CurationRecordSummaryRead]:
     del user
-    await _assume_reviewer_database_role(db)
+    await assume_reviewer_database_role(db)
     rows = (
         await db.execute(
             select(CatalogSourceRecord, CatalogIngestionBatch)
@@ -175,7 +170,7 @@ async def staging_record(
     db: AuthSessionDep,
 ) -> CurationRecordDetailRead:
     del user
-    await _assume_reviewer_database_role(db)
+    await assume_reviewer_database_role(db)
     record, batch = await _record_with_batch(db, record_id)
     return _detail(record, batch)
 
@@ -190,7 +185,7 @@ async def verify_staging_record(
     user: ReviewerUserDep,
     db: AuthSessionDep,
 ) -> CurationReviewRead:
-    await _assume_reviewer_database_role(db)
+    await assume_reviewer_database_role(db)
     actor = _actor(user)
     try:
         evidence, created = await promote_verified_record(
@@ -228,7 +223,7 @@ async def reject_staging_candidate(
     user: ReviewerUserDep,
     db: AuthSessionDep,
 ) -> CurationReviewRead:
-    await _assume_reviewer_database_role(db)
+    await assume_reviewer_database_role(db)
     actor = _actor(user)
     try:
         record = await reject_staging_record(
