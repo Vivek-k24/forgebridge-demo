@@ -10,11 +10,33 @@ from pathlib import Path
 RESTRICT_LINE = re.compile(r"^\\(?:un)?restrict\b.*$", re.MULTILINE)
 DATA_SECTION = re.compile(r"^-- Data for Name:", re.MULTILINE)
 COPY_FROM_STDIN = re.compile(r"^COPY\s+.+\s+FROM\s+stdin;$", re.MULTILINE | re.IGNORECASE)
+VARCHAR_ARRAY_CAST = re.compile(
+    r"\(ARRAY\[(?P<items>(?:'(?:''|[^'])*'::character varying(?:, )?)*)\]\)::text\[\]"
+)
+VARCHAR_ARRAY_ITEM = re.compile(r"('(?:''|[^'])*'::character varying)")
+
+
+def _normalize_varchar_array_casts(text: str) -> str:
+    """Normalize one PostgreSQL deparser rewrite that is semantically identical.
+
+    A CHECK written as ``ARRAY['x'::varchar]::text[]`` is emitted after restore
+    as ``ARRAY[('x'::varchar)::text]``. Only that exact varchar-array cast form
+    is normalized; different values, operators, constraints, or ACLs still
+    produce a baseline mismatch.
+    """
+
+    def replace_array(match: re.Match[str]) -> str:
+        items = VARCHAR_ARRAY_ITEM.sub(r"(\1)::text", match.group("items"))
+        return f"ARRAY[{items}]"
+
+    return VARCHAR_ARRAY_CAST.sub(replace_array, text)
 
 
 def normalized_schema(text: str) -> str:
-    """Remove pg_dump invocation randomness while preserving schema semantics."""
-    return RESTRICT_LINE.sub("", text).strip() + "\n"
+    """Remove known non-semantic pg_dump/deparser differences only."""
+    text = RESTRICT_LINE.sub("", text)
+    text = _normalize_varchar_array_casts(text)
+    return text.strip() + "\n"
 
 
 def validate_schema_only(text: str) -> None:
