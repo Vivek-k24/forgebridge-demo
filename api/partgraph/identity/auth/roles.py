@@ -13,6 +13,8 @@ REVIEW_ROLES = frozenset({"reviewer", "curator", "operator_admin"})
 CURATION_PUBLISH_ROLES = frozenset({"curator", "operator_admin"})
 CONTRIBUTION_ROLES = frozenset({"contributor", "reviewer", "curator", "operator_admin"})
 REVIEWER_DATABASE_ROLE = "partgraph_reviewer"
+CONTRIBUTOR_DATABASE_ROLE = "partgraph_contributor"
+CURATOR_DATABASE_ROLE = "partgraph_curator"
 
 
 def require_any_role(*allowed_roles: str) -> Callable[[CurrentUserDep], User]:
@@ -37,9 +39,23 @@ def require_role(role: str) -> Callable[[CurrentUserDep], User]:
     return require_any_role(role)
 
 
+async def _assume_database_role(session: AsyncSession, role: str) -> None:
+    await session.execute(text(f"SET LOCAL ROLE {role}"))
+
+
 async def assume_reviewer_database_role(session: AsyncSession) -> None:
     """Narrow the current transaction to the reviewer database privilege set."""
-    await session.execute(text(f"SET LOCAL ROLE {REVIEWER_DATABASE_ROLE}"))
+    await _assume_database_role(session, REVIEWER_DATABASE_ROLE)
+
+
+async def assume_contributor_database_role(session: AsyncSession) -> None:
+    """Narrow the current transaction to staging-only candidate submission privileges."""
+    await _assume_database_role(session, CONTRIBUTOR_DATABASE_ROLE)
+
+
+async def assume_curator_database_role(session: AsyncSession) -> None:
+    """Narrow the current transaction to normalized-claim publication privileges."""
+    await _assume_database_role(session, CURATOR_DATABASE_ROLE)
 
 
 ReviewerUserDep = Annotated[
