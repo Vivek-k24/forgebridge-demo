@@ -1,6 +1,7 @@
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 
 from ..errors import ErrorEnvelope
 from ..identity.auth.dependencies import AuthSessionDep, CurrentUserDep, require_csrf
@@ -11,11 +12,21 @@ from .local_bootstrap import (
     local_operator_bootstrap_environment,
     local_operator_bootstrap_status,
 )
-from .schemas import OperatorAuditRead, PreviewOperatorBootstrapStatus, ProviderCreate, ProviderRead, ProviderUpdate
+from .schemas import (
+    OperatorAuditRead,
+    OperatorUserRead,
+    PreviewOperatorBootstrapStatus,
+    ProviderCreate,
+    ProviderRead,
+    ProviderUpdate,
+    UserRoleUpdate,
+)
 from .service import (
     bootstrap_preview_operator,
+    change_user_role,
     create_provider,
     list_operator_audit,
+    list_operator_users,
     list_providers,
     preview_operator_bootstrap_status,
     update_provider,
@@ -60,6 +71,35 @@ async def preview_bootstrap(
     else:
         await bootstrap_preview_operator(session, user=user)
     return AdminAccessRead()
+
+
+@router.get("/users", response_model=list[OperatorUserRead])
+async def users(
+    user: OperatorAdminDep,
+    session: AuthSessionDep,
+    limit: Annotated[int, Query(ge=1, le=250)] = 100,
+) -> list[OperatorUserRead]:
+    del user
+    return await list_operator_users(session, limit=limit)
+
+
+@router.patch(
+    "/users/{user_id}/role",
+    response_model=OperatorUserRead,
+    dependencies=[CsrfDep],
+)
+async def change_role(
+    user_id: UUID,
+    payload: UserRoleUpdate,
+    user: OperatorAdminDep,
+    session: AuthSessionDep,
+) -> OperatorUserRead:
+    return await change_user_role(
+        session,
+        actor_id=user.id,
+        target_user_id=user_id,
+        payload=payload,
+    )
 
 
 @router.get("/providers", response_model=list[ProviderRead])
