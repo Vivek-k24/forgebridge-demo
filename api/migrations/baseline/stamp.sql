@@ -5,6 +5,6 @@ BEGIN
     END IF;
 
     INSERT INTO public.alembic_version (version_num)
-    VALUES ('0045_provenance_conflicts');
+    VALUES ('0046_pipeline_actor_roles');
 END
 $$;
