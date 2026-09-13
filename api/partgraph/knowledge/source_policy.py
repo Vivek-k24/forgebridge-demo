@@ -16,6 +16,7 @@ class ClaimDomain(StrEnum):
     VEHICLE_IDENTITY = "vehicle_identity"
     SAFETY_CAMPAIGN = "safety_campaign"
     REPAIR_REQUIREMENT = "repair_requirement"
+    REPAIR_PROCEDURE = "repair_procedure"
     PART_FITMENT = "part_fitment"
 
 
