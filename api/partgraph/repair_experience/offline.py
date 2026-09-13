@@ -6,8 +6,8 @@ from fastapi import status
 from pydantic import BaseModel
 from sqlalchemy import select
 
-from ..identity.auth.dependencies import AuthSessionDep
 from ..errors import ErrorCode, PartGraphError
+from ..identity.auth.dependencies import AuthSessionDep
 from .guidance import RepairGuidancePlanRead, _guidance_view
 from .models import RepairSession, RepairSessionEvent
 from .readiness import RepairReadinessRead, _readiness_view
