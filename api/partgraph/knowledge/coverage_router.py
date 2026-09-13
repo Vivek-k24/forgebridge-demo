@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Path, status
 
 from ..errors import ErrorEnvelope
 from ..identity.auth.dependencies import AuthSessionDep
-from ..identity.auth.roles import ReviewerUserDep
+from ..identity.auth.roles import ReviewerUserDep, assume_reviewer_database_role
 from .coverage_schemas import CatalogCoverageBatchRead
 from .coverage_service import get_coverage_batch, list_coverage_batches
 
@@ -25,6 +25,7 @@ async def coverage_batches(
     session: AuthSessionDep,
 ) -> list[CatalogCoverageBatchRead]:
     del user
+    await assume_reviewer_database_role(session)
     return await list_coverage_batches(session)
 
 
@@ -35,6 +36,7 @@ async def coverage_batch(
     session: AuthSessionDep,
 ) -> CatalogCoverageBatchRead:
     del user
+    await assume_reviewer_database_role(session)
     item = await get_coverage_batch(session, batch_key)
     if item is None:
         raise HTTPException(
