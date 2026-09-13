@@ -13,7 +13,14 @@ BASELINE_DIR = Path(__file__).resolve().parents[1] / "migrations" / "baseline"
 ARCHIVE_PATH = BASELINE_DIR / "schema.sql.gz.b64"
 MANIFEST_PATH = BASELINE_DIR / "manifest.json"
 EXPECTED_ADOPTION_STATE = "adopted"
-EXPECTED_HEAD = "0045_provenance_conflicts"
+EXPECTED_HEAD = "0046_pipeline_actor_roles"
+
+
+def _encoded_archive() -> str:
+    paths = [ARCHIVE_PATH, *sorted(BASELINE_DIR.glob("schema.sql.gz.b64.[0-9][0-9][0-9]"))]
+    if not all(path.is_file() for path in paths):
+        raise ValueError("adopted baseline archive is incomplete")
+    return "".join(path.read_text(encoding="ascii").strip() for path in paths)
 
 
 def load_adopted_schema() -> bytes:
@@ -30,8 +37,7 @@ def load_adopted_schema() -> bytes:
     if manifest.get("reference_data_included") is not False:
         raise ValueError("reference data must remain outside the schema baseline")
 
-    encoded = ARCHIVE_PATH.read_text(encoding="ascii")
-    raw = gzip.decompress(base64.b64decode(encoded))
+    raw = gzip.decompress(base64.b64decode(_encoded_archive()))
     digest = hashlib.sha256(raw).hexdigest()
     if digest != manifest.get("schema_sha256"):
         raise ValueError(
