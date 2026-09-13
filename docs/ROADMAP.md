@@ -177,7 +177,7 @@ The functional Phase 3 exit gate is satisfied for operations that currently exis
 
 ### Phase 4 — Complete the 18-domain canonical schema
 
-Status: **In progress.** Domains 1-8 are complete. Exact identity, structure, part identity, fitment, interchange, the typed physical relationship graph and canonical hardware all have dedicated relational models. Migration `0039_tools_equipment_workspace` adds structured canonical tool/equipment and workspace resources plus bindings to the existing requirement model. Professional equipment remains a physical resource classification only and does not grant DIY procedure support. The Domain 8 implementation passed API CI #597 and Web CI #460, including fresh PostgreSQL migration, least-privilege database checks and container smoke, on `264b9d5d8ee028f359db7e3211de36775b393876`.
+Status: **In progress.** Domains 1-9 are complete. Exact identity, structure, part identity, fitment, interchange, the typed physical relationship graph, canonical hardware and structured repair resources all have dedicated relational models. Migration `0040_materials_consumables` adds canonical fluids, lubricants, refrigerants, materials and consumables; exact-configuration material compatibility; optional physical-system placement; safety/disposal metadata; and bindings to repair fluid/consumable requirements. Quantity/capacity measurements remain deliberately in the next specifications/limits domain rather than being duplicated here. The Domain 9 implementation passed API CI #603 and Web CI #466, including fresh PostgreSQL migration, least-privilege database checks and container smoke, on `fa96c5f3189e5c0a6d913fb4262723708da0930a`.
 
 Implement the Blueprint domains without vehicle-specific application code:
 
@@ -189,7 +189,7 @@ Implement the Blueprint domains without vehicle-specific application code:
 - [x] physical relationship graph
 - [x] hardware/fasteners
 - [x] tools/equipment/workspace
-- [ ] fluids/materials/consumables
+- [x] fluids/materials/consumables
 - [ ] specifications/limits
 - [ ] repair definitions/operations
 - [ ] procedure actions/dependencies
