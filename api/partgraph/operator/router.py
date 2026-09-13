@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, status
 
 from ..errors import ErrorEnvelope
 from ..identity.auth.dependencies import AuthSessionDep, CurrentUserDep, require_csrf
-from ..identity.auth.roles import require_role
+from ..identity.auth.roles import OperatorAdminDep
 from ..identity.auth.schemas import AdminAccessRead
 from .local_bootstrap import (
     bootstrap_local_operator,
@@ -29,13 +29,9 @@ router = APIRouter(
 CsrfDep = Depends(require_csrf)
 
 
-def _operator(user: CurrentUserDep):
-    return require_role(user, {"operator_admin"})
-
-
 @router.get("/access", response_model=AdminAccessRead)
-async def access(user: CurrentUserDep) -> AdminAccessRead:
-    _operator(user)
+async def access(user: OperatorAdminDep) -> AdminAccessRead:
+    del user
     return AdminAccessRead()
 
 
@@ -67,14 +63,14 @@ async def preview_bootstrap(
 
 
 @router.get("/providers", response_model=list[ProviderRead])
-async def providers(user: CurrentUserDep, session: AuthSessionDep) -> list[ProviderRead]:
-    _operator(user)
+async def providers(user: OperatorAdminDep, session: AuthSessionDep) -> list[ProviderRead]:
+    del user
     return await list_providers(session)
 
 
 @router.get("/audit", response_model=list[OperatorAuditRead])
-async def audit(user: CurrentUserDep, session: AuthSessionDep) -> list[OperatorAuditRead]:
-    _operator(user)
+async def audit(user: OperatorAdminDep, session: AuthSessionDep) -> list[OperatorAuditRead]:
+    del user
     return await list_operator_audit(session)
 
 
@@ -86,11 +82,10 @@ async def audit(user: CurrentUserDep, session: AuthSessionDep) -> list[OperatorA
 )
 async def add_provider(
     payload: ProviderCreate,
-    user: CurrentUserDep,
+    user: OperatorAdminDep,
     session: AuthSessionDep,
 ) -> ProviderRead:
-    operator = _operator(user)
-    return await create_provider(session, actor_id=operator.id, payload=payload)
+    return await create_provider(session, actor_id=user.id, payload=payload)
 
 
 @router.patch(
@@ -101,13 +96,12 @@ async def add_provider(
 async def change_provider(
     provider_id: UUID,
     payload: ProviderUpdate,
-    user: CurrentUserDep,
+    user: OperatorAdminDep,
     session: AuthSessionDep,
 ) -> ProviderRead:
-    operator = _operator(user)
     return await update_provider(
         session,
-        actor_id=operator.id,
+        actor_id=user.id,
         provider_id=provider_id,
         payload=payload,
     )
