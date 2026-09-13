@@ -21,6 +21,20 @@ self.addEventListener('activate', (event) => {
   )
 })
 
+self.addEventListener('message', (event) => {
+  if (event.data?.type !== 'CACHE_APP_SHELL_ASSETS' || !Array.isArray(event.data.urls)) return
+  const safeUrls = event.data.urls.filter((value) => {
+    if (typeof value !== 'string') return false
+    try {
+      const url = new URL(value, self.location.origin)
+      return url.origin === self.location.origin && !url.pathname.startsWith('/api/')
+    } catch {
+      return false
+    }
+  })
+  event.waitUntil(caches.open(SHELL_CACHE).then((cache) => cache.addAll(safeUrls)))
+})
+
 self.addEventListener('fetch', (event) => {
   const request = event.request
   if (request.method !== 'GET') return
