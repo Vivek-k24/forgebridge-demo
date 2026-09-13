@@ -110,11 +110,11 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
             "requirement_definition_id",
-            name="uq_tool_equipment_requirement_bindings_requirement",
+            name="uq_tool_req_bindings_requirement",
         ),
     )
     op.create_index(
-        "ix_tool_equipment_requirement_bindings_tool_equipment_definition_id",
+        "ix_tool_req_bindings_tool_id",
         "tool_equipment_requirement_bindings",
         ["tool_equipment_definition_id"],
     )
@@ -143,11 +143,11 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
             "requirement_definition_id",
-            name="uq_workspace_requirement_bindings_requirement",
+            name="uq_workspace_req_bindings_requirement",
         ),
     )
     op.create_index(
-        "ix_workspace_requirement_bindings_workspace_definition_id",
+        "ix_workspace_req_bindings_workspace_id",
         "workspace_requirement_bindings",
         ["workspace_definition_id"],
     )
@@ -163,12 +163,12 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.execute(sa.text(f"REVOKE SELECT ON {SHARED_TABLES} FROM {APP_ROLE}, {REVIEWER_ROLE}"))
     op.drop_index(
-        "ix_workspace_requirement_bindings_workspace_definition_id",
+        "ix_workspace_req_bindings_workspace_id",
         table_name="workspace_requirement_bindings",
     )
     op.drop_table("workspace_requirement_bindings")
     op.drop_index(
-        "ix_tool_equipment_requirement_bindings_tool_equipment_definition_id",
+        "ix_tool_req_bindings_tool_id",
         table_name="tool_equipment_requirement_bindings",
     )
     op.drop_table("tool_equipment_requirement_bindings")
