@@ -59,27 +59,34 @@ Major gaps:
 - hosted durable photo persistence still needs environment/configuration proof before production cutover
 - browser E2E and final offline/degraded regression coverage
 - contributor submission and curator publication/conflict-resolution actions do not exist yet because their Phase 6 pipeline operations do not exist yet
-- shared canonical/vehicle read authorization policy still needs one consistent explicit boundary before the Phase 3 exit gate is closed
 - canonical evidence-to-repair materialization
 - source-code vehicle-data invariant not yet enforced automatically
 - clean migration baseline and production-copy migration proof remain outstanding
 
 ## 3. Fixed implementation order
 
+Task tracking convention:
+- `[x]` means the task is implemented and has passed the validation available at that stage.
+- `[ ]` means the task is still pending, deferred, or conditional as noted.
+- Update the checkbox when each task is completed so this file remains the live record of what is done and what remains.
+- A documentation-only status update does not replace the last exact green implementation SHA as the deployment candidate.
+
 ### Phase 0 — Consolidate the repository
 
 Goal: one coherent implementation line before new automotive data work.
 
-1. Work from a single consolidation line.
-2. Replace stale documentation with `ROADMAP.md` and `BLUEPRINT.md`.
-3. Preserve all spreadsheets/JSON/CSV/database data assets.
-4. Remove obsolete narrative docs, old architectural instructions and obsolete prototypes.
-5. Inventory every Git branch.
-6. Selectively port useful code; do not wholesale merge historical experiment branches.
-7. Remove code paths that no longer belong to the target architecture.
-8. Externalize hard-coded vehicle facts from source/CI into data fixtures.
-9. Make supported vehicle selection data-driven.
-10. Retire obsolete historical test/acceptance suites while keeping build, lint, dependency-audit and container-smoke CI operational.
+Status: **In progress.** The active line is consolidated, but the remaining temporary salvage branches still require final accounting before the exit gate is closed.
+
+- [x] Work from a single consolidation line.
+- [x] Replace stale documentation with `ROADMAP.md` and `BLUEPRINT.md`.
+- [x] Preserve all spreadsheets/JSON/CSV/database data assets.
+- [x] Remove obsolete narrative docs, old architectural instructions and obsolete prototypes from the active line.
+- [x] Inventory every Git branch.
+- [ ] Selectively port/account for useful code and data from the remaining temporary salvage branches; do not wholesale merge historical experiment branches. **Active.**
+- [x] Remove known code paths that no longer belong to the target architecture.
+- [x] Externalize known hard-coded vehicle facts from source/CI into data fixtures or database data. Final automated source-code invariant proof remains Phase 9.
+- [x] Make supported vehicle selection data-driven.
+- [x] Retire obsolete historical test/acceptance suites while keeping build, lint, dependency-audit and container-smoke CI operational.
 
 Exit gate:
 - no useful code remains stranded on an old branch
@@ -91,21 +98,21 @@ Exit gate:
 ### Phase 1 — Correct existing behavioral defects
 
 Status on `partgraph-mvp-consolidation`:
-- items 1-8 and 10 are implemented and have passed the current build/migration/container-smoke gates
-- item 9's private local/hosted storage implementation is present; hosted persistence still requires environment-level proof before production cutover
-- item 11 remains intentionally deferred to the fresh final validation suite
+- core behavioral items are implemented
+- private local/hosted photo storage implementation is present; hosted persistence still requires environment-level proof before production cutover
+- final behavioral regression remains intentionally deferred to the fresh Phase 9 validation suite
 
-1. Make unsupported computer/service-tool boundaries non-completable.
-2. Add first-class downstream/cross-repair required-operation relationships.
-3. Make completion semantics mechanically honest.
-4. Fix Resume Repair device-ID handling.
-5. Fix Repair Log device-ID handling.
-6. Consume event-history pagination.
-7. Correct Garage exact-configuration resolution and verification wording.
-8. Reconcile manual session inventory with canonical readiness.
-9. Finalize durable private photo storage.
-10. Align upload limits with actual hosting limits.
-11. Record behaviors that require final regression coverage; do not rebuild the automated test suite until the functional MVP build is complete.
+- [x] Make unsupported computer/service-tool boundaries non-completable.
+- [x] Add first-class downstream/cross-repair required-operation relationships.
+- [x] Make completion semantics mechanically honest.
+- [x] Fix Resume Repair device-ID handling.
+- [x] Fix Repair Log device-ID handling.
+- [x] Consume event-history pagination.
+- [x] Correct Garage exact-configuration resolution and verification wording.
+- [x] Reconcile manual session inventory with canonical readiness.
+- [ ] Finalize durable private photo storage with hosted environment/configuration persistence proof. Implementation exists; proof remains deferred to final validation/cutover.
+- [x] Align upload limits with actual hosting limits.
+- [ ] Complete fresh final regression coverage for these behaviors. **Deferred to Phase 9.**
 
 Exit gate:
 PartGraph can no longer report a mechanically incomplete or unsupported repair as complete.
@@ -113,24 +120,23 @@ PartGraph can no longer report a mechanically incomplete or unsupported repair a
 ### Phase 2 — Restore the resilience contract
 
 Status on `partgraph-mvp-consolidation`:
-- items 1-9 and 11 are implemented in the active application line
-- item 10 is intentionally inactive because MVP offline mode is read-only; no offline mutation journal is enabled
+- the functional exit gate is satisfied for the current read-only offline policy
 - offline repair pack v1 is generated from server-authoritative resume, readiness and verified guidance state and is versioned by repair-definition version and confirmed session sequence
 - private offline pack state is kept in tab-scoped `sessionStorage`; confirmed logout/session invalidation clears it
 - the service worker caches only the public application shell and explicitly excludes `/api/` responses; same-tab reload can reopen an already cached repair while the network is unavailable
 - final browser/offline/degraded regression proof remains a Phase 9 validation responsibility
 
-1. Preserve the central machine-readable error registry.
-2. Formalize error-code ownership by module.
-3. Keep request IDs end-to-end.
-4. Preserve bounded GET retry behavior.
-5. Add authoritative recovery for timed-out writes.
-6. Define server-side request/deadline behavior.
-7. Standardize degraded/unavailable UI behavior.
-8. Implement versioned offline repair packs.
-9. Implement offline read-only repair continuity first.
-10. If offline writes are enabled, add local event journaling, idempotency, base sequence, conflict detection and reconnect reconciliation.
-11. Keep the server authoritative.
+- [x] Preserve the central machine-readable error registry.
+- [x] Formalize error-code ownership by module.
+- [x] Keep request IDs end-to-end.
+- [x] Preserve bounded GET retry behavior.
+- [x] Add authoritative recovery for timed-out writes.
+- [x] Define server-side request/deadline behavior.
+- [x] Standardize degraded/unavailable UI behavior.
+- [x] Implement versioned offline repair packs.
+- [x] Implement offline read-only repair continuity first.
+- [ ] If offline writes are enabled, add local event journaling, idempotency, base sequence, conflict detection and reconnect reconciliation. **Conditional; not scheduled for the current read-only MVP.**
+- [x] Keep the server authoritative.
 
 Exit gate:
 Network loss cannot make PartGraph guess, lose the user's place, or falsely report a mutation.
@@ -148,86 +154,89 @@ Status on `partgraph-mvp-consolidation`:
 - the reviewer database role can read staging evidence, update only review fields and create immutable verified-evidence snapshots; it has no canonical write authority
 - verification currently stops at `CatalogVerifiedEvidence`; it cannot publish `MechanicalClaim`, vehicle truth, repair definitions, operations or requirements
 - contributor candidate-submission and curator publication/conflict-resolution endpoints are intentionally not fabricated ahead of the Phase 6 pipeline operations they would authorize
-- one remaining Phase 3 boundary is to normalize whether shared vehicle/canonical read APIs are authenticated ordinary-user reads or deliberately public shared reads, then enforce that policy consistently
-- the current RBAC/migration/UI line has passed API lint, role/security tests, migrations, API container smoke, web typecheck/build and web container smoke on the active branch
+- shared canonical and vehicle reads now use an explicit authenticated ordinary-user boundary; reviewer-only staging/reconciliation/coverage reads narrow the transaction to `partgraph_reviewer`
+- migration `0032_shared_read_privileges` grants only the missing shared read privileges and CI exercises the real PostgreSQL role boundary
+- API CI and Web CI passed for `a28a5372b310fe11e696789c7840f54170aca5ed`, including migration `0032`, live PostgreSQL RBAC tests and container smoke
 
-1. Preserve `partgraph_app` least-privilege access.
-2. Preserve collector staging-only privilege.
-3. Preserve transaction-local owner context.
-4. Extend FORCE RLS to every new private table.
-5. Define human roles:
-   - owner/user
-   - contributor
-   - reviewer
-   - curator
-   - operator/admin
-6. Enforce roles in API services.
-7. Enforce database privileges where practical.
-8. Do not expose operator workbench functionality before RBAC is present.
-9. Keep canonical knowledge shared/read-only to ordinary users.
-10. Keep owner state private.
-11. Keep candidate acquisition isolated from canonical truth.
+- [x] Preserve `partgraph_app` least-privilege access.
+- [x] Preserve collector staging-only privilege.
+- [x] Preserve transaction-local owner context.
+- [x] Extend FORCE RLS to every current private table and require it for every new private table.
+- [x] Define human roles: owner/user, contributor, reviewer, curator and operator/admin.
+- [x] Enforce roles in current API services.
+- [x] Enforce database privileges where practical.
+- [x] Do not expose operator workbench functionality before RBAC is present.
+- [x] Keep canonical knowledge shared/read-only to authenticated ordinary users.
+- [x] Keep owner state private.
+- [x] Keep candidate acquisition isolated from canonical truth.
 
 Exit gate:
 Every read/write/promotion operation has an explicit actor and authorization boundary.
 
-The Phase 3 exit gate is not yet declared complete. Existing privileged writes and evidence promotion now have explicit human/API/database boundaries; the remaining shared-read policy must be made explicit, while future contributor/curator write paths are added only with the corresponding Phase 6 operations.
+The functional Phase 3 exit gate is satisfied for operations that currently exist. Contributor candidate-submission and curator publication/conflict-resolution authorization will be added with the corresponding Phase 6 operations rather than fabricating unused write paths early.
 
 ### Phase 4 — Complete the 18-domain canonical schema
 
+Status: **Next phase; not started.** Existing tables are foundations only until each domain is audited against the Blueprint and the Phase 4 exit gate.
+
 Implement the Blueprint domains without vehicle-specific application code:
-1. exact vehicle identity
-2. systems/assemblies
-3. parts/components
-4. fitment/applicability
-5. interchange/supersession
-6. physical relationship graph
-7. hardware/fasteners
-8. tools/equipment/workspace
-9. fluids/materials/consumables
-10. specifications/limits
-11. repair definitions/operations
-12. procedure actions/dependencies
-13. triggered downstream operations
-14. diagnostics/inspections
-15. electrical/sensor/connectors
-16. safety/capability boundaries
-17. evidence/provenance/conflicts/versioning
-18. owner Garage/session/memory/readiness/progress
+
+- [ ] exact vehicle identity
+- [ ] systems/assemblies
+- [ ] parts/components
+- [ ] fitment/applicability
+- [ ] interchange/supersession
+- [ ] physical relationship graph
+- [ ] hardware/fasteners
+- [ ] tools/equipment/workspace
+- [ ] fluids/materials/consumables
+- [ ] specifications/limits
+- [ ] repair definitions/operations
+- [ ] procedure actions/dependencies
+- [ ] triggered downstream operations
+- [ ] diagnostics/inspections
+- [ ] electrical/sensor/connectors
+- [ ] safety/capability boundaries
+- [ ] evidence/provenance/conflicts/versioning
+- [ ] owner Garage/session/memory/readiness/progress
 
 Exit gate:
 An empty database can represent the whole MVP without hard-coded reference-vehicle facts.
 
 ### Phase 5 — Clean migration baseline
 
-1. Keep production owner data intact.
-2. Build a schema-only future baseline.
-3. Move reference/seed vehicle facts to external data fixtures.
-4. Test fresh database creation.
-5. Test migration against a current production copy.
-6. Compare schema and owner-state invariants.
-7. Adopt the clean baseline only after proof.
-8. Never reset production to simplify migration work.
+Status: **Pending Phase 4.**
+
+- [ ] Keep production owner data intact.
+- [ ] Build a schema-only future baseline.
+- [ ] Move reference/seed vehicle facts to external data fixtures.
+- [ ] Test fresh database creation.
+- [ ] Test migration against a current production copy.
+- [ ] Compare schema and owner-state invariants.
+- [ ] Adopt the clean baseline only after proof.
+- [ ] Never reset production to simplify migration work.
 
 Exit gate:
 Fresh installs and production upgrades follow a generic schema path.
 
 ### Phase 6 — Canonical data and provider pipeline
 
-1. source registry
-2. source authority policy
-3. provider/connector registry
-4. immutable raw capture
-5. extraction/normalization
-6. candidate fact generation
-7. exact applicability assignment
-8. conflict detection
-9. reviewer decision
-10. verified evidence promotion
-11. mechanical claim creation
-12. repair-definition materialization
-13. versioning/supersession
-14. audit trail
+Status: **Pending Phase 5.** Existing staging/provider/evidence foundations will be audited when this phase begins; they are not pre-checked as complete here.
+
+- [ ] source registry
+- [ ] source authority policy
+- [ ] provider/connector registry
+- [ ] immutable raw capture
+- [ ] extraction/normalization
+- [ ] candidate fact generation
+- [ ] exact applicability assignment
+- [ ] conflict detection
+- [ ] reviewer decision
+- [ ] verified evidence promotion
+- [ ] mechanical claim creation
+- [ ] repair-definition materialization
+- [ ] versioning/supersession
+- [ ] audit trail
 
 MVP provider strategy:
 - canonical vehicle and repair data may come from PartGraph database tables and approved backend data files through the same provider/connector boundary
@@ -251,31 +260,35 @@ Rules:
 
 ### Phase 7 — Primary end-to-end vehicle
 
+Status: **Pending Phase 6.**
+
 Use the 2009 Honda Civic Hybrid as the deepest first validation configuration.
 
 Build enough canonical coverage to exercise:
-- identity
-- systems/assemblies
-- parts and hardware
-- tools
-- fluids/materials
-- specifications
-- repair requirements
-- procedures
-- readiness
-- blockers
-- downstream operations
-- observations/photos
-- pause/resume
-- capability boundaries
-- completion
+- [ ] identity
+- [ ] systems/assemblies
+- [ ] parts and hardware
+- [ ] tools
+- [ ] fluids/materials
+- [ ] specifications
+- [ ] repair requirements
+- [ ] procedures
+- [ ] readiness
+- [ ] blockers
+- [ ] downstream operations
+- [ ] observations/photos
+- [ ] pause/resume
+- [ ] capability boundaries
+- [ ] completion
 
 Exit gate:
 Representative repairs work start-to-finish without vehicle-specific code changes.
 
 ### Phase 8 — Five-model reference fleet
 
-Populate the remaining reference fleet through data only.
+Status: **Pending Phase 7.**
+
+- [ ] Populate the remaining reference fleet through data only.
 
 Rule:
 Adding another vehicle may require more data, but must not require a make/model/year/trim `if` statement or a make-specific application service.
@@ -285,37 +298,41 @@ The same source code executes workflows for all five model families.
 
 ### Phase 9 — Build the fresh MVP validation suite
 
+Status: **Pending functional MVP completion.**
+
 Do not revive the historical tests removed during consolidation. Build a new validation suite against the completed Blueprint and the final MVP behavior.
 
 Required gates:
-- unit/domain tests
-- API tests
-- authentication/security tests
-- RLS/owner-isolation tests
-- migration tests
-- production-copy migration
-- full-stack integration
-- verified-guidance integration
-- browser E2E
-- randomized acceptance
-- reference-fleet acceptance
-- offline/degraded behavior
-- timeout/ambiguous-write recovery
-- downstream-operation semantics
-- unsupported computer boundary
-- durable photo persistence
-- data-free-source-code check
-- RBAC authorization tests
+- [ ] unit/domain tests
+- [ ] API tests
+- [ ] authentication/security tests
+- [ ] RLS/owner-isolation tests
+- [ ] migration tests
+- [ ] production-copy migration
+- [ ] full-stack integration
+- [ ] verified-guidance integration
+- [ ] browser E2E
+- [ ] randomized acceptance
+- [ ] reference-fleet acceptance
+- [ ] offline/degraded behavior
+- [ ] timeout/ambiguous-write recovery
+- [ ] downstream-operation semantics
+- [ ] unsupported computer boundary
+- [ ] durable photo persistence
+- [ ] data-free-source-code check
+- [ ] RBAC authorization tests
 
 ### Phase 10 — Production MVP cutover
 
-1. merge only an exact green commit
-2. deploy frontend/backend from the same source commit
-3. apply only validated schema changes
-4. verify health/readiness
-5. verify real owner state
-6. run production-safe smoke checks
-7. do not seed unverified repair data as canonical truth
+Status: **Pending Phase 9.**
+
+- [ ] merge only an exact green commit
+- [ ] deploy frontend/backend from the same source commit
+- [ ] apply only validated schema changes
+- [ ] verify health/readiness
+- [ ] verify real owner state
+- [ ] run production-safe smoke checks
+- [ ] do not seed unverified repair data as canonical truth
 
 ## 4. Branch consolidation policy
 
