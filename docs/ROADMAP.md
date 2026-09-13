@@ -25,10 +25,10 @@ These percentages are strict MVP completion estimates, not code-volume estimates
 
 | Area | Completion |
 |---|---:|
-| Core software/platform architecture | 80% |
-| Security, ownership and data isolation | 86% |
+| Core software/platform architecture | 81% |
+| Security, ownership and data isolation | 89% |
 | Error/timeout/degraded resilience | 86% |
-| Human RBAC | 42% |
+| Human RBAC | 65% |
 | Canonical automotive data pipeline | 30% |
 | Broad canonical automotive knowledge | 8-10% |
 | Five-model consumer MVP | 48% |
@@ -48,6 +48,9 @@ Major existing strengths:
 - bounded client retries, server request deadlines and authoritative ambiguous-write recovery
 - standardized degraded/unavailable UI state
 - versioned, owner-scoped read-only offline repair packs with public-shell-only service-worker caching
+- persistent human roles with operator-managed, audited role assignment and a last-admin guardrail
+- reviewer-gated staging review with a separate least-privilege PostgreSQL reviewer role
+- verified evidence promotion remains distinct from canonical automotive publication
 - staging/canonical privilege separation
 - private photo storage implementation with hosted Blob support and local private-volume fallback
 
@@ -55,7 +58,8 @@ Major gaps:
 - no broad canonical repair library
 - hosted durable photo persistence still needs environment/configuration proof before production cutover
 - browser E2E and final offline/degraded regression coverage
-- human reviewer/curator authorization remains incomplete
+- contributor submission and curator publication/conflict-resolution actions do not exist yet because their Phase 6 pipeline operations do not exist yet
+- shared canonical/vehicle read authorization policy still needs one consistent explicit boundary before the Phase 3 exit gate is closed
 - canonical evidence-to-repair materialization
 - source-code vehicle-data invariant not yet enforced automatically
 - clean migration baseline and production-copy migration proof remain outstanding
@@ -135,6 +139,18 @@ The functional Phase 2 exit gate is satisfied for the current read-only offline 
 
 ### Phase 3 — Complete security and RBAC boundaries
 
+Status on `partgraph-mvp-consolidation`:
+- all five human roles are persistent account states: owner, contributor, reviewer, curator and operator/admin
+- reusable API role dependencies exist for contributor-capable, reviewer, curator and operator operations
+- operator/admin routes use explicit operator authorization rather than UI hiding
+- operator/admin can list accounts and assign human roles through audited API/UI controls; the last active operator/admin cannot be demoted
+- evidence review is restricted to reviewer, curator or operator/admin accounts and runs under a separate `partgraph_reviewer` PostgreSQL role
+- the reviewer database role can read staging evidence, update only review fields and create immutable verified-evidence snapshots; it has no canonical write authority
+- verification currently stops at `CatalogVerifiedEvidence`; it cannot publish `MechanicalClaim`, vehicle truth, repair definitions, operations or requirements
+- contributor candidate-submission and curator publication/conflict-resolution endpoints are intentionally not fabricated ahead of the Phase 6 pipeline operations they would authorize
+- one remaining Phase 3 boundary is to normalize whether shared vehicle/canonical read APIs are authenticated ordinary-user reads or deliberately public shared reads, then enforce that policy consistently
+- the current RBAC/migration/UI line has passed API lint, role/security tests, migrations, API container smoke, web typecheck/build and web container smoke on the active branch
+
 1. Preserve `partgraph_app` least-privilege access.
 2. Preserve collector staging-only privilege.
 3. Preserve transaction-local owner context.
@@ -154,6 +170,8 @@ The functional Phase 2 exit gate is satisfied for the current read-only offline 
 
 Exit gate:
 Every read/write/promotion operation has an explicit actor and authorization boundary.
+
+The Phase 3 exit gate is not yet declared complete. Existing privileged writes and evidence promotion now have explicit human/API/database boundaries; the remaining shared-read policy must be made explicit, while future contributor/curator write paths are added only with the corresponding Phase 6 operations.
 
 ### Phase 4 — Complete the 18-domain canonical schema
 
