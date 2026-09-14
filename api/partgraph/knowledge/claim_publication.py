@@ -23,6 +23,7 @@ from .source_policy import (
     PromotionDecision,
     SourceClass,
     assess_mechanical_claim,
+    load_source_authority_policy,
 )
 
 PromotionState = Literal[
@@ -311,6 +312,12 @@ async def publish_verified_mechanical_claim(
             status_code=status.HTTP_409_CONFLICT,
         ) from exc
 
+    authority_policy = await load_source_authority_policy(
+        db,
+        source_class=source_class,
+        claim_domain=spec.claim_domain,
+        risk=spec.claim_risk,
+    )
     conflict_key = _conflict_key(spec)
     # Every mutation of one deterministic fact scope uses the same transaction
     # advisory lock. This serializes publication and conflict resolution without
@@ -327,6 +334,7 @@ async def publish_verified_mechanical_claim(
     )
     if existing_from_evidence is not None:
         assessment = assess_mechanical_claim(
+            policy=authority_policy,
             source_class=source_class,
             claim_domain=spec.claim_domain,
             exact_applicability=spec.exact_applicability,
@@ -368,6 +376,7 @@ async def publish_verified_mechanical_claim(
     )
 
     assessment = assess_mechanical_claim(
+        policy=authority_policy,
         source_class=source_class,
         claim_domain=spec.claim_domain,
         exact_applicability=spec.exact_applicability,
