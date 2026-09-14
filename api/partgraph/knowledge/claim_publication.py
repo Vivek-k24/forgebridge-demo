@@ -14,6 +14,7 @@ from ..errors import ErrorCode, ErrorEnvelope, PartGraphError
 from ..identity.auth.dependencies import AuthSessionDep, require_csrf
 from ..identity.auth.roles import CuratorUserDep, assume_curator_database_role
 from ..identity.vehicle.models import VehicleConfiguration
+from .claim_locks import lock_mechanical_claim_scope, lock_mechanical_claims
 from .models import CatalogSource, CatalogVerifiedEvidence, MechanicalClaim
 from .provenance import CanonicalConflict, CanonicalConflictItem
 from .source_policy import (
@@ -311,6 +312,11 @@ async def publish_verified_mechanical_claim(
         ) from exc
 
     conflict_key = _conflict_key(spec)
+    # Every mutation of one deterministic fact scope uses the same transaction
+    # advisory lock. This serializes publication and conflict resolution without
+    # giving read-only materialization claim-table UPDATE privileges.
+    await lock_mechanical_claim_scope(db, conflict_key)
+
     existing_from_evidence = await db.scalar(
         select(MechanicalClaim).where(
             MechanicalClaim.verified_evidence_id == evidence.id,
@@ -350,6 +356,11 @@ async def publish_verified_mechanical_claim(
                 MechanicalClaim.promotion_state.in_(("verified", "conflict")),
             )
         )
+    )
+    await lock_mechanical_claims(
+        db,
+        (claim.id for claim in scoped_claims),
+        shared=False,
     )
     contradictory = [claim for claim in scoped_claims if not _same_fact(claim, spec)]
     has_conflict = bool(contradictory) or any(
