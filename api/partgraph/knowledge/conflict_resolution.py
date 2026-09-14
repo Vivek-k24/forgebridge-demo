@@ -12,8 +12,16 @@ from ..errors import ErrorCode, ErrorEnvelope, PartGraphError
 from ..identity.auth.dependencies import AuthSessionDep, require_csrf
 from ..identity.auth.roles import CuratorUserDep, assume_curator_database_role
 from .claim_locks import lock_mechanical_claim_scope, lock_mechanical_claims
-from .models import MechanicalClaim
+from .models import CatalogSource, MechanicalClaim
 from .provenance import CanonicalConflict, CanonicalConflictItem
+from .source_policy import (
+    ClaimDomain,
+    ClaimRisk,
+    PromotionDecision,
+    SourceClass,
+    assess_mechanical_claim,
+    load_source_authority_policy,
+)
 
 ConflictResolutionValue = Literal[
     "accepted_evidence",
@@ -90,6 +98,49 @@ def _selected_item_id(items: list[CanonicalConflictItem]) -> UUID | None:
     if len(selected) > 1:
         raise _invalid("Resolved conflict contains multiple selected claims.")
     return selected[0] if selected else None
+
+
+async def _assert_selected_claim_publishable(
+    db: AuthSessionDep,
+    claim: MechanicalClaim,
+) -> None:
+    if not claim.explicit_claim or not claim.exact_applicability:
+        raise _invalid(
+            "Selected claim must be explicit and have exact vehicle applicability."
+        )
+
+    source = await db.get(CatalogSource, claim.source_id)
+    if source is None:
+        raise _invalid("Selected claim references an unavailable source registry entry.")
+    if source.license_status != "approved":
+        raise _invalid("Selected claim source is not approved for canonical publication.")
+
+    try:
+        source_class = SourceClass(source.source_class)
+        claim_domain = ClaimDomain(claim.claim_domain)
+        claim_risk = ClaimRisk(claim.claim_risk)
+    except ValueError as exc:
+        raise _invalid("Selected claim has an unsupported authority scope.") from exc
+
+    policy = await load_source_authority_policy(
+        db,
+        source_class=source_class,
+        claim_domain=claim_domain,
+        risk=claim_risk,
+    )
+    assessment = assess_mechanical_claim(
+        policy=policy,
+        source_class=source_class,
+        claim_domain=claim_domain,
+        exact_applicability=claim.exact_applicability,
+        explicit_claim=claim.explicit_claim,
+        risk=claim_risk,
+        has_conflict=False,
+    )
+    if assessment.decision is PromotionDecision.CANDIDATE_ONLY:
+        raise _invalid(
+            "Selected claim source authority does not permit canonical promotion."
+        )
 
 
 @router.post(
@@ -212,6 +263,7 @@ async def resolve_canonical_conflict(
         if request.selected_claim_id not in active_claim_ids:
             raise _invalid("Selected claim is not an active contender in this conflict.")
         selected_claim = claim_by_id[request.selected_claim_id]
+        await _assert_selected_claim_publishable(db, selected_claim)
 
     now = datetime.now(UTC)
     for item in active_items:
