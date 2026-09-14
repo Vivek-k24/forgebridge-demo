@@ -97,6 +97,7 @@ jobs:
           api/partgraph/knowledge/provenance.py
           api/partgraph/identity/auth/roles.py
           api/migrations/versions/0053_domain_materialization.py
+          api/migrations/versions/0054_vehicle_verify_timestamp.py
           api/tests/test_canonical_claim_materialization_database.py
           api/tests/test_materializer_database_privileges.py
           api/tests/test_repair_materialization_database.py
