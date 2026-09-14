@@ -235,8 +235,11 @@ def _unique_map(items: list[object], field_name: str, key) -> dict[str, object]:
     return result
 
 
-def _unique_positions(items: list[object], label: str) -> None:
-    positions = [getattr(item, "position") for item in items]
+def _unique_positions(
+    items: list[RepairOperationMaterializationSpec] | list[ProcedureActionMaterializationSpec],
+    label: str,
+) -> None:
+    positions = [item.position for item in items]
     if len(set(positions)) != len(positions):
         raise ValueError(f"{label} positions must be unique")
 
