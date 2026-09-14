@@ -6,8 +6,11 @@ on:
       - 'api/partgraph/knowledge/extraction.py'
       - 'api/partgraph/knowledge/staging.py'
       - 'api/partgraph/knowledge/nhtsa.py'
+      - 'api/partgraph/operator/models.py'
+      - 'api/partgraph/identity/auth/roles.py'
       - 'api/tests/test_extraction_pipeline.py'
       - 'api/tests/test_nhtsa_collector.py'
+      - 'api/tests/test_provider_source_binding.py'
       - 'api/migrations/**'
       - 'api/pyproject.toml'
       - '.github/workflows/extraction.yml'
@@ -19,8 +22,11 @@ on:
       - 'api/partgraph/knowledge/extraction.py'
       - 'api/partgraph/knowledge/staging.py'
       - 'api/partgraph/knowledge/nhtsa.py'
+      - 'api/partgraph/operator/models.py'
+      - 'api/partgraph/identity/auth/roles.py'
       - 'api/tests/test_extraction_pipeline.py'
       - 'api/tests/test_nhtsa_collector.py'
+      - 'api/tests/test_provider_source_binding.py'
       - 'api/migrations/**'
       - 'api/pyproject.toml'
       - '.github/workflows/extraction.yml'
@@ -72,8 +78,12 @@ jobs:
           api/partgraph/knowledge/extraction.py
           api/partgraph/knowledge/staging.py
           api/partgraph/knowledge/nhtsa.py
+          api/partgraph/operator/models.py
+          api/partgraph/identity/auth/roles.py
+          api/migrations/versions/0051_provider_source_binding.py
           api/tests/test_extraction_pipeline.py
           api/tests/test_nhtsa_collector.py
+          api/tests/test_provider_source_binding.py
 
       - name: Apply database migrations
         env:
@@ -84,6 +94,11 @@ jobs:
         env:
           PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
         run: python -m unittest discover -s api/tests -p 'test_extraction_pipeline.py'
+
+      - name: Test trusted provider source binding
+        env:
+          PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
+        run: python -m unittest discover -s api/tests -p 'test_provider_source_binding.py'
 
       - name: Test NHTSA recall collector boundary
         env:
