@@ -6,12 +6,14 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
     UniqueConstraint,
     Uuid,
     func,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -120,6 +122,10 @@ class CanonicalRecordVersion(Base):
             "version",
             name="uq_canonical_record_versions_identity",
         ),
+        UniqueConstraint(
+            "idempotency_key",
+            name="uq_canonical_record_versions_idempotency_key",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
@@ -132,6 +138,8 @@ class CanonicalRecordVersion(Base):
         Uuid(as_uuid=True),
         ForeignKey("canonical_record_versions.id", ondelete="SET NULL"),
     )
+    idempotency_key: Mapped[str | None] = mapped_column(String(128))
+    request_sha256: Mapped[str | None] = mapped_column(String(64))
     published_by: Mapped[str] = mapped_column(String(128), nullable=False)
     published_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -152,7 +160,15 @@ class CanonicalRecordEvidence(Base):
         UniqueConstraint(
             "record_version_id",
             "verified_evidence_id",
-            name="uq_canonical_record_evidence_pair",
+            "mechanical_claim_id",
+            name="uq_canonical_record_evidence_claim",
+        ),
+        Index(
+            "uq_canonical_record_evidence_evidence_only",
+            "record_version_id",
+            "verified_evidence_id",
+            unique=True,
+            postgresql_where=text("mechanical_claim_id IS NULL"),
         ),
     )
 
