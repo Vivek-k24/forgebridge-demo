@@ -1,4 +1,5 @@
 import unittest
+from decimal import Decimal
 from types import SimpleNamespace
 from uuid import UUID, uuid4
 
@@ -15,6 +16,12 @@ from partgraph.knowledge.conflict_resolution import (
     CanonicalConflictResolutionCreate,
     _selected_item_id,
 )
+from partgraph.knowledge.repair_materialization_contract import (
+    IDEMPOTENCY_PATTERN,
+    RepairDefinitionMaterializationCreate,
+    assert_payload_coverage,
+    request_sha256,
+)
 from partgraph.knowledge.source_policy import (
     ClaimDomain,
     ClaimRisk,
@@ -22,8 +29,11 @@ from partgraph.knowledge.source_policy import (
     SourceClass,
     assess_mechanical_claim,
 )
+from partgraph.knowledge.support_boundaries import COMPUTER_SERVICE_BOUNDARY_ACTION_KEY
 
 CONFIGURATION_ID = UUID("11111111-1111-4111-8111-111111111111")
+MATERIALIZATION_CONFIGURATION_ID = UUID("22222222-2222-4222-8222-222222222222")
+MATERIALIZATION_CLAIM_ID = UUID("33333333-3333-4333-8333-333333333333")
 
 
 class ClaimPipelinePolicyTests(unittest.TestCase):
@@ -155,10 +165,7 @@ class ClaimPipelinePolicyTests(unittest.TestCase):
             rationale="  exact   OEM evidence   supports this contender  ",
         )
         self.assertEqual(request.selected_claim_id, selected)
-        self.assertEqual(
-            request.rationale,
-            "exact OEM evidence supports this contender",
-        )
+        self.assertEqual(request.rationale, "exact OEM evidence supports this contender")
 
     def test_multiple_selected_conflict_items_are_rejected(self) -> None:
         items = [
@@ -186,6 +193,124 @@ class ClaimPipelinePolicyTests(unittest.TestCase):
                     idempotent=True,
                 )
                 self.assertEqual(response.promotion_state, promotion_state)
+
+
+class RepairMaterializationPolicyTests(unittest.TestCase):
+    @staticmethod
+    def _requirement() -> dict[str, object]:
+        return {
+            "use_key": "socket-use",
+            "requirement_key": "tool.socket-10mm",
+            "category": "tool",
+            "display_name": "10 mm socket",
+            "necessity": "required",
+            "fulfillment_mode": "reusable",
+            "timing": "operation",
+            "operation_key": "remove-cover",
+            "supporting_claim_ids": [MATERIALIZATION_CLAIM_ID],
+        }
+
+    @staticmethod
+    def _action(**overrides: object) -> dict[str, object]:
+        value: dict[str, object] = {
+            "action_key": "remove-cover",
+            "title": "Remove cover",
+            "instruction": "Remove the cover fasteners.",
+            "position": 0,
+            "skippable": False,
+            "requirement_use_keys": ["socket-use"],
+            "supporting_claim_ids": [uuid4()],
+        }
+        value.update(overrides)
+        return value
+
+    def _request(self, **overrides: object) -> RepairDefinitionMaterializationCreate:
+        value: dict[str, object] = {
+            "vehicle_configuration_id": MATERIALIZATION_CONFIGURATION_ID,
+            "repair_key": "cover.remove",
+            "title": "Remove cover",
+            "capability_policy_key": "diy_supported",
+            "operations": [
+                {
+                    "operation_key": "remove-cover",
+                    "label": "Remove cover",
+                    "position": 0,
+                }
+            ],
+            "requirements": [self._requirement()],
+            "actions": [self._action()],
+        }
+        value.update(overrides)
+        return RepairDefinitionMaterializationCreate.model_validate(value)
+
+    def test_materialization_request_hash_is_deterministic(self) -> None:
+        request = self._request()
+        self.assertEqual(request_sha256(request), request_sha256(request))
+        self.assertEqual(len(request_sha256(request)), 64)
+
+    def test_unreferenced_operation_is_rejected(self) -> None:
+        requirement = self._requirement()
+        requirement["timing"] = "whole_repair"
+        requirement["operation_key"] = None
+        with self.assertRaises(ValidationError):
+            self._request(requirements=[requirement])
+
+    def test_dependency_must_precede_dependent_action(self) -> None:
+        first = self._action(action_key="first", position=1, requirement_use_keys=[])
+        second = self._action(
+            action_key="second",
+            position=0,
+            prerequisite_action_keys=["first"],
+            requirement_use_keys=["socket-use"],
+        )
+        with self.assertRaises(ValidationError):
+            self._request(actions=[first, second])
+
+    def test_computer_service_boundary_must_be_terminal(self) -> None:
+        boundary = self._action(
+            action_key=COMPUTER_SERVICE_BOUNDARY_ACTION_KEY,
+            position=0,
+            requirement_use_keys=[],
+        )
+        physical = self._action(action_key="physical-step", position=1)
+        with self.assertRaises(ValidationError):
+            self._request(actions=[boundary, physical])
+
+    def test_claims_may_collectively_cover_materialized_fact(self) -> None:
+        claims = [
+            SimpleNamespace(claim_payload={"requirement_key": "tool.socket-10mm"}),
+            SimpleNamespace(claim_payload={"category": "tool", "quantity": "1.000"}),
+        ]
+        assert_payload_coverage(  # type: ignore[arg-type]
+            claims,
+            {
+                "requirement_key": "tool.socket-10mm",
+                "category": "tool",
+                "quantity": Decimal("1"),
+            },
+            fact_label="requirement[socket-use]",
+        )
+
+    def test_conflicting_supporting_payload_is_rejected(self) -> None:
+        claims = [
+            SimpleNamespace(claim_payload={"category": "tool"}),
+            SimpleNamespace(claim_payload={"category": "fluid"}),
+        ]
+        with self.assertRaises(PartGraphError) as context:
+            assert_payload_coverage(  # type: ignore[arg-type]
+                claims,
+                {"category": "tool"},
+                fact_label="requirement[socket-use]",
+            )
+        self.assertEqual(
+            context.exception.code,
+            ErrorCode.KNOWLEDGE_MATERIALIZATION_INVALID,
+        )
+
+    def test_materialization_idempotency_key_contract_is_bounded(self) -> None:
+        self.assertIsNotNone(IDEMPOTENCY_PATTERN.fullmatch("repair:publish:001"))
+        self.assertIsNone(IDEMPOTENCY_PATTERN.fullmatch("short"))
+        self.assertIsNone(IDEMPOTENCY_PATTERN.fullmatch("contains space"))
 
 
 if __name__ == "__main__":
