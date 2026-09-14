@@ -1,0 +1,91 @@
+name: Extraction Pipeline CI
+
+on:
+  pull_request:
+    paths:
+      - 'api/partgraph/knowledge/extraction.py'
+      - 'api/partgraph/knowledge/staging.py'
+      - 'api/partgraph/knowledge/nhtsa.py'
+      - 'api/tests/test_extraction_pipeline.py'
+      - 'api/tests/test_nhtsa_collector.py'
+      - 'api/migrations/**'
+      - 'api/pyproject.toml'
+      - '.github/workflows/extraction.yml'
+  push:
+    branches:
+      - main
+      - partgraph-mvp-consolidation
+    paths:
+      - 'api/partgraph/knowledge/extraction.py'
+      - 'api/partgraph/knowledge/staging.py'
+      - 'api/partgraph/knowledge/nhtsa.py'
+      - 'api/tests/test_extraction_pipeline.py'
+      - 'api/tests/test_nhtsa_collector.py'
+      - 'api/migrations/**'
+      - 'api/pyproject.toml'
+      - '.github/workflows/extraction.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: extraction-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  extraction:
+    name: Extraction + staging safety gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:18.6-alpine
+        env:
+          POSTGRES_DB: partgraph
+          POSTGRES_USER: partgraph
+          POSTGRES_PASSWORD: partgraph
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U partgraph -d partgraph"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
+
+      - name: Install API dependencies
+        run: python -m pip install -e './api[dev]'
+
+      - name: Lint extraction boundary
+        run: >-
+          ruff check
+          api/partgraph/knowledge/extraction.py
+          api/partgraph/knowledge/staging.py
+          api/partgraph/knowledge/nhtsa.py
+          api/tests/test_extraction_pipeline.py
+          api/tests/test_nhtsa_collector.py
+
+      - name: Apply database migrations
+        env:
+          PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
+        run: alembic -c api/alembic.ini upgrade head
+
+      - name: Test generic extraction and candidate staging
+        env:
+          PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
+        run: python -m unittest discover -s api/tests -p 'test_extraction_pipeline.py'
+
+      - name: Test NHTSA recall collector boundary
+        env:
+          PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
+        run: python -m unittest discover -s api/tests -p 'test_nhtsa_collector.py'
