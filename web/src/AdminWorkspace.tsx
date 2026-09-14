@@ -46,6 +46,43 @@ type Provider = {
   updated_at: string
 }
 
+type SourceClass =
+  | 'government'
+  | 'oem_service'
+  | 'licensed_oem_derived'
+  | 'oem_parts'
+  | 'industry_standard'
+  | 'retailer'
+  | 'community'
+type SourceLicenseStatus = 'unreviewed' | 'approved' | 'prohibited'
+type CatalogSource = {
+  id: string
+  source_key: string
+  display_name: string
+  source_class: SourceClass
+  license_status: SourceLicenseStatus
+  automation_allowed: boolean
+  terms_url: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+type ProviderSourceBinding = {
+  id: string
+  provider_connection_id: string
+  provider_key: string
+  provider_enabled: boolean
+  source_id: string
+  source_key: string
+  source_license_status: SourceLicenseStatus
+  source_automation_allowed: boolean
+  enabled: boolean
+  ready_for_ingestion: boolean
+  created_at: string
+  updated_at: string
+}
+
 type OperatorAuditAction =
   | 'provider_created'
   | 'provider_updated'
@@ -53,6 +90,11 @@ type OperatorAuditAction =
   | 'provider_disabled'
   | 'provider_credential_saved'
   | 'provider_credential_removed'
+  | 'source_created'
+  | 'source_updated'
+  | 'provider_source_binding_created'
+  | 'provider_source_binding_enabled'
+  | 'provider_source_binding_disabled'
   | 'preview_operator_bootstrap'
   | 'user_role_changed'
 
@@ -83,8 +125,28 @@ const PROVIDER_KINDS: Array<{ value: ProviderKind; label: string }> = [
   { value: 'manufacturer', label: 'Manufacturer' },
 ]
 
+const SOURCE_CLASSES: Array<{ value: SourceClass; label: string }> = [
+  { value: 'government', label: 'Government' },
+  { value: 'oem_service', label: 'OEM service' },
+  { value: 'licensed_oem_derived', label: 'Licensed OEM-derived' },
+  { value: 'oem_parts', label: 'OEM parts' },
+  { value: 'industry_standard', label: 'Industry standard' },
+  { value: 'retailer', label: 'Retailer' },
+  { value: 'community', label: 'Community' },
+]
+
+const SOURCE_LICENSE_STATUSES: Array<{ value: SourceLicenseStatus; label: string }> = [
+  { value: 'unreviewed', label: 'Unreviewed' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'prohibited', label: 'Prohibited' },
+]
+
 function kindLabel(kind: ProviderKind): string {
   return PROVIDER_KINDS.find((item) => item.value === kind)?.label ?? kind.replaceAll('_', ' ')
+}
+
+function sourceClassLabel(sourceClass: SourceClass): string {
+  return SOURCE_CLASSES.find((item) => item.value === sourceClass)?.label ?? sourceClass.replaceAll('_', ' ')
 }
 
 function credentialLabel(provider: Provider): string {
@@ -103,6 +165,11 @@ function auditLabel(action: OperatorAuditAction): string {
     case 'provider_disabled': return 'Provider disabled'
     case 'provider_credential_saved': return 'Provider credential saved'
     case 'provider_credential_removed': return 'Provider credential removed'
+    case 'source_created': return 'Evidence source created'
+    case 'source_updated': return 'Evidence source updated'
+    case 'provider_source_binding_created': return 'Provider/source binding created'
+    case 'provider_source_binding_enabled': return 'Provider/source binding enabled'
+    case 'provider_source_binding_disabled': return 'Provider/source binding disabled'
     case 'preview_operator_bootstrap': return 'Preview administrator enabled'
     case 'user_role_changed': return 'User role changed'
   }
@@ -110,7 +177,10 @@ function auditLabel(action: OperatorAuditAction): string {
 
 function auditContext(event: OperatorAuditEvent): string | null {
   const providerKey = event.event_data.provider_key
+  const sourceKey = event.event_data.source_key
+  if (typeof providerKey === 'string' && typeof sourceKey === 'string') return `${providerKey} → ${sourceKey}`
   if (typeof providerKey === 'string') return providerKey
+  if (typeof sourceKey === 'string') return sourceKey
   const previousRole = event.event_data.previous_role
   const newRole = event.event_data.new_role
   if (typeof previousRole === 'string' && typeof newRole === 'string') {
@@ -128,10 +198,15 @@ export function AdminWorkspace() {
   const [roleDrafts, setRoleDrafts] = useState<Record<string, UserRole>>({})
   const [roleBusyId, setRoleBusyId] = useState<string | null>(null)
   const [providers, setProviders] = useState<Provider[]>([])
+  const [sources, setSources] = useState<CatalogSource[]>([])
+  const [bindings, setBindings] = useState<ProviderSourceBinding[]>([])
   const [auditEvents, setAuditEvents] = useState<OperatorAuditEvent[]>([])
   const [providerBusy, setProviderBusy] = useState(false)
+  const [sourceBusyId, setSourceBusyId] = useState<string | null>(null)
+  const [bindingBusyId, setBindingBusyId] = useState<string | null>(null)
   const [credentialBusyId, setCredentialBusyId] = useState<string | null>(null)
   const [credentialDrafts, setCredentialDrafts] = useState<Record<string, string>>({})
+  const [sourceLicenseDrafts, setSourceLicenseDrafts] = useState<Record<string, SourceLicenseStatus>>({})
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -144,19 +219,39 @@ export function AdminWorkspace() {
   const [notes, setNotes] = useState('')
   const [enabled, setEnabled] = useState(false)
 
+  const [sourceKey, setSourceKey] = useState('')
+  const [sourceDisplayName, setSourceDisplayName] = useState('')
+  const [sourceClass, setSourceClass] = useState<SourceClass>('government')
+  const [sourceLicenseStatus, setSourceLicenseStatus] = useState<SourceLicenseStatus>('unreviewed')
+  const [sourceAutomationAllowed, setSourceAutomationAllowed] = useState(false)
+  const [sourceTermsUrl, setSourceTermsUrl] = useState('')
+  const [sourceNotes, setSourceNotes] = useState('')
+
+  const [bindingProviderId, setBindingProviderId] = useState('')
+  const [bindingSourceId, setBindingSourceId] = useState('')
+
   function storeUsers(rows: OperatorUser[]) {
     setUsers(rows)
     setRoleDrafts(Object.fromEntries(rows.map((item) => [item.id, item.role])))
   }
 
+  function storeSources(rows: CatalogSource[]) {
+    setSources(rows)
+    setSourceLicenseDrafts(Object.fromEntries(rows.map((item) => [item.id, item.license_status])))
+  }
+
   async function loadOperatorData() {
-    const [userRows, providerRows, auditRows] = await Promise.all([
+    const [userRows, providerRows, sourceRows, bindingRows, auditRows] = await Promise.all([
       apiRequest<OperatorUser[]>('/api/v1/operator/users'),
       apiRequest<Provider[]>('/api/v1/operator/providers'),
+      apiRequest<CatalogSource[]>('/api/v1/operator/sources'),
+      apiRequest<ProviderSourceBinding[]>('/api/v1/operator/provider-source-bindings'),
       apiRequest<OperatorAuditEvent[]>('/api/v1/operator/audit'),
     ])
     storeUsers(userRows)
     setProviders(providerRows)
+    storeSources(sourceRows)
+    setBindings(bindingRows)
     setAuditEvents(auditRows)
   }
 
@@ -170,16 +265,20 @@ export function AdminWorkspace() {
         if (!active || grant.access !== 'granted' || grant.role !== 'operator_admin') return
         setAccess('granted')
 
-        const [healthResult, userResult, providerResult, auditResult] = await Promise.allSettled([
+        const [healthResult, userResult, providerResult, sourceResult, bindingResult, auditResult] = await Promise.allSettled([
           apiRequest<ReadyHealth>('/api/v1/health/ready'),
           apiRequest<OperatorUser[]>('/api/v1/operator/users'),
           apiRequest<Provider[]>('/api/v1/operator/providers'),
+          apiRequest<CatalogSource[]>('/api/v1/operator/sources'),
+          apiRequest<ProviderSourceBinding[]>('/api/v1/operator/provider-source-bindings'),
           apiRequest<OperatorAuditEvent[]>('/api/v1/operator/audit'),
         ])
         if (!active) return
         if (healthResult.status === 'fulfilled') setHealth(healthResult.value)
         if (userResult.status === 'fulfilled') storeUsers(userResult.value)
         if (providerResult.status === 'fulfilled') setProviders(providerResult.value)
+        if (sourceResult.status === 'fulfilled') storeSources(sourceResult.value)
+        if (bindingResult.status === 'fulfilled') setBindings(bindingResult.value)
         if (auditResult.status === 'fulfilled') setAuditEvents(auditResult.value)
         if (healthResult.status === 'rejected') {
           setError(formatApiFailure(healthResult.reason, 'Platform status could not be loaded.'))
@@ -187,6 +286,10 @@ export function AdminWorkspace() {
           setError(formatApiFailure(userResult.reason, 'User roles could not be loaded.'))
         } else if (providerResult.status === 'rejected') {
           setError(formatApiFailure(providerResult.reason, 'Provider registry could not be loaded.'))
+        } else if (sourceResult.status === 'rejected') {
+          setError(formatApiFailure(sourceResult.reason, 'Evidence sources could not be loaded.'))
+        } else if (bindingResult.status === 'rejected') {
+          setError(formatApiFailure(bindingResult.reason, 'Provider/source bindings could not be loaded.'))
         } else if (auditResult.status === 'rejected') {
           setError(formatApiFailure(auditResult.reason, 'Administrator activity could not be loaded.'))
         }
@@ -349,6 +452,132 @@ export function AdminWorkspace() {
     }
   }
 
+  async function createSource(event: FormEvent) {
+    event.preventDefault()
+    if (!sourceKey.trim() || !sourceDisplayName.trim()) return
+    try {
+      setSourceBusyId('new')
+      setError(null)
+      setMessage(null)
+      await apiRequest<CatalogSource>('/api/v1/operator/sources', {
+        method: 'POST',
+        headers: { ...CSRF_HEADERS, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source_key: sourceKey.trim().toLowerCase(),
+          display_name: sourceDisplayName.trim(),
+          source_class: sourceClass,
+          license_status: sourceLicenseStatus,
+          automation_allowed: sourceAutomationAllowed,
+          terms_url: sourceTermsUrl.trim() || null,
+          notes: sourceNotes.trim() || null,
+        }),
+      })
+      setSourceKey('')
+      setSourceDisplayName('')
+      setSourceClass('government')
+      setSourceLicenseStatus('unreviewed')
+      setSourceAutomationAllowed(false)
+      setSourceTermsUrl('')
+      setSourceNotes('')
+      await loadOperatorData()
+      setMessage('Evidence source saved.')
+    } catch (failure) {
+      setError(formatApiFailure(failure, 'Evidence source could not be saved.'))
+    } finally {
+      setSourceBusyId(null)
+    }
+  }
+
+  async function saveSourceLicense(source: CatalogSource) {
+    const nextStatus = sourceLicenseDrafts[source.id] ?? source.license_status
+    if (nextStatus === source.license_status) return
+    try {
+      setSourceBusyId(source.id)
+      setError(null)
+      setMessage(null)
+      await apiRequest<CatalogSource>(`/api/v1/operator/sources/${source.id}`, {
+        method: 'PATCH',
+        headers: { ...CSRF_HEADERS, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          license_status: nextStatus,
+          ...(nextStatus !== 'approved' && source.automation_allowed ? { automation_allowed: false } : {}),
+        }),
+      })
+      await loadOperatorData()
+      setMessage(`${source.display_name} is now ${nextStatus}.`)
+    } catch (failure) {
+      setSourceLicenseDrafts((current) => ({ ...current, [source.id]: source.license_status }))
+      setError(formatApiFailure(failure, 'Source review state could not be updated.'))
+    } finally {
+      setSourceBusyId(null)
+    }
+  }
+
+  async function setSourceAutomation(source: CatalogSource, nextAllowed: boolean) {
+    try {
+      setSourceBusyId(source.id)
+      setError(null)
+      setMessage(null)
+      await apiRequest<CatalogSource>(`/api/v1/operator/sources/${source.id}`, {
+        method: 'PATCH',
+        headers: { ...CSRF_HEADERS, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ automation_allowed: nextAllowed }),
+      })
+      await loadOperatorData()
+      setMessage(`${source.display_name} automated collection ${nextAllowed ? 'allowed' : 'blocked'}.`)
+    } catch (failure) {
+      setError(formatApiFailure(failure, 'Source automation state could not be updated.'))
+    } finally {
+      setSourceBusyId(null)
+    }
+  }
+
+  async function createBinding(event: FormEvent) {
+    event.preventDefault()
+    if (!bindingProviderId || !bindingSourceId) return
+    try {
+      setBindingBusyId('new')
+      setError(null)
+      setMessage(null)
+      await apiRequest<ProviderSourceBinding>('/api/v1/operator/provider-source-bindings', {
+        method: 'POST',
+        headers: { ...CSRF_HEADERS, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider_connection_id: bindingProviderId,
+          source_id: bindingSourceId,
+          enabled: false,
+        }),
+      })
+      setBindingProviderId('')
+      setBindingSourceId('')
+      await loadOperatorData()
+      setMessage('Provider/source binding created disabled. Review it before enabling.')
+    } catch (failure) {
+      setError(formatApiFailure(failure, 'Provider/source binding could not be created.'))
+    } finally {
+      setBindingBusyId(null)
+    }
+  }
+
+  async function setBindingEnabled(binding: ProviderSourceBinding, nextEnabled: boolean) {
+    try {
+      setBindingBusyId(binding.id)
+      setError(null)
+      setMessage(null)
+      await apiRequest<ProviderSourceBinding>(`/api/v1/operator/provider-source-bindings/${binding.id}`, {
+        method: 'PATCH',
+        headers: { ...CSRF_HEADERS, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: nextEnabled }),
+      })
+      await loadOperatorData()
+      setMessage(`Binding ${binding.provider_key} → ${binding.source_key} ${nextEnabled ? 'enabled' : 'disabled'}.`)
+    } catch (failure) {
+      setError(formatApiFailure(failure, 'Provider/source binding state could not be updated.'))
+    } finally {
+      setBindingBusyId(null)
+    }
+  }
+
   if (access === 'checking') {
     return <main className="admin-shell"><section className="panel admin-access-state"><p>Verifying administrator access…</p></section></main>
   }
@@ -382,7 +611,7 @@ export function AdminWorkspace() {
       <header className="workspace-hero admin-heading">
         <p className="eyebrow">PARTGRAPH · ADMIN</p>
         <h1>Operator workspace.</h1>
-        <p>Manage human access and PartGraph data connections without putting provider configuration or credentials into application source.</p>
+        <p>Manage human access, evidence sources, and data connections without putting provider configuration or credentials into application source.</p>
       </header>
 
       {error && <div className="workspace-alert workspace-alert--error">{error}</div>}
@@ -393,6 +622,8 @@ export function AdminWorkspace() {
         <article className="panel"><span>Database</span><strong>{health?.database ?? 'Unavailable'}</strong><small>{health ? `${health.database_ms.toFixed(1)} ms readiness` : 'Status not loaded'}</small></article>
         <article className="panel"><span>Users</span><strong>{users.length}</strong><small>{users.filter((item) => item.is_active).length} active</small></article>
         <article className="panel"><span>Providers</span><strong>{providers.length}</strong><small>{providers.filter((item) => item.enabled).length} enabled</small></article>
+        <article className="panel"><span>Sources</span><strong>{sources.length}</strong><small>{sources.filter((item) => item.automation_allowed).length} automation allowed</small></article>
+        <article className="panel"><span>Bindings</span><strong>{bindings.length}</strong><small>{bindings.filter((item) => item.ready_for_ingestion).length} ready</small></article>
       </section>
 
       <section className="panel admin-user-panel">
@@ -411,24 +642,10 @@ export function AdminWorkspace() {
                     <small>{account.is_active ? 'Active account' : 'Inactive account'}</small>
                   </div>
                   <div className="admin-user-role-editor">
-                    <select
-                      aria-label={`Role for ${account.username}`}
-                      value={draft}
-                      disabled={busy}
-                      onChange={(event) => setRoleDrafts((current) => ({
-                        ...current,
-                        [account.id]: event.target.value as UserRole,
-                      }))}
-                    >
+                    <select aria-label={`Role for ${account.username}`} value={draft} disabled={busy} onChange={(event) => setRoleDrafts((current) => ({ ...current, [account.id]: event.target.value as UserRole }))}>
                       {USER_ROLES.map((role) => <option key={role.value} value={role.value}>{role.label}</option>)}
                     </select>
-                    <button
-                      type="button"
-                      disabled={busy || draft === account.role}
-                      onClick={() => void saveUserRole(account)}
-                    >
-                      {busy ? 'Saving…' : 'Save role'}
-                    </button>
+                    <button type="button" disabled={busy || draft === account.role} onClick={() => void saveUserRole(account)}>{busy ? 'Saving…' : 'Save role'}</button>
                   </div>
                 </article>
               )
@@ -475,6 +692,82 @@ export function AdminWorkspace() {
             <label><span>Notes</span><textarea rows={3} maxLength={500} value={notes} onChange={(event) => setNotes(event.target.value)} /></label>
             <label className="admin-toggle"><input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} /><span>Enable after saving</span></label>
             <button disabled={providerBusy || !providerKey.trim() || !displayName.trim()}>{providerBusy ? 'Saving…' : 'Save provider'}</button>
+          </form>
+        </section>
+      </section>
+
+      <section className="admin-provider-layout">
+        <div className="panel admin-provider-list">
+          <div className="admin-section-heading"><div><p className="eyebrow">EVIDENCE SOURCES</p><h2>Source registry</h2></div><span>{sources.length}</span></div>
+          <p className="admin-muted">Source class and source key are fixed after registration. Approval and automation are separate gates. Changing these controls does not change the source-authority matrix.</p>
+          {sources.length === 0 ? <p className="admin-muted">No evidence sources registered.</p> : (
+            <div className="admin-provider-cards">
+              {sources.map((source) => {
+                const draft = sourceLicenseDrafts[source.id] ?? source.license_status
+                const busy = sourceBusyId === source.id
+                return (
+                  <article key={source.id} className={source.automation_allowed ? 'admin-provider-card admin-provider-card--enabled' : 'admin-provider-card'}>
+                    <div className="admin-provider-card__head"><div><span>{sourceClassLabel(source.source_class)}</span><strong>{source.display_name}</strong><small>{source.source_key}</small></div><button type="button" disabled={busy || (source.license_status !== 'approved' && !source.automation_allowed)} className={source.automation_allowed ? 'secondary' : ''} onClick={() => void setSourceAutomation(source, !source.automation_allowed)}>{source.automation_allowed ? 'Block automation' : 'Allow automation'}</button></div>
+                    <div className="admin-provider-meta"><span>License: {source.license_status}</span><span>{source.automation_allowed ? 'Automation allowed' : 'Automation blocked'}</span></div>
+                    <div className="admin-user-role-editor">
+                      <select aria-label={`License status for ${source.display_name}`} value={draft} disabled={busy} onChange={(event) => setSourceLicenseDrafts((current) => ({ ...current, [source.id]: event.target.value as SourceLicenseStatus }))}>
+                        {SOURCE_LICENSE_STATUSES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                      </select>
+                      <button type="button" disabled={busy || draft === source.license_status} onClick={() => void saveSourceLicense(source)}>{busy ? 'Saving…' : 'Save review state'}</button>
+                    </div>
+                    {source.terms_url && <p>{source.terms_url}</p>}
+                    {source.notes && <small className="admin-provider-notes">{source.notes}</small>}
+                  </article>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        <section className="panel admin-provider-form">
+          <p className="eyebrow">ADD SOURCE</p>
+          <h2>Register evidence origin</h2>
+          <form onSubmit={(event) => void createSource(event)}>
+            <label><span>Source key</span><input required maxLength={128} pattern="[a-z0-9][a-z0-9_.-]{0,127}" value={sourceKey} onChange={(event) => setSourceKey(event.target.value.toLowerCase().replace(/\s/g, '-'))} placeholder="nhtsa-recalls" /></label>
+            <label><span>Display name</span><input required maxLength={180} value={sourceDisplayName} onChange={(event) => setSourceDisplayName(event.target.value)} placeholder="Evidence source" /></label>
+            <label><span>Source class</span><select value={sourceClass} onChange={(event) => setSourceClass(event.target.value as SourceClass)}>{SOURCE_CLASSES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select><small>Source class is immutable after registration because it affects trust policy.</small></label>
+            <label><span>License review</span><select value={sourceLicenseStatus} onChange={(event) => { const value = event.target.value as SourceLicenseStatus; setSourceLicenseStatus(value); if (value !== 'approved') setSourceAutomationAllowed(false) }}>{SOURCE_LICENSE_STATUSES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
+            <label><span>Terms URL</span><input type="url" maxLength={1024} value={sourceTermsUrl} onChange={(event) => setSourceTermsUrl(event.target.value)} placeholder="https://… (optional)" /></label>
+            <label><span>Notes</span><textarea rows={3} maxLength={1000} value={sourceNotes} onChange={(event) => setSourceNotes(event.target.value)} /></label>
+            <label className="admin-toggle"><input type="checkbox" disabled={sourceLicenseStatus !== 'approved'} checked={sourceAutomationAllowed} onChange={(event) => setSourceAutomationAllowed(event.target.checked)} /><span>Allow automated collection</span></label>
+            <button disabled={sourceBusyId === 'new' || !sourceKey.trim() || !sourceDisplayName.trim()}>{sourceBusyId === 'new' ? 'Saving…' : 'Save source'}</button>
+          </form>
+        </section>
+      </section>
+
+      <section className="admin-provider-layout">
+        <div className="panel admin-provider-list">
+          <div className="admin-section-heading"><div><p className="eyebrow">PROVIDER → SOURCE</p><h2>Trusted bindings</h2></div><span>{bindings.length}</span></div>
+          <p className="admin-muted">A binding identifies which registered evidence source a provider is allowed to represent. Creating a binding never starts collection; every new binding starts disabled.</p>
+          {bindings.length === 0 ? <p className="admin-muted">No provider/source bindings registered.</p> : (
+            <div className="admin-provider-cards">
+              {bindings.map((binding) => {
+                const busy = bindingBusyId === binding.id
+                const canEnable = binding.provider_enabled && binding.source_license_status === 'approved' && binding.source_automation_allowed
+                return (
+                  <article key={binding.id} className={binding.ready_for_ingestion ? 'admin-provider-card admin-provider-card--enabled' : 'admin-provider-card'}>
+                    <div className="admin-provider-card__head"><div><span>{binding.ready_for_ingestion ? 'Ready' : binding.enabled ? 'Blocked by dependency' : 'Disabled'}</span><strong>{binding.provider_key} → {binding.source_key}</strong><small>{binding.source_license_status} source · provider {binding.provider_enabled ? 'enabled' : 'disabled'}</small></div><button type="button" className={binding.enabled ? 'secondary' : ''} disabled={busy || (!binding.enabled && !canEnable)} onClick={() => void setBindingEnabled(binding, !binding.enabled)}>{binding.enabled ? 'Disable binding' : 'Enable binding'}</button></div>
+                    <div className="admin-provider-meta"><span>{binding.source_automation_allowed ? 'Source automation allowed' : 'Source automation blocked'}</span><span>{binding.ready_for_ingestion ? 'All configuration gates satisfied' : 'No collection authority'}</span></div>
+                  </article>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        <section className="panel admin-provider-form">
+          <p className="eyebrow">ADD BINDING</p>
+          <h2>Connect provider to source</h2>
+          <form onSubmit={(event) => void createBinding(event)}>
+            <label><span>Provider</span><select required value={bindingProviderId} onChange={(event) => setBindingProviderId(event.target.value)}><option value="">Choose provider</option>{providers.map((provider) => <option key={provider.id} value={provider.id}>{provider.display_name} · {provider.enabled ? 'enabled' : 'disabled'}</option>)}</select></label>
+            <label><span>Evidence source</span><select required value={bindingSourceId} onChange={(event) => setBindingSourceId(event.target.value)}><option value="">Choose source</option>{sources.map((source) => <option key={source.id} value={source.id}>{source.display_name} · {source.license_status}{source.automation_allowed ? ' · automation allowed' : ''}</option>)}</select></label>
+            <p className="admin-muted">The pair is immutable after creation. The new binding will be disabled until you explicitly enable it.</p>
+            <button disabled={bindingBusyId === 'new' || !bindingProviderId || !bindingSourceId}>{bindingBusyId === 'new' ? 'Saving…' : 'Create disabled binding'}</button>
           </form>
         </section>
       </section>
