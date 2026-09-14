@@ -161,6 +161,8 @@ class OperatorAuditEvent(Base):
         CheckConstraint(
             "action IN ('provider_created', 'provider_updated', 'provider_enabled', "
             "'provider_disabled', 'provider_credential_saved', 'provider_credential_removed', "
+            "'source_created', 'source_updated', 'provider_source_binding_created', "
+            "'provider_source_binding_enabled', 'provider_source_binding_disabled', "
             "'preview_operator_bootstrap', 'user_role_changed')",
             name="ck_operator_audit_events_action",
         ),
