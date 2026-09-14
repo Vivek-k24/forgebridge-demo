@@ -8,14 +8,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..errors import ErrorCode, PartGraphError
 from ..identity.auth.models import User
+from ..knowledge.models import CatalogSource
 from .credentials import ProviderCredentialError, protect_provider_credential
-from .models import OperatorAuditEvent, ProviderConnection
+from .models import OperatorAuditEvent, ProviderConnection, ProviderSourceBinding
 from .schemas import (
+    CatalogSourceCreate,
+    CatalogSourceRead,
+    CatalogSourceUpdate,
     OperatorAuditRead,
     OperatorUserRead,
     PreviewOperatorBootstrapStatus,
     ProviderCreate,
     ProviderRead,
+    ProviderSourceBindingCreate,
+    ProviderSourceBindingRead,
+    ProviderSourceBindingUpdate,
     ProviderUpdate,
     UserRoleUpdate,
 )
@@ -49,6 +56,49 @@ def serialize_provider(provider: ProviderConnection) -> ProviderRead:
         notes=provider.notes,
         created_at=provider.created_at,
         updated_at=provider.updated_at,
+    )
+
+
+def serialize_catalog_source(source: CatalogSource) -> CatalogSourceRead:
+    return CatalogSourceRead(
+        id=source.id,
+        source_key=source.source_key,
+        display_name=source.display_name,
+        source_class=source.source_class,
+        license_status=source.license_status,
+        automation_allowed=source.automation_allowed,
+        terms_url=source.terms_url,
+        notes=source.notes,
+        created_at=source.created_at,
+        updated_at=source.updated_at,
+    )
+
+
+def serialize_provider_source_binding(
+    binding: ProviderSourceBinding,
+    *,
+    provider: ProviderConnection,
+    source: CatalogSource,
+) -> ProviderSourceBindingRead:
+    ready = (
+        binding.enabled
+        and provider.enabled
+        and source.license_status == "approved"
+        and source.automation_allowed
+    )
+    return ProviderSourceBindingRead(
+        id=binding.id,
+        provider_connection_id=provider.id,
+        provider_key=provider.provider_key,
+        provider_enabled=provider.enabled,
+        source_id=source.id,
+        source_key=source.source_key,
+        source_license_status=source.license_status,
+        source_automation_allowed=source.automation_allowed,
+        enabled=binding.enabled,
+        ready_for_ingestion=ready,
+        created_at=binding.created_at,
+        updated_at=binding.updated_at,
     )
 
 
@@ -202,6 +252,36 @@ async def list_providers(session: AsyncSession) -> list[ProviderRead]:
         )
     )
     return [serialize_provider(row) for row in rows]
+
+
+async def list_catalog_sources(session: AsyncSession) -> list[CatalogSourceRead]:
+    rows = list(
+        await session.scalars(
+            select(CatalogSource).order_by(
+                CatalogSource.source_class,
+                CatalogSource.display_name,
+            )
+        )
+    )
+    return [serialize_catalog_source(row) for row in rows]
+
+
+async def list_provider_source_bindings(
+    session: AsyncSession,
+) -> list[ProviderSourceBindingRead]:
+    result = await session.execute(
+        select(ProviderSourceBinding, ProviderConnection, CatalogSource)
+        .join(
+            ProviderConnection,
+            ProviderConnection.id == ProviderSourceBinding.provider_connection_id,
+        )
+        .join(CatalogSource, CatalogSource.id == ProviderSourceBinding.source_id)
+        .order_by(ProviderConnection.provider_key, CatalogSource.source_key)
+    )
+    return [
+        serialize_provider_source_binding(binding, provider=provider, source=source)
+        for binding, provider, source in result.all()
+    ]
 
 
 async def list_operator_users(
@@ -415,3 +495,239 @@ async def update_provider(
 
     await session.flush()
     return serialize_provider(provider)
+
+
+async def create_catalog_source(
+    session: AsyncSession,
+    *,
+    actor_id: UUID,
+    payload: CatalogSourceCreate,
+) -> CatalogSourceRead:
+    source = CatalogSource(
+        id=uuid4(),
+        source_key=payload.source_key,
+        display_name=payload.display_name,
+        source_class=payload.source_class,
+        license_status=payload.license_status,
+        automation_allowed=payload.automation_allowed,
+        terms_url=payload.terms_url,
+        notes=payload.notes,
+    )
+    session.add(source)
+    try:
+        await session.flush()
+    except IntegrityError as exc:
+        raise PartGraphError(
+            code=ErrorCode.REQUEST_CONFLICT,
+            message="A catalog source with this key already exists.",
+            status_code=409,
+        ) from exc
+
+    _record_audit_event(
+        session,
+        actor_id=actor_id,
+        action="source_created",
+        target_type="catalog_source",
+        target_id=source.id,
+        event_data={
+            "source_key": source.source_key,
+            "source_class": source.source_class,
+            "license_status": source.license_status,
+            "automation_allowed": source.automation_allowed,
+        },
+    )
+    await session.flush()
+    return serialize_catalog_source(source)
+
+
+async def update_catalog_source(
+    session: AsyncSession,
+    *,
+    actor_id: UUID,
+    source_id: UUID,
+    payload: CatalogSourceUpdate,
+) -> CatalogSourceRead:
+    source = await session.get(CatalogSource, source_id)
+    if source is None:
+        raise PartGraphError(
+            code=ErrorCode.REQUEST_NOT_FOUND,
+            message="Catalog source not found.",
+            status_code=404,
+        )
+
+    changes = payload.model_dump(exclude_unset=True)
+    next_license = changes.get("license_status", source.license_status)
+    next_automation = changes.get("automation_allowed", source.automation_allowed)
+    if next_automation and next_license != "approved":
+        raise PartGraphError(
+            code=ErrorCode.REQUEST_CONFLICT,
+            message="Automated collection is allowed only for an approved source.",
+            status_code=409,
+        )
+
+    changed_fields: list[str] = []
+    for field, value in changes.items():
+        if getattr(source, field) != value:
+            setattr(source, field, value)
+            changed_fields.append(field)
+    if not changed_fields:
+        return serialize_catalog_source(source)
+
+    source.updated_at = datetime.now(UTC)
+    _record_audit_event(
+        session,
+        actor_id=actor_id,
+        action="source_updated",
+        target_type="catalog_source",
+        target_id=source.id,
+        event_data={
+            "source_key": source.source_key,
+            "changed_fields": sorted(changed_fields),
+            "license_status": source.license_status,
+            "automation_allowed": source.automation_allowed,
+        },
+    )
+    await session.flush()
+    return serialize_catalog_source(source)
+
+
+def _validate_binding_activation(
+    *,
+    provider: ProviderConnection,
+    source: CatalogSource,
+) -> None:
+    if not provider.enabled:
+        raise PartGraphError(
+            code=ErrorCode.REQUEST_CONFLICT,
+            message="The provider must be enabled before this binding can be enabled.",
+            status_code=409,
+        )
+    if source.license_status != "approved":
+        raise PartGraphError(
+            code=ErrorCode.REQUEST_CONFLICT,
+            message="The catalog source must be approved before this binding can be enabled.",
+            status_code=409,
+        )
+    if not source.automation_allowed:
+        raise PartGraphError(
+            code=ErrorCode.REQUEST_CONFLICT,
+            message="The catalog source does not allow automated collection.",
+            status_code=409,
+        )
+
+
+async def _binding_dependencies(
+    session: AsyncSession,
+    *,
+    provider_id: UUID,
+    source_id: UUID,
+) -> tuple[ProviderConnection, CatalogSource]:
+    provider = await session.get(ProviderConnection, provider_id)
+    if provider is None:
+        raise PartGraphError(
+            code=ErrorCode.REQUEST_NOT_FOUND,
+            message="Provider connection not found.",
+            status_code=404,
+        )
+    source = await session.get(CatalogSource, source_id)
+    if source is None:
+        raise PartGraphError(
+            code=ErrorCode.REQUEST_NOT_FOUND,
+            message="Catalog source not found.",
+            status_code=404,
+        )
+    return provider, source
+
+
+async def create_provider_source_binding(
+    session: AsyncSession,
+    *,
+    actor_id: UUID,
+    payload: ProviderSourceBindingCreate,
+) -> ProviderSourceBindingRead:
+    provider, source = await _binding_dependencies(
+        session,
+        provider_id=payload.provider_connection_id,
+        source_id=payload.source_id,
+    )
+    if payload.enabled:
+        _validate_binding_activation(provider=provider, source=source)
+
+    binding = ProviderSourceBinding(
+        id=uuid4(),
+        provider_connection_id=provider.id,
+        source_id=source.id,
+        enabled=payload.enabled,
+        created_by=actor_id,
+        updated_by=actor_id,
+    )
+    session.add(binding)
+    try:
+        await session.flush()
+    except IntegrityError as exc:
+        raise PartGraphError(
+            code=ErrorCode.REQUEST_CONFLICT,
+            message="This provider is already bound to this catalog source.",
+            status_code=409,
+        ) from exc
+
+    _record_audit_event(
+        session,
+        actor_id=actor_id,
+        action="provider_source_binding_created",
+        target_type="provider_source_binding",
+        target_id=binding.id,
+        event_data={
+            "provider_key": provider.provider_key,
+            "source_key": source.source_key,
+            "enabled": binding.enabled,
+        },
+    )
+    await session.flush()
+    return serialize_provider_source_binding(binding, provider=provider, source=source)
+
+
+async def update_provider_source_binding(
+    session: AsyncSession,
+    *,
+    actor_id: UUID,
+    binding_id: UUID,
+    payload: ProviderSourceBindingUpdate,
+) -> ProviderSourceBindingRead:
+    binding = await session.get(ProviderSourceBinding, binding_id)
+    if binding is None:
+        raise PartGraphError(
+            code=ErrorCode.REQUEST_NOT_FOUND,
+            message="Provider/source binding not found.",
+            status_code=404,
+        )
+    provider, source = await _binding_dependencies(
+        session,
+        provider_id=binding.provider_connection_id,
+        source_id=binding.source_id,
+    )
+    if payload.enabled:
+        _validate_binding_activation(provider=provider, source=source)
+    if binding.enabled == payload.enabled:
+        return serialize_provider_source_binding(binding, provider=provider, source=source)
+
+    binding.enabled = payload.enabled
+    binding.updated_by = actor_id
+    binding.updated_at = datetime.now(UTC)
+    _record_audit_event(
+        session,
+        actor_id=actor_id,
+        action=(
+            "provider_source_binding_enabled"
+            if binding.enabled
+            else "provider_source_binding_disabled"
+        ),
+        target_type="provider_source_binding",
+        target_id=binding.id,
+        event_data={
+            "provider_key": provider.provider_key,
+            "source_key": source.source_key,
+        },
+    )
+    await session.flush()
+    return serialize_provider_source_binding(binding, provider=provider, source=source)
