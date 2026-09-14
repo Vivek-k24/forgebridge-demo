@@ -9,12 +9,13 @@ Last updated: **2026-09-14**
 
 Current exact implementation proof tracked here:
 - active implementation branch: `partgraph-mvp-consolidation`
-- latest exact green implementation commit: `f2982866bda7754726cc52e6d4f9bb6ac7ebe1f4`
+- latest exact green implementation commit: `f1988d2331694fcb43bd6891d33e2eaf7576626e`
 - full API CI: passed
 - Web CI: passed
 - extraction/NHTSA/provider-binding/operator-control pipeline CI: passed
+- canonical publication CI: passed
 - Vercel consolidation preview: READY on the same commit
-- consolidation preview database: `0052_operator_source_controls`
+- consolidation preview database: `0054_vehicle_verify_timestamp`
 - production database: intentionally unchanged at `0020_catalog_coverage`
 - PR #84: remains draft/unmerged
 
@@ -177,7 +178,7 @@ Production remains at `0020_catalog_coverage` until an explicit production migra
 
 ## Phase 6 — Canonical data and provider pipeline
 
-Status: **In progress. Human evidence-to-claim-to-repair publication, generic extraction, trusted provider/source binding, and authenticated Admin configuration are implemented and green. Real provider activation and broad knowledge population remain.**
+Status: **In progress. Human evidence-to-claim publication, repair publication, vehicle-identity/part-fitment canonical materialization, generic extraction, trusted provider/source binding, and authenticated Admin configuration are implemented and green. Real provider activation and broad knowledge population remain.**
 
 Core registry and authority:
 - [x] source registry
@@ -231,9 +232,13 @@ Human review/publication spine:
 - [x] MechanicalClaim creation
 - [x] conflict resolution, reopen, and claim supersession
 - [x] repair-definition/requirement/procedure materialization
+- [x] vehicle-identity claim materialization into an existing exact `VehicleConfiguration` publication envelope without rewriting identity fields
+- [x] part-fitment claim materialization using the existing `part_fitments` table with insert-only/fail-closed conflict behavior
+- [x] safety-campaign claims remain claim-only and fail closed when canonical materialization is attempted
 - [x] canonical publication versioning/supersession
 - [x] canonical record evidence/audit trail
 - [x] dedicated least-privilege materializer boundary
+- [x] permanent canonical-publication CI gate
 - [x] prevent candidate-only source authority from winning curator conflict resolution
 
 Remaining Phase 6 work:
@@ -241,7 +246,7 @@ Remaining Phase 6 work:
 - [x] define the trusted execution role/path that resolves provider configuration and its bound source without widening collector authority
 - [ ] activate real approved-provider ingestion only after that binding exists
 - [x] expose safe provider/source configuration and enable/disable controls through authenticated operator/admin flow where required
-- [ ] broaden canonical materialization to additional domains where the MVP provider pipeline requires it
+- [x] broaden canonical materialization to additional domains where the MVP provider pipeline requires it
 - [ ] populate broad canonical repair knowledge
 
 Current safety boundary:
@@ -249,10 +254,13 @@ Current safety boundary:
 - source registration, provider enablement, and binding enablement do **not** start collection by themselves
 - external providers have no direct verified/canonical publication authority
 - extraction confidence is not source authority
+- vehicle identity publication does not rewrite stored identity fields; an unverified configuration requires evidence covering its stored identity before verification can advance
+- canonical part fitment is insert-only through the materializer and conflicting existing rows fail closed rather than being overwritten
+- safety campaigns remain verified claim context with no canonical destination in the current architecture
 - missing remains missing
 - conflicts remain explicit
 - AI cannot directly publish canonical automotive truth
-- production provider/collector activation is **not** implied by adapter or Admin-control implementation
+- production provider/collector activation is **not** implied by adapter, materializer, or Admin-control implementation
 
 ---
 
@@ -315,7 +323,7 @@ Status: **Pending functional MVP completion. Permanent CI gates already created 
 - [ ] data-free-source-code check
 - [ ] RBAC authorization tests
 
-Existing permanent CI, including migration history, adopted-baseline equivalence, RBAC, source-authority, extraction, container build, and readiness smoke, remains active and is not discarded while Phase 9 is pending.
+Existing permanent CI, including migration history, adopted-baseline equivalence, RBAC, source-authority, extraction, canonical publication, container build, and readiness smoke, remains active and is not discarded while Phase 9 is pending.
 
 ---
 
