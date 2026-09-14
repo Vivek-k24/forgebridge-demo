@@ -13,23 +13,35 @@ from .local_bootstrap import (
     local_operator_bootstrap_status,
 )
 from .schemas import (
+    CatalogSourceCreate,
+    CatalogSourceRead,
+    CatalogSourceUpdate,
     OperatorAuditRead,
     OperatorUserRead,
     PreviewOperatorBootstrapStatus,
     ProviderCreate,
     ProviderRead,
+    ProviderSourceBindingCreate,
+    ProviderSourceBindingRead,
+    ProviderSourceBindingUpdate,
     ProviderUpdate,
     UserRoleUpdate,
 )
 from .service import (
     bootstrap_preview_operator,
     change_user_role,
+    create_catalog_source,
     create_provider,
+    create_provider_source_binding,
+    list_catalog_sources,
     list_operator_audit,
     list_operator_users,
+    list_provider_source_bindings,
     list_providers,
     preview_operator_bootstrap_status,
+    update_catalog_source,
     update_provider,
+    update_provider_source_binding,
 )
 
 router = APIRouter(
@@ -108,12 +120,6 @@ async def providers(user: OperatorAdminDep, session: AuthSessionDep) -> list[Pro
     return await list_providers(session)
 
 
-@router.get("/audit", response_model=list[OperatorAuditRead])
-async def audit(user: OperatorAdminDep, session: AuthSessionDep) -> list[OperatorAuditRead]:
-    del user
-    return await list_operator_audit(session)
-
-
 @router.post(
     "/providers",
     response_model=ProviderRead,
@@ -145,3 +151,97 @@ async def change_provider(
         provider_id=provider_id,
         payload=payload,
     )
+
+
+@router.get("/sources", response_model=list[CatalogSourceRead])
+async def sources(user: OperatorAdminDep, session: AuthSessionDep) -> list[CatalogSourceRead]:
+    del user
+    return await list_catalog_sources(session)
+
+
+@router.post(
+    "/sources",
+    response_model=CatalogSourceRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[CsrfDep],
+)
+async def add_source(
+    payload: CatalogSourceCreate,
+    user: OperatorAdminDep,
+    session: AuthSessionDep,
+) -> CatalogSourceRead:
+    return await create_catalog_source(session, actor_id=user.id, payload=payload)
+
+
+@router.patch(
+    "/sources/{source_id}",
+    response_model=CatalogSourceRead,
+    dependencies=[CsrfDep],
+)
+async def change_source(
+    source_id: UUID,
+    payload: CatalogSourceUpdate,
+    user: OperatorAdminDep,
+    session: AuthSessionDep,
+) -> CatalogSourceRead:
+    return await update_catalog_source(
+        session,
+        actor_id=user.id,
+        source_id=source_id,
+        payload=payload,
+    )
+
+
+@router.get(
+    "/provider-source-bindings",
+    response_model=list[ProviderSourceBindingRead],
+)
+async def provider_source_bindings(
+    user: OperatorAdminDep,
+    session: AuthSessionDep,
+) -> list[ProviderSourceBindingRead]:
+    del user
+    return await list_provider_source_bindings(session)
+
+
+@router.post(
+    "/provider-source-bindings",
+    response_model=ProviderSourceBindingRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[CsrfDep],
+)
+async def add_provider_source_binding(
+    payload: ProviderSourceBindingCreate,
+    user: OperatorAdminDep,
+    session: AuthSessionDep,
+) -> ProviderSourceBindingRead:
+    return await create_provider_source_binding(
+        session,
+        actor_id=user.id,
+        payload=payload,
+    )
+
+
+@router.patch(
+    "/provider-source-bindings/{binding_id}",
+    response_model=ProviderSourceBindingRead,
+    dependencies=[CsrfDep],
+)
+async def change_provider_source_binding(
+    binding_id: UUID,
+    payload: ProviderSourceBindingUpdate,
+    user: OperatorAdminDep,
+    session: AuthSessionDep,
+) -> ProviderSourceBindingRead:
+    return await update_provider_source_binding(
+        session,
+        actor_id=user.id,
+        binding_id=binding_id,
+        payload=payload,
+    )
+
+
+@router.get("/audit", response_model=list[OperatorAuditRead])
+async def audit(user: OperatorAdminDep, session: AuthSessionDep) -> list[OperatorAuditRead]:
+    del user
+    return await list_operator_audit(session)
