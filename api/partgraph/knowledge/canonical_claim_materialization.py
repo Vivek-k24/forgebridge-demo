@@ -472,7 +472,8 @@ async def _materialize_vehicle_identity(
     if configuration.verification_status == "unverified":
         if not _claim_fully_covers_unverified_configuration(configuration, payload):
             raise invalid_materialization(
-                "An unverified vehicle configuration can only be verified by evidence covering every stored identity field."
+                "An unverified vehicle configuration can only be verified by evidence "
+                "covering every stored identity field."
             )
         configuration.verification_status = "verified"
         await db.flush()
@@ -560,7 +561,8 @@ async def _materialize_part_fitment(
         or fitment.qualifiers != payload.qualifiers
     ):
         raise invalid_materialization(
-            "Verified claim conflicts with an existing canonical fitment row; canonical fitment is not overwritten automatically."
+            "Verified claim conflicts with an existing canonical fitment row; "
+            "canonical fitment is not overwritten automatically."
         )
 
     return await _publish_record_version(
