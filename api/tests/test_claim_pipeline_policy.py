@@ -6,6 +6,7 @@ from pydantic import ValidationError
 
 from partgraph.errors import ErrorCode, PartGraphError
 from partgraph.knowledge.claim_publication import (
+    MechanicalClaimPublicationRead,
     VerifiedMechanicalClaimSpec,
     _conflict_key,
     _promotion_state,
@@ -170,6 +171,21 @@ class ClaimPipelinePolicyTests(unittest.TestCase):
             context.exception.code,
             ErrorCode.KNOWLEDGE_CONFLICT_RESOLUTION_INVALID,
         )
+
+    def test_publication_response_accepts_final_resolution_states(self) -> None:
+        for promotion_state in ("rejected", "superseded"):
+            with self.subTest(promotion_state=promotion_state):
+                response = MechanicalClaimPublicationRead(
+                    mechanical_claim_id=uuid4(),
+                    verified_evidence_id=uuid4(),
+                    source_key="fixture-source",
+                    promotion_state=promotion_state,
+                    policy_decision=PromotionDecision.ELIGIBLE,
+                    policy_reason="previously reviewed evidence",
+                    conflict_key="mechanical:" + "a" * 64,
+                    idempotent=True,
+                )
+                self.assertEqual(response.promotion_state, promotion_state)
 
 
 if __name__ == "__main__":
