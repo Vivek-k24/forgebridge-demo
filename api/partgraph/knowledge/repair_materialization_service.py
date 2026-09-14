@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..errors import ErrorCode, PartGraphError
 from ..identity.vehicle.models import VehicleConfiguration
+from .claim_locks import lock_mechanical_claims
 from .models import (
     CatalogSource,
     MechanicalClaim,
@@ -84,11 +85,13 @@ async def _load_verified_claims(
             "Repair materialization requires at least one verified claim."
         )
 
+    # Publication is a claim-state reader, not a claim-state writer. Shared
+    # advisory locks serialize it with curator claim transitions without
+    # granting the materializer UPDATE privilege on mechanical_claims.
+    await lock_mechanical_claims(db, claim_ids, shared=True)
     claims = list(
         await db.scalars(
-            select(MechanicalClaim)
-            .where(MechanicalClaim.id.in_(claim_ids))
-            .with_for_update(read=True)
+            select(MechanicalClaim).where(MechanicalClaim.id.in_(claim_ids))
         )
     )
     claim_by_id = {claim.id: claim for claim in claims}
