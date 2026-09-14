@@ -7,7 +7,7 @@ from typing import Annotated, Literal
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, Header, status
-from pydantic import BaseModel, Field, ValidationError, model_validator
+from pydantic import BaseModel, ValidationError
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,7 +25,7 @@ from ..identity.vehicle.taxonomy import (
 from .claim_locks import lock_mechanical_claims
 from .fitment import PartFitment
 from .models import CatalogSource, MechanicalClaim
-from .parts import ComponentPartRole
+from .part_catalog_materialization import resolve_part_fitment_claim_payload
 from .provenance import CanonicalConflict, CanonicalRecordEvidence, CanonicalRecordVersion
 from .repair_materialization_contract import IDEMPOTENCY_PATTERN, invalid_materialization
 from .source_policy import (
@@ -50,20 +50,6 @@ _OPTIONAL_IDENTITY_FIELDS = (
     "drivetrain",
 )
 _STRUCTURED_IDENTITY_FIELDS = frozenset({"engine", "transmission"})
-
-
-class PartFitmentClaimPayload(BaseModel):
-    component_part_role_id: UUID
-    applicability_state: Literal["applicable", "excluded", "conditional"]
-    qualifier_key: str = Field(default="", max_length=128)
-    qualifiers: dict[str, object] = Field(default_factory=dict)
-
-    @model_validator(mode="after")
-    def normalize_scope(self) -> PartFitmentClaimPayload:
-        self.qualifier_key = self.qualifier_key.strip()
-        if self.applicability_state == "conditional" and not self.qualifier_key:
-            raise ValueError("conditional fitment requires qualifier_key")
-        return self
 
 
 class CanonicalClaimMaterializationRead(BaseModel):
@@ -189,7 +175,9 @@ def _canonical_target(claim: MechanicalClaim) -> tuple[CanonicalDomain, Canonica
         raise invalid_materialization(
             "Repair claims must be materialized through the repair-definition materializer."
         )
-    raise invalid_materialization("Mechanical claim belongs to an unsupported materialization domain.")
+    raise invalid_materialization(
+        "Mechanical claim belongs to an unsupported materialization domain."
+    )
 
 
 async def _assert_claim_publishable(
@@ -197,7 +185,9 @@ async def _assert_claim_publishable(
     claim: MechanicalClaim,
 ) -> None:
     if claim.promotion_state != "verified":
-        raise invalid_materialization("Canonical materialization requires a verified mechanical claim.")
+        raise invalid_materialization(
+            "Canonical materialization requires a verified mechanical claim."
+        )
     if not claim.explicit_claim or not claim.exact_applicability:
         raise invalid_materialization(
             "Canonical materialization requires explicit exact-applicability evidence."
@@ -345,7 +335,8 @@ async def _existing_claim_publication(
     )
     if current is None:
         raise invalid_materialization(
-            "Mechanical claim was already used by a superseded canonical publication and cannot be replayed."
+            "Mechanical claim was already used by a superseded canonical publication "
+            "and cannot be replayed."
         )
     assert claim.vehicle_configuration_id is not None
     return CanonicalClaimMaterializationRead(
@@ -513,13 +504,7 @@ async def _materialize_part_fitment(
     request_digest: str,
 ) -> CanonicalClaimMaterializationRead:
     assert claim.vehicle_configuration_id is not None
-    try:
-        payload = PartFitmentClaimPayload.model_validate(claim.claim_payload)
-    except ValidationError as exc:
-        raise invalid_materialization(
-            "Part-fitment claim payload is invalid.",
-            details={"validation": exc.errors(include_url=False)},
-        ) from exc
+    payload = await resolve_part_fitment_claim_payload(db, claim.claim_payload)
 
     await db.execute(
         text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
@@ -533,10 +518,6 @@ async def _materialize_part_fitment(
     if await db.get(VehicleConfiguration, claim.vehicle_configuration_id) is None:
         raise invalid_materialization(
             "Part-fitment claim references an unknown vehicle configuration."
-        )
-    if await db.get(ComponentPartRole, payload.component_part_role_id) is None:
-        raise invalid_materialization(
-            "Part-fitment claim references an unknown canonical component/part role."
         )
 
     existing_publication = await _existing_claim_publication(
@@ -635,7 +616,9 @@ async def materialize_verified_mechanical_claim_service(
             idempotency_key=idempotency_key,
             request_digest=request_digest,
         )
-    raise invalid_materialization("Mechanical claim has no supported canonical materializer.")
+    raise invalid_materialization(
+        "Mechanical claim has no supported canonical materializer."
+    )
 
 
 @router.post(
