@@ -1,0 +1,123 @@
+name: One-shot adopt 0046 baseline
+
+on:
+  push:
+    branches: [partgraph-mvp-consolidation]
+    paths:
+      - '.github/workflows/one-shot-baseline-0046.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  adopt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18.6-alpine
+        env:
+          POSTGRES_DB: partgraph
+          POSTGRES_USER: partgraph
+          POSTGRES_PASSWORD: partgraph
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U partgraph -d partgraph"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+
+    steps:
+      - name: Checkout consolidation branch
+        uses: actions/checkout@v7
+        with:
+          ref: partgraph-mvp-consolidation
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
+
+      - name: Install API dependencies
+        run: python -m pip install -e './api[dev]'
+
+      - name: Build exact current schema
+        env:
+          PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
+          PGPASSWORD: partgraph
+        run: |
+          alembic -c api/alembic.ini upgrade head
+          docker run --rm --network host \
+            -e PGPASSWORD="$PGPASSWORD" \
+            postgres:18.6-alpine \
+            pg_dump --host=127.0.0.1 --port=5432 --username=partgraph --dbname=partgraph \
+              --schema-only --no-owner --no-comments \
+            > /tmp/partgraph-0046-schema.sql
+          EXPECTED_HEAD="$(alembic -c api/alembic.ini heads | awk 'NR == 1 {print $1}')"
+          test "$EXPECTED_HEAD" = '0046_pipeline_actor_roles'
+          python api/scripts/validate_schema_baseline.py \
+            /tmp/partgraph-0046-schema.sql "$EXPECTED_HEAD"
+
+      - name: Adopt generated schema archive
+        env:
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          python - <<'PY'
+          from __future__ import annotations
+
+          import base64
+          import gzip
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          baseline = Path('api/migrations/baseline')
+          raw = Path('/tmp/partgraph-0046-schema.sql').read_bytes()
+          digest = hashlib.sha256(raw).hexdigest()
+          encoded = base64.b64encode(gzip.compress(raw, mtime=0)).decode('ascii')
+
+          for path in baseline.glob('schema.sql.gz.b64*'):
+              path.unlink()
+
+          chunks = [encoded[index:index + 5000] for index in range(0, len(encoded), 5000)]
+          for index, chunk in enumerate(chunks):
+              name = 'schema.sql.gz.b64' if index == 0 else f'schema.sql.gz.b64.{index:03d}'
+              (baseline / name).write_text(chunk, encoding='ascii')
+
+          manifest = {
+              'schema_version': 1,
+              'alembic_head': '0046_pipeline_actor_roles',
+              'schema_sha256': digest,
+              'schema_only': True,
+              'reference_data_included': False,
+              'role_bootstrap': 'api/migrations/baseline/roles.sql',
+              'revision_stamp': 'api/migrations/baseline/stamp.sql',
+              'source_commit': os.environ['SOURCE_COMMIT'],
+              'adoption_state': 'adopted',
+          }
+          (baseline / 'manifest.json').write_text(
+              json.dumps(manifest, indent=2) + '\n', encoding='utf-8'
+          )
+          print(f'adopted {len(raw)} schema bytes as {len(chunks)} chunks; sha256={digest}')
+          PY
+
+      - name: Verify adopted archive round-trip
+        run: |
+          python api/scripts/verify_adopted_baseline.py --output /tmp/recovered-schema.sql
+          cmp /tmp/partgraph-0046-schema.sql /tmp/recovered-schema.sql
+
+      - name: Commit baseline and remove one-shot workflow
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/one-shot-baseline-0046.yml
+          git add api/migrations/baseline
+          if git diff --cached --quiet; then
+            echo 'No baseline changes to commit.'
+            exit 0
+          fi
+          git commit -m 'Adopt validated 0046 schema baseline'
+          git push origin HEAD:partgraph-mvp-consolidation
