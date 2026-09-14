@@ -140,11 +140,25 @@ class MaterializerDatabasePrivilegeTests(unittest.TestCase):
         self.assertFalse(
             self._table_privilege(MATERIALIZER_ROLE, "public.part_fitments", "DELETE")
         )
-        self.assertFalse(
+        self.assertTrue(
             self._table_privilege(
                 MATERIALIZER_ROLE,
                 "public.component_part_roles",
                 "INSERT",
+            )
+        )
+        self.assertFalse(
+            self._table_privilege(
+                MATERIALIZER_ROLE,
+                "public.component_part_roles",
+                "UPDATE",
+            )
+        )
+        self.assertFalse(
+            self._table_privilege(
+                MATERIALIZER_ROLE,
+                "public.component_part_roles",
+                "DELETE",
             )
         )
 
