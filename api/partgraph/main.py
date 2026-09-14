@@ -26,6 +26,7 @@ from .identity.auth.router import router as auth_router
 from .identity.user_vehicle.router import router as user_vehicle_router
 from .identity.vehicle.router import router as vehicle_router
 from .knowledge.claim_publication import router as claim_publication_router
+from .knowledge.conflict_resolution import router as conflict_resolution_router
 from .knowledge.contribution import router as knowledge_contribution_router
 from .knowledge.coverage_router import router as catalog_coverage_router
 from .knowledge.curation import router as knowledge_curation_router
@@ -96,6 +97,7 @@ app.include_router(catalog_coverage_router)
 app.include_router(knowledge_curation_router)
 app.include_router(knowledge_contribution_router)
 app.include_router(claim_publication_router)
+app.include_router(conflict_resolution_router)
 app.include_router(repair_session_router)
 app.include_router(repair_recovery_router)
 app.include_router(repair_memory_router)
