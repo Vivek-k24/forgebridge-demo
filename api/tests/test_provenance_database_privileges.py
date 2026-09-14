@@ -13,6 +13,10 @@ from test_repair_materialization_database import (
 DATABASE_URL_ENV = "PARTGRAPH_DATABASE_URL"
 APP_ROLE = "partgraph_app"
 REVIEWER_ROLE = "partgraph_reviewer"
+_MATERIALIZATION_TEST_SUITES = (
+    _MaterializerDatabasePrivilegeTests,
+    _RepairMaterializationDatabaseTests,
+)
 
 
 def _database_url() -> str:
