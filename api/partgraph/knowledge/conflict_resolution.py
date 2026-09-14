@@ -131,7 +131,8 @@ async def resolve_canonical_conflict(
         raise _invalid("Canonical conflict has no contenders.")
     if any(item.record_evidence_id is not None for item in items):
         raise _invalid(
-            "This conflict contains publication-evidence contenders and cannot be resolved by the mechanical-claim resolver."
+            "This conflict contains publication-evidence contenders and cannot be "
+            "resolved by the mechanical-claim resolver."
         )
 
     claim_ids = [
