@@ -24,7 +24,13 @@ from .source_policy import (
     assess_mechanical_claim,
 )
 
-PromotionState = Literal["needs_review", "verified", "conflict"]
+PromotionState = Literal[
+    "needs_review",
+    "verified",
+    "conflict",
+    "rejected",
+    "superseded",
+]
 _CANONICAL_CONFLICT_DOMAINS: dict[ClaimDomain, str] = {
     ClaimDomain.VEHICLE_IDENTITY: "vehicle_identity",
     ClaimDomain.REPAIR_REQUIREMENT: "requirement",
