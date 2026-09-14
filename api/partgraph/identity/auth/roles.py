@@ -15,6 +15,7 @@ CONTRIBUTION_ROLES = frozenset({"contributor", "reviewer", "curator", "operator_
 REVIEWER_DATABASE_ROLE = "partgraph_reviewer"
 CONTRIBUTOR_DATABASE_ROLE = "partgraph_contributor"
 CURATOR_DATABASE_ROLE = "partgraph_curator"
+MATERIALIZER_DATABASE_ROLE = "partgraph_materializer"
 
 
 def require_any_role(*allowed_roles: str) -> Callable[[CurrentUserDep], User]:
@@ -49,13 +50,18 @@ async def assume_reviewer_database_role(session: AsyncSession) -> None:
 
 
 async def assume_contributor_database_role(session: AsyncSession) -> None:
-    """Narrow the current transaction to staging-only candidate submission privileges."""
+    """Narrow the transaction to staging-only candidate submission privileges."""
     await _assume_database_role(session, CONTRIBUTOR_DATABASE_ROLE)
 
 
 async def assume_curator_database_role(session: AsyncSession) -> None:
-    """Narrow the current transaction to normalized-claim publication privileges."""
+    """Narrow the transaction to normalized-claim/conflict curation privileges."""
     await _assume_database_role(session, CURATOR_DATABASE_ROLE)
+
+
+async def assume_materializer_database_role(session: AsyncSession) -> None:
+    """Narrow a curator-authorized transaction to versioned repair publication."""
+    await _assume_database_role(session, MATERIALIZER_DATABASE_ROLE)
 
 
 ReviewerUserDep = Annotated[
