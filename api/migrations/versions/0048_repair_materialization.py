@@ -10,7 +10,8 @@ down_revision: str | None = "0047_conflict_resolution"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
-MATERIALIZER_ROLE = "partgraph_materializer"
+CURATOR_ROLE = "partgraph_curator"
+
 MATERIALIZATION_TABLES = (
     "repair_definitions",
     "repair_operations",
@@ -26,31 +27,7 @@ MATERIALIZATION_TABLES = (
 )
 
 
-def _ensure_role() -> None:
-    op.execute(
-        sa.text(
-            f"""
-            DO $$
-            BEGIN
-                IF NOT EXISTS (
-                    SELECT 1 FROM pg_roles WHERE rolname = '{MATERIALIZER_ROLE}'
-                ) THEN
-                    CREATE ROLE {MATERIALIZER_ROLE} NOLOGIN;
-                END IF;
-            END
-            $$
-            """
-        )
-    )
-    op.execute(
-        sa.text(
-            f"GRANT {MATERIALIZER_ROLE} TO CURRENT_USER WITH INHERIT FALSE, SET TRUE"
-        )
-    )
-
-
 def upgrade() -> None:
-    _ensure_role()
     op.add_column(
         "canonical_record_versions",
         sa.Column("idempotency_key", sa.String(length=128), nullable=True),
@@ -85,8 +62,9 @@ def upgrade() -> None:
         postgresql_where=sa.text("mechanical_claim_id IS NULL"),
     )
 
-    # The service serializes this scope too, but correctness does not depend on
-    # application locking alone.
+    # Database-enforced single-current-version invariant. The materializer also
+    # serializes per exact vehicle + repair scope, but correctness does not rely
+    # on application locking alone.
     op.create_index(
         "uq_repair_definitions_current_verified",
         "repair_definitions",
@@ -96,58 +74,51 @@ def upgrade() -> None:
     )
 
     tables = ", ".join(f"public.{table}" for table in MATERIALIZATION_TABLES)
-    op.execute(sa.text(f"GRANT USAGE ON SCHEMA public TO {MATERIALIZER_ROLE}"))
-    op.execute(sa.text(f"GRANT SELECT ON {tables} TO {MATERIALIZER_ROLE}"))
+    op.execute(sa.text(f"GRANT SELECT ON {tables} TO {CURATOR_ROLE}"))
     op.execute(
         sa.text(
-            "GRANT SELECT ON public.catalog_sources, public.vehicle_configurations, "
-            "public.mechanical_claims, public.canonical_conflicts, "
-            f"public.repair_capability_policies TO {MATERIALIZER_ROLE}"
+            f"GRANT SELECT ON public.repair_capability_policies TO {CURATOR_ROLE}"
         )
     )
-    op.execute(sa.text(f"GRANT INSERT ON {tables} TO {MATERIALIZER_ROLE}"))
+    op.execute(sa.text(f"GRANT INSERT ON {tables} TO {CURATOR_ROLE}"))
 
-    # Published child rows remain append-only. The materializer may transition
-    # only the previous version envelopes into their superseded state.
+    # Published child rows are append-only. Curators may only transition the
+    # previous repair/publication envelope into its superseded state.
     op.execute(
         sa.text(
-            "GRANT UPDATE (status, superseded_by_id) ON public.repair_definitions "
-            f"TO {MATERIALIZER_ROLE}"
+            f"GRANT UPDATE (status, superseded_by_id) ON public.repair_definitions "
+            f"TO {CURATOR_ROLE}"
         )
     )
     op.execute(
         sa.text(
-            "GRANT UPDATE (publication_state) ON public.canonical_record_versions "
-            f"TO {MATERIALIZER_ROLE}"
+            f"GRANT UPDATE (publication_state) ON public.canonical_record_versions "
+            f"TO {CURATOR_ROLE}"
         )
     )
-    op.execute(sa.text(f"REVOKE DELETE ON {tables} FROM {MATERIALIZER_ROLE}"))
+    op.execute(sa.text(f"REVOKE DELETE ON {tables} FROM {CURATOR_ROLE}"))
 
 
 def downgrade() -> None:
     tables = ", ".join(f"public.{table}" for table in MATERIALIZATION_TABLES)
-    op.execute(sa.text(f"REVOKE INSERT ON {tables} FROM {MATERIALIZER_ROLE}"))
+    op.execute(sa.text(f"REVOKE INSERT ON {tables} FROM {CURATOR_ROLE}"))
     op.execute(
         sa.text(
-            "REVOKE UPDATE (publication_state) ON public.canonical_record_versions "
-            f"FROM {MATERIALIZER_ROLE}"
+            f"REVOKE UPDATE (publication_state) ON public.canonical_record_versions "
+            f"FROM {CURATOR_ROLE}"
         )
     )
     op.execute(
         sa.text(
-            "REVOKE UPDATE (status, superseded_by_id) ON public.repair_definitions "
-            f"FROM {MATERIALIZER_ROLE}"
+            f"REVOKE UPDATE (status, superseded_by_id) ON public.repair_definitions "
+            f"FROM {CURATOR_ROLE}"
         )
     )
     op.execute(
         sa.text(
-            "REVOKE SELECT ON public.catalog_sources, public.vehicle_configurations, "
-            "public.mechanical_claims, public.canonical_conflicts, "
-            f"public.repair_capability_policies FROM {MATERIALIZER_ROLE}"
+            f"REVOKE SELECT ON public.repair_capability_policies FROM {CURATOR_ROLE}"
         )
     )
-    op.execute(sa.text(f"REVOKE SELECT ON {tables} FROM {MATERIALIZER_ROLE}"))
-    op.execute(sa.text(f"REVOKE USAGE ON SCHEMA public FROM {MATERIALIZER_ROLE}"))
 
     op.drop_index(
         "uq_repair_definitions_current_verified",
@@ -174,5 +145,3 @@ def downgrade() -> None:
     )
     op.drop_column("canonical_record_versions", "request_sha256")
     op.drop_column("canonical_record_versions", "idempotency_key")
-    op.execute(sa.text(f"REVOKE {MATERIALIZER_ROLE} FROM CURRENT_USER"))
-    op.execute(sa.text(f"DROP ROLE IF EXISTS {MATERIALIZER_ROLE}"))
