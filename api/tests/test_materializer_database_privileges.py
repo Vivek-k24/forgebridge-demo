@@ -70,6 +70,17 @@ class MaterializerDatabasePrivilegeTests(unittest.TestCase):
                 "INSERT",
             )
         )
+        self.assertFalse(
+            self._table_privilege(CURATOR_ROLE, "public.part_fitments", "INSERT")
+        )
+        self.assertFalse(
+            self._column_privilege(
+                CURATOR_ROLE,
+                "public.vehicle_configurations",
+                "verification_status",
+                "UPDATE",
+            )
+        )
 
     def test_materializer_reads_claim_scope_but_cannot_create_claims(self) -> None:
         for table in (
@@ -78,6 +89,9 @@ class MaterializerDatabasePrivilegeTests(unittest.TestCase):
             "public.mechanical_claims",
             "public.canonical_conflicts",
             "public.repair_capability_policies",
+            "public.source_authority_policies",
+            "public.component_part_roles",
+            "public.part_fitments",
         ):
             with self.subTest(table=table):
                 self.assertTrue(self._table_privilege(MATERIALIZER_ROLE, table, "SELECT"))
@@ -90,6 +104,43 @@ class MaterializerDatabasePrivilegeTests(unittest.TestCase):
                 "public.mechanical_claims",
                 "claim_payload",
                 "UPDATE",
+            )
+        )
+
+    def test_materializer_has_narrow_vehicle_and_fitment_writes(self) -> None:
+        self.assertTrue(
+            self._column_privilege(
+                MATERIALIZER_ROLE,
+                "public.vehicle_configurations",
+                "verification_status",
+                "UPDATE",
+            )
+        )
+        for column in ("make", "model", "trim", "engine", "identity_hash"):
+            with self.subTest(column=column):
+                self.assertFalse(
+                    self._column_privilege(
+                        MATERIALIZER_ROLE,
+                        "public.vehicle_configurations",
+                        column,
+                        "UPDATE",
+                    )
+                )
+
+        self.assertTrue(
+            self._table_privilege(MATERIALIZER_ROLE, "public.part_fitments", "INSERT")
+        )
+        self.assertFalse(
+            self._table_privilege(MATERIALIZER_ROLE, "public.part_fitments", "UPDATE")
+        )
+        self.assertFalse(
+            self._table_privilege(MATERIALIZER_ROLE, "public.part_fitments", "DELETE")
+        )
+        self.assertFalse(
+            self._table_privilege(
+                MATERIALIZER_ROLE,
+                "public.component_part_roles",
+                "INSERT",
             )
         )
 
