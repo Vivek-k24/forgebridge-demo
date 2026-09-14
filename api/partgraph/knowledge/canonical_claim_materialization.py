@@ -16,7 +16,12 @@ from ..identity.auth.dependencies import AuthSessionDep, require_csrf
 from ..identity.auth.roles import CuratorUserDep, assume_materializer_database_role
 from ..identity.vehicle.models import VehicleConfiguration
 from ..identity.vehicle.schemas import VehicleConfigurationInput
-from ..identity.vehicle.taxonomy import canonicalize_fields, comparison_key
+from ..identity.vehicle.taxonomy import (
+    canonical_engine,
+    canonical_transmission,
+    canonicalize_fields,
+    comparison_key,
+)
 from .claim_locks import lock_mechanical_claims
 from .fitment import PartFitment
 from .models import CatalogSource, MechanicalClaim
@@ -97,7 +102,12 @@ IdempotencyKey = Annotated[
 
 
 def _detail_tokens(field: str, value: str) -> set[str]:
-    return {token for token in comparison_key(field, value).split("|") if token}
+    canonical = value
+    if field == "engine":
+        canonical = canonical_engine(value) or value
+    elif field == "transmission":
+        canonical = canonical_transmission(value) or value
+    return {token for token in comparison_key(field, canonical).split("|") if token}
 
 
 def _compatible_identity_value(
