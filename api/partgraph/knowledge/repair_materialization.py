@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Header
 
 from ..errors import ErrorEnvelope
 from ..identity.auth.dependencies import AuthSessionDep, require_csrf
-from ..identity.auth.roles import CuratorUserDep, assume_curator_database_role
+from ..identity.auth.roles import CuratorUserDep, assume_materializer_database_role
 from .repair_materialization_contract import (
     IDEMPOTENCY_PATTERN,
     RepairDefinitionMaterializationCreate,
@@ -49,7 +49,7 @@ async def materialize_repair_definition(
     db: AuthSessionDep,
     idempotency_key: IdempotencyKey,
 ) -> RepairDefinitionMaterializationRead:
-    await assume_curator_database_role(db)
+    await assume_materializer_database_role(db)
     if IDEMPOTENCY_PATTERN.fullmatch(idempotency_key) is None:
         raise invalid_materialization("Idempotency-Key is invalid.")
     return await materialize_repair_definition_service(
