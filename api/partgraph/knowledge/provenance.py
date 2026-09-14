@@ -37,7 +37,15 @@ CANONICAL_DOMAINS = (
     "electrical",
     "capability",
 )
+CLAIM_DOMAINS = (
+    "vehicle_identity",
+    "safety_campaign",
+    "repair_requirement",
+    "repair_procedure",
+    "part_fitment",
+)
 _CANONICAL_DOMAIN_SQL = ", ".join(f"'{item}'" for item in CANONICAL_DOMAINS)
+_CLAIM_DOMAIN_SQL = ", ".join(f"'{item}'" for item in CLAIM_DOMAINS)
 _SOURCE_CLASS_SQL = (
     "'government', 'oem_service', 'licensed_oem_derived', 'oem_parts', "
     "'industry_standard', 'retailer', 'community'"
@@ -45,13 +53,17 @@ _SOURCE_CLASS_SQL = (
 
 
 class SourceAuthorityPolicy(Base):
-    """Policy describing whether a source class is acceptable for a canonical domain/risk."""
+    """Policy describing source authority for claim and canonical publication scopes."""
 
     __tablename__ = "source_authority_policies"
     __table_args__ = (
         CheckConstraint(
             f"canonical_domain IN ({_CANONICAL_DOMAIN_SQL})",
             name="ck_source_authority_policies_domain",
+        ),
+        CheckConstraint(
+            f"claim_domain IS NULL OR claim_domain IN ({_CLAIM_DOMAIN_SQL})",
+            name="ck_source_authority_policies_claim_domain",
         ),
         CheckConstraint(
             f"source_class IN ({_SOURCE_CLASS_SQL})",
@@ -75,11 +87,18 @@ class SourceAuthorityPolicy(Base):
             "risk_class",
             name="uq_source_authority_policies_scope",
         ),
+        UniqueConstraint(
+            "claim_domain",
+            "source_class",
+            "risk_class",
+            name="uq_source_authority_policies_claim_scope",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
     policy_key: Mapped[str] = mapped_column(String(160), nullable=False, unique=True)
-    canonical_domain: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    canonical_domain: Mapped[str | None] = mapped_column(String(32), index=True)
+    claim_domain: Mapped[str | None] = mapped_column(String(32), index=True)
     source_class: Mapped[str] = mapped_column(String(32), nullable=False)
     risk_class: Mapped[str] = mapped_column(String(24), nullable=False)
     authority_state: Mapped[str] = mapped_column(String(16), nullable=False)
