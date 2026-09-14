@@ -325,7 +325,7 @@ class PipelineConflictLifecycleTests(unittest.IsolatedAsyncioTestCase):
                              exact_applicability, promotion_state, conflict_key)
                         VALUES (%s, %s, %s, 'repair_requirement', 'normal',
                                 'fixture.requirement', 'fixture.repair', %s, true,
-                                false, 'conflict', %s)
+                                true, 'conflict', %s)
                         """,
                         (
                             claim_id,
@@ -460,7 +460,7 @@ class PipelineConflictLifecycleTests(unittest.IsolatedAsyncioTestCase):
                          exact_applicability, promotion_state, conflict_key)
                     VALUES (%s, %s, %s, 'repair_requirement', 'normal',
                             'fixture.requirement', 'fixture.repair', %s, true,
-                            false, 'conflict', %s)
+                            true, 'conflict', %s)
                     """,
                     (
                         self.claim_ids[2],
@@ -477,7 +477,7 @@ class PipelineConflictLifecycleTests(unittest.IsolatedAsyncioTestCase):
             normalized_key="fixture.requirement",
             claim_payload={"value": 3},
             explicit_claim=True,
-            exact_applicability=False,
+            exact_applicability=True,
             repair_key="fixture.repair",
         )
         async with session_factory() as db:
