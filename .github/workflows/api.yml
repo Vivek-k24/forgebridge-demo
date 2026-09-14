@@ -77,6 +77,7 @@ jobs:
           api/tests/test_pipeline_database_privileges.py
           api/tests/test_claim_pipeline_policy.py
           api/tests/test_source_authority_policy_database.py
+          api/tests/test_source_authority_enforcement.py
           api/tests/test_capability_database_privileges.py
           api/tests/test_provenance_database_privileges.py
           api/tests/test_auth_origins.py
@@ -117,7 +118,7 @@ jobs:
           PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
         run: >-
           python -m unittest discover -s api/tests
-          -p 'test_source_authority_policy_database.py'
+          -p 'test_source_authority_*.py'
 
       - name: Build production-copy upgrade SQL
         env:
