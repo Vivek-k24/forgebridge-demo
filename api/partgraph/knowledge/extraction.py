@@ -97,6 +97,12 @@ class _StructuredMechanicalClaim(BaseModel):
     @model_validator(mode="after")
     def validate_scope(self) -> _StructuredMechanicalClaim:
         self.normalized_key = " ".join(self.normalized_key.split())
+        if not self.normalized_key:
+            raise ValueError("normalized_key cannot be blank")
+        if self.repair_key is not None:
+            self.repair_key = " ".join(self.repair_key.split())
+            if not self.repair_key:
+                raise ValueError("repair_key cannot be blank")
         if not self.claim_payload:
             raise ValueError("claim_payload cannot be empty")
         if self.exact_applicability and self.vehicle_configuration_id is None:
