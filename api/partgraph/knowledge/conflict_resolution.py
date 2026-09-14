@@ -11,6 +11,7 @@ from sqlalchemy import select
 from ..errors import ErrorCode, ErrorEnvelope, PartGraphError
 from ..identity.auth.dependencies import AuthSessionDep, require_csrf
 from ..identity.auth.roles import CuratorUserDep, assume_curator_database_role
+from .claim_locks import lock_mechanical_claim_scope, lock_mechanical_claims
 from .models import MechanicalClaim
 from .provenance import CanonicalConflict, CanonicalConflictItem
 
@@ -105,6 +106,20 @@ async def resolve_canonical_conflict(
     await assume_curator_database_role(db)
     actor = _actor(user)
 
+    # Read the deterministic scope first, then serialize all mutations of that
+    # scope before taking row locks. Claim materialization uses shared advisory
+    # locks, so a resolution cannot change supporting truth mid-publication.
+    conflict_scope = await db.scalar(
+        select(CanonicalConflict).where(CanonicalConflict.id == conflict_id)
+    )
+    if conflict_scope is None:
+        raise PartGraphError(
+            code=ErrorCode.KNOWLEDGE_CONFLICT_NOT_FOUND,
+            message="Canonical conflict not found.",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+    await lock_mechanical_claim_scope(db, conflict_scope.conflict_key)
+
     conflict = (
         await db.execute(
             select(CanonicalConflict)
@@ -143,6 +158,7 @@ async def resolve_canonical_conflict(
     if len(claim_ids) != len(items):
         raise _invalid("Canonical conflict contains an invalid contender reference.")
 
+    await lock_mechanical_claims(db, claim_ids, shared=False)
     claims = list(
         await db.scalars(
             select(MechanicalClaim)
