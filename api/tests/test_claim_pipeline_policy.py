@@ -37,8 +37,40 @@ MATERIALIZATION_CLAIM_ID = UUID("33333333-3333-4333-8333-333333333333")
 
 
 class ClaimPipelinePolicyTests(unittest.TestCase):
-    def test_oem_service_exact_explicit_procedure_is_eligible(self) -> None:
+    @staticmethod
+    def _policy(
+        *,
+        source_class: SourceClass,
+        claim_domain: ClaimDomain,
+        risk: ClaimRisk = ClaimRisk.NORMAL,
+        authority_state: str,
+    ) -> SimpleNamespace:
+        canonical_domains = {
+            ClaimDomain.VEHICLE_IDENTITY: "vehicle_identity",
+            ClaimDomain.SAFETY_CAMPAIGN: None,
+            ClaimDomain.REPAIR_REQUIREMENT: "requirement",
+            ClaimDomain.REPAIR_PROCEDURE: "procedure",
+            ClaimDomain.PART_FITMENT: "fitment",
+        }
+        return SimpleNamespace(
+            claim_domain=claim_domain.value,
+            canonical_domain=canonical_domains[claim_domain],
+            source_class=source_class.value,
+            risk_class=risk.value,
+            authority_state=authority_state,
+            requires_exact_applicability=True,
+            minimum_evidence_count=1,
+            rationale="fixture authority policy",
+        )
+
+    def test_accepted_policy_makes_exact_explicit_claim_eligible(self) -> None:
+        policy = self._policy(
+            source_class=SourceClass.OEM_SERVICE,
+            claim_domain=ClaimDomain.REPAIR_PROCEDURE,
+            authority_state="accepted",
+        )
         assessment = assess_mechanical_claim(
+            policy=policy,
             source_class=SourceClass.OEM_SERVICE,
             claim_domain=ClaimDomain.REPAIR_PROCEDURE,
             exact_applicability=True,
@@ -46,8 +78,14 @@ class ClaimPipelinePolicyTests(unittest.TestCase):
         )
         self.assertEqual(assessment.decision, PromotionDecision.ELIGIBLE)
 
-    def test_oem_parts_does_not_establish_repair_procedure(self) -> None:
+    def test_rejected_policy_remains_candidate_only(self) -> None:
+        policy = self._policy(
+            source_class=SourceClass.OEM_PARTS,
+            claim_domain=ClaimDomain.REPAIR_PROCEDURE,
+            authority_state="rejected",
+        )
         assessment = assess_mechanical_claim(
+            policy=policy,
             source_class=SourceClass.OEM_PARTS,
             claim_domain=ClaimDomain.REPAIR_PROCEDURE,
             exact_applicability=True,
@@ -55,8 +93,9 @@ class ClaimPipelinePolicyTests(unittest.TestCase):
         )
         self.assertEqual(assessment.decision, PromotionDecision.CANDIDATE_ONLY)
 
-    def test_retailer_fitment_remains_candidate_only(self) -> None:
+    def test_missing_policy_fails_closed(self) -> None:
         assessment = assess_mechanical_claim(
+            policy=None,
             source_class=SourceClass.RETAILER,
             claim_domain=ClaimDomain.PART_FITMENT,
             exact_applicability=True,
@@ -65,7 +104,13 @@ class ClaimPipelinePolicyTests(unittest.TestCase):
         self.assertEqual(assessment.decision, PromotionDecision.CANDIDATE_ONLY)
 
     def test_conflict_never_promotes_directly(self) -> None:
+        policy = self._policy(
+            source_class=SourceClass.OEM_SERVICE,
+            claim_domain=ClaimDomain.REPAIR_REQUIREMENT,
+            authority_state="accepted",
+        )
         assessment = assess_mechanical_claim(
+            policy=policy,
             source_class=SourceClass.OEM_SERVICE,
             claim_domain=ClaimDomain.REPAIR_REQUIREMENT,
             exact_applicability=True,
@@ -82,8 +127,15 @@ class ClaimPipelinePolicyTests(unittest.TestCase):
             "conflict",
         )
 
-    def test_curator_review_satisfies_safety_critical_human_review_gate(self) -> None:
+    def test_curator_review_satisfies_conditional_policy_gate(self) -> None:
+        policy = self._policy(
+            source_class=SourceClass.OEM_SERVICE,
+            claim_domain=ClaimDomain.REPAIR_REQUIREMENT,
+            risk=ClaimRisk.SAFETY_CRITICAL,
+            authority_state="conditional",
+        )
         assessment = assess_mechanical_claim(
+            policy=policy,
             source_class=SourceClass.OEM_SERVICE,
             claim_domain=ClaimDomain.REPAIR_REQUIREMENT,
             exact_applicability=True,
@@ -100,6 +152,22 @@ class ClaimPipelinePolicyTests(unittest.TestCase):
             ),
             "verified",
         )
+
+    def test_policy_scope_mismatch_fails_closed(self) -> None:
+        policy = self._policy(
+            source_class=SourceClass.OEM_SERVICE,
+            claim_domain=ClaimDomain.REPAIR_REQUIREMENT,
+            authority_state="accepted",
+        )
+        policy.canonical_domain = "procedure"
+        assessment = assess_mechanical_claim(
+            policy=policy,
+            source_class=SourceClass.OEM_SERVICE,
+            claim_domain=ClaimDomain.REPAIR_REQUIREMENT,
+            exact_applicability=True,
+            explicit_claim=True,
+        )
+        self.assertEqual(assessment.decision, PromotionDecision.CANDIDATE_ONLY)
 
     def test_non_exact_or_inferred_claim_cannot_become_verified(self) -> None:
         self.assertEqual(
