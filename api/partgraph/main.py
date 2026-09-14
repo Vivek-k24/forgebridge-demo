@@ -30,6 +30,7 @@ from .knowledge.conflict_resolution import router as conflict_resolution_router
 from .knowledge.contribution import router as knowledge_contribution_router
 from .knowledge.coverage_router import router as catalog_coverage_router
 from .knowledge.curation import router as knowledge_curation_router
+from .knowledge.repair_materialization import router as repair_materialization_router
 from .knowledge.router import router as repair_definition_router
 from .operator.router import router as operator_router
 from .repair_experience.completion import router as repair_completion_router
@@ -98,6 +99,7 @@ app.include_router(knowledge_curation_router)
 app.include_router(knowledge_contribution_router)
 app.include_router(claim_publication_router)
 app.include_router(conflict_resolution_router)
+app.include_router(repair_materialization_router)
 app.include_router(repair_session_router)
 app.include_router(repair_recovery_router)
 app.include_router(repair_memory_router)
