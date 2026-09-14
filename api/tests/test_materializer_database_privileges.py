@@ -73,14 +73,16 @@ class MaterializerDatabasePrivilegeTests(unittest.TestCase):
         self.assertFalse(
             self._table_privilege(CURATOR_ROLE, "public.part_fitments", "INSERT")
         )
-        self.assertFalse(
-            self._column_privilege(
-                CURATOR_ROLE,
-                "public.vehicle_configurations",
-                "verification_status",
-                "UPDATE",
-            )
-        )
+        for column in ("verification_status", "updated_at"):
+            with self.subTest(column=column):
+                self.assertFalse(
+                    self._column_privilege(
+                        CURATOR_ROLE,
+                        "public.vehicle_configurations",
+                        column,
+                        "UPDATE",
+                    )
+                )
 
     def test_materializer_reads_claim_scope_but_cannot_create_claims(self) -> None:
         for table in (
@@ -108,14 +110,16 @@ class MaterializerDatabasePrivilegeTests(unittest.TestCase):
         )
 
     def test_materializer_has_narrow_vehicle_and_fitment_writes(self) -> None:
-        self.assertTrue(
-            self._column_privilege(
-                MATERIALIZER_ROLE,
-                "public.vehicle_configurations",
-                "verification_status",
-                "UPDATE",
-            )
-        )
+        for column in ("verification_status", "updated_at"):
+            with self.subTest(column=column):
+                self.assertTrue(
+                    self._column_privilege(
+                        MATERIALIZER_ROLE,
+                        "public.vehicle_configurations",
+                        column,
+                        "UPDATE",
+                    )
+                )
         for column in ("make", "model", "trim", "engine", "identity_hash"):
             with self.subTest(column=column):
                 self.assertFalse(
