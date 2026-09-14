@@ -9,11 +9,12 @@ Last updated: **2026-09-14**
 
 Current exact implementation proof tracked here:
 - active implementation branch: `partgraph-mvp-consolidation`
-- latest exact green implementation commit: `c2962d4b87838af80c04f10c2bff08678a8b28ed`
+- latest exact green implementation commit: `f2982866bda7754726cc52e6d4f9bb6ac7ebe1f4`
 - full API CI: passed
-- extraction/NHTSA/provider-binding pipeline CI: passed
+- Web CI: passed
+- extraction/NHTSA/provider-binding/operator-control pipeline CI: passed
 - Vercel consolidation preview: READY on the same commit
-- consolidation preview database: `0051_provider_source_binding`
+- consolidation preview database: `0052_operator_source_controls`
 - production database: intentionally unchanged at `0020_catalog_coverage`
 - PR #84: remains draft/unmerged
 
@@ -176,7 +177,7 @@ Production remains at `0020_catalog_coverage` until an explicit production migra
 
 ## Phase 6 — Canonical data and provider pipeline
 
-Status: **In progress. Human evidence-to-claim-to-repair publication, generic extraction, and trusted provider/source binding are implemented and green. Real provider activation/admin configuration and broad knowledge population remain.**
+Status: **In progress. Human evidence-to-claim-to-repair publication, generic extraction, trusted provider/source binding, and authenticated Admin configuration are implemented and green. Real provider activation and broad knowledge population remain.**
 
 Core registry and authority:
 - [x] source registry
@@ -209,6 +210,19 @@ NHTSA government-source collector:
 - [x] prove NHTSA staging creates zero verified evidence and zero MechanicalClaims automatically
 - [x] NHTSA collector CI safety tests
 
+Operator/admin provider controls:
+- [x] operator-only source registry list/create/update API
+- [x] source license-review and automation controls remain separate gates
+- [x] source key/class remain immutable through the operator flow
+- [x] operator-only provider/source binding list/create/toggle API
+- [x] provider/source pair remains immutable after binding creation
+- [x] new bindings are created disabled in the Admin UI
+- [x] binding enablement requires provider enabled + source approved + source automation allowed
+- [x] source/binding changes are recorded in the operator audit log
+- [x] application role may manage source metadata but cannot delete sources or change source-authority policy
+- [x] Admin workspace exposes source registration/review/automation and provider/source binding controls
+- [x] prove configuration/enablement alone does not create staging records or start collection
+
 Human review/publication spine:
 - [x] exact applicability enforcement
 - [x] conflict detection/quarantine
@@ -226,18 +240,19 @@ Remaining Phase 6 work:
 - [x] define and persist an explicit trusted `provider_connection` → `catalog_source` binding
 - [x] define the trusted execution role/path that resolves provider configuration and its bound source without widening collector authority
 - [ ] activate real approved-provider ingestion only after that binding exists
-- [ ] expose safe provider/source configuration and enable/disable controls through authenticated operator/admin flow where required
+- [x] expose safe provider/source configuration and enable/disable controls through authenticated operator/admin flow where required
 - [ ] broaden canonical materialization to additional domains where the MVP provider pipeline requires it
 - [ ] populate broad canonical repair knowledge
 
 Current safety boundary:
 - collector/extractor output is candidate data only
+- source registration, provider enablement, and binding enablement do **not** start collection by themselves
 - external providers have no direct verified/canonical publication authority
 - extraction confidence is not source authority
 - missing remains missing
 - conflicts remain explicit
 - AI cannot directly publish canonical automotive truth
-- production provider/collector activation is **not** implied by adapter implementation
+- production provider/collector activation is **not** implied by adapter or Admin-control implementation
 
 ---
 
