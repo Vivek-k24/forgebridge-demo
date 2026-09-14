@@ -143,7 +143,7 @@ def assess_mechanical_claim(
 
     if evidence_count < policy.minimum_evidence_count:
         return PromotionAssessment(
-            PromotionDecision.HUMAN_REVIEW_REQUIRED,
+            PromotionDecision.CANDIDATE_ONLY,
             "source authority policy requires additional independent evidence",
         )
 
