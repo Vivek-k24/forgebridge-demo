@@ -1,10 +1,18 @@
 import unittest
-from uuid import UUID
+from types import SimpleNamespace
+from uuid import UUID, uuid4
 
+from pydantic import ValidationError
+
+from partgraph.errors import ErrorCode, PartGraphError
 from partgraph.knowledge.claim_publication import (
     VerifiedMechanicalClaimSpec,
     _conflict_key,
     _promotion_state,
+)
+from partgraph.knowledge.conflict_resolution import (
+    CanonicalConflictResolutionCreate,
+    _selected_item_id,
 )
 from partgraph.knowledge.source_policy import (
     ClaimDomain,
@@ -117,6 +125,51 @@ class ClaimPipelinePolicyTests(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertTrue(first.startswith("mechanical:"))
         self.assertLessEqual(len(first), 128)
+
+    def test_conflict_resolution_requires_selection_when_a_claim_wins(self) -> None:
+        for resolution in ("accepted_evidence", "superseded", "duplicate"):
+            with self.subTest(resolution=resolution):
+                with self.assertRaises(ValidationError):
+                    CanonicalConflictResolutionCreate(
+                        resolution=resolution,
+                        rationale="source-specific review selected the supported fact",
+                    )
+
+    def test_conflict_resolution_forbids_selection_when_no_claim_wins(self) -> None:
+        selected = uuid4()
+        for resolution in ("insufficient_evidence", "not_applicable"):
+            with self.subTest(resolution=resolution):
+                with self.assertRaises(ValidationError):
+                    CanonicalConflictResolutionCreate(
+                        resolution=resolution,
+                        selected_claim_id=selected,
+                        rationale="no contender establishes canonical truth",
+                    )
+
+    def test_conflict_resolution_normalizes_audit_rationale(self) -> None:
+        selected = uuid4()
+        request = CanonicalConflictResolutionCreate(
+            resolution="accepted_evidence",
+            selected_claim_id=selected,
+            rationale="  exact   OEM evidence   supports this contender  ",
+        )
+        self.assertEqual(request.selected_claim_id, selected)
+        self.assertEqual(
+            request.rationale,
+            "exact OEM evidence supports this contender",
+        )
+
+    def test_multiple_selected_conflict_items_are_rejected(self) -> None:
+        items = [
+            SimpleNamespace(disposition="selected", mechanical_claim_id=uuid4()),
+            SimpleNamespace(disposition="selected", mechanical_claim_id=uuid4()),
+        ]
+        with self.assertRaises(PartGraphError) as context:
+            _selected_item_id(items)  # type: ignore[arg-type]
+        self.assertEqual(
+            context.exception.code,
+            ErrorCode.KNOWLEDGE_CONFLICT_RESOLUTION_INVALID,
+        )
 
 
 if __name__ == "__main__":
