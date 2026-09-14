@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Header
 from ..errors import ErrorEnvelope
 from ..identity.auth.dependencies import AuthSessionDep, require_csrf
 from ..identity.auth.roles import CuratorUserDep, assume_materializer_database_role
+from .canonical_claim_materialization import router as canonical_claim_materialization_router
 from .repair_materialization_contract import (
     IDEMPOTENCY_PATTERN,
     RepairDefinitionMaterializationCreate,
@@ -35,6 +36,7 @@ router = APIRouter(
         500: {"model": ErrorEnvelope},
     },
 )
+router.include_router(canonical_claim_materialization_router)
 CsrfDep = Depends(require_csrf)
 
 
