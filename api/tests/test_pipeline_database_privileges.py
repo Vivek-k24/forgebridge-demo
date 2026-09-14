@@ -132,7 +132,7 @@ class PipelineDatabasePrivilegeTests(unittest.TestCase):
             self._table_privilege(REVIEWER_ROLE, "public.canonical_conflicts", "INSERT")
         )
 
-    def test_curator_can_publish_claims_and_quarantine_conflicts_only(self) -> None:
+    def test_curator_can_publish_claims_and_resolve_conflicts_only(self) -> None:
         self.assertTrue(
             self._table_privilege(
                 CURATOR_ROLE,
@@ -143,22 +143,17 @@ class PipelineDatabasePrivilegeTests(unittest.TestCase):
         self.assertTrue(
             self._table_privilege(CURATOR_ROLE, "public.mechanical_claims", "INSERT")
         )
-        self.assertTrue(
-            self._column_privilege(
-                CURATOR_ROLE,
-                "public.mechanical_claims",
-                "promotion_state",
-                "UPDATE",
-            )
-        )
-        self.assertTrue(
-            self._column_privilege(
-                CURATOR_ROLE,
-                "public.mechanical_claims",
-                "reviewed_at",
-                "UPDATE",
-            )
-        )
+        for column in ("promotion_state", "reviewed_at", "reviewed_by", "superseded_by_id"):
+            with self.subTest(table="mechanical_claims", column=column):
+                self.assertTrue(
+                    self._column_privilege(
+                        CURATOR_ROLE,
+                        "public.mechanical_claims",
+                        column,
+                        "UPDATE",
+                    )
+                )
+
         self.assertTrue(
             self._table_privilege(CURATOR_ROLE, "public.canonical_conflicts", "INSERT")
         )
@@ -167,6 +162,56 @@ class PipelineDatabasePrivilegeTests(unittest.TestCase):
                 CURATOR_ROLE,
                 "public.canonical_conflict_items",
                 "INSERT",
+            )
+        )
+        for column in (
+            "conflict_state",
+            "resolution",
+            "resolution_rationale",
+            "resolved_at",
+            "resolved_by",
+        ):
+            with self.subTest(table="canonical_conflicts", column=column):
+                self.assertTrue(
+                    self._column_privilege(
+                        CURATOR_ROLE,
+                        "public.canonical_conflicts",
+                        column,
+                        "UPDATE",
+                    )
+                )
+        self.assertTrue(
+            self._column_privilege(
+                CURATOR_ROLE,
+                "public.canonical_conflict_items",
+                "disposition",
+                "UPDATE",
+            )
+        )
+
+        # Conflict resolution must not become a broad table-update grant.
+        self.assertFalse(
+            self._column_privilege(
+                CURATOR_ROLE,
+                "public.mechanical_claims",
+                "claim_payload",
+                "UPDATE",
+            )
+        )
+        self.assertFalse(
+            self._column_privilege(
+                CURATOR_ROLE,
+                "public.canonical_conflicts",
+                "conflict_key",
+                "UPDATE",
+            )
+        )
+        self.assertFalse(
+            self._column_privilege(
+                CURATOR_ROLE,
+                "public.canonical_conflict_items",
+                "mechanical_claim_id",
+                "UPDATE",
             )
         )
 
