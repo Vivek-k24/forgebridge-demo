@@ -1,4 +1,5 @@
 import unittest
+from decimal import Decimal
 from types import SimpleNamespace
 from uuid import UUID, uuid4
 
@@ -105,7 +106,7 @@ class RepairMaterializationPolicyTests(unittest.TestCase):
             {
                 "requirement_key": "tool.socket-10mm",
                 "category": "tool",
-                "quantity": 1,
+                "quantity": Decimal("1"),
             },
             fact_label="requirement[socket-use]",
         )
