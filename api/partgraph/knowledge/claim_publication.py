@@ -176,10 +176,24 @@ async def _conflict_record(
         )
         db.add(conflict)
         await db.flush()
+    else:
+        if conflict.canonical_domain != canonical_domain:
+            raise PartGraphError(
+                code=ErrorCode.KNOWLEDGE_PUBLICATION_CONFLICT,
+                message="Existing conflict record belongs to a different canonical domain.",
+                status_code=status.HTTP_409_CONFLICT,
+            )
+        # A later contradictory claim reopens the same deterministic scope rather
+        # than creating a second conflict or silently inheriting an old resolution.
+        conflict.conflict_state = "open"
+        conflict.resolution = None
+        conflict.resolution_rationale = None
+        conflict.resolved_at = None
+        conflict.resolved_by = None
 
     for claim_id in contender_ids:
         existing_item = await db.scalar(
-            select(CanonicalConflictItem.id).where(
+            select(CanonicalConflictItem).where(
                 CanonicalConflictItem.conflict_id == conflict.id,
                 CanonicalConflictItem.mechanical_claim_id == claim_id,
             )
@@ -192,6 +206,8 @@ async def _conflict_record(
                     disposition="contender",
                 )
             )
+        else:
+            existing_item.disposition = "contender"
     await db.flush()
     return conflict.id
 
