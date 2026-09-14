@@ -9,11 +9,11 @@ Last updated: **2026-09-14**
 
 Current exact implementation proof tracked here:
 - active implementation branch: `partgraph-mvp-consolidation`
-- latest exact green implementation commit: `3615262a7a877690b680db174eda9ccb78c92320`
+- latest exact green implementation commit: `c2962d4b87838af80c04f10c2bff08678a8b28ed`
 - full API CI: passed
-- extraction/NHTSA pipeline CI: passed
+- extraction/NHTSA/provider-binding pipeline CI: passed
 - Vercel consolidation preview: READY on the same commit
-- consolidation preview database: `0050_claim_authority_policy`
+- consolidation preview database: `0051_provider_source_binding`
 - production database: intentionally unchanged at `0020_catalog_coverage`
 - PR #84: remains draft/unmerged
 
@@ -118,13 +118,13 @@ Status: **Functional exit gate satisfied for current operations.**
 - [x] Define owner/user, contributor, reviewer, curator, and operator/admin roles.
 - [x] Enforce roles in current API services.
 - [x] Enforce database privileges where practical.
-- [x] Separate contributor, reviewer, curator, and canonical-materializer execution authority.
+- [x] Separate contributor, reviewer, curator, canonical-materializer, and provider-ingestor execution authority.
 - [x] Keep operator workbench functionality behind RBAC.
 - [x] Keep canonical knowledge shared/read-only to ordinary authenticated users.
 - [x] Keep owner state private.
 - [x] Keep candidate acquisition isolated from canonical truth.
 
-Implemented execution roles include `partgraph_contributor`, `partgraph_reviewer`, `partgraph_curator`, and `partgraph_materializer`.
+Implemented execution roles include `partgraph_contributor`, `partgraph_reviewer`, `partgraph_curator`, `partgraph_materializer`, and `partgraph_ingestor`.
 
 ---
 
@@ -176,7 +176,7 @@ Production remains at `0020_catalog_coverage` until an explicit production migra
 
 ## Phase 6 — Canonical data and provider pipeline
 
-Status: **In progress. Human evidence-to-claim-to-repair publication and generic extraction are implemented and green. Real provider activation/source binding and broad knowledge population remain.**
+Status: **In progress. Human evidence-to-claim-to-repair publication, generic extraction, and trusted provider/source binding are implemented and green. Real provider activation/admin configuration and broad knowledge population remain.**
 
 Core registry and authority:
 - [x] source registry
@@ -184,6 +184,7 @@ Core registry and authority:
 - [x] database-backed claim-domain × source-class × risk-class authority matrix
 - [x] fail-closed missing/malformed/insufficient authority behavior
 - [x] provider/connector registry foundation
+- [x] explicit persisted `provider_connection` → `catalog_source` binding
 
 Raw acquisition and extraction:
 - [x] immutable raw capture
@@ -194,6 +195,9 @@ Raw acquisition and extraction:
 - [x] exact vehicle snapshot generation when exact applicability is supplied
 - [x] generic extraction database integration test
 - [x] extraction pipeline CI gate
+- [x] trusted bound-provider execution path using dedicated `partgraph_ingestor` database role
+- [x] fail closed on missing or disabled provider/source binding
+- [x] prove ingestor can stage candidates but cannot write verified evidence, MechanicalClaims, or canonical repair truth
 
 NHTSA government-source collector:
 - [x] deterministic NHTSA recall adapter in `api/partgraph/knowledge/nhtsa.py`
@@ -219,8 +223,8 @@ Human review/publication spine:
 - [x] prevent candidate-only source authority from winning curator conflict resolution
 
 Remaining Phase 6 work:
-- [ ] define and persist an explicit trusted `provider_connection` → `catalog_source` binding
-- [ ] define the trusted execution role/path that resolves provider configuration and its bound source without widening collector authority
+- [x] define and persist an explicit trusted `provider_connection` → `catalog_source` binding
+- [x] define the trusted execution role/path that resolves provider configuration and its bound source without widening collector authority
 - [ ] activate real approved-provider ingestion only after that binding exists
 - [ ] expose safe provider/source configuration and enable/disable controls through authenticated operator/admin flow where required
 - [ ] broaden canonical materialization to additional domains where the MVP provider pipeline requires it
