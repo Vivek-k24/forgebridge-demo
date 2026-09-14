@@ -8,6 +8,16 @@ from ..identity.auth.schemas import UserRole
 
 ProviderKind = Literal["internal_data", "vehicle_data", "ai", "manufacturer"]
 ProviderCredentialStorage = Literal["encrypted_database", "external_reference"]
+SourceClass = Literal[
+    "government",
+    "oem_service",
+    "licensed_oem_derived",
+    "oem_parts",
+    "industry_standard",
+    "retailer",
+    "community",
+]
+SourceLicenseStatus = Literal["unreviewed", "approved", "prohibited"]
 OperatorAuditAction = Literal[
     "provider_created",
     "provider_updated",
@@ -15,10 +25,16 @@ OperatorAuditAction = Literal[
     "provider_disabled",
     "provider_credential_saved",
     "provider_credential_removed",
+    "source_created",
+    "source_updated",
+    "provider_source_binding_created",
+    "provider_source_binding_enabled",
+    "provider_source_binding_disabled",
     "preview_operator_bootstrap",
     "user_role_changed",
 ]
 PROVIDER_KEY_PATTERN = r"^[a-z0-9][a-z0-9_-]{1,95}$"
+SOURCE_KEY_PATTERN = r"^[a-z0-9][a-z0-9_.-]{0,127}$"
 
 
 def _clean_optional(value: str | None) -> str | None:
@@ -166,6 +182,111 @@ class ProviderRead(BaseModel):
     secret_storage: ProviderCredentialStorage | None
     secret_hint: str | None
     notes: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class CatalogSourceCreate(BaseModel):
+    source_key: str = Field(min_length=1, max_length=128, pattern=SOURCE_KEY_PATTERN)
+    display_name: str = Field(min_length=1, max_length=180)
+    source_class: SourceClass
+    license_status: SourceLicenseStatus = "unreviewed"
+    automation_allowed: bool = False
+    terms_url: str | None = Field(default=None, max_length=1024)
+    notes: str | None = Field(default=None, max_length=1000)
+
+    @field_validator("source_key")
+    @classmethod
+    def normalize_key(cls, value: str) -> str:
+        return value.strip().casefold()
+
+    @field_validator("display_name")
+    @classmethod
+    def clean_name(cls, value: str) -> str:
+        return " ".join(value.split())
+
+    @field_validator("terms_url")
+    @classmethod
+    def validate_terms_url(cls, value: str | None) -> str | None:
+        cleaned = _clean_optional(value)
+        if cleaned is not None and not cleaned.startswith(("https://", "http://")):
+            raise ValueError("terms_url must use http or https")
+        return cleaned
+
+    @field_validator("notes")
+    @classmethod
+    def clean_notes(cls, value: str | None) -> str | None:
+        return _clean_optional(value)
+
+    @model_validator(mode="after")
+    def automation_requires_approved_license(self):
+        if self.automation_allowed and self.license_status != "approved":
+            raise ValueError("automation_allowed requires an approved source license")
+        return self
+
+
+class CatalogSourceUpdate(BaseModel):
+    display_name: str | None = Field(default=None, min_length=1, max_length=180)
+    license_status: SourceLicenseStatus | None = None
+    automation_allowed: bool | None = None
+    terms_url: str | None = Field(default=None, max_length=1024)
+    notes: str | None = Field(default=None, max_length=1000)
+
+    @field_validator("display_name")
+    @classmethod
+    def clean_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return " ".join(value.split())
+
+    @field_validator("terms_url")
+    @classmethod
+    def validate_terms_url(cls, value: str | None) -> str | None:
+        cleaned = _clean_optional(value)
+        if cleaned is not None and not cleaned.startswith(("https://", "http://")):
+            raise ValueError("terms_url must use http or https")
+        return cleaned
+
+    @field_validator("notes")
+    @classmethod
+    def clean_notes(cls, value: str | None) -> str | None:
+        return _clean_optional(value)
+
+
+class CatalogSourceRead(BaseModel):
+    id: UUID
+    source_key: str
+    display_name: str
+    source_class: SourceClass
+    license_status: SourceLicenseStatus
+    automation_allowed: bool
+    terms_url: str | None
+    notes: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class ProviderSourceBindingCreate(BaseModel):
+    provider_connection_id: UUID
+    source_id: UUID
+    enabled: bool = False
+
+
+class ProviderSourceBindingUpdate(BaseModel):
+    enabled: bool
+
+
+class ProviderSourceBindingRead(BaseModel):
+    id: UUID
+    provider_connection_id: UUID
+    provider_key: str
+    provider_enabled: bool
+    source_id: UUID
+    source_key: str
+    source_license_status: SourceLicenseStatus
+    source_automation_allowed: bool
+    enabled: bool
+    ready_for_ingestion: bool
     created_at: datetime
     updated_at: datetime
 
