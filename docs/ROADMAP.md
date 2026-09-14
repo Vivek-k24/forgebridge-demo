@@ -25,13 +25,20 @@ These percentages are strict MVP completion estimates, not code-volume estimates
 
 | Area | Completion |
 |---|---:|
-| Core software/platform architecture | 81% |
-| Security, ownership and data isolation | 89% |
+| Core software/platform architecture | 86% |
+| Security, ownership and data isolation | 93% |
 | Error/timeout/degraded resilience | 86% |
-| Human RBAC | 65% |
-| Canonical automotive data pipeline | 30% |
+| Human RBAC | 90% |
+| Canonical automotive data pipeline | 75% |
 | Broad canonical automotive knowledge | 8-10% |
-| Five-model consumer MVP | 48% |
+| Five-model consumer MVP | 50% |
+
+Last exact green implementation candidate before documentation-only status updates:
+- `e1f2ceafd7bf8be3fe46f325c3dcbb7c1d4a3505`
+- API CI #733: passed, including migration, persisted-history, RBAC, source-authority, Phase 6 lifecycle, adopted-baseline, container-build and readiness-smoke gates
+- Web CI #596: passed
+- consolidation preview database: `0050_claim_authority_policy`
+- production database: intentionally unchanged at `0020_catalog_coverage`
 
 Major existing strengths:
 - authentication and server-side sessions
@@ -49,19 +56,23 @@ Major existing strengths:
 - standardized degraded/unavailable UI state
 - versioned, owner-scoped read-only offline repair packs with public-shell-only service-worker caching
 - persistent human roles with operator-managed, audited role assignment and a last-admin guardrail
-- reviewer-gated staging review with a separate least-privilege PostgreSQL reviewer role
-- verified evidence promotion remains distinct from canonical automotive publication
-- staging/canonical privilege separation
+- contributor, reviewer, curator and materializer operations separated by API and PostgreSQL privilege boundaries
+- immutable staging/raw evidence, reviewer-gated verified evidence and MechanicalClaim publication
+- database-backed source-authority policy with fail-closed publication and conflict resolution
+- explicit canonical conflict quarantine, resolution, reopen and claim supersession
+- verified-claim-to-repair materialization with canonical version/evidence envelopes and supersession
+- fixed adopted schema baseline at migration `0046_pipeline_actor_roles`, with baseline-to-current-head equivalence CI
+- production-copy migration proof through the adoption checkpoint without modifying production
 - private photo storage implementation with hosted Blob support and local private-volume fallback
 
 Major gaps:
-- no broad canonical repair library
+- no broad canonical repair library yet
+- real approved-provider ingestion and generic extraction/normalization adapters are not yet complete
+- canonical materialization beyond the current repair-definition/requirement/procedure publication path remains incomplete where Phase 6 needs it
 - hosted durable photo persistence still needs environment/configuration proof before production cutover
 - browser E2E and final offline/degraded regression coverage
-- contributor submission and curator publication/conflict-resolution actions do not exist yet because their Phase 6 pipeline operations do not exist yet
-- canonical evidence-to-repair materialization
 - source-code vehicle-data invariant not yet enforced automatically
-- clean migration baseline and production-copy migration proof remain outstanding
+- reference-fleet canonical data coverage remains Phase 7/8 work
 
 ## 3. Fixed implementation order
 
@@ -75,18 +86,26 @@ Task tracking convention:
 
 Goal: one coherent implementation line before new automotive data work.
 
-Status: **In progress.** The active line is consolidated, but the remaining temporary salvage branches still require final accounting before the exit gate is closed.
+Status: **Functionally accounted, consolidation line still open.** Historical branch contents have been inventoried and useful generic assets/ideas have been explicitly accounted for. Temporary branches are retained until explicit cleanup approval; branch deletion is not an implementation requirement.
 
 - [x] Work from a single consolidation line.
 - [x] Replace stale documentation with `ROADMAP.md` and `BLUEPRINT.md`.
 - [x] Preserve all spreadsheets/JSON/CSV/database data assets.
 - [x] Remove obsolete narrative docs, old architectural instructions and obsolete prototypes from the active line.
 - [x] Inventory every Git branch.
-- [ ] Selectively port/account for useful code and data from the remaining temporary salvage branches; do not wholesale merge historical experiment branches. **Active.**
+- [x] Selectively port/account for useful code and data from temporary salvage branches; do not wholesale merge historical experiment branches.
 - [x] Remove known code paths that no longer belong to the target architecture.
 - [x] Externalize known hard-coded vehicle facts from source/CI into data fixtures or database data. Final automated source-code invariant proof remains Phase 9.
 - [x] Make supported vehicle selection data-driven.
 - [x] Retire obsolete historical test/acceptance suites while keeping build, lint, dependency-audit and container-smoke CI operational.
+- [ ] Merge the exact validated consolidation result to `main`. **Production cutover gate; not authorized yet.**
+
+Salvage accounting notes:
+- reference-fleet external data assets are preserved
+- generic computer/service-tool support-boundary behavior is represented on the active line
+- historical workbench code is not promoted wholesale because it bypasses the current human publication boundary
+- historical raw/unstructured retailer collector experiments remain reference-only because they conflict with approved-source-first policy
+- no temporary Git or Neon branch has been deleted as part of this accounting
 
 Exit gate:
 - no useful code remains stranded on an old branch
@@ -145,18 +164,17 @@ The functional Phase 2 exit gate is satisfied for the current read-only offline 
 
 ### Phase 3 — Complete security and RBAC boundaries
 
-Status on `partgraph-mvp-consolidation`:
+Status: **Functional exit gate satisfied for current operations.** Human authorization and PostgreSQL execution roles now cover the complete implemented evidence-to-repair publication path.
+
 - all five human roles are persistent account states: owner, contributor, reviewer, curator and operator/admin
-- reusable API role dependencies exist for contributor-capable, reviewer, curator and operator operations
-- operator/admin routes use explicit operator authorization rather than UI hiding
-- operator/admin can list accounts and assign human roles through audited API/UI controls; the last active operator/admin cannot be demoted
-- evidence review is restricted to reviewer, curator or operator/admin accounts and runs under a separate `partgraph_reviewer` PostgreSQL role
-- the reviewer database role can read staging evidence, update only review fields and create immutable verified-evidence snapshots; it has no canonical write authority
-- verification currently stops at `CatalogVerifiedEvidence`; it cannot publish `MechanicalClaim`, vehicle truth, repair definitions, operations or requirements
-- contributor candidate-submission and curator publication/conflict-resolution endpoints are intentionally not fabricated ahead of the Phase 6 pipeline operations they would authorize
-- shared canonical and vehicle reads now use an explicit authenticated ordinary-user boundary; reviewer-only staging/reconciliation/coverage reads narrow the transaction to `partgraph_reviewer`
-- migration `0032_shared_read_privileges` grants only the missing shared read privileges and CI exercises the real PostgreSQL role boundary
-- API CI and Web CI passed for `a28a5372b310fe11e696789c7840f54170aca5ed`, including migration `0032`, live PostgreSQL RBAC tests and container smoke
+- contributor submission uses a staging-only `partgraph_contributor` database role
+- reviewer decisions and immutable verified-evidence snapshots use `partgraph_reviewer`
+- curator MechanicalClaim publication/conflict resolution uses `partgraph_curator`
+- canonical repair materialization narrows into dedicated `partgraph_materializer`; the ordinary curator role does not receive broad canonical repair writes
+- `partgraph_materializer` can read MechanicalClaim but cannot update it
+- claim publication, conflict resolution and materialization coordinate with advisory locks rather than widening claim-table write grants
+- source-authority policy is readable by curator but not writable by curator
+- ordinary authenticated owner operations retain explicit shared-read/private-owner-state boundaries
 
 - [x] Preserve `partgraph_app` least-privilege access.
 - [x] Preserve collector staging-only privilege.
@@ -165,19 +183,18 @@ Status on `partgraph-mvp-consolidation`:
 - [x] Define human roles: owner/user, contributor, reviewer, curator and operator/admin.
 - [x] Enforce roles in current API services.
 - [x] Enforce database privileges where practical.
+- [x] Separate contributor, reviewer, curator and canonical-materializer execution authority.
 - [x] Do not expose operator workbench functionality before RBAC is present.
 - [x] Keep canonical knowledge shared/read-only to authenticated ordinary users.
 - [x] Keep owner state private.
 - [x] Keep candidate acquisition isolated from canonical truth.
 
 Exit gate:
-Every read/write/promotion operation has an explicit actor and authorization boundary.
-
-The functional Phase 3 exit gate is satisfied for operations that currently exist. Contributor candidate-submission and curator publication/conflict-resolution authorization will be added with the corresponding Phase 6 operations rather than fabricating unused write paths early.
+Every implemented read/write/review/promotion/materialization operation has an explicit actor and authorization boundary.
 
 ### Phase 4 — Complete the 18-domain canonical schema
 
-Status: **In progress.** Domains 1-9 are complete. Exact identity, structure, part identity, fitment, interchange, the typed physical relationship graph, canonical hardware and structured repair resources all have dedicated relational models. Migration `0040_materials_consumables` adds canonical fluids, lubricants, refrigerants, materials and consumables; exact-configuration material compatibility; optional physical-system placement; safety/disposal metadata; and bindings to repair fluid/consumable requirements. Quantity/capacity measurements remain deliberately in the next specifications/limits domain rather than being duplicated here. The Domain 9 implementation passed API CI #603 and Web CI #466, including fresh PostgreSQL migration, least-privilege database checks and container smoke, on `fa96c5f3189e5c0a6d913fb4262723708da0930a`.
+Status: **Complete for MVP representational schema.** Broad automotive knowledge population is intentionally separate Phase 6/7/8 work.
 
 Implement the Blueprint domains without vehicle-specific application code:
 
@@ -190,58 +207,82 @@ Implement the Blueprint domains without vehicle-specific application code:
 - [x] hardware/fasteners
 - [x] tools/equipment/workspace
 - [x] fluids/materials/consumables
-- [ ] specifications/limits
-- [ ] repair definitions/operations
-- [ ] procedure actions/dependencies
-- [ ] triggered downstream operations
-- [ ] diagnostics/inspections
-- [ ] electrical/sensor/connectors
-- [ ] safety/capability boundaries
-- [ ] evidence/provenance/conflicts/versioning
-- [ ] owner Garage/session/memory/readiness/progress
+- [x] specifications/limits
+- [x] repair definitions/operations
+- [x] procedure actions/dependencies
+- [x] triggered downstream operations
+- [x] diagnostics/inspections
+- [x] electrical/sensor/connectors
+- [x] safety/capability boundaries
+- [x] evidence/provenance/conflicts/versioning
+- [x] owner Garage/session/memory/readiness/progress
 
 Exit gate:
 An empty database can represent the whole MVP without hard-coded reference-vehicle facts.
 
 ### Phase 5 — Clean migration baseline
 
-Status: **Pending Phase 4.**
+Status: **Complete.** The adopted baseline is deliberately a fixed checkpoint at `0046_pipeline_actor_roles`; later migrations remain normal forward history rather than regenerating the baseline on every schema change.
 
-- [ ] Keep production owner data intact.
-- [ ] Build a schema-only future baseline.
-- [ ] Move reference/seed vehicle facts to external data fixtures.
-- [ ] Test fresh database creation.
-- [ ] Test migration against a current production copy.
-- [ ] Compare schema and owner-state invariants.
-- [ ] Adopt the clean baseline only after proof.
-- [ ] Never reset production to simplify migration work.
+- [x] Keep production owner data intact.
+- [x] Build and adopt a schema-only future baseline at `0046_pipeline_actor_roles`.
+- [x] Move reference/seed vehicle facts to external data fixtures.
+- [x] Test fresh database creation.
+- [x] Test migration against a current production copy through the adoption checkpoint.
+- [x] Compare all pre-existing production data-table row counts and deterministic content digests during production-copy proof.
+- [x] Preserve persisted owner-state invariants through `0020_catalog_coverage` to current-head CI upgrades.
+- [x] Repair the historical rewritten-0045 case with a forward migration and permanent regression gate.
+- [x] Prove the fixed adopted 0046 baseline upgrades to the current head with schema equivalence in CI.
+- [x] Never reset production to simplify migration work.
+
+Production-copy adoption proof:
+- fresh copy of current production migrated from `0020_catalog_coverage` through `0046_pipeline_actor_roles`
+- all 35 pre-existing data tables matched production by row count and deterministic content digest
+- production itself remained at `0020_catalog_coverage`
+- forward migrations after the adoption checkpoint are exercised by fresh, persisted-history and adopted-baseline upgrade gates in CI
 
 Exit gate:
-Fresh installs and production upgrades follow a generic schema path.
+Fresh installs and production upgrades follow a generic schema path while the fixed baseline remains an immutable checkpoint.
 
 ### Phase 6 — Canonical data and provider pipeline
 
-Status: **Pending Phase 5.** Existing staging/provider/evidence foundations will be audited when this phase begins; they are not pre-checked as complete here.
+Status: **In progress.** The human evidence-to-claim-to-repair publication spine is implemented and green. Remaining work is primarily generic provider ingestion/extraction and broader canonical publication coverage, followed by actual knowledge population.
 
-- [ ] source registry
-- [ ] source authority policy
-- [ ] provider/connector registry
-- [ ] immutable raw capture
-- [ ] extraction/normalization
-- [ ] candidate fact generation
-- [ ] exact applicability assignment
-- [ ] conflict detection
-- [ ] reviewer decision
-- [ ] verified evidence promotion
-- [ ] mechanical claim creation
-- [ ] repair-definition materialization
-- [ ] versioning/supersession
-- [ ] audit trail
+- [x] source registry
+- [x] source authority policy
+- [x] database-backed claim-domain/source/risk authority matrix with fail-closed missing-policy behavior
+- [x] provider/connector registry foundation
+- [x] immutable raw capture
+- [ ] generic extraction/normalization adapters
+- [x] candidate fact generation foundation
+- [x] exact applicability assignment and enforcement
+- [x] conflict detection/quarantine
+- [x] reviewer decision
+- [x] verified evidence promotion
+- [x] mechanical claim creation
+- [x] conflict resolution, reopen and claim supersession
+- [x] repair-definition/requirement/procedure materialization
+- [x] canonical publication versioning/supersession
+- [x] canonical record evidence/audit trail
+- [x] dedicated least-privilege materializer boundary
+- [x] prevent candidate-only source authority from winning curator conflict resolution
+- [ ] real approved-provider ingestion/connector operations
+- [ ] broader canonical materialization for additional domains where required by the MVP provider pipeline
+- [ ] broad canonical repair knowledge population
+
+Current source-authority contract at migration `0050_claim_authority_policy`:
+- policy scope is claim domain × source class × risk class
+- 70 claim-policy records encode the existing authority matrix as canonical data
+- government safety-campaign authority is represented without inventing a false canonical repair domain
+- conflict, exact-applicability and explicit-support rules remain product invariants
+- missing, malformed or insufficient authority evidence fails closed
+- curator can read source-authority policy but cannot rewrite it
 
 MVP provider strategy:
 - canonical vehicle and repair data may come from PartGraph database tables and approved backend data files through the same provider/connector boundary
 - external URLs or public services may be used only through backend adapters
 - the frontend must not contain provider secrets or vehicle-specific source logic
+- no real external collector/provider ingestion is activated merely because the generic pipeline exists
 
 Production provider strategy:
 - commercial vehicle-data providers, AI providers and manufacturer integrations are registered/configured through an authenticated admin/operator UI
@@ -254,13 +295,13 @@ Rules:
 - missing remains missing
 - conflicts remain explicit until resolved
 - extraction confidence is not source authority
-- retailer data is not sufficient mechanical truth by itself
+- retailer/community evidence cannot be elevated by conflict resolution when its authority policy is candidate-only
 - old collector thresholds are not inherited automatically
 - AI cannot directly publish canonical knowledge
 
 ### Phase 7 — Primary end-to-end vehicle
 
-Status: **Pending Phase 6.**
+Status: **Pending sufficient Phase 6 generic ingestion/publication coverage.**
 
 Use the 2009 Honda Civic Hybrid as the deepest first validation configuration.
 
@@ -298,9 +339,7 @@ The same source code executes workflows for all five model families.
 
 ### Phase 9 — Build the fresh MVP validation suite
 
-Status: **Pending functional MVP completion.**
-
-Do not revive the historical tests removed during consolidation. Build a new validation suite against the completed Blueprint and the final MVP behavior.
+Status: **Pending functional MVP completion.** Existing permanent CI gates remain active; this phase adds the final completed-MVP validation suite rather than reviving historical acceptance infrastructure.
 
 Required gates:
 - [ ] unit/domain tests
@@ -324,7 +363,7 @@ Required gates:
 
 ### Phase 10 — Production MVP cutover
 
-Status: **Pending Phase 9.**
+Status: **Pending Phase 9 and explicit production approval.**
 
 - [ ] merge only an exact green commit
 - [ ] deploy frontend/backend from the same source commit
@@ -336,20 +375,22 @@ Status: **Pending Phase 9.**
 
 ## 4. Branch consolidation policy
 
-Do not merge historical branches wholesale. The following ledger was re-verified against the live repository on 2026-09-12.
+Do not merge historical branches wholesale. The following ledger was re-verified against the live repository on 2026-09-12 and salvage accounting was completed before Phase 6 materialization work.
 
 ### Keep
 
 - `main` — production/default line
 - `partgraph-mvp-consolidation` — active consolidation implementation line
 
-### Keep temporarily for selective salvage
+### Keep temporarily as historical references
 
-- `partgraph-local-catalog-workbench` — newest surviving workbench/identity-catalog line; useful generic acquisition/schema ideas must be reviewed selectively
-- `partgraph-raw-catalog-collectors` — generic staging/collector ideas must be reviewed selectively; old source-policy assumptions are not automatically inherited
-- `partgraph-reference-fleet-mvp` — preserve external reference-fleet data and generic support-boundary ideas before retirement
+These branches have been accounted for. They remain present until explicit cleanup approval; their existence does not authorize revival or wholesale merge.
 
-### Ready to retire
+- `partgraph-local-catalog-workbench` — historical generic acquisition/schema ideas; deterministic promotion behavior is superseded by current human publication boundaries
+- `partgraph-raw-catalog-collectors` — historical staging/collector ideas; retailer/unstructured source assumptions are superseded by current source-authority policy
+- `partgraph-reference-fleet-mvp` — external reference-fleet assets and generic support-boundary history are preserved/accounted for
+
+### Ready to retire when branch cleanup is explicitly approved
 
 These branches are either already fully represented in newer history, are duplicate temporary refs, or contain experiments explicitly rejected/superseded by the current architecture:
 
@@ -380,16 +421,11 @@ These branches are either already fully represented in newer history, are duplic
 - `tmp-test-ignore7`
 
 Verification notes:
-- `partgraph-local-acceptance-harness`, `partgraph-local-acceptance-harness-v2`, `partgraph-fix-light-card-contrast`, `partgraph-github-pages-preview`, `partgraph-platform-ci-cd`, `partgraph-reference-civic-hybrid-profile`, `partgraph-repair-session-foundation`, and `partgraph-verify-workbook-exact-selection` are zero commits ahead of current `main` at the time verified.
-- `noop-ignore` and all `tmp-test-ignore2` through `tmp-test-ignore7` resolve to the same old workbench commit; that commit is fully contained in `partgraph-local-catalog-workbench`, which is retained.
-- `partgraph-catalog-coverage-dashboard-backend` contains catalog-coverage files already represented on the active implementation line.
-- `partgraph-production-acceptance-run` is obsolete acceptance-test infrastructure and is retired under the decision to rebuild tests after the functional MVP.
-- `partgraph-review-gemini-workbook` contains only an obsolete review workflow; the workbook/data asset is already preserved independently.
-- `partgraph-trim-catalog-provider` and its probe line are retired with the CarsXE path.
-- the Garage/VIN fallback branch has been selectively accounted for: verified canonical matching and decode-only fallback are retained in consolidation; the path that would save VIN-derived identity without protected VIN storage is intentionally not adopted because protected persistence must fail closed without crypto keys.
-- `partgraph-hosted-parity-hardening` has been selectively accounted for: its private Vercel Blob/local-volume storage implementation is present byte-for-byte in consolidation; its old GitHub Pages root redirect is intentionally superseded; its old hosted-photo test is not revived because the final test suite is intentionally rebuilt in Phase 9; and its old web API-base fallback is superseded by the current explicit/same-origin configuration.
-
-No branch in the temporary-salvage set is retired until its useful generic code/data is explicitly accounted for.
+- old acceptance branches are not revived; Phase 9 builds validation against the final Blueprint
+- obsolete CarsXE/probe work remains retired
+- Garage/VIN fallback behavior was selectively accounted for; protected persistence remains fail-closed without crypto keys
+- hosted-parity storage behavior is represented on the active line, while obsolete hosting assumptions are not
+- temporary migration-test Git/Neon branches are not deleted without explicit approval
 
 ## 5. No-deviation rule
 
