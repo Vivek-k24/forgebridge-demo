@@ -260,6 +260,7 @@ class PipelineDatabasePrivilegeTests(unittest.TestCase):
 
 class PipelineConflictLifecycleTests(unittest.IsolatedAsyncioTestCase):
     source_id: UUID
+    vehicle_configuration_id: UUID
     evidence_ids: list[UUID]
     claim_ids: list[UUID]
     conflict_id: UUID
@@ -278,6 +279,13 @@ class PipelineConflictLifecycleTests(unittest.IsolatedAsyncioTestCase):
 
         with psycopg.connect(_database_url()) as connection:
             with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT id FROM public.vehicle_configurations ORDER BY id LIMIT 1"
+                )
+                vehicle_row = cursor.fetchone()
+                assert vehicle_row is not None
+                self.vehicle_configuration_id = vehicle_row[0]
+
                 cursor.execute(
                     """
                     INSERT INTO public.catalog_sources
@@ -320,10 +328,11 @@ class PipelineConflictLifecycleTests(unittest.IsolatedAsyncioTestCase):
                     cursor.execute(
                         """
                         INSERT INTO public.mechanical_claims
-                            (id, source_id, verified_evidence_id, claim_domain, claim_risk,
-                             normalized_key, repair_key, claim_payload, explicit_claim,
-                             exact_applicability, promotion_state, conflict_key)
-                        VALUES (%s, %s, %s, 'repair_requirement', 'normal',
+                            (id, source_id, verified_evidence_id, vehicle_configuration_id,
+                             claim_domain, claim_risk, normalized_key, repair_key,
+                             claim_payload, explicit_claim, exact_applicability,
+                             promotion_state, conflict_key)
+                        VALUES (%s, %s, %s, %s, 'repair_requirement', 'normal',
                                 'fixture.requirement', 'fixture.repair', %s, true,
                                 true, 'conflict', %s)
                         """,
@@ -331,6 +340,7 @@ class PipelineConflictLifecycleTests(unittest.IsolatedAsyncioTestCase):
                             claim_id,
                             self.source_id,
                             evidence_id,
+                            self.vehicle_configuration_id,
                             Jsonb({"value": index}),
                             self.conflict_key,
                         ),
@@ -455,10 +465,11 @@ class PipelineConflictLifecycleTests(unittest.IsolatedAsyncioTestCase):
                 cursor.execute(
                     """
                     INSERT INTO public.mechanical_claims
-                        (id, source_id, verified_evidence_id, claim_domain, claim_risk,
-                         normalized_key, repair_key, claim_payload, explicit_claim,
-                         exact_applicability, promotion_state, conflict_key)
-                    VALUES (%s, %s, %s, 'repair_requirement', 'normal',
+                        (id, source_id, verified_evidence_id, vehicle_configuration_id,
+                         claim_domain, claim_risk, normalized_key, repair_key,
+                         claim_payload, explicit_claim, exact_applicability,
+                         promotion_state, conflict_key)
+                    VALUES (%s, %s, %s, %s, 'repair_requirement', 'normal',
                             'fixture.requirement', 'fixture.repair', %s, true,
                             true, 'conflict', %s)
                     """,
@@ -466,6 +477,7 @@ class PipelineConflictLifecycleTests(unittest.IsolatedAsyncioTestCase):
                         self.claim_ids[2],
                         self.source_id,
                         self.evidence_ids[2],
+                        self.vehicle_configuration_id,
                         Jsonb({"value": 3}),
                         self.conflict_key,
                     ),
@@ -478,6 +490,7 @@ class PipelineConflictLifecycleTests(unittest.IsolatedAsyncioTestCase):
             claim_payload={"value": 3},
             explicit_claim=True,
             exact_applicability=True,
+            vehicle_configuration_id=self.vehicle_configuration_id,
             repair_key="fixture.repair",
         )
         async with session_factory() as db:
