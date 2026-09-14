@@ -3,6 +3,12 @@ import unittest
 
 import psycopg
 from psycopg.errors import InsufficientPrivilege
+from test_materializer_database_privileges import (
+    MaterializerDatabasePrivilegeTests as _MaterializerDatabasePrivilegeTests,
+)
+from test_repair_materialization_database import (
+    RepairMaterializationDatabaseTests as _RepairMaterializationDatabaseTests,
+)
 
 DATABASE_URL_ENV = "PARTGRAPH_DATABASE_URL"
 APP_ROLE = "partgraph_app"
