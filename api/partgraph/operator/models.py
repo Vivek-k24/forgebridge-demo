@@ -1,7 +1,18 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, LargeBinary, SmallInteger, String, Uuid, func
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    LargeBinary,
+    SmallInteger,
+    String,
+    UniqueConstraint,
+    Uuid,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -75,6 +86,60 @@ class ProviderConnection(Base):
     updated_by: Mapped[UUID] = mapped_column(
         Uuid(as_uuid=True),
         ForeignKey("users.id"),
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class ProviderSourceBinding(Base):
+    """Explicit operator-approved mapping from acquisition mechanism to evidence source."""
+
+    __tablename__ = "provider_source_bindings"
+    __table_args__ = (
+        UniqueConstraint(
+            "provider_connection_id",
+            "source_id",
+            name="uq_provider_source_bindings_pair",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
+    provider_connection_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("provider_connections.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    source_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("catalog_sources.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+    )
+    created_by: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    updated_by: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("users.id", ondelete="RESTRICT"),
         nullable=False,
     )
     created_at: Mapped[datetime] = mapped_column(
