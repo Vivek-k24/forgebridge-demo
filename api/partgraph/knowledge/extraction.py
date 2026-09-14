@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Literal, Protocol
 from uuid import UUID
@@ -8,8 +8,10 @@ from uuid import UUID
 from pydantic import BaseModel, Field, ValidationError, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..identity.auth.roles import assume_ingestor_database_role
 from ..identity.vehicle.models import VehicleConfiguration
-from .models import CatalogSourceRecord
+from ..operator.models import ProviderConnection, ProviderSourceBinding
+from .models import CatalogSource, CatalogSourceRecord
 from .staging import (
     StageRecordInput,
     complete_ingestion_batch,
@@ -208,11 +210,12 @@ async def extract_and_stage_provider_record(
     adapter: ExtractionAdapter,
     record: RawProviderRecord,
 ) -> StagedExtractionResult:
-    """Normalize one raw record into pending staging candidates atomically.
+    """Normalize one trusted provider/source pair into pending staging candidates.
 
-    The caller supplies a trusted provider→source mapping. This function does
-    not fetch remote data, resolve secrets, review evidence, create claims, or
-    write canonical truth.
+    This low-level function performs no network access, secret resolution,
+    evidence review, claim creation, or canonical publication. Production
+    ingestion should call `extract_and_stage_bound_provider_record`, which
+    resolves the provider/source pair from a persisted trusted binding.
     """
 
     _validate_execution_boundary(provider=provider, source=source, adapter=adapter)
@@ -287,4 +290,46 @@ async def extract_and_stage_provider_record(
         ingestion_batch_id=batch.id,
         staging_record_ids=tuple(item.id for item in staged),
         inserted_count=inserted_count,
+    )
+
+
+async def extract_and_stage_bound_provider_record(
+    session: AsyncSession,
+    *,
+    binding_id: UUID,
+    adapter: ExtractionAdapter,
+    record: RawProviderRecord,
+) -> StagedExtractionResult:
+    """Resolve an approved persisted provider/source binding and stage candidates.
+
+    The transaction is narrowed to the dedicated ingestor database role before
+    the binding is read. An arbitrary caller-supplied provider/source pair can
+    therefore no longer stand in for the trusted production ingestion path.
+    """
+
+    await assume_ingestor_database_role(session)
+    binding = await session.get(ProviderSourceBinding, binding_id)
+    if binding is None:
+        raise ExtractionError("provider/source binding does not exist")
+    if not binding.enabled:
+        raise ExtractionError("provider/source binding is disabled")
+
+    provider = await session.get(ProviderConnection, binding.provider_connection_id)
+    source = await session.get(CatalogSource, binding.source_id)
+    if provider is None or source is None:
+        raise ExtractionError("provider/source binding references unavailable registry data")
+
+    bound_record = replace(
+        record,
+        provenance={
+            **record.provenance,
+            "provider_source_binding_id": str(binding.id),
+        },
+    )
+    return await extract_and_stage_provider_record(
+        session,
+        provider=provider,
+        source=source,
+        adapter=adapter,
+        record=bound_record,
     )
