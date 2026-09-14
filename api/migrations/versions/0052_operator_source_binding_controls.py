@@ -5,7 +5,7 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0052_operator_source_binding_controls"
+revision: str = "0052_operator_source_controls"
 down_revision: str | None = "0051_provider_source_binding"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
