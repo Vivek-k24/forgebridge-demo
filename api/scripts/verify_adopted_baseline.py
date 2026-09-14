@@ -16,11 +16,25 @@ EXPECTED_ADOPTION_STATE = "adopted"
 EXPECTED_HEAD = "0046_pipeline_actor_roles"
 
 
-def _encoded_archive() -> str:
-    paths = [ARCHIVE_PATH, *sorted(BASELINE_DIR.glob("schema.sql.gz.b64.[0-9][0-9][0-9]"))]
-    if not all(path.is_file() for path in paths):
+def _archive_paths() -> list[Path]:
+    if not ARCHIVE_PATH.is_file():
         raise ValueError("adopted baseline archive is incomplete")
-    return "".join(path.read_text(encoding="ascii").strip() for path in paths)
+
+    sidecars = sorted(BASELINE_DIR.glob("schema.sql.gz.b64.[0-9][0-9][0-9]"))
+    expected_sidecars = [
+        BASELINE_DIR / f"schema.sql.gz.b64.{index:03d}"
+        for index in range(1, len(sidecars) + 1)
+    ]
+    if sidecars != expected_sidecars:
+        raise ValueError("adopted baseline archive chunks are not contiguous")
+    return [ARCHIVE_PATH, *sidecars]
+
+
+def _encoded_archive() -> str:
+    return "".join(
+        path.read_text(encoding="ascii").strip()
+        for path in _archive_paths()
+    )
 
 
 def load_adopted_schema() -> bytes:
