@@ -38,6 +38,8 @@ _CANONICAL_CONFLICT_DOMAINS: dict[ClaimDomain, str] = {
     ClaimDomain.REPAIR_REQUIREMENT: "requirement",
     ClaimDomain.REPAIR_PROCEDURE: "procedure",
     ClaimDomain.PART_FITMENT: "fitment",
+    ClaimDomain.VEHICLE_STRUCTURE: "structure",
+    ClaimDomain.VEHICLE_SPECIFICATION: "specification",
 }
 
 
