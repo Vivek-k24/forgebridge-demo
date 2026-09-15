@@ -13,6 +13,7 @@ from .local_bootstrap import (
     local_operator_bootstrap_status,
 )
 from .nhtsa import stage_nhtsa_recall_query
+from .preview_bootstrap import bootstrap_preview_operator, preview_operator_bootstrap_status
 from .reference_parts import stage_reference_parts_dataset
 from .schemas import (
     CatalogSourceCreate,
@@ -34,7 +35,6 @@ from .schemas import (
     UserRoleUpdate,
 )
 from .service import (
-    bootstrap_preview_operator,
     change_user_role,
     create_catalog_source,
     create_provider,
@@ -44,7 +44,6 @@ from .service import (
     list_operator_users,
     list_provider_source_bindings,
     list_providers,
-    preview_operator_bootstrap_status,
     update_catalog_source,
     update_provider,
     update_provider_source_binding,
@@ -69,10 +68,9 @@ async def preview_bootstrap_status(
     user: CurrentUserDep,
     session: AuthSessionDep,
 ) -> PreviewOperatorBootstrapStatus:
-    del user
     if local_operator_bootstrap_environment():
         return await local_operator_bootstrap_status(session)
-    return await preview_operator_bootstrap_status(session)
+    return await preview_operator_bootstrap_status(session, user=user)
 
 
 @router.post(
