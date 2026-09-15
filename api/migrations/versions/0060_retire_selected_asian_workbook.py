@@ -1,6 +1,6 @@
 """Retire the orphaned selected-Asian workbook lineage.
 
-The 363-row workbook import was an early breadth proof.  It intentionally kept
+The 363-row workbook import was an early breadth proof. It intentionally kept
 all rows unverified because authoritative per-row citations were not retained.
 Later provider-backed identity collection superseded this bootstrap data.
 
@@ -12,6 +12,7 @@ that configuration or its dependent data.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from uuid import UUID
 
 import sqlalchemy as sa
 from alembic import op
@@ -21,9 +22,9 @@ down_revision: str | None = "0059_primary_vehicle_domains"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
-WORKBOOK_NAME = "Selected_Asian_Brands_1996_2000.xlsx"
-SOURCE_COMMIT = "ab954125d89f8ae4cfc42d35af177ec1fe3938a8"
-INGESTION_SOURCE_NAME = f"github:{SOURCE_COMMIT}:{WORKBOOK_NAME}"
+# Stable identifier created by the immutable 0017 migration. Using the batch ID
+# here avoids re-importing or re-encoding the retired source artifact itself.
+INGESTION_BATCH_ID = UUID("924c6c9c-150b-5a19-9e00-718313e49193")
 COVERAGE_BATCH_KEY = "selected-asian-1996-2000-v1"
 EXPECTED_TOTAL = 363
 EXPECTED_MAKE_COUNTS = {
@@ -97,9 +98,9 @@ def _assert_staging_lineage(bind: sa.Connection) -> None:
         """
         SELECT count(*)
         FROM catalog_staging.ingestion_batches
-        WHERE source_name = :source_name
+        WHERE id = :batch_id
         """,
-        {"source_name": INGESTION_SOURCE_NAME},
+        {"batch_id": INGESTION_BATCH_ID},
     )
     if batch_count != 1:
         raise RuntimeError(
@@ -111,15 +112,13 @@ def _assert_staging_lineage(bind: sa.Connection) -> None:
         bind,
         """
         SELECT count(*)
-        FROM catalog_staging.source_records AS source_record
-        JOIN catalog_staging.ingestion_batches AS batch
-          ON batch.id = source_record.batch_id
-        WHERE batch.source_name = :source_name
-          AND source_record.candidate_type = 'vehicle_identity'
-          AND source_record.review_status = 'pending'
-          AND source_record.extraction_method = 'curated_workbook_import'
+        FROM catalog_staging.source_records
+        WHERE batch_id = :batch_id
+          AND candidate_type = 'vehicle_identity'
+          AND review_status = 'pending'
+          AND extraction_method = 'curated_workbook_import'
         """,
-        {"source_name": INGESTION_SOURCE_NAME},
+        {"batch_id": INGESTION_BATCH_ID},
     )
     if source_record_count != EXPECTED_TOTAL:
         raise RuntimeError(
@@ -222,10 +221,10 @@ def upgrade() -> None:
         sa.text(
             """
             DELETE FROM catalog_staging.ingestion_batches
-            WHERE source_name = :source_name
+            WHERE id = :batch_id
             """
         ),
-        {"source_name": INGESTION_SOURCE_NAME},
+        {"batch_id": INGESTION_BATCH_ID},
     )
     if staging_delete.rowcount != 1:
         raise RuntimeError(
