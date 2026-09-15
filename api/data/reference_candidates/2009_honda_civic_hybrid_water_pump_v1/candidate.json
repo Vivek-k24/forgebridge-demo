@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "candidate_key": "2009-honda-civic-hybrid-water-pump-downstream-v1",
-  "review_status": "pending_project_owner_review",
+  "review_status": "approved_for_mvp_reference",
   "vehicle_configuration_id": "7feb13e9-bca0-5d8b-b701-f0260cce5da1",
   "vehicle": {
     "market": "US",
@@ -12,10 +12,12 @@
     "engine": "1.3L I4 HYBRID"
   },
   "source_review": {
-    "license_status": "unreviewed",
+    "license_status": "approved",
     "automation_allowed": false,
     "proposed_source_class": "licensed_oem_derived",
-    "note": "Exact-vehicle service-manual mirror used only for candidate review. Do not promote until source licensing/authority and the mechanical facts are explicitly approved."
+    "reviewed_on": "2026-09-15",
+    "reviewed_by": "project_owner",
+    "note": "Project owner explicitly approved this exact-vehicle service-manual mirror for manually reviewed MVP evidence. Automated acquisition remains disabled."
   },
   "sources": [
     {
@@ -81,7 +83,8 @@
         "display_name": "Safe underbody access",
         "necessity": "required",
         "fulfillment_mode": "reusable",
-        "timing": "whole_repair"
+        "timing": "operation",
+        "operation_key": "remove-water-pump"
       },
       {
         "use_key": "coolant-drain-container",
@@ -90,7 +93,8 @@
         "display_name": "Coolant drain container",
         "necessity": "required",
         "fulfillment_mode": "reusable",
-        "timing": "before_start"
+        "timing": "operation",
+        "operation_key": "drain-coolant"
       }
     ],
     "operations": [
@@ -132,7 +136,14 @@
         "skippable": false,
         "prerequisite_action_keys": ["remove-water-pump"],
         "requirement_use_keys": ["replacement-water-pump", "new-water-pump-seal"],
-        "milestone_type": "physical_replacement"
+        "milestone_type": "physical_replacement",
+        "downstream_requirement_key": "cooling.refill-air-bleed-after-water-pump",
+        "downstream_title": "Refill coolant and bleed trapped air",
+        "downstream_detail": "Water-pump replacement is not mechanically complete until the cooling system has been refilled and trapped air has been bled with the heater valve open.",
+        "downstream_trigger_type": "action_completed",
+        "downstream_trigger_action_key": "install-water-pump",
+        "downstream_support_state": "supported",
+        "downstream_target_repair_key": "cooling-system-refill-air-bleed"
       }
     ]
   },
@@ -148,7 +159,8 @@
         "display_name": "Honda Long Life Antifreeze/Coolant Type 2",
         "necessity": "required",
         "fulfillment_mode": "consumed",
-        "timing": "whole_repair"
+        "timing": "operation",
+        "operation_key": "refill-and-bleed"
       }
     ],
     "operations": [
@@ -190,7 +202,7 @@
         "requirement_use_keys": ["honda-coolant-type-2"]
       }
     ],
-    "boundary_note": "Do not include Honda Diagnostic System service-reminder reset steps in this repair. This candidate is the physical refill/air-bleed operation required after water-pump replacement, not a scheduled Maintenance Minder coolant-replacement reset workflow."
+    "boundary_note": "Do not include Honda Diagnostic System service-reminder reset steps in this repair. This is the physical refill/air-bleed operation required after water-pump replacement, not a scheduled Maintenance Minder coolant-replacement reset workflow."
   },
   "downstream_relation": {
     "requirement_key": "cooling.refill-air-bleed-after-water-pump",
@@ -204,7 +216,9 @@
     "milestone_type": "physical_replacement"
   },
   "publication_boundary": {
-    "canonical_publication_allowed": false,
-    "reason": "Awaiting explicit project-owner review of the candidate facts and source licensing/authority approval."
+    "canonical_publication_allowed": true,
+    "approved_on": "2026-09-15",
+    "approved_by": "project_owner",
+    "reason": "Project owner explicitly approved this candidate and the licensed-OEM-derived mirror for manually reviewed MVP publication; automated use remains disabled."
   }
 }
