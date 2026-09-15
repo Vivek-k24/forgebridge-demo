@@ -1,0 +1,210 @@
+{
+  "schema_version": 1,
+  "candidate_key": "2009-honda-civic-hybrid-water-pump-downstream-v1",
+  "review_status": "pending_project_owner_review",
+  "vehicle_configuration_id": "7feb13e9-bca0-5d8b-b701-f0260cce5da1",
+  "vehicle": {
+    "market": "US",
+    "year": 2009,
+    "make": "Honda",
+    "model": "CIVIC",
+    "trim": "HYBRID",
+    "engine": "1.3L I4 HYBRID"
+  },
+  "source_review": {
+    "license_status": "unreviewed",
+    "automation_allowed": false,
+    "proposed_source_class": "licensed_oem_derived",
+    "note": "Exact-vehicle service-manual mirror used only for candidate review. Do not promote until source licensing/authority and the mechanical facts are explicitly approved."
+  },
+  "sources": [
+    {
+      "source_key": "candidate-charm-2009-civic-hybrid-water-pump",
+      "display_name": "2009 Civic Hybrid water-pump service-manual mirror",
+      "url": "https://charm.li/Honda/2009/Civic%20L4-1.3L%20Hybrid/Repair%20and%20Diagnosis/Engine%2C%20Cooling%20and%20Exhaust/Engine/Water%20Pump/Service%20and%20Repair/",
+      "supports": [
+        "water-pump replacement sequence",
+        "new sealing O-ring requirement",
+        "required radiator refill and cooling-system air bleed with heater valve open"
+      ]
+    },
+    {
+      "source_key": "candidate-charm-2009-civic-hybrid-coolant",
+      "display_name": "2009 Civic Hybrid coolant service-manual mirror",
+      "url": "https://charm.li/Honda/2009/Civic%20L4-1.3L%20Hybrid/Repair%20and%20Diagnosis/Maintenance/Fluids/Coolant/Service%20and%20Repair/",
+      "supports": [
+        "Honda Long Life Antifreeze/Coolant Type 2",
+        "physical refill and air-bleed sequence"
+      ]
+    },
+    {
+      "source_key": "hpn_water_pump",
+      "display_name": "Existing reviewed OEM-parts source",
+      "supports": [
+        "Engine water-pump assembly 19200-RMX-003 exact fitment",
+        "Water-pump gasket/seal 19222-PZA-003 exact fitment"
+      ]
+    }
+  ],
+  "source_repair": {
+    "repair_key": "engine-water-pump-replacement",
+    "title": "Engine water-pump replacement",
+    "proposed_capability_policy_key": "diy_supported",
+    "requirements": [
+      {
+        "use_key": "replacement-water-pump",
+        "requirement_key": "part.honda.19200-rmx-003",
+        "category": "part",
+        "display_name": "Engine water-pump assembly",
+        "necessity": "required",
+        "fulfillment_mode": "replacement_required",
+        "timing": "whole_repair",
+        "quantity": 1,
+        "unit": "each"
+      },
+      {
+        "use_key": "new-water-pump-seal",
+        "requirement_key": "hardware.honda.19222-pza-003",
+        "category": "hardware",
+        "display_name": "New water-pump sealing O-ring/gasket",
+        "necessity": "required",
+        "fulfillment_mode": "replacement_required",
+        "timing": "operation",
+        "operation_key": "install-water-pump",
+        "quantity": 1,
+        "unit": "each"
+      },
+      {
+        "use_key": "safe-underbody-access",
+        "requirement_key": "workspace.safe_underbody_access",
+        "category": "workspace",
+        "display_name": "Safe underbody access",
+        "necessity": "required",
+        "fulfillment_mode": "reusable",
+        "timing": "whole_repair"
+      },
+      {
+        "use_key": "coolant-drain-container",
+        "requirement_key": "equipment.coolant_drain_container",
+        "category": "equipment",
+        "display_name": "Coolant drain container",
+        "necessity": "required",
+        "fulfillment_mode": "reusable",
+        "timing": "before_start"
+      }
+    ],
+    "operations": [
+      {"operation_key": "drain-coolant", "label": "Drain engine coolant", "position": 0},
+      {"operation_key": "remove-water-pump", "label": "Remove engine water pump", "position": 1},
+      {"operation_key": "install-water-pump", "label": "Install engine water pump", "position": 2}
+    ],
+    "actions": [
+      {
+        "action_key": "drain-engine-coolant",
+        "title": "Drain the engine coolant",
+        "instruction": "With the engine cool, drain the engine coolant before opening the water-pump area.",
+        "position": 0,
+        "skippable": false,
+        "requirement_use_keys": ["coolant-drain-container", "safe-underbody-access"]
+      },
+      {
+        "action_key": "remove-access-and-drive-parts",
+        "title": "Remove access and drive components",
+        "instruction": "Remove the front undercover and splash shield, then remove the drive belt, water-pump pulley fasteners, and auto-tensioner needed for pump access.",
+        "position": 1,
+        "skippable": false,
+        "prerequisite_action_keys": ["drain-engine-coolant"],
+        "requirement_use_keys": ["safe-underbody-access"]
+      },
+      {
+        "action_key": "remove-water-pump",
+        "title": "Remove the water pump",
+        "instruction": "Remove the water-pump mounting fasteners and take out the pump, then inspect and clean the sealing groove and engine-block mating surface.",
+        "position": 2,
+        "skippable": false,
+        "prerequisite_action_keys": ["remove-access-and-drive-parts"]
+      },
+      {
+        "action_key": "install-water-pump",
+        "title": "Install the replacement water pump",
+        "instruction": "Install the replacement pump with a new sealing O-ring/gasket and restore the removed drive and access components in reverse order. Clean any spilled coolant.",
+        "position": 3,
+        "skippable": false,
+        "prerequisite_action_keys": ["remove-water-pump"],
+        "requirement_use_keys": ["replacement-water-pump", "new-water-pump-seal"],
+        "milestone_type": "physical_replacement"
+      }
+    ]
+  },
+  "target_repair": {
+    "repair_key": "cooling-system-refill-air-bleed",
+    "title": "Cooling-system refill and air bleed",
+    "proposed_capability_policy_key": "diy_supported",
+    "requirements": [
+      {
+        "use_key": "honda-coolant-type-2",
+        "requirement_key": "fluid.honda-long-life-coolant-type-2",
+        "category": "fluid",
+        "display_name": "Honda Long Life Antifreeze/Coolant Type 2",
+        "necessity": "required",
+        "fulfillment_mode": "consumed",
+        "timing": "whole_repair"
+      }
+    ],
+    "operations": [
+      {"operation_key": "refill-and-bleed", "label": "Refill coolant and bleed trapped air", "position": 0}
+    ],
+    "actions": [
+      {
+        "action_key": "open-bleed-and-refill",
+        "title": "Open the bleed path and refill",
+        "instruction": "Open the cooling-system air-bleed path and add the specified coolant. Close the bleed path once coolant flows steadily without trapped air at that point.",
+        "position": 0,
+        "skippable": false,
+        "requirement_use_keys": ["honda-coolant-type-2"]
+      },
+      {
+        "action_key": "fill-radiator-and-reservoir",
+        "title": "Fill the radiator and reservoir",
+        "instruction": "Fill the radiator and coolant reservoir to the service-manual levels using the specified premixed coolant.",
+        "position": 1,
+        "skippable": false,
+        "prerequisite_action_keys": ["open-bleed-and-refill"],
+        "requirement_use_keys": ["honda-coolant-type-2"]
+      },
+      {
+        "action_key": "warm-and-purge-air",
+        "title": "Warm the engine and purge remaining air",
+        "instruction": "With the heater valve open, run the engine as specified by the service procedure so remaining trapped air can leave the cooling system.",
+        "position": 2,
+        "skippable": false,
+        "prerequisite_action_keys": ["fill-radiator-and-reservoir"]
+      },
+      {
+        "action_key": "recheck-level-and-leaks",
+        "title": "Recheck coolant level and leaks",
+        "instruction": "After the engine is shut off as directed, recheck the coolant level, top up if needed, secure the radiator cap, and check the system for leaks.",
+        "position": 3,
+        "skippable": false,
+        "prerequisite_action_keys": ["warm-and-purge-air"],
+        "requirement_use_keys": ["honda-coolant-type-2"]
+      }
+    ],
+    "boundary_note": "Do not include Honda Diagnostic System service-reminder reset steps in this repair. This candidate is the physical refill/air-bleed operation required after water-pump replacement, not a scheduled Maintenance Minder coolant-replacement reset workflow."
+  },
+  "downstream_relation": {
+    "requirement_key": "cooling.refill-air-bleed-after-water-pump",
+    "title": "Refill coolant and bleed trapped air",
+    "detail": "Water-pump replacement is not mechanically complete until the cooling system has been refilled and trapped air has been bled with the heater valve open.",
+    "trigger_type": "action_completed",
+    "trigger_action_key": "install-water-pump",
+    "support_state": "supported",
+    "target_repair_key": "cooling-system-refill-air-bleed",
+    "position": 0,
+    "milestone_type": "physical_replacement"
+  },
+  "publication_boundary": {
+    "canonical_publication_allowed": false,
+    "reason": "Awaiting explicit project-owner review of the candidate facts and source licensing/authority approval."
+  }
+}

@@ -8,12 +8,14 @@ on:
       - 'api/partgraph/knowledge/nhtsa.py'
       - 'api/partgraph/knowledge/reference_parts.py'
       - 'api/data/reference/**'
+      - 'api/data/reference_candidates/**'
       - 'api/partgraph/operator/**'
       - 'api/partgraph/identity/auth/roles.py'
       - 'api/tests/test_extraction_pipeline.py'
       - 'api/tests/test_nhtsa_collector.py'
       - 'api/tests/test_operator_nhtsa_ingestion.py'
       - 'api/tests/test_reference_parts_dataset.py'
+      - 'api/tests/test_reference_repair_candidates.py'
       - 'api/tests/test_operator_reference_parts_staging.py'
       - 'api/tests/test_provider_source_binding.py'
       - 'api/tests/test_operator_source_binding_controls.py'
@@ -30,12 +32,14 @@ on:
       - 'api/partgraph/knowledge/nhtsa.py'
       - 'api/partgraph/knowledge/reference_parts.py'
       - 'api/data/reference/**'
+      - 'api/data/reference_candidates/**'
       - 'api/partgraph/operator/**'
       - 'api/partgraph/identity/auth/roles.py'
       - 'api/tests/test_extraction_pipeline.py'
       - 'api/tests/test_nhtsa_collector.py'
       - 'api/tests/test_operator_nhtsa_ingestion.py'
       - 'api/tests/test_reference_parts_dataset.py'
+      - 'api/tests/test_reference_repair_candidates.py'
       - 'api/tests/test_operator_reference_parts_staging.py'
       - 'api/tests/test_provider_source_binding.py'
       - 'api/tests/test_operator_source_binding_controls.py'
@@ -101,6 +105,7 @@ jobs:
           api/tests/test_nhtsa_collector.py
           api/tests/test_operator_nhtsa_ingestion.py
           api/tests/test_reference_parts_dataset.py
+          api/tests/test_reference_repair_candidates.py
           api/tests/test_operator_reference_parts_staging.py
           api/tests/test_provider_source_binding.py
           api/tests/test_operator_source_binding_controls.py
@@ -141,6 +146,11 @@ jobs:
         run: >-
           python -m unittest discover -s api/tests
           -p 'test_reference_parts_dataset.py'
+
+      - name: Test pending reference-repair candidate boundary
+        run: >-
+          python -m unittest discover -s api/tests
+          -p 'test_reference_repair_candidates.py'
 
       - name: Test operator-triggered reference-parts staging
         env:
