@@ -3,6 +3,8 @@ name: Canonical Publication CI
 on:
   pull_request:
     paths:
+      - 'api/data/reference/persistent_publication_plan_v1.json'
+      - 'docs/CANONICAL_PUBLICATION_RUNBOOK.md'
       - 'api/partgraph/knowledge/canonical_claim_materialization.py'
       - 'api/partgraph/knowledge/part_catalog_materialization.py'
       - 'api/partgraph/knowledge/downstream_materialization.py'
@@ -15,6 +17,7 @@ on:
       - 'api/partgraph/knowledge/source_policy.py'
       - 'api/partgraph/knowledge/provenance.py'
       - 'api/partgraph/identity/auth/roles.py'
+      - 'api/tests/test_persistent_publication_plan.py'
       - 'api/tests/test_canonical_claim_materialization_database.py'
       - 'api/tests/test_vehicle_domain_materialization_database.py'
       - 'api/tests/test_vehicle_domain_materializer_database_privileges.py'
@@ -34,6 +37,8 @@ on:
       - main
       - partgraph-mvp-consolidation
     paths:
+      - 'api/data/reference/persistent_publication_plan_v1.json'
+      - 'docs/CANONICAL_PUBLICATION_RUNBOOK.md'
       - 'api/partgraph/knowledge/canonical_claim_materialization.py'
       - 'api/partgraph/knowledge/part_catalog_materialization.py'
       - 'api/partgraph/knowledge/downstream_materialization.py'
@@ -46,6 +51,7 @@ on:
       - 'api/partgraph/knowledge/source_policy.py'
       - 'api/partgraph/knowledge/provenance.py'
       - 'api/partgraph/identity/auth/roles.py'
+      - 'api/tests/test_persistent_publication_plan.py'
       - 'api/tests/test_canonical_claim_materialization_database.py'
       - 'api/tests/test_vehicle_domain_materialization_database.py'
       - 'api/tests/test_vehicle_domain_materializer_database_privileges.py'
@@ -122,6 +128,7 @@ jobs:
           api/migrations/versions/0055_part_catalog.py
           api/migrations/versions/0058_downstream_materializer.py
           api/migrations/versions/0059_primary_vehicle_domains.py
+          api/tests/test_persistent_publication_plan.py
           api/tests/test_canonical_claim_materialization_database.py
           api/tests/test_vehicle_domain_materialization_database.py
           api/tests/test_vehicle_domain_materializer_database_privileges.py
@@ -138,6 +145,11 @@ jobs:
         env:
           PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
         run: alembic -c api/alembic.ini upgrade head
+
+      - name: Test persistent publication contract
+        run: >-
+          python -m unittest discover -s api/tests
+          -p 'test_persistent_publication_plan.py'
 
       - name: Test claim and repair publication policy
         run: >-
