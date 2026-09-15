@@ -20,6 +20,11 @@
     "reviewed_by": "project_owner_manual_verification",
     "note": "Project owner manually verified the collected OEM part numbers side by side with the source catalog list and approved them for PartGraph reference data."
   },
+  "publication": {
+    "part_manufacturer": "Honda",
+    "claim_risk": "safety_critical",
+    "note": "The dataset is conservatively classified as safety-critical for fitment publication so no row receives a lower authority threshold merely because per-row risk metadata is absent. This classification does not assert that every physical component is itself safety-critical."
+  },
   "sources": [
     {"key":"hpn_radiator_denso","source_class":"oem_parts","url":"https://www.hondapartsnow.com/parts-list/2009-honda-civic--4dr_mx_hybrid-ka_cvt/electrical_exhaust_heater_fuel/radiator_denso.html"},
     {"key":"hpn_radiator_hose_reserve","source_class":"oem_parts","url":"https://www.hondapartsnow.com/parts-list/2009-honda-civic--4dr_mx_hybrid-ka_cvt/electrical_exhaust_heater_fuel/radiator_hose_reserve_tank.html"},
