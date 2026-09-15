@@ -71,6 +71,12 @@ def _raw_sha(payload: dict[str, object]) -> str:
 
 
 class ReferenceRepairRuntimeDatabaseTests(unittest.IsolatedAsyncioTestCase):
+    async def _cleanup_db(self) -> None:
+        if hasattr(self, "transaction") and self.transaction.is_active:
+            await self.transaction.rollback()
+        if hasattr(self, "db"):
+            await self.db.close()
+
     async def asyncSetUp(self) -> None:
         if DATABASE_URL_ENV not in os.environ:
             raise unittest.SkipTest(f"{DATABASE_URL_ENV} is not configured")
@@ -83,11 +89,12 @@ class ReferenceRepairRuntimeDatabaseTests(unittest.IsolatedAsyncioTestCase):
 
         self.db = session_factory()
         self.transaction = await self.db.begin()
+        self.addAsyncCleanup(self._cleanup_db)
 
         vehicle = await self.db.get(VehicleConfiguration, REFERENCE_VEHICLE_ID)
         self.assertIsNotNone(vehicle)
         assert vehicle is not None
-        self.assertEqual((vehicle.year, vehicle.make, vehicle.model), (2009, "Honda", "Civic"))
+        self.assertEqual((vehicle.year, vehicle.make, vehicle.model), (2009, "Honda", "CIVIC"))
         self.assertEqual(vehicle.verification_status, "verified")
 
         current = await self.db.scalar(
@@ -98,8 +105,6 @@ class ReferenceRepairRuntimeDatabaseTests(unittest.IsolatedAsyncioTestCase):
             )
         )
         if current is not None:
-            await self.transaction.rollback()
-            await self.db.close()
             raise unittest.SkipTest(
                 "Reference repair already exists in this database; runtime CI expects a fresh migrated database."
             )
@@ -114,8 +119,6 @@ class ReferenceRepairRuntimeDatabaseTests(unittest.IsolatedAsyncioTestCase):
             license_status="approved",
             automation_allowed=False,
         )
-        self.db.add(source)
-
         self.user = User(
             id=uuid4(),
             email=f"reference-runtime-{suffix}@example.invalid",
@@ -135,11 +138,11 @@ class ReferenceRepairRuntimeDatabaseTests(unittest.IsolatedAsyncioTestCase):
                 "year": 2009,
                 "market": "US",
                 "make": "Honda",
-                "model": "Civic",
+                "model": "CIVIC",
                 "trim": "Hybrid",
             },
         )
-        self.db.add_all([self.user, self.user_vehicle])
+        self.db.add_all([source, self.user, self.user_vehicle])
         await self.db.flush()
 
         requirement_claim_ids: dict[str, UUID] = {}
@@ -233,15 +236,37 @@ class ReferenceRepairRuntimeDatabaseTests(unittest.IsolatedAsyncioTestCase):
         )
         self.repair_definition_id = publication.repair_definition_id
 
+        await self.db.execute(text("RESET ROLE"))
         await self.db.execute(text("SET LOCAL ROLE partgraph_app"))
         await set_user_context(self.db, self.user.id)
         self.device_id = uuid4()
 
-    async def asyncTearDown(self) -> None:
-        if hasattr(self, "transaction") and self.transaction.is_active:
-            await self.transaction.rollback()
-        if hasattr(self, "db"):
-            await self.db.close()
+    async def _complete_current_action(
+        self,
+        *,
+        session_id: UUID,
+        idempotency_key: str,
+    ) -> str:
+        guidance = await _guidance_view(
+            self.db,
+            user_id=self.user.id,
+            session_id=session_id,
+            include_plan=False,
+        )
+        self.assertEqual(guidance.status, "action_available")
+        self.assertIsNotNone(guidance.current_action)
+        assert guidance.current_action is not None
+        action_key = guidance.current_action.action_key
+        await update_action_progress(
+            session_id,
+            guidance.current_action.action_id,
+            GuidanceActionUpdate(progress_state="completed"),
+            self.user,
+            self.db,
+            device_header=str(self.device_id),
+            idempotency_header=idempotency_key,
+        )
+        return action_key
 
     async def test_reference_oil_change_runs_readiness_pause_resume_and_completion(self) -> None:
         bundle = await create_repair_session(
@@ -322,27 +347,16 @@ class ReferenceRepairRuntimeDatabaseTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(recommended[0].requirement_key, "equipment.sealed_used_oil_container")
         self.assertEqual(recommended[0].readiness_state, "missing")
 
-        completed_keys: list[str] = []
-        for index in range(2):
-            guidance = await _guidance_view(
-                self.db,
-                user_id=self.user.id,
+        completed_keys = [
+            await self._complete_current_action(
                 session_id=session_id,
-                include_plan=False,
-            )
-            self.assertEqual(guidance.status, "action_available")
-            assert guidance.current_action is not None
-            completed_keys.append(guidance.current_action.action_key)
-            await update_action_progress(
-                session_id,
-                guidance.current_action.action_id,
-                GuidanceActionUpdate(progress_state="completed"),
-                self.user,
-                self.db,
-                device_header=str(self.device_id),
-                idempotency_header=f"action_done_{index + 1:02d}",
-            )
-
+                idempotency_key="action_done_01",
+            ),
+            await self._complete_current_action(
+                session_id=session_id,
+                idempotency_key="action_done_02",
+            ),
+        ]
         self.assertEqual(completed_keys, ["prepare-access", "drain-engine-oil"])
 
         paused = await append_status_event(
@@ -402,24 +416,12 @@ class ReferenceRepairRuntimeDatabaseTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(resumed_reorientation.next_verified_action.label, "Replace the oil filter")
         self.assertEqual(resumed_reorientation.counts.verified_readiness_blockers, 0)
 
-        for index in range(2, 6):
-            guidance = await _guidance_view(
-                self.db,
-                user_id=self.user.id,
-                session_id=session_id,
-                include_plan=False,
-            )
-            self.assertEqual(guidance.status, "action_available")
-            assert guidance.current_action is not None
-            completed_keys.append(guidance.current_action.action_key)
-            await update_action_progress(
-                session_id,
-                guidance.current_action.action_id,
-                GuidanceActionUpdate(progress_state="completed"),
-                self.user,
-                self.db,
-                device_header=str(self.device_id),
-                idempotency_header=f"action_done_{index + 1:02d}",
+        for index in range(3, 7):
+            completed_keys.append(
+                await self._complete_current_action(
+                    session_id=session_id,
+                    idempotency_key=f"action_done_{index:02d}",
+                )
             )
 
         self.assertEqual(
