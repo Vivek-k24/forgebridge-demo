@@ -17,6 +17,7 @@ CONTRIBUTOR_DATABASE_ROLE = "partgraph_contributor"
 CURATOR_DATABASE_ROLE = "partgraph_curator"
 MATERIALIZER_DATABASE_ROLE = "partgraph_materializer"
 INGESTOR_DATABASE_ROLE = "partgraph_ingestor"
+OPERATOR_DATABASE_ROLE = "partgraph_operator"
 
 
 def require_any_role(*allowed_roles: str) -> Callable[[CurrentUserDep], User]:
@@ -68,6 +69,11 @@ async def assume_materializer_database_role(session: AsyncSession) -> None:
 async def assume_ingestor_database_role(session: AsyncSession) -> None:
     """Narrow provider acquisition to bound-source reads and candidate staging only."""
     await _assume_database_role(session, INGESTOR_DATABASE_ROLE)
+
+
+async def assume_operator_database_role(session: AsyncSession) -> None:
+    """Narrow an authorized operator transaction to operator configuration privileges."""
+    await _assume_database_role(session, OPERATOR_DATABASE_ROLE)
 
 
 ReviewerUserDep = Annotated[
