@@ -3,6 +3,9 @@ from __future__ import annotations
 import json
 import os
 import re
+import warnings
+from dataclasses import dataclass
+from io import BytesIO
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
@@ -11,6 +14,8 @@ from uuid import UUID, uuid4
 
 import anyio
 from fastapi import status
+from PIL import Image, ImageOps, UnidentifiedImageError
+from pillow_heif import register_heif_opener
 
 from ..config import settings
 from ..errors import ErrorCode, PartGraphError
@@ -19,26 +24,115 @@ _STORAGE_KEY_PATTERN = re.compile(r"^[0-9a-f]{32}\.(?:jpg|png|webp|heic)$")
 _BLOB_API_URL = "https://vercel.com/api/blob"
 _BLOB_API_VERSION = "12"
 _BLOB_TIMEOUT_SECONDS = 10
+MAX_PHOTO_PIXELS = 24_000_000
+MAX_PHOTO_DIMENSION = 8_192
+
+register_heif_opener()
 
 
 class PhotoFormatError(ValueError):
     pass
 
 
+class PhotoResourceLimitError(ValueError):
+    pass
+
+
+@dataclass(frozen=True, slots=True)
+class PreparedPhoto:
+    data: bytes
+    media_type: str
+    extension: str
+    width: int
+    height: int
+
+
+def _decoded_format(image: Image.Image) -> str:
+    image_format = (image.format or "").upper()
+    if image_format not in {"JPEG", "PNG", "WEBP", "HEIF", "HEIC"}:
+        raise PhotoFormatError("unsupported image format")
+    return image_format
+
+
+def _assert_image_limits(image: Image.Image) -> None:
+    width, height = image.size
+    if width < 1 or height < 1:
+        raise PhotoFormatError("image dimensions are invalid")
+    if width > MAX_PHOTO_DIMENSION or height > MAX_PHOTO_DIMENSION:
+        raise PhotoResourceLimitError("image dimensions exceed the allowed limit")
+    if width * height > MAX_PHOTO_PIXELS:
+        raise PhotoResourceLimitError("decoded image pixel count exceeds the allowed limit")
+    if getattr(image, "n_frames", 1) != 1:
+        raise PhotoFormatError("animated or multi-frame images are not supported")
+
+
+def _pixel_copy(image: Image.Image, *, preserve_alpha: bool) -> Image.Image:
+    bands = image.getbands()
+    has_alpha = "A" in bands or "transparency" in image.info
+    target_mode = "RGBA" if preserve_alpha and has_alpha else "RGB"
+    return image.convert(target_mode)
+
+
+def _encode_sanitized(image: Image.Image, source_format: str) -> tuple[bytes, str, str]:
+    oriented = ImageOps.exif_transpose(image)
+    output = BytesIO()
+
+    if source_format in {"JPEG", "HEIF", "HEIC"}:
+        sanitized = _pixel_copy(oriented, preserve_alpha=False)
+        sanitized.save(output, format="JPEG", quality=90, optimize=True)
+        return output.getvalue(), "image/jpeg", "jpg"
+
+    if source_format == "PNG":
+        sanitized = _pixel_copy(oriented, preserve_alpha=True)
+        sanitized.save(output, format="PNG", optimize=True, compress_level=9)
+        return output.getvalue(), "image/png", "png"
+
+    if source_format == "WEBP":
+        sanitized = _pixel_copy(oriented, preserve_alpha=True)
+        sanitized.save(output, format="WEBP", quality=90, method=4)
+        return output.getvalue(), "image/webp", "webp"
+
+    raise PhotoFormatError("unsupported image format")
+
+
+def _prepare_photo_sync(data: bytes, maximum_bytes: int) -> PreparedPhoto:
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", Image.DecompressionBombWarning)
+            with Image.open(BytesIO(data)) as image:
+                source_format = _decoded_format(image)
+                _assert_image_limits(image)
+                image.load()
+                width, height = image.size
+                encoded, media_type, extension = _encode_sanitized(image, source_format)
+    except PhotoResourceLimitError:
+        raise
+    except (Image.DecompressionBombError, Image.DecompressionBombWarning) as exc:
+        raise PhotoResourceLimitError("image decompression limit exceeded") from exc
+    except (UnidentifiedImageError, OSError, SyntaxError, ValueError) as exc:
+        raise PhotoFormatError("unsupported or malformed image content") from exc
+
+    if not encoded or len(encoded) > maximum_bytes:
+        raise PhotoResourceLimitError("sanitized image exceeds the allowed byte limit")
+
+    return PreparedPhoto(
+        data=encoded,
+        media_type=media_type,
+        extension=extension,
+        width=width,
+        height=height,
+    )
+
+
+async def prepare_photo(data: bytes, *, maximum_bytes: int) -> PreparedPhoto:
+    return await anyio.to_thread.run_sync(_prepare_photo_sync, data, maximum_bytes)
+
+
 def detect_photo_media_type(data: bytes) -> tuple[str, str]:
-    if data.startswith(b"\xff\xd8\xff"):
-        return "image/jpeg", "jpg"
-    if data.startswith(b"\x89PNG\r\n\x1a\n"):
-        return "image/png", "png"
-    if len(data) >= 12 and data[:4] == b"RIFF" and data[8:12] == b"WEBP":
-        return "image/webp", "webp"
-    if len(data) >= 12 and data[4:8] == b"ftyp":
-        brand = data[8:12]
-        compatible = data[16:64]
-        heif_brands = (b"heic", b"heix", b"hevc", b"hevx", b"mif1", b"msf1")
-        if brand in heif_brands or any(item in compatible for item in heif_brands):
-            return "image/heic", "heic"
-    raise PhotoFormatError("unsupported or malformed image content")
+    """Compatibility helper for already-decoded/sanitized image bytes."""
+
+    prepared = _prepare_photo_sync(data, max(len(data) * 2, settings.photo_max_bytes))
+    return prepared.media_type, prepared.extension
 
 
 def new_storage_key(photo_id: UUID, extension: str) -> str:
@@ -112,9 +206,27 @@ def _blob_unavailable() -> PartGraphError:
     )
 
 
+def _media_type_for_storage_key(storage_key: str) -> str:
+    extension = storage_key.rsplit(".", 1)[-1]
+    media_types = {
+        "jpg": "image/jpeg",
+        "png": "image/png",
+        "webp": "image/webp",
+        "heic": "image/heic",
+    }
+    try:
+        return media_types[extension]
+    except KeyError as exc:
+        raise PartGraphError(
+            code=ErrorCode.PHOTO_STORAGE_CORRUPT,
+            message="Photo storage reference has an unsupported media type.",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        ) from exc
+
+
 def _blob_put(storage_key: str, data: bytes, token: str) -> None:
     store_id = _blob_store_id(token)
-    media_type, _ = detect_photo_media_type(data)
+    media_type = _media_type_for_storage_key(storage_key)
     url = f"{_BLOB_API_URL}/?{urlencode({'pathname': storage_key})}"
     headers = {
         **_blob_headers(token, store_id=store_id),
