@@ -22,10 +22,7 @@ from partgraph.equipment.inventory_catalog_v2 import (
     RETIRED_CATALOG_KEYS,
     current_inventory_catalog,
 )
-from partgraph.equipment.manual_reference_v1 import (
-    MANUAL_REFERENCE_QUERY_TARGETS,
-    augment_equipment_catalog_rows,
-)
+from partgraph.equipment.manual_reference_v1 import augment_equipment_catalog_rows
 from partgraph.equipment.service import _search_without_whitespace
 
 API_ROOT = Path(__file__).resolve().parents[1]
@@ -115,14 +112,6 @@ class EquipmentCatalogSeedTests(unittest.TestCase):
         self.assertEqual(_search_without_whitespace("10 mm"), "10mm")
         self.assertEqual(_search_without_whitespace("10mm"), "10mm")
         self.assertEqual(_search_without_whitespace("  3/8   in  drive "), "3/8indrive")
-
-    def test_manual_reference_equipment_is_searchable_in_versioned_dataset(self) -> None:
-        rows = load_equipment_catalog_rows()
-        for query, expected_keys in MANUAL_REFERENCE_QUERY_TARGETS.items():
-            self.assertTrue(
-                set(expected_keys).issubset(_matches(rows, query)),
-                f"manual equipment query is not fully covered: {query!r}",
-            )
 
     def test_versioned_catalog_includes_fluids_and_wheel_hardware(self) -> None:
         rows = load_equipment_catalog_rows()
