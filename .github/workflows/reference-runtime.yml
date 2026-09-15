@@ -4,14 +4,17 @@ on:
   pull_request:
     paths:
       - 'api/data/reference/2009_honda_civic_hybrid_repairs_v1/**'
+      - 'api/data/reference/2009_honda_civic_hybrid_profile_v1/**'
       - 'api/partgraph/repair_experience/**'
       - 'api/partgraph/repair_definition/**'
       - 'api/partgraph/knowledge/repair_materialization*.py'
       - 'api/partgraph/knowledge/downstream_materialization.py'
+      - 'api/partgraph/knowledge/vehicle_domain_materialization.py'
       - 'api/partgraph/knowledge/repair_service.py'
       - 'api/partgraph/knowledge/procedure_service.py'
       - 'api/tests/test_reference_repair_runtime.py'
       - 'api/tests/test_reference_downstream_runtime.py'
+      - 'api/tests/test_reference_primary_vehicle_runtime.py'
       - 'api/migrations/**'
       - 'api/pyproject.toml'
       - '.github/workflows/reference-runtime.yml'
@@ -21,14 +24,17 @@ on:
       - partgraph-mvp-consolidation
     paths:
       - 'api/data/reference/2009_honda_civic_hybrid_repairs_v1/**'
+      - 'api/data/reference/2009_honda_civic_hybrid_profile_v1/**'
       - 'api/partgraph/repair_experience/**'
       - 'api/partgraph/repair_definition/**'
       - 'api/partgraph/knowledge/repair_materialization*.py'
       - 'api/partgraph/knowledge/downstream_materialization.py'
+      - 'api/partgraph/knowledge/vehicle_domain_materialization.py'
       - 'api/partgraph/knowledge/repair_service.py'
       - 'api/partgraph/knowledge/procedure_service.py'
       - 'api/tests/test_reference_repair_runtime.py'
       - 'api/tests/test_reference_downstream_runtime.py'
+      - 'api/tests/test_reference_primary_vehicle_runtime.py'
       - 'api/migrations/**'
       - 'api/pyproject.toml'
       - '.github/workflows/reference-runtime.yml'
@@ -83,10 +89,12 @@ jobs:
           api/partgraph/knowledge/repair_materialization_contract.py
           api/partgraph/knowledge/repair_materialization_service.py
           api/partgraph/knowledge/downstream_materialization.py
+          api/partgraph/knowledge/vehicle_domain_materialization.py
           api/partgraph/knowledge/repair_service.py
           api/partgraph/knowledge/procedure_service.py
           api/tests/test_reference_repair_runtime.py
           api/tests/test_reference_downstream_runtime.py
+          api/tests/test_reference_primary_vehicle_runtime.py
 
       - name: Apply database migrations
         env:
