@@ -24,6 +24,8 @@ class ClaimDomain(StrEnum):
     REPAIR_REQUIREMENT = "repair_requirement"
     REPAIR_PROCEDURE = "repair_procedure"
     PART_FITMENT = "part_fitment"
+    VEHICLE_STRUCTURE = "vehicle_structure"
+    VEHICLE_SPECIFICATION = "vehicle_specification"
 
 
 class ClaimRisk(StrEnum):
@@ -43,6 +45,8 @@ CLAIM_CANONICAL_DOMAIN: dict[ClaimDomain, str | None] = {
     ClaimDomain.REPAIR_REQUIREMENT: "requirement",
     ClaimDomain.REPAIR_PROCEDURE: "procedure",
     ClaimDomain.PART_FITMENT: "fitment",
+    ClaimDomain.VEHICLE_STRUCTURE: "structure",
+    ClaimDomain.VEHICLE_SPECIFICATION: "specification",
 }
 
 
