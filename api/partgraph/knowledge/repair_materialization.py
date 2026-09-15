@@ -18,6 +18,7 @@ from .repair_materialization_contract import (
     invalid_materialization,
 )
 from .repair_materialization_service import materialize_repair_definition_service
+from .vehicle_domain_materialization import router as vehicle_domain_materialization_router
 
 IdempotencyKey = Annotated[
     str,
@@ -42,6 +43,7 @@ router = APIRouter(
     },
 )
 router.include_router(canonical_claim_materialization_router)
+router.include_router(vehicle_domain_materialization_router)
 CsrfDep = Depends(require_csrf)
 
 
