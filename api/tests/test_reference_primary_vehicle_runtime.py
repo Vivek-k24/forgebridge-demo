@@ -3,9 +3,11 @@ import json
 import os
 import unittest
 from datetime import UTC, datetime
+from io import BytesIO
 from pathlib import Path
 from uuid import UUID, uuid4
 
+from PIL import Image
 from sqlalchemy import select, text
 
 import partgraph.orm_registry  # noqa: F401
@@ -294,7 +296,9 @@ class ReferencePrimaryVehicleRuntimeTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(observation.source, "user")
         self.assertEqual(observation.review_state, "confirmed")
 
-        image_bytes = b"\x89PNG\r\n\x1a\nPARTGRAPH-PHASE7-REFERENCE-PHOTO"
+        image_buffer = BytesIO()
+        Image.new("RGB", (2, 2), (80, 120, 160)).save(image_buffer, format="PNG")
+        image_bytes = image_buffer.getvalue()
         photo = await create_photo(
             self.db,
             user_id=self.user.id,
