@@ -70,42 +70,55 @@ def _validate_hostname_without_dns(hostname: str) -> None:
         raise ProviderNetworkPolicyError("provider URL IP address is not publicly routable")
 
 
-def normalize_provider_base_url(value: str) -> str:
-    """Canonicalize a stored provider URL without performing DNS resolution."""
-
+def _normalize_provider_url(value: str, *, allow_query: bool) -> str:
     cleaned = value.strip()
     if not cleaned:
-        raise ProviderNetworkPolicyError("provider base URL cannot be blank")
+        raise ProviderNetworkPolicyError("provider URL cannot be blank")
     if any(character in cleaned for character in ("\\", "\r", "\n", "\t", "\x00")):
-        raise ProviderNetworkPolicyError("provider base URL contains unsafe characters")
+        raise ProviderNetworkPolicyError("provider URL contains unsafe characters")
 
     try:
         parsed = urlsplit(cleaned)
         port = parsed.port
     except ValueError as exc:
-        raise ProviderNetworkPolicyError("provider base URL is invalid") from exc
+        raise ProviderNetworkPolicyError("provider URL is invalid") from exc
 
     scheme = parsed.scheme.casefold()
     if scheme not in {"http", "https"}:
-        raise ProviderNetworkPolicyError("provider base URL must use http or https")
+        raise ProviderNetworkPolicyError("provider URL must use http or https")
     if not parsed.netloc or parsed.hostname is None:
-        raise ProviderNetworkPolicyError("provider base URL hostname is required")
+        raise ProviderNetworkPolicyError("provider URL hostname is required")
     if parsed.username is not None or parsed.password is not None:
-        raise ProviderNetworkPolicyError("provider base URL must not include user information")
-    if parsed.query or parsed.fragment:
-        raise ProviderNetworkPolicyError("provider base URL must not include a query or fragment")
+        raise ProviderNetworkPolicyError("provider URL must not include user information")
+    if parsed.fragment:
+        raise ProviderNetworkPolicyError("provider URL must not include a fragment")
+    if parsed.query and not allow_query:
+        raise ProviderNetworkPolicyError("provider base URL must not include a query")
 
     hostname = _normalize_hostname(parsed.hostname)
     _validate_hostname_without_dns(hostname)
 
     if port is not None and not 1 <= port <= 65535:
-        raise ProviderNetworkPolicyError("provider base URL port is invalid")
+        raise ProviderNetworkPolicyError("provider URL port is invalid")
 
     rendered_host = f"[{hostname}]" if ":" in hostname else hostname
     default_port = 443 if scheme == "https" else 80
     rendered_port = "" if port is None or port == default_port else f":{port}"
-    normalized = urlunsplit((scheme, f"{rendered_host}{rendered_port}", parsed.path, "", ""))
-    return normalized.rstrip("/")
+    return urlunsplit(
+        (
+            scheme,
+            f"{rendered_host}{rendered_port}",
+            parsed.path,
+            parsed.query if allow_query else "",
+            "",
+        )
+    )
+
+
+def normalize_provider_base_url(value: str) -> str:
+    """Canonicalize a stored provider base URL without performing DNS resolution."""
+
+    return _normalize_provider_url(value, allow_query=False).rstrip("/")
 
 
 def _system_resolver(hostname: str, port: int) -> tuple[str, ...]:
@@ -130,7 +143,7 @@ def resolve_provider_target(
     becoming a route to an internal target.
     """
 
-    normalized_url = normalize_provider_base_url(value)
+    normalized_url = _normalize_provider_url(value, allow_query=True)
     parsed = urlsplit(normalized_url)
     assert parsed.hostname is not None
     hostname = _normalize_hostname(parsed.hostname)
@@ -167,8 +180,9 @@ def resolve_provider_redirect(
 
     if not location.strip():
         raise ProviderNetworkPolicyError("provider redirect location is empty")
-    next_url = urljoin(current_url, location.strip())
-    current = urlsplit(normalize_provider_base_url(current_url))
+    normalized_current = _normalize_provider_url(current_url, allow_query=True)
+    next_url = urljoin(normalized_current, location.strip())
+    current = urlsplit(normalized_current)
     redirected = urlsplit(next_url)
     if current.scheme == "https" and redirected.scheme.casefold() == "http":
         raise ProviderNetworkPolicyError("provider redirect cannot downgrade HTTPS to HTTP")
