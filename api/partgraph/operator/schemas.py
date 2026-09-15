@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr, field_validator, model_validator
 
 from ..identity.auth.schemas import UserRole
+from ..knowledge.provider_network import normalize_provider_base_url
 
 ProviderKind = Literal["internal_data", "vehicle_data", "ai", "manufacturer"]
 ProviderCredentialStorage = Literal["encrypted_database", "external_reference"]
@@ -47,6 +48,11 @@ def _clean_optional(value: str | None) -> str | None:
     return cleaned or None
 
 
+def _normalize_optional_provider_base_url(value: str | None) -> str | None:
+    cleaned = _clean_optional(value)
+    return normalize_provider_base_url(cleaned) if cleaned is not None else None
+
+
 class ProviderCreate(BaseModel):
     provider_key: str = Field(min_length=2, max_length=96, pattern=PROVIDER_KEY_PATTERN)
     display_name: str = Field(min_length=1, max_length=160)
@@ -71,10 +77,7 @@ class ProviderCreate(BaseModel):
     @field_validator("base_url")
     @classmethod
     def validate_base_url(cls, value: str | None) -> str | None:
-        cleaned = _clean_optional(value)
-        if cleaned is not None and not cleaned.startswith(("https://", "http://")):
-            raise ValueError("base_url must use http or https")
-        return cleaned.rstrip("/") if cleaned else None
+        return _normalize_optional_provider_base_url(value)
 
     @field_validator("secret_ref", "notes")
     @classmethod
@@ -130,10 +133,7 @@ class ProviderUpdate(BaseModel):
     @field_validator("base_url")
     @classmethod
     def validate_base_url(cls, value: str | None) -> str | None:
-        cleaned = _clean_optional(value)
-        if cleaned is not None and not cleaned.startswith(("https://", "http://")):
-            raise ValueError("base_url must use http or https")
-        return cleaned.rstrip("/") if cleaned else None
+        return _normalize_optional_provider_base_url(value)
 
     @field_validator("secret_ref", "notes")
     @classmethod
