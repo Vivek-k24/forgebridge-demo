@@ -3,7 +3,7 @@
   "profile_id": "48a527db-2d90-52f9-a9da-0aa761718703",
   "vehicle_configuration_id": "7feb13e9-bca0-5d8b-b701-f0260cce5da1",
   "profile_version": 1,
-  "verification_status": "verified",
+  "verification_status": "candidate",
   "source_match_count": 4,
   "profile": {
     "identity": {
@@ -187,6 +187,11 @@
           "source": "honda_2009_hybrid_owner_manual"
         }
       }
+    },
+    "governance": {
+      "status": "legacy_candidate",
+      "reason": "Pre-modern curated transcriptions are retained for historical reference but do not satisfy the immutable-evidence publication boundary.",
+      "remediated_revision": "0061_retire_legacy_specs"
     }
   }
 }
