@@ -2,6 +2,11 @@
   "schema_version": 1,
   "vehicle_configuration_id": "7feb13e9-bca0-5d8b-b701-f0260cce5da1",
   "captured_at": "2026-09-03T00:00:00Z",
+  "governance": {
+    "status": "legacy_candidate",
+    "reason": "These observations are curated transcriptions retained for historical reference. Their hashes cover the transcription payload, not original source bytes, so they do not satisfy the current immutable-evidence publication boundary.",
+    "remediated_revision": "0061_retire_legacy_specs"
+  },
   "sources": {
     "honda_2009_hybrid_fact_sheet": {
       "source_type": "manufacturer",
