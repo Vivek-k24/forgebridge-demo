@@ -194,7 +194,10 @@ BEGIN
                jsonb_build_object(
                    'status', 'legacy_candidate',
                    'reason',
-                   'Pre-modern curated transcriptions are retained for historical reference but do not satisfy the immutable-evidence publication boundary.',
+                   concat(
+                       'Pre-modern curated transcriptions are retained for historical reference ',
+                       'but do not satisfy the immutable-evidence publication boundary.'
+                   ),
                    'remediated_revision', '0061_retire_legacy_specs'
                ),
                true
