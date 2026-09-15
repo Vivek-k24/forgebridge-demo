@@ -9,6 +9,12 @@ CANDIDATE_PATH = (
     / "2009_honda_civic_hybrid_water_pump_v1"
     / "candidate.json"
 )
+REFERENCE_DIR = (
+    Path(__file__).resolve().parents[1]
+    / "data"
+    / "reference"
+    / "2009_honda_civic_hybrid_repairs_v1"
+)
 REFERENCE_VEHICLE_ID = "7feb13e9-bca0-5d8b-b701-f0260cce5da1"
 
 
@@ -17,15 +23,17 @@ class ReferenceRepairCandidateTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.candidate = json.loads(CANDIDATE_PATH.read_text(encoding="utf-8"))
 
-    def test_candidate_stays_outside_canonical_truth_until_review(self) -> None:
+    def test_project_owner_approval_keeps_automation_disabled(self) -> None:
         self.assertEqual(
             self.candidate["review_status"],
-            "pending_project_owner_review",
+            "approved_for_mvp_reference",
         )
         source_review = self.candidate["source_review"]
-        self.assertEqual(source_review["license_status"], "unreviewed")
+        self.assertEqual(source_review["license_status"], "approved")
+        self.assertEqual(source_review["reviewed_on"], "2026-09-15")
+        self.assertEqual(source_review["reviewed_by"], "project_owner")
         self.assertFalse(source_review["automation_allowed"])
-        self.assertFalse(
+        self.assertTrue(
             self.candidate["publication_boundary"]["canonical_publication_allowed"]
         )
 
@@ -59,6 +67,14 @@ class ReferenceRepairCandidateTests(unittest.TestCase):
             if item["action_key"] == relation["trigger_action_key"]
         )
         self.assertEqual(pump_action["milestone_type"], "physical_replacement")
+        self.assertEqual(
+            pump_action["downstream_requirement_key"],
+            relation["requirement_key"],
+        )
+        self.assertEqual(
+            pump_action["downstream_target_repair_key"],
+            relation["target_repair_key"],
+        )
 
     def test_existing_reviewed_part_numbers_are_used_without_inference(self) -> None:
         requirements = {
@@ -93,6 +109,23 @@ class ReferenceRepairCandidateTests(unittest.TestCase):
         ):
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(forbidden, serialized)
+
+    def test_approved_candidate_has_canonical_reference_files(self) -> None:
+        source = json.loads(
+            (REFERENCE_DIR / "engine_water_pump_replacement.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        target = json.loads(
+            (REFERENCE_DIR / "cooling_system_refill_air_bleed.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(source["vehicle_configuration_id"], REFERENCE_VEHICLE_ID)
+        self.assertEqual(target["vehicle_configuration_id"], REFERENCE_VEHICLE_ID)
+        self.assertEqual(source["repair_key"], "engine-water-pump-replacement")
+        self.assertEqual(target["repair_key"], "cooling-system-refill-air-bleed")
+        self.assertEqual(source["source_key"], target["source_key"])
 
 
 if __name__ == "__main__":
