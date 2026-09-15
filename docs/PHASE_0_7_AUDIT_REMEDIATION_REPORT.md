@@ -3,6 +3,7 @@
 Audit date: 2026-09-15  
 Scope: repository, consolidation preview, production boundary, database state, CI/CD, runtime behavior, frontend/browser/accessibility, data lifecycle, security, reliability, and roadmap state through completion of Phase 7.  
 Implementation fixes performed during audit: **none**. This document is a remediation reference only.  
+Post-audit remediation updates are recorded inline when an entire issue category is completed.  
 Explicit audit exclusion: sign-in/sign-up mechanics themselves were not reviewed; authorization, ownership, isolation, secrets, trust boundaries, and operator access were reviewed.
 
 ## Purpose
@@ -66,6 +67,26 @@ These are not remediation tasks. They are working controls that future changes m
 ---
 
 # A. Data model, schema and canonical-data integrity
+
+## Category A remediation update — 2026-09-15
+
+**Status: COMPLETED on `partgraph-mvp-consolidation`; not cut over to `main` application code or production.**  
+Category A proof head: `9946b373a32d44963e6fd8fcc838653473bd471a`.  
+Consolidation preview schema after cleanup: `0061_retire_legacy_specs`.  
+Production remains intentionally at `0020_catalog_coverage`; PR #84 remains open/draft/unmerged.
+
+All six Category A findings have been remediated on the consolidation branch:
+
+- `PG-AUD-DATA-001`: ORM claim-domain metadata, source-policy domains and Alembic schema are aligned and guarded by schema-alignment tests.
+- `PG-AUD-DATA-002`: the operational equipment catalog now loads from the versioned `api/data/equipment/equipment_catalog_v1.json.gz` dataset through `catalog_dataset.py`; deterministic seeding reads that dataset rather than executable catalog-generation logic. Legacy generator modules are not the operational catalog source and remain a later dead-code/maintainability concern rather than runtime data authority.
+- `PG-AUD-DATA-003`: persistent publication is now governed by `persistent_publication_plan_v1.json`, `docs/CANONICAL_PUBLICATION_RUNBOOK.md`, and a permanent Canonical Publication CI contract. Deployment remains separate from automotive-truth publication; no preview/production publication was performed as part of this remediation.
+- `PG-AUD-DATA-004`: forward migration `0061_retire_legacy_spec_observations.py` retires the five pre-modern verified specification observations with fail-closed lineage/dependency checks. Current preview count of legacy verified specification candidates is zero.
+- `PG-AUD-DATA-005`: forward migration `0060_retire_selected_asian_workbook.py` removes the orphaned workbook staging/configuration/coverage lineage with dependency assertions while preserving immutable historical migrations. Current preview workbook configuration, workbook staging and unverified coverage counts are all zero.
+- `PG-AUD-DATA-006`: the duplicate `docs/Selected_Asian_Brands_1996_2000.xlsx` and unused `api/data/archive/reference_fleet_legacy/` JSON assets were removed after dependency proof. The single `api/data/Selected_Asian_Brands_1996_2000.xlsx` copy remains intentionally because immutable migrations 0017/0020 still require that path for historical reconstruction. `api/data/README.md` documents the exception and `test_reference_fixture_externalization.py` prevents duplicate/archive regression.
+
+Exact final proof on `9946b373...`: API CI/CD #840, Web CI/CD #703, Extraction Pipeline CI #138, Canonical Publication CI #104 and Reference Repair Runtime CI #83 all passed. Fresh migration execution, persisted-history upgrade checks, canonical materialization, reference repair runtime and the repository-data hygiene assertions all remained green.
+
+The original issue statements below are retained as the audit baseline that motivated the remediation.
 
 ## PG-AUD-DATA-001 — SQLAlchemy MechanicalClaim domain constraint is stale
 
@@ -708,7 +729,20 @@ These are important audit findings, but many are naturally Phase 9/release work 
 
 # I. Database and infrastructure cleanup register
 
-## Strong database cleanup candidate
+## Post-audit Category A cleanup status
+
+The audit-baseline estimates below are retained for historical traceability, but the corresponding Category A database cleanup has been completed on the consolidation preview through forward migrations 0060 and 0061.
+
+Current consolidation preview verification at `0061_retire_legacy_specs`:
+
+- workbook-derived unverified vehicle configurations: **0**
+- workbook staging rows (`curated_workbook_import`): **0**
+- unverified coverage rows: **0**
+- legacy verified `vehicle_specification_candidate` staging rows: **0**
+
+No production cleanup/migration was performed. Production remains at `0020_catalog_coverage` pending an explicitly authorized cutover.
+
+## Strong database cleanup candidate — audit baseline, now completed in consolidation preview
 
 Selected Asian workbook lineage:
 
@@ -720,7 +754,7 @@ Selected Asian workbook lineage:
 - approximately **695 KiB logical row payload**
 - no user-vehicle, repair-definition, MechanicalClaim or fitment dependencies found during audit
 
-## Conditional database cleanup candidate
+## Conditional database cleanup candidate — audit baseline, now completed in consolidation preview
 
 Legacy specification staging:
 
@@ -729,7 +763,7 @@ Legacy specification staging:
 - approximately **9.7 KiB logical row payload**
 - migrate any still-needed facts into modern evidence first
 
-## Combined potential cleanup
+## Combined audit-baseline cleanup
 
 - **1,096 rows**
 - approximately **705 KiB logical row payload**
@@ -742,8 +776,9 @@ Do not delete merely because they are unpromoted or duplicated by canonical stat
 
 - 20 pending NHTSA safety/mechanical candidates observed in staging
 - 282 current promoted/raw provenance rows that support the evidence → claim audit chain
-- equipment catalog rows until the catalog-data migration is designed
-- historical migrations 0001–0059
+- equipment catalog rows; operational catalog authority is now the versioned dataset
+- historical migrations 0001–0061, including the legacy data migrations and forward cleanup migrations
+- `api/data/Selected_Asian_Brands_1996_2000.xlsx`, because immutable migrations 0017/0020 require the API path for historical reconstruction even though its live database lineage is retired
 
 ## Neon preview-branch cleanup candidates
 
@@ -758,19 +793,19 @@ Combined apparent logical branch size: ~67.7 MiB. Neon copy-on-write means delet
 
 # J. Recommended remediation order
 
-This order is based on blast radius and production risk, not on the five audit passes.
+This order is based on blast radius and production risk, not on the five audit passes. Completed Category A items are retained in the ordering for historical context but should not be re-opened without new evidence.
 
-1. **Correct schema metadata drift** (`PG-AUD-DATA-001`) because future migrations/tests depend on truthful metadata.
+1. **Correct schema metadata drift** (`PG-AUD-DATA-001`) — completed on consolidation branch.
 2. **Close production safety blockers**: database DR, photo DB/blob consistency design, hosted CSP, controlled preview bootstrap, branch protection.
 3. **Decouple production migrations from Vercel builds** and write the PR #84 cutover runbook before any merge.
 4. **Harden indeterminate database-write recovery and serverless connection pooling**.
 5. **Fix P1/P2 accessibility defects**: labels, sticky reflow, live announcements, focus management, incorrect tab/radio semantics.
 6. **Add deployed/browser regression gates** including hosted security headers and accessibility/browser E2E.
 7. **Finish older roadmap gates**: hosted durable-photo proof and deployed NHTSA HTTP proof; continue Phase 6 knowledge breadth through data only.
-8. **Move generic equipment catalog data out of Python** after higher-risk correctness/security work is stable.
-9. **Run forward legacy-data cleanup** only after preserving any facts that still need modern provenance.
-10. **Remove proven dead/duplicate repo assets and compatibility bridges** last, after import/dependency analysis.
+8. **Move generic equipment catalog data out of Python** — operational path completed through the versioned dataset; any remaining unused generator modules are a later code-cleanup concern.
+9. **Run forward legacy-data cleanup** — completed on consolidation preview through 0060/0061; production execution remains part of authorized cutover.
+10. **Remove proven dead/duplicate repo assets and compatibility bridges** — Category A duplicate/archive data cleanup completed; broader compatibility/dead-code cleanup remains under Category F.
 
 ## Definition of audit completion
 
-The audit is complete when this report exists on `main`. Audit completion does **not** mean these remediation tasks are implemented, PR #84 is approved for merge, production is ready for migration, or Phase 8 has started.
+The audit is complete when this report exists on `main`. Audit completion does **not** mean PR #84 is approved for merge, production is ready for migration, or Phase 8 has started. Post-audit Category A remediation is complete on the consolidation branch, but production cutover remains separately gated and unauthorized.
