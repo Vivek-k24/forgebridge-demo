@@ -15,9 +15,9 @@
   },
   "review": {
     "status": "approved_for_mvp_reference",
-    "reviewed_on": "2026-09-14",
+    "reviewed_through": "2026-09-15",
     "reviewed_by": "project_owner",
-    "note": "Project owner approved the engine-oil-and-filter workflow and explicitly required the Maintenance Minder oil-life reset as the final step."
+    "note": "Project owner approved the engine-oil-and-filter workflow on 2026-09-14 and approved the water-pump replacement plus required physical coolant refill/air-bleed workflow on 2026-09-15."
   },
   "source": {
     "source_key": "honda-2009-civic-hybrid-owner-manual",
@@ -26,13 +26,50 @@
     "document_part_number": "00X31-SNC-6300",
     "url": "https://techinfo.honda.com/rjanisis/pubs/OM/NC0909/NC0909OM.PDF"
   },
+  "sources": [
+    {
+      "source_key": "honda-2009-civic-hybrid-owner-manual",
+      "source_class": "oem_service",
+      "license_status": "approved",
+      "automation_allowed": false,
+      "document": "2009 Civic Hybrid Online Reference Owner's Manual",
+      "document_part_number": "00X31-SNC-6300",
+      "url": "https://techinfo.honda.com/rjanisis/pubs/OM/NC0909/NC0909OM.PDF"
+    },
+    {
+      "source_key": "charmli-2009-civic-hybrid-service-manual-mirror",
+      "source_class": "licensed_oem_derived",
+      "license_status": "approved",
+      "automation_allowed": false,
+      "reviewed_on": "2026-09-15",
+      "reviewed_by": "project_owner",
+      "note": "Approved for manually reviewed MVP evidence only; automated acquisition remains disabled."
+    }
+  ],
   "repairs": [
     {
       "repair_key": "engine-oil-filter-change",
       "path": "engine_oil_filter_change.json",
+      "source_key": "honda-2009-civic-hybrid-owner-manual",
       "capability_policy_key": "diy_supported",
       "requirement_count": 8,
       "action_count": 6
+    },
+    {
+      "repair_key": "engine-water-pump-replacement",
+      "path": "engine_water_pump_replacement.json",
+      "source_key": "charmli-2009-civic-hybrid-service-manual-mirror",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 4,
+      "action_count": 4
+    },
+    {
+      "repair_key": "cooling-system-refill-air-bleed",
+      "path": "cooling_system_refill_air_bleed.json",
+      "source_key": "charmli-2009-civic-hybrid-service-manual-mirror",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 1,
+      "action_count": 4
     }
   ]
 }
