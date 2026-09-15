@@ -7,9 +7,11 @@ on:
       - 'api/partgraph/repair_experience/**'
       - 'api/partgraph/repair_definition/**'
       - 'api/partgraph/knowledge/repair_materialization*.py'
+      - 'api/partgraph/knowledge/downstream_materialization.py'
       - 'api/partgraph/knowledge/repair_service.py'
       - 'api/partgraph/knowledge/procedure_service.py'
       - 'api/tests/test_reference_repair_runtime.py'
+      - 'api/tests/test_reference_downstream_runtime.py'
       - 'api/migrations/**'
       - 'api/pyproject.toml'
       - '.github/workflows/reference-runtime.yml'
@@ -22,9 +24,11 @@ on:
       - 'api/partgraph/repair_experience/**'
       - 'api/partgraph/repair_definition/**'
       - 'api/partgraph/knowledge/repair_materialization*.py'
+      - 'api/partgraph/knowledge/downstream_materialization.py'
       - 'api/partgraph/knowledge/repair_service.py'
       - 'api/partgraph/knowledge/procedure_service.py'
       - 'api/tests/test_reference_repair_runtime.py'
+      - 'api/tests/test_reference_downstream_runtime.py'
       - 'api/migrations/**'
       - 'api/pyproject.toml'
       - '.github/workflows/reference-runtime.yml'
@@ -78,9 +82,11 @@ jobs:
           api/partgraph/knowledge/repair_materialization.py
           api/partgraph/knowledge/repair_materialization_contract.py
           api/partgraph/knowledge/repair_materialization_service.py
+          api/partgraph/knowledge/downstream_materialization.py
           api/partgraph/knowledge/repair_service.py
           api/partgraph/knowledge/procedure_service.py
           api/tests/test_reference_repair_runtime.py
+          api/tests/test_reference_downstream_runtime.py
 
       - name: Apply database migrations
         env:
@@ -92,4 +98,4 @@ jobs:
           PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
         run: >-
           python -m unittest discover -s api/tests
-          -p 'test_reference_repair_runtime.py'
+          -p 'test_reference_*_runtime.py'
