@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "plan_key": "phase7-reference-persistent-publication-v1",
+  "vehicle_configuration_id": "7feb13e9-bca0-5d8b-b701-f0260cce5da1",
+  "policy": {
+    "deployment_is_publication": false,
+    "publication_trigger": "operator_only",
+    "explicit_environment_authorization_required": true,
+    "production_publication_authorized": false,
+    "source_automation_rights_unchanged": true,
+    "publication_path": "immutable_evidence_then_verified_claim_then_restricted_materializer",
+    "direct_canonical_sql_allowed": false
+  },
+  "datasets": {
+    "parts_manifest": "api/data/reference/2009_honda_civic_hybrid_parts_v1/manifest.json",
+    "repair_manifest": "api/data/reference/2009_honda_civic_hybrid_repairs_v1/manifest.json",
+    "primary_vehicle_coverage": "api/data/reference/2009_honda_civic_hybrid_profile_v1/canonical_coverage.json"
+  },
+  "reference_bundle": {
+    "vehicle_identity_claims": 1,
+    "part_fitment_claims": 267,
+    "repairs": [
+      {
+        "repair_key": "engine-oil-filter-change",
+        "requirement_claims": 8,
+        "procedure_claims": 6
+      },
+      {
+        "repair_key": "engine-water-pump-replacement",
+        "requirement_claims": 4,
+        "procedure_claims": 4
+      },
+      {
+        "repair_key": "cooling-system-refill-air-bleed",
+        "requirement_claims": 1,
+        "procedure_claims": 4
+      }
+    ],
+    "vehicle_structure_claims": 3,
+    "vehicle_specification_claims": 2,
+    "expected_scoped_target": {
+      "verified_evidence": 300,
+      "mechanical_claims": 300,
+      "part_fitments": 267,
+      "repair_definitions": 3,
+      "vehicle_structure_nodes": 3,
+      "vehicle_specification_values": 2
+    }
+  },
+  "observed_preview_snapshot": {
+    "observed_on": "2026-09-15",
+    "schema_revision": "0061_retire_legacy_specs",
+    "verified_evidence": 282,
+    "mechanical_claims": 282,
+    "part_fitments": 267,
+    "repair_definitions": [
+      "engine-oil-filter-change"
+    ],
+    "vehicle_structure_nodes": 0,
+    "vehicle_specification_values": 0,
+    "classification": {
+      "already_persistent": [
+        "verified vehicle identity claim",
+        "reviewed OEM part-fitment claim set",
+        "engine-oil-filter-change repair definition and supporting claims"
+      ],
+      "approved_fixture_only_pending_environment_publication": [
+        "engine-water-pump-replacement repair definition and supporting claims",
+        "cooling-system-refill-air-bleed repair definition and supporting claims",
+        "three primary vehicle-structure claims",
+        "two primary vehicle-specification claims"
+      ]
+    }
+  },
+  "expected_increment_from_observed_preview": {
+    "verified_evidence": 18,
+    "mechanical_claims": 18,
+    "repair_definitions": 2,
+    "vehicle_structure_nodes": 3,
+    "vehicle_specification_values": 2
+  },
+  "publication_preconditions": [
+    "target database schema is at the approved application revision",
+    "target environment has explicit publication authorization separate from deployment authorization",
+    "every source is registered with approved license status and its existing automation_allowed value is preserved",
+    "every fact has immutable verified evidence before a MechanicalClaim can be verified",
+    "every MechanicalClaim has exact vehicle applicability and satisfies source-authority policy",
+    "no unresolved conflict blocks the claim",
+    "publication actor uses only the restricted materializer role for canonical writes"
+  ],
+  "publication_order": [
+    "preflight",
+    "promote immutable evidence",
+    "create or reuse verified MechanicalClaims",
+    "materialize canonical vehicle domains and repair definitions",
+    "verify scoped counts and evidence links",
+    "record publication result"
+  ],
+  "rollback_policy": {
+    "preferred": "supersede or correct through the provenance-aware publication path",
+    "database_restore": "use only for environment-level failed publication/cutover recovery",
+    "direct_delete": false
+  },
+  "deferred": {
+    "generic_reusable_persistent_bundle_publisher": "Phase 6 broad repair-knowledge population",
+    "reason": "The current Phase 7 fixtures prove the same evidence/claim/materializer path, but a generic operator ingestion orchestrator belongs with broad canonical knowledge population rather than a reference-vehicle-only remediation utility."
+  }
+}
