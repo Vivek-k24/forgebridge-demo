@@ -7,6 +7,7 @@ from pydantic import ValidationError
 
 from partgraph.database import session_factory
 from partgraph.errors import PartGraphError
+from partgraph.identity.auth.roles import assume_operator_database_role
 from partgraph.operator.schemas import (
     CatalogSourceCreate,
     CatalogSourceUpdate,
@@ -26,6 +27,7 @@ from partgraph.operator.service import (
 
 DATABASE_URL_ENV = "PARTGRAPH_DATABASE_URL"
 APP_ROLE = "partgraph_app"
+OPERATOR_ROLE = "partgraph_operator"
 
 
 def _database_url() -> str:
@@ -56,43 +58,43 @@ class OperatorSourceBindingPrivilegeTests(unittest.TestCase):
     def tearDownClass(cls) -> None:
         cls.connection.close()
 
-    def _table_privilege(self, table: str, privilege: str) -> bool:
+    def _table_privilege(self, role: str, table: str, privilege: str) -> bool:
         with self.connection.cursor() as cursor:
             cursor.execute(
                 "SELECT has_table_privilege(%s, %s, %s)",
-                (APP_ROLE, table, privilege),
+                (role, table, privilege),
             )
             row = cursor.fetchone()
             assert row is not None
             return bool(row[0])
 
-    def test_app_can_manage_source_registry_but_not_authority_policy(self) -> None:
-        self.assertTrue(self._table_privilege("public.catalog_sources", "SELECT"))
-        self.assertTrue(self._table_privilege("public.catalog_sources", "INSERT"))
-        self.assertTrue(self._table_privilege("public.catalog_sources", "UPDATE"))
-        self.assertFalse(self._table_privilege("public.catalog_sources", "DELETE"))
+    def test_app_is_read_only_while_operator_manages_source_registry(self) -> None:
+        for table in (
+            "public.catalog_sources",
+            "public.provider_source_bindings",
+        ):
+            with self.subTest(role=APP_ROLE, table=table):
+                self.assertTrue(self._table_privilege(APP_ROLE, table, "SELECT"))
+                self.assertFalse(self._table_privilege(APP_ROLE, table, "INSERT"))
+                self.assertFalse(self._table_privilege(APP_ROLE, table, "UPDATE"))
+                self.assertFalse(self._table_privilege(APP_ROLE, table, "DELETE"))
 
-        self.assertTrue(
-            self._table_privilege("public.provider_source_bindings", "SELECT")
-        )
-        self.assertTrue(
-            self._table_privilege("public.provider_source_bindings", "INSERT")
-        )
-        self.assertTrue(
-            self._table_privilege("public.provider_source_bindings", "UPDATE")
-        )
-        self.assertFalse(
-            self._table_privilege("public.provider_source_bindings", "DELETE")
-        )
+            with self.subTest(role=OPERATOR_ROLE, table=table):
+                self.assertTrue(self._table_privilege(OPERATOR_ROLE, table, "SELECT"))
+                self.assertTrue(self._table_privilege(OPERATOR_ROLE, table, "INSERT"))
+                self.assertTrue(self._table_privilege(OPERATOR_ROLE, table, "UPDATE"))
+                self.assertFalse(self._table_privilege(OPERATOR_ROLE, table, "DELETE"))
 
-        for privilege in ("INSERT", "UPDATE", "DELETE"):
-            with self.subTest(privilege=privilege):
-                self.assertFalse(
-                    self._table_privilege(
-                        "public.source_authority_policies",
-                        privilege,
+        for role in (APP_ROLE, OPERATOR_ROLE):
+            for privilege in ("INSERT", "UPDATE", "DELETE"):
+                with self.subTest(role=role, privilege=privilege):
+                    self.assertFalse(
+                        self._table_privilege(
+                            role,
+                            "public.source_authority_policies",
+                            privilege,
+                        )
                     )
-                )
 
 
 class OperatorSourceBindingServiceTests(unittest.IsolatedAsyncioTestCase):
@@ -161,6 +163,7 @@ class OperatorSourceBindingServiceTests(unittest.IsolatedAsyncioTestCase):
     async def test_binding_enablement_is_explicit_fail_closed_and_does_not_collect(self) -> None:
         async with session_factory() as db:
             async with db.begin():
+                await assume_operator_database_role(db)
                 provider = await create_provider(
                     db,
                     actor_id=self.actor_id,
