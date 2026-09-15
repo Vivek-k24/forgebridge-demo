@@ -6,7 +6,7 @@ from starlette.responses import FileResponse
 
 from ..auth.dependencies import AuthSessionDep, CurrentUserDep, require_csrf
 from ..config import settings
-from ..errors import ErrorEnvelope
+from ..errors import ErrorCode, ErrorEnvelope, PartGraphError
 from ..repair_session.router import (
     DEVICE_HEADER,
     IDEMPOTENCY_HEADER,
@@ -44,6 +44,7 @@ from .service import (
     update_fastener_state,
     update_inventory_state,
 )
+from .storage import PhotoFormatError, PhotoResourceLimitError, prepare_photo
 
 ERROR_RESPONSES = {
     401: {"model": ErrorEnvelope},
@@ -290,6 +291,26 @@ async def add_photo(
         data = await photo.read(settings.photo_max_bytes + 1)
     finally:
         await photo.close()
+    if not data or len(data) > settings.photo_max_bytes:
+        raise PartGraphError(
+            code=ErrorCode.PHOTO_TOO_LARGE,
+            message=f"Photo must be between 1 byte and {settings.photo_max_bytes} bytes.",
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+        )
+    try:
+        prepared = await prepare_photo(data, maximum_bytes=settings.photo_max_bytes)
+    except PhotoResourceLimitError as exc:
+        raise PartGraphError(
+            code=ErrorCode.PHOTO_TOO_LARGE,
+            message="Photo dimensions, decoded pixel count, or sanitized size exceed the allowed limit.",
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+        ) from exc
+    except PhotoFormatError as exc:
+        raise PartGraphError(
+            code=ErrorCode.PHOTO_MEDIA_TYPE_UNSUPPORTED,
+            message="Photo content must be a valid JPEG, PNG, WebP, or HEIC image.",
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+        ) from exc
     return await create_photo(
         db,
         user_id=user.id,
@@ -300,7 +321,7 @@ async def add_photo(
         observation_id=observation_id,
         fastener_id=fastener_id,
         filename=photo.filename,
-        data=data,
+        data=prepared.data,
         maximum_bytes=settings.photo_max_bytes,
     )
 
