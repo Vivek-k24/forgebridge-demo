@@ -5,18 +5,19 @@ on:
     paths:
       - 'api/**'
       - 'compose.yaml'
-      - '.github/workflows/api.yml'
+      - '.github/workflows/**'
+      - '.github/dependabot.yml'
   push:
     branches: [main]
     paths:
       - 'api/**'
       - 'compose.yaml'
-      - '.github/workflows/api.yml'
+      - '.github/workflows/**'
+      - '.github/dependabot.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
-  packages: write
 
 concurrency:
   group: api-${{ github.workflow }}-${{ github.ref }}
@@ -44,10 +45,13 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Validate GitHub Actions supply-chain policy
+        run: python3 api/scripts/validate_ci_security.py
 
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: '3.14'
 
@@ -66,6 +70,7 @@ jobs:
       - name: Lint API, migrations, and security tests
         run: >-
           ruff check api/partgraph api/migrations
+          api/scripts/validate_ci_security.py
           api/scripts/validate_schema_baseline.py
           api/scripts/verify_adopted_baseline.py
           api/scripts/verify_persisted_history_upgrade.py
@@ -279,7 +284,7 @@ jobs:
 
       - name: Upload schema baseline diagnostics
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: partgraph-schema-baseline-${{ github.sha }}
           path: |
@@ -323,10 +328,13 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Authenticate to GHCR
         env:
