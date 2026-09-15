@@ -6,6 +6,11 @@ from ..errors import ErrorEnvelope
 from ..identity.auth.dependencies import AuthSessionDep, require_csrf
 from ..identity.auth.roles import CuratorUserDep, assume_materializer_database_role
 from .canonical_claim_materialization import router as canonical_claim_materialization_router
+from .downstream_materialization import (
+    DownstreamRequirementMaterializationCreate,
+    DownstreamRequirementMaterializationRead,
+    materialize_downstream_requirement_service,
+)
 from .repair_materialization_contract import (
     IDEMPOTENCY_PATTERN,
     RepairDefinitionMaterializationCreate,
@@ -59,4 +64,22 @@ async def materialize_repair_definition(
         request=request,
         actor=f"{user.id}:{user.role}",
         idempotency_key=idempotency_key,
+    )
+
+
+@router.post(
+    "/repair-definitions/downstream/materialize",
+    response_model=DownstreamRequirementMaterializationRead,
+    dependencies=[CsrfDep],
+)
+async def materialize_downstream_requirement(
+    request: DownstreamRequirementMaterializationCreate,
+    user: CuratorUserDep,
+    db: AuthSessionDep,
+) -> DownstreamRequirementMaterializationRead:
+    del user
+    await assume_materializer_database_role(db)
+    return await materialize_downstream_requirement_service(
+        db,
+        request=request,
     )
