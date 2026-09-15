@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import select, text
 
+import partgraph.orm_registry  # noqa: F401
 from partgraph.database import session_factory
 from partgraph.identity.auth.models import User
 from partgraph.identity.auth.service import set_user_context
