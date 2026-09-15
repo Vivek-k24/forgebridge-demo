@@ -9,15 +9,17 @@ Last updated: **2026-09-14**
 
 Current exact implementation proof tracked here:
 - active implementation branch: `partgraph-mvp-consolidation`
-- latest exact green implementation commit: `f1988d2331694fcb43bd6891d33e2eaf7576626e`
-- full API CI: passed
-- Web CI: passed
-- extraction/NHTSA/provider-binding/operator-control pipeline CI: passed
+- latest exact green implementation commit: `384cd95edadaf36bde621b6b4deb95c2a3ca3092`
+- full API CI: passed (`#776`)
+- Web CI: passed (`#639`)
+- extraction/provider-ingestion pipeline CI: passed (`#53`)
 - canonical publication CI: passed
 - Vercel consolidation preview: READY on the same commit
-- consolidation preview database: `0054_vehicle_verify_timestamp`
+- consolidation preview database: `0057_nhtsa_ingest_audit`
 - production database: intentionally unchanged at `0020_catalog_coverage`
 - PR #84: remains draft/unmerged
+
+The consolidation preview now contains 267 reviewed canonical Civic Hybrid part fitments and the first fully canonical repair workflow: `engine-oil-filter-change` version 1, with 8 requirements, 6 ordered procedure actions, `diy_supported` capability, and 14 verified evidence links. The final non-skippable action resets the Maintenance Minder engine-oil-life display to 100% using the vehicle's dashboard controls.
 
 This file is intentionally allowed to be newer than `docs/ROADMAP.md` on `main`. It tracks completed work immediately while implementation continues on the consolidation branch.
 
@@ -60,7 +62,7 @@ Status: **Functionally accounted; consolidation line remains open.**
 - [x] Externalize known hard-coded vehicle facts from source/CI into fixtures or database data.
 - [x] Make supported vehicle selection data-driven.
 - [x] Retire obsolete historical acceptance infrastructure while preserving build/lint/audit/container-smoke CI.
-- [ ] Merge the exact validated consolidation result to `main`. **Explicit merge/cutover decision still required.**
+- [ ] Merge the exact validated consolidation result to `main`. **Production schema/cutover ordering still blocks this.**
 
 Notes:
 - historical salvage has been accounted for
@@ -178,7 +180,7 @@ Production remains at `0020_catalog_coverage` until an explicit production migra
 
 ## Phase 6 — Canonical data and provider pipeline
 
-Status: **In progress. Human evidence-to-claim publication, repair publication, vehicle-identity/part-fitment canonical materialization, generic extraction, trusted provider/source binding, and authenticated Admin configuration are implemented and green. Real provider activation and broad knowledge population remain.**
+Status: **In progress. The generic evidence/provider/publication pipeline is implemented and green; the preview has an enabled NHTSA provider/source binding, 267 canonical Civic part fitments, and the first canonical Civic repair workflow. Broad repair-knowledge population remains.**
 
 Core registry and authority:
 - [x] source registry
@@ -210,6 +212,8 @@ NHTSA government-source collector:
 - [x] stage NHTSA-derived facts as `pending`
 - [x] prove NHTSA staging creates zero verified evidence and zero MechanicalClaims automatically
 - [x] NHTSA collector CI safety tests
+- [x] configure an approved NHTSA provider/source binding in the isolated consolidation preview
+- [ ] prove a live deployed HTTP ingestion invocation through the operator endpoint; configuration alone is not counted as collection
 
 Operator/admin provider controls:
 - [x] operator-only source registry list/create/update API
@@ -240,51 +244,62 @@ Human review/publication spine:
 - [x] dedicated least-privilege materializer boundary
 - [x] permanent canonical-publication CI gate
 - [x] prevent candidate-only source authority from winning curator conflict resolution
+- [x] publish the first reviewed Honda OEM-service repair through reviewer → curator → materializer authority
 
 Remaining Phase 6 work:
 - [x] define and persist an explicit trusted `provider_connection` → `catalog_source` binding
 - [x] define the trusted execution role/path that resolves provider configuration and its bound source without widening collector authority
-- [ ] activate real approved-provider ingestion only after that binding exists
+- [ ] complete real-provider live ingestion proof through the deployed operator path
 - [x] expose safe provider/source configuration and enable/disable controls through authenticated operator/admin flow where required
 - [x] broaden canonical materialization to additional domains where the MVP provider pipeline requires it
-- [ ] populate broad canonical repair knowledge
+- [ ] populate **broad** canonical repair knowledge; one fully reviewed repair is now canonical, but one repair is not broad coverage
 
 Current safety boundary:
 - collector/extractor output is candidate data only
 - source registration, provider enablement, and binding enablement do **not** start collection by themselves
 - external providers have no direct verified/canonical publication authority
 - extraction confidence is not source authority
-- vehicle identity publication does not rewrite stored identity fields; an unverified configuration requires evidence covering its stored identity before verification can advance
-- canonical part fitment is insert-only through the materializer and conflicting existing rows fail closed rather than being overwritten
+- vehicle identity publication does not rewrite stored identity fields
+- canonical part fitment is insert-only through the materializer and conflicting existing rows fail closed
 - safety campaigns remain verified claim context with no canonical destination in the current architecture
 - missing remains missing
 - conflicts remain explicit
 - AI cannot directly publish canonical automotive truth
-- production provider/collector activation is **not** implied by adapter, materializer, or Admin-control implementation
+- production provider/collector activation is **not** implied by preview configuration
 
 ---
 
 ## Phase 7 — Primary end-to-end vehicle
 
-Status: **Pending sufficient Phase 6 ingestion/publication coverage.**
+Status: **In progress. The exact 2009 Civic Hybrid identity, reviewed parts/fitment coverage, first tool/fluid/requirement set, first verified procedure, and DIY capability classification are now canonical. Runtime session/readiness/completion validation and additional repair domains remain.**
 
 Use the 2009 Honda Civic Hybrid as the deepest first validation configuration.
 
-- [ ] identity coverage
+- [x] identity coverage — exact verified `VehicleConfiguration`
 - [ ] systems/assemblies coverage
-- [ ] parts and hardware coverage
-- [ ] tools coverage
-- [ ] fluids/materials coverage
-- [ ] specifications coverage
-- [ ] repair requirements coverage
-- [ ] procedures coverage
+- [x] parts and hardware coverage — 267 reviewed canonical fitments across cooling, HVAC, intake, brakes, and suspension; repair-specific drain washer also modeled as a requirement
+- [x] tools coverage — first canonical repair includes oil-filter wrench and flat-tip screwdriver
+- [x] fluids/materials coverage — first canonical repair includes 0W-20 engine oil with verified quantity/unit
+- [ ] specifications coverage — torque/capacity are evidence-backed inside the repair workflow, but first-class specification-table coverage is still pending
+- [x] repair requirements coverage — first canonical repair has 8 verified requirement uses
+- [x] procedures coverage — `engine-oil-filter-change` v1 has 6 ordered, non-skippable actions with evidence; final action resets engine oil life to 100%
 - [ ] readiness coverage
 - [ ] blockers coverage
 - [ ] downstream operations coverage
 - [ ] observations/photos coverage
 - [ ] pause/resume coverage
-- [ ] capability-boundary coverage
+- [x] capability-boundary coverage — first canonical repair is explicitly `diy_supported`; dashboard reset uses physical vehicle controls rather than scan-tool/computer authority
 - [ ] completion coverage
+
+Current primary-vehicle canonical repair proof:
+- repair key: `engine-oil-filter-change`
+- repair definition version: `1`
+- requirements: `8`
+- procedure actions: `6`
+- verified evidence/claim links: `14`
+- capability: `diy_supported`
+- source: Honda OEM service evidence, project-owner reviewed
+- repository reference dataset: `api/data/reference/2009_honda_civic_hybrid_repairs_v1/`
 
 Exit gate: representative repairs work start-to-finish without vehicle-specific code changes.
 
@@ -345,14 +360,14 @@ Status: **Pending Phase 9 and explicit production approval.**
 
 Keep:
 - `main` — production/default line; this live roadmap is maintained here immediately
-- `partgraph-mvp-consolidation` — active implementation line until explicit merge approval
+- `partgraph-mvp-consolidation` — active implementation line until production-safe cutover order is satisfied
 
 Historical/temp branches may remain as references. Do not delete Git or Neon branches without explicit approval.
 
 Do not interpret updates to this live roadmap as authorization to:
 - merge PR #84
 - migrate production
-- enable a real provider/collector in production
+- enable a provider/collector in production
 - delete branches
 - relax source authority
 - bypass human evidence review
