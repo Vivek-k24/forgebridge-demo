@@ -5,7 +5,10 @@ from fastapi import APIRouter, Depends, Query, status
 
 from ..errors import ErrorEnvelope
 from ..identity.auth.dependencies import AuthSessionDep, CurrentUserDep, require_csrf
-from ..identity.auth.roles import OperatorAdminDep
+from ..identity.auth.roles import (
+    OperatorAdminDep,
+    assume_operator_database_role,
+)
 from ..identity.auth.schemas import AdminAccessRead
 from .local_bootstrap import (
     bootstrap_local_operator,
@@ -13,7 +16,11 @@ from .local_bootstrap import (
     local_operator_bootstrap_status,
 )
 from .nhtsa import stage_nhtsa_recall_query
-from .preview_bootstrap import bootstrap_preview_operator, preview_operator_bootstrap_status
+from .preview_bootstrap import (
+    bootstrap_preview_operator,
+    preview_operator_bootstrap_authorized,
+    preview_operator_bootstrap_status,
+)
 from .reference_parts import stage_reference_parts_dataset
 from .schemas import (
     CatalogSourceCreate,
@@ -83,8 +90,11 @@ async def preview_bootstrap(
     session: AuthSessionDep,
 ) -> AdminAccessRead:
     if local_operator_bootstrap_environment():
+        await assume_operator_database_role(session)
         await bootstrap_local_operator(session, user=user)
     else:
+        if preview_operator_bootstrap_authorized(user):
+            await assume_operator_database_role(session)
         await bootstrap_preview_operator(session, user=user)
     return AdminAccessRead()
 
@@ -95,6 +105,7 @@ async def users(
     session: AuthSessionDep,
     limit: Annotated[int, Query(ge=1, le=250)] = 100,
 ) -> list[OperatorUserRead]:
+    await assume_operator_database_role(session)
     del user
     return await list_operator_users(session, limit=limit)
 
@@ -110,6 +121,7 @@ async def change_role(
     user: OperatorAdminDep,
     session: AuthSessionDep,
 ) -> OperatorUserRead:
+    await assume_operator_database_role(session)
     return await change_user_role(
         session,
         actor_id=user.id,
@@ -120,6 +132,7 @@ async def change_role(
 
 @router.get("/providers", response_model=list[ProviderRead])
 async def providers(user: OperatorAdminDep, session: AuthSessionDep) -> list[ProviderRead]:
+    await assume_operator_database_role(session)
     del user
     return await list_providers(session)
 
@@ -135,6 +148,7 @@ async def add_provider(
     user: OperatorAdminDep,
     session: AuthSessionDep,
 ) -> ProviderRead:
+    await assume_operator_database_role(session)
     return await create_provider(session, actor_id=user.id, payload=payload)
 
 
@@ -149,6 +163,7 @@ async def change_provider(
     user: OperatorAdminDep,
     session: AuthSessionDep,
 ) -> ProviderRead:
+    await assume_operator_database_role(session)
     return await update_provider(
         session,
         actor_id=user.id,
@@ -159,6 +174,7 @@ async def change_provider(
 
 @router.get("/sources", response_model=list[CatalogSourceRead])
 async def sources(user: OperatorAdminDep, session: AuthSessionDep) -> list[CatalogSourceRead]:
+    await assume_operator_database_role(session)
     del user
     return await list_catalog_sources(session)
 
@@ -174,6 +190,7 @@ async def add_source(
     user: OperatorAdminDep,
     session: AuthSessionDep,
 ) -> CatalogSourceRead:
+    await assume_operator_database_role(session)
     return await create_catalog_source(session, actor_id=user.id, payload=payload)
 
 
@@ -188,6 +205,7 @@ async def change_source(
     user: OperatorAdminDep,
     session: AuthSessionDep,
 ) -> CatalogSourceRead:
+    await assume_operator_database_role(session)
     return await update_catalog_source(
         session,
         actor_id=user.id,
@@ -204,6 +222,7 @@ async def provider_source_bindings(
     user: OperatorAdminDep,
     session: AuthSessionDep,
 ) -> list[ProviderSourceBindingRead]:
+    await assume_operator_database_role(session)
     del user
     return await list_provider_source_bindings(session)
 
@@ -219,6 +238,7 @@ async def add_provider_source_binding(
     user: OperatorAdminDep,
     session: AuthSessionDep,
 ) -> ProviderSourceBindingRead:
+    await assume_operator_database_role(session)
     return await create_provider_source_binding(
         session,
         actor_id=user.id,
@@ -237,6 +257,7 @@ async def change_provider_source_binding(
     user: OperatorAdminDep,
     session: AuthSessionDep,
 ) -> ProviderSourceBindingRead:
+    await assume_operator_database_role(session)
     return await update_provider_source_binding(
         session,
         actor_id=user.id,
@@ -255,6 +276,7 @@ async def stage_reference_parts(
     user: OperatorAdminDep,
     session: AuthSessionDep,
 ) -> ReferencePartsStageRead:
+    await assume_operator_database_role(session)
     return await stage_reference_parts_dataset(
         session,
         actor_id=user.id,
@@ -272,6 +294,7 @@ async def stage_nhtsa_recalls(
     user: OperatorAdminDep,
     session: AuthSessionDep,
 ) -> NhtsaRecallStageRead:
+    await assume_operator_database_role(session)
     return await stage_nhtsa_recall_query(
         session,
         actor_id=user.id,
@@ -281,5 +304,6 @@ async def stage_nhtsa_recalls(
 
 @router.get("/audit", response_model=list[OperatorAuditRead])
 async def audit(user: OperatorAdminDep, session: AuthSessionDep) -> list[OperatorAuditRead]:
+    await assume_operator_database_role(session)
     del user
     return await list_operator_audit(session)
