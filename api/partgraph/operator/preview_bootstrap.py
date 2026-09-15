@@ -5,11 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..errors import ErrorCode, PartGraphError
 from ..identity.auth.models import User
+from . import service
 from .schemas import PreviewOperatorBootstrapStatus
-from .service import (
-    bootstrap_preview_operator as _bootstrap_preview_operator,
-    preview_operator_bootstrap_status as _preview_operator_bootstrap_status,
-)
 
 PREVIEW_OPERATOR_BOOTSTRAP_USER_ID_ENV = "PARTGRAPH_PREVIEW_OPERATOR_BOOTSTRAP_USER_ID"
 
@@ -37,7 +34,7 @@ async def preview_operator_bootstrap_status(
 ) -> PreviewOperatorBootstrapStatus:
     if not preview_operator_bootstrap_authorized(user):
         return PreviewOperatorBootstrapStatus(available=False)
-    return await _preview_operator_bootstrap_status(session)
+    return await service.preview_operator_bootstrap_status(session)
 
 
 async def bootstrap_preview_operator(
@@ -51,4 +48,4 @@ async def bootstrap_preview_operator(
             message="Preview operator bootstrap is not authorized for this account.",
             status_code=403,
         )
-    await _bootstrap_preview_operator(session, user=user)
+    await service.bootstrap_preview_operator(session, user=user)

@@ -5,7 +5,8 @@ from uuid import uuid4
 
 from partgraph.errors import PartGraphError
 from partgraph.identity.auth.models import User
-from partgraph.operator import preview_bootstrap, router as operator_router, service
+from partgraph.operator import preview_bootstrap, service
+from partgraph.operator import router as operator_router
 from partgraph.operator.models import OperatorAuditEvent
 
 
