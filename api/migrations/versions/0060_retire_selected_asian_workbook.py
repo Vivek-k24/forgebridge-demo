@@ -6,7 +6,8 @@ Later provider-backed identity collection superseded this bootstrap data.
 
 This cleanup is deliberately fail-closed: if any workbook configuration has
 acquired a real downstream dependency, the migration aborts instead of deleting
-that configuration or its dependent data.
+that configuration or its dependent data. Schema-only baseline installations,
+where the historical lineage was never loaded, are an intentional no-op.
 """
 
 from __future__ import annotations
@@ -67,6 +68,45 @@ WORKBOOK_CONFIGURATION_SQL = """
 def _scalar(bind: sa.Connection, sql: str, params: dict[str, object] | None = None) -> int:
     value = bind.execute(sa.text(sql), params or {}).scalar_one()
     return int(value)
+
+
+def _lineage_presence(bind: sa.Connection) -> tuple[int, int, int, int, int]:
+    configuration_count = _scalar(
+        bind,
+        f"SELECT count(*) FROM vehicle_configurations WHERE id IN ({WORKBOOK_CONFIGURATION_SQL})",
+    )
+    ingestion_batch_count = _scalar(
+        bind,
+        "SELECT count(*) FROM catalog_staging.ingestion_batches WHERE id = :batch_id",
+        {"batch_id": INGESTION_BATCH_ID},
+    )
+    source_record_count = _scalar(
+        bind,
+        "SELECT count(*) FROM catalog_staging.source_records WHERE batch_id = :batch_id",
+        {"batch_id": INGESTION_BATCH_ID},
+    )
+    coverage_batch_count = _scalar(
+        bind,
+        "SELECT count(*) FROM catalog_coverage_batches WHERE batch_key = :batch_key",
+        {"batch_key": COVERAGE_BATCH_KEY},
+    )
+    coverage_item_count = _scalar(
+        bind,
+        """
+        SELECT count(*)
+        FROM catalog_coverage_items AS item
+        JOIN catalog_coverage_batches AS batch ON batch.id = item.batch_id
+        WHERE batch.batch_key = :batch_key
+        """,
+        {"batch_key": COVERAGE_BATCH_KEY},
+    )
+    return (
+        configuration_count,
+        ingestion_batch_count,
+        source_record_count,
+        coverage_batch_count,
+        coverage_item_count,
+    )
 
 
 def _assert_workbook_identity_set(bind: sa.Connection) -> None:
@@ -202,6 +242,12 @@ def _assert_no_protected_references(bind: sa.Connection) -> None:
 
 def upgrade() -> None:
     bind = op.get_bind()
+
+    # The adopted schema-only baseline never loaded the historical workbook.
+    # A completely absent lineage is therefore valid. Any partial presence
+    # continues through the strict assertions below and fails closed.
+    if _lineage_presence(bind) == (0, 0, 0, 0, 0):
+        return
 
     _assert_workbook_identity_set(bind)
     _assert_staging_lineage(bind)
