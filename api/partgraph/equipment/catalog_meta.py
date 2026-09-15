@@ -1,11 +1,7 @@
 from __future__ import annotations
 
-from .catalog_seed_v1 import CATEGORY_META as EQUIPMENT_CATEGORY_META
+from .catalog_dataset import load_equipment_category_meta
 
-CATEGORY_META = {
-    **EQUIPMENT_CATEGORY_META,
-    "engine-oil": ("Engine oil", "oil"),
-    "coolant-antifreeze": ("Coolant & antifreeze", "coolant"),
-    "washer-fluid": ("Windshield washer fluid", "washer-fluid"),
-    "wheel-hardware": ("Wheel hardware", "lug"),
-}
+# Runtime category metadata comes from the same versioned dataset as catalog rows.
+# Legacy generator metadata remains only for immutable migration compatibility.
+CATEGORY_META = load_equipment_category_meta()
