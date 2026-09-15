@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2009-honda-civic-hybrid-repairs-v1",
+  "vehicle_configuration_id": "7feb13e9-bca0-5d8b-b701-f0260cce5da1",
+  "vehicle": {
+    "market": "US",
+    "year": 2009,
+    "make": "Honda",
+    "model": "CIVIC",
+    "trim": "HYBRID",
+    "body_style": "Sedan",
+    "engine": "1.3L I4 HYBRID",
+    "transmission": "CVT",
+    "drivetrain": "FWD"
+  },
+  "review": {
+    "status": "approved_for_mvp_reference",
+    "reviewed_on": "2026-09-14",
+    "reviewed_by": "project_owner",
+    "note": "Project owner approved the engine-oil-and-filter workflow and explicitly required the Maintenance Minder oil-life reset as the final step."
+  },
+  "source": {
+    "source_key": "honda-2009-civic-hybrid-owner-manual",
+    "source_class": "oem_service",
+    "document": "2009 Civic Hybrid Online Reference Owner's Manual",
+    "document_part_number": "00X31-SNC-6300",
+    "url": "https://techinfo.honda.com/rjanisis/pubs/OM/NC0909/NC0909OM.PDF"
+  },
+  "repairs": [
+    {
+      "repair_key": "engine-oil-filter-change",
+      "path": "engine_oil_filter_change.json",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 8,
+      "action_count": 6
+    }
+  ]
+}
