@@ -133,13 +133,17 @@ class ReferenceRepairRuntimeDatabaseTests(unittest.IsolatedAsyncioTestCase):
             canonical_configuration_id=REFERENCE_VEHICLE_ID,
             nickname="Reference Civic Hybrid",
             identity_source="manual",
-            identity_resolution="exact",
+            identity_resolution="matched",
             identity_snapshot={
                 "year": 2009,
                 "market": "US",
                 "make": "Honda",
                 "model": "CIVIC",
-                "trim": "Hybrid",
+                "trim": "HYBRID",
+                "body_style": "Sedan",
+                "engine": "1.3L I4 HYBRID",
+                "transmission": "CVT",
+                "drivetrain": "FWD",
             },
         )
         self.db.add_all([source, self.user, self.user_vehicle])
