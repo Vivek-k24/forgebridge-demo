@@ -3,24 +3,26 @@
 Status: **Live progress tracker**  
 Architecture authority: `docs/BLUEPRINT.md`  
 Implementation-sequence source: `docs/ROADMAP.md`  
-Maintenance rule: **update this file directly on `main` as soon as a roadmap task is completed. Do not wait for the implementation branch to merge or for its PR to close.**
+Maintenance rule: **update this file directly on `main` as soon as a roadmap task is completed. Do not wait for the implementation branch to merge or for its PR to close. Keep the technical tracker and the `Layman Live progress` section synchronized so they describe the same completed, pending, and next work without changing roadmap scope, order, or architecture.**
 
-Last updated: **2026-09-14**
+Last updated: **2026-09-15**
 
 Current exact implementation proof tracked here:
 - active implementation branch: `partgraph-mvp-consolidation`
-- latest exact green implementation commit: `f5f7c67e947a5adcb8789805893889ac9e5cbf94`
-- full API CI: passed (`#781`)
-- Web CI: passed (`#644`)
-- extraction/provider-ingestion pipeline CI: passed (`#58`)
-- canonical publication CI: passed (`#30`)
-- reference repair runtime CI: passed (`#6`)
+- latest exact green implementation commit: `4a4bcfb764aebffa277b4555afce355f725f006b`
+- full API CI: passed (`#786`)
+- Web CI: passed (`#649`)
+- extraction/provider-ingestion pipeline CI: passed (`#66`)
+- canonical publication CI: passed (`#36`)
+- reference repair runtime CI: passed (`#12`)
 - Vercel consolidation preview: READY on the same commit
 - consolidation preview database: `0057_nhtsa_ingest_audit`
 - production database: intentionally unchanged at `0020_catalog_coverage`
 - PR #84: remains draft/unmerged
 
 The consolidation preview contains 267 reviewed canonical Civic Hybrid part fitments and the first fully canonical repair workflow: `engine-oil-filter-change` version 1, with 8 requirements, 6 ordered procedure actions, `diy_supported` capability, and 14 verified evidence links. The final non-skippable action resets the Maintenance Minder engine-oil-life display to 100% using the vehicle's dashboard controls. A permanent fresh-database runtime gate now reconstructs this approved repair and proves required-readiness blocking, blocker recovery, ordered action progression, pause/resume reorientation, and final mechanical completion.
+
+The active consolidation branch also now contains a staged 2009 Honda Civic Hybrid water-pump repair candidate plus downstream-repair materialization support. The candidate models physical coolant refill/bleed work as the required follow-on operation and explicitly keeps computer/service-tool work out of the executable repair steps. This work is green in CI, but the candidate is still candidate/staging data rather than canonical repair truth, so Phase 7 downstream-operation coverage remains unchecked until human review/publication and end-to-end runtime proof are complete.
 
 This file is intentionally allowed to be newer than `docs/ROADMAP.md` on `main`. It tracks completed work immediately while implementation continues on the consolidation branch.
 
@@ -272,7 +274,7 @@ Current safety boundary:
 
 ## Phase 7 — Primary end-to-end vehicle
 
-Status: **In progress. The first canonical 2009 Civic Hybrid repair now passes a permanent fresh-database runtime path through readiness, blocker enforcement/recovery, ordered guidance, pause/resume reorientation, and mechanical completion. Additional repair/domain coverage remains.**
+Status: **In progress. The first canonical 2009 Civic Hybrid repair now passes a permanent fresh-database runtime path through readiness, blocker enforcement/recovery, ordered guidance, pause/resume reorientation, and mechanical completion. A water-pump repair candidate is now staged specifically to exercise a required downstream refill/bleed operation, but it is not canonical or runtime-proven yet. Additional repair/domain coverage remains.**
 
 Use the 2009 Honda Civic Hybrid as the deepest first validation configuration.
 
@@ -286,7 +288,7 @@ Use the 2009 Honda Civic Hybrid as the deepest first validation configuration.
 - [x] procedures coverage — `engine-oil-filter-change` v1 has 6 ordered, non-skippable actions with evidence; final action resets engine oil life to 100%
 - [x] readiness coverage — fresh-database runtime proof loads all 8 requirements, blocks on all 7 required missing items, and allows one recommended item to remain missing
 - [x] blockers coverage — the first action cannot complete while its required screwdriver/workspace inputs are missing; setting verified readiness clears the blocker deterministically
-- [ ] downstream operations coverage — this oil-change definition has no triggered downstream operation, so the primary-vehicle downstream path is not yet exercised
+- [ ] downstream operations coverage — the oil-change definition has no triggered downstream operation; the staged water-pump candidate now supplies a real physical refill/bleed follow-on case, but it still requires human review/publication and runtime proof before this box can be checked
 - [ ] observations/photos coverage
 - [x] pause/resume coverage — session pauses after oil drain, preserves the last mechanical checkpoint, and resumes with `Replace the oil filter` as the next verified action
 - [x] capability-boundary coverage — first canonical repair is explicitly `diy_supported`; dashboard reset uses physical vehicle controls rather than scan-tool/computer authority
@@ -300,9 +302,16 @@ Current primary-vehicle canonical repair proof:
 - verified evidence/claim links: `14`
 - capability: `diy_supported`
 - runtime acceptance: `.github/workflows/reference-runtime.yml` / `api/tests/test_reference_repair_runtime.py`
-- runtime CI proof: `Reference Repair Runtime CI #6` on `f5f7c67e947a5adcb8789805893889ac9e5cbf94`
+- runtime CI proof: `Reference Repair Runtime CI #12` on `4a4bcfb764aebffa277b4555afce355f725f006b`
 - source: Honda OEM service evidence, project-owner reviewed
 - repository reference dataset: `api/data/reference/2009_honda_civic_hybrid_repairs_v1/`
+
+Current downstream-operation candidate proof:
+- source repair: 2009 Honda Civic Hybrid water-pump replacement candidate
+- target follow-on work: physical coolant refill/bleed repair candidate
+- downstream repair materialization support: implemented and green
+- computer/service-tool executable content: explicitly excluded by regression test
+- publication state: candidate/staging only; not canonical yet
 
 Exit gate: representative repairs work start-to-finish without vehicle-specific code changes.
 
@@ -383,5 +392,115 @@ A bug may change task detail. It does not automatically change architecture.
 
 Any change to ownership, canonical/private boundaries, source authority, offline authority, repair completion semantics, safety/capability boundaries, RBAC, or deterministic repair execution requires an explicit architecture decision before implementation.
 
-------------------------------------------------------------------------------------------------------------------------------------------------------------
-**Layman Live progress**
+---
+
+## Layman Live progress
+
+This section says the same thing as the technical tracker above, but in plain English. It does not create new work, change priorities, or change the architecture.
+
+### Where the project stands right now
+
+PartGraph is still being built on the separate `partgraph-mvp-consolidation` branch. The production `main` application and production database have **not** been switched over to this new code. PR #84 is still a draft and has not been merged.
+
+The latest tested implementation commit is `4a4bcfb764aebffa277b4555afce355f725f006b`. The API tests, web tests, data-extraction tests, canonical-publication tests, and reference-repair runtime tests all pass on that exact commit. The Vercel preview for that commit also deployed successfully.
+
+For the 2009 Honda Civic Hybrid, PartGraph currently has 267 reviewed part-fitment records in the preview and one repair that is fully approved and usable from start to finish: the engine-oil-and-filter change. That repair knows what is required before starting, blocks the user when a required item is missing, gives the six repair steps in order, can pause and resume without forgetting where the user stopped, and does not claim completion until the actual mechanical work is finished.
+
+The work immediately after that oil-change proof is the water-pump repair. A **candidate** version of the water-pump repair is now in the branch. It also creates the follow-on coolant refill/bleed work that replacing the water pump requires. This is important because it proves the idea at the heart of PartGraph: replacing one component can create another required operation before the overall repair is truly complete.
+
+That water-pump repair is **not approved canonical data yet**. It is still in the waiting/review area. The code needed to turn a reviewed downstream requirement into canonical repair data has been added and all current tests are green. The repair candidate is also checked so that computer or dealer-service-tool instructions do not quietly get mixed into the physical DIY steps.
+
+### Phase 0 — Put the repository onto one controlled path
+
+Almost everything in this phase is finished. We identified the useful code and data, removed obsolete active paths, stopped relying on hard-coded vehicle facts, and moved ongoing work onto one consolidation branch.
+
+What remains is the final merge to `main`. That will not happen yet because production still needs a safe database-migration and cutover order.
+
+### Phase 1 — Fix behavior that could mislead the user
+
+The important repair-behavior problems are fixed. PartGraph now treats unsupported computer/service-tool work as something the user cannot simply mark complete, understands when one repair creates another required repair, preserves repair history correctly, and keeps readiness and inventory consistent.
+
+Two things remain here: proving that uploaded repair photos stay stored correctly in the hosted environment, and the final full regression test that is intentionally saved for Phase 9.
+
+### Phase 2 — Make the app survive network and timeout problems safely
+
+The current MVP policy is complete: offline use is read-only. A user can keep viewing an already-downloaded repair when the network disappears, but the server remains the final authority for changes.
+
+Offline writing and later synchronization are not part of the current MVP. If that is added later, it will need a separate safe conflict-resolution system.
+
+### Phase 3 — Keep private data and privileged actions separated
+
+This phase is functionally complete. Normal users, contributors, reviewers, curators, data collectors, materializers, and administrators have separate responsibilities and permissions.
+
+A normal user cannot publish automotive truth. A data collector can bring information into the staging area but cannot turn it directly into verified repair knowledge. Owner-specific Garage and repair-session data stays private.
+
+### Phase 4 — Give the database places for every kind of repair knowledge we need
+
+This phase is complete for the MVP structure. The database now has a place for all 18 planned information areas, including exact vehicle identity, parts, fitment, fasteners, tools, fluids, specifications, repairs, ordered steps, required follow-on work, diagnostics, electrical items, safety limits, evidence, conflicts, and the owner's repair state.
+
+This does **not** mean all of those areas are filled with broad automotive data yet. It means PartGraph now has the correct structure to store them without changing application code for every car.
+
+### Phase 5 — Make future database upgrades safe
+
+This phase is complete. We built and tested a clean future database baseline and proved that it can be reached without wiping existing owner data.
+
+The real production database is deliberately still at `0020_catalog_coverage`. We have not migrated production just because the newer preview schema works.
+
+### Phase 6 — Bring outside automotive information in without trusting it automatically
+
+Most of the data pipeline is built. PartGraph can register sources and providers, collect raw data, extract candidate facts, keep source authority rules in the database, detect conflicts, send information through human review, and publish approved information through a restricted canonical-publication path.
+
+The NHTSA recall connector is implemented and safely stages recall information without pretending that a year/make/model recall automatically applies to an exact trim or VIN. An approved NHTSA provider/source connection exists only in the isolated preview.
+
+What still remains in this phase is a real deployed HTTP proof that the operator-triggered NHTSA ingestion path works, and much broader repair-data coverage. One approved oil-change workflow is good proof of the machinery, but it is not broad automotive knowledge.
+
+### Phase 7 — Make the 2009 Honda Civic Hybrid work deeply from beginning to end
+
+This is the phase we are actively working on.
+
+Already working:
+- the exact Civic Hybrid configuration is known
+- 267 reviewed part fitments are available in the preview
+- the oil-change repair has verified requirements, tools, oil, hardware, six ordered steps, readiness checks, blockers, pause/resume behavior, and honest completion
+- unsupported computer/service-tool work is kept outside supported DIY completion
+
+Still missing for full Phase 7 coverage:
+- broader systems and assembly data
+- first-class specification records instead of only evidence inside individual repair steps
+- a real end-to-end downstream-repair example
+- observations and photo coverage
+- additional representative repairs
+
+The current water-pump candidate is intended to close the downstream-repair gap. Replacing the water pump creates required physical coolant refill/bleed work. The next steps are to review and publish that candidate through the normal evidence path, then run it as a real repair session and prove that PartGraph refuses to call the overall job complete until the required follow-on work is also complete. Only after that proof should the downstream-operation checkbox be marked complete.
+
+### Phase 8 — Prove the same design works on five different vehicle models
+
+This has not started yet because the deep Honda proof is not finished.
+
+After Phase 7, the remaining reference vehicles are the 2015 Toyota Camry, 2018 Ford F-150, 2020 Subaru Forester, and 2022 Hyundai Tucson. They must be added through data, not by adding vehicle-specific branches to application code.
+
+### Phase 9 — Run the final MVP test campaign
+
+This phase has not started as a final campaign yet, although many permanent test gates already run on every change.
+
+The final campaign will cover the completed MVP as one whole system: unit tests, API behavior, security, owner isolation, migrations, browser flows, offline behavior, timeout recovery, required downstream repairs, unsupported-computer boundaries, photo persistence, role permissions, randomized acceptance, and all five reference vehicles.
+
+### Phase 10 — Move the finished MVP into production
+
+This has not started and requires explicit production approval.
+
+When that time comes, we will merge only an exact green commit, deploy the frontend and backend from the same source version, apply only migrations already proven safe, verify production health and real owner state, and run production-safe smoke checks. Unverified repair data will never be inserted as canonical truth just to make the production launch look complete.
+
+### Safety rules that remain in force
+
+Updating this progress file does **not** authorize merging PR #84, migrating the production database, turning on data collectors in production, deleting Git or Neon branches, weakening source-authority rules, or skipping human evidence review.
+
+If information is missing, PartGraph must keep it missing instead of guessing. If sources disagree, the conflict stays visible until it is resolved. Candidate or AI-produced information cannot publish itself as canonical automotive truth.
+
+### Exact place to resume work
+
+The implementation should resume from the staged 2009 Honda Civic Hybrid water-pump candidate on `partgraph-mvp-consolidation`.
+
+The next path is: human-review/evidence promotion → canonical publication of the water-pump repair and its required coolant refill/bleed follow-on operation → fresh-database runtime proof → verify that the parent repair remains incomplete while the required follow-on repair is still pending → complete the follow-on repair → verify final mechanical completion.
+
+Until that sequence is actually proven, the Phase 7 downstream-operation checkbox stays unchecked.
