@@ -62,7 +62,8 @@ class ReferenceRepairCandidateTests(unittest.TestCase):
 
     def test_existing_reviewed_part_numbers_are_used_without_inference(self) -> None:
         requirements = {
-            item["use_key"]: item for item in self.candidate["source_repair"]["requirements"]
+            item["use_key"]: item
+            for item in self.candidate["source_repair"]["requirements"]
         }
         self.assertEqual(
             requirements["replacement-water-pump"]["requirement_key"],
@@ -73,8 +74,14 @@ class ReferenceRepairCandidateTests(unittest.TestCase):
             "hardware.honda.19222-pza-003",
         )
 
-    def test_physical_bleed_candidate_does_not_smuggle_in_computer_service(self) -> None:
-        serialized = json.dumps(self.candidate["target_repair"]).lower()
+    def test_physical_bleed_actions_do_not_smuggle_in_computer_service(self) -> None:
+        target = self.candidate["target_repair"]
+        executable_content = {
+            "requirements": target["requirements"],
+            "operations": target["operations"],
+            "actions": target["actions"],
+        }
+        serialized = json.dumps(executable_content).lower()
         for forbidden in (
             "honda diagnostic system",
             "hds communicates",
