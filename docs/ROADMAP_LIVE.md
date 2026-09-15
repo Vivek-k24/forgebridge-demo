@@ -9,17 +9,18 @@ Last updated: **2026-09-14**
 
 Current exact implementation proof tracked here:
 - active implementation branch: `partgraph-mvp-consolidation`
-- latest exact green implementation commit: `384cd95edadaf36bde621b6b4deb95c2a3ca3092`
-- full API CI: passed (`#776`)
-- Web CI: passed (`#639`)
-- extraction/provider-ingestion pipeline CI: passed (`#53`)
-- canonical publication CI: passed
+- latest exact green implementation commit: `f5f7c67e947a5adcb8789805893889ac9e5cbf94`
+- full API CI: passed (`#781`)
+- Web CI: passed (`#644`)
+- extraction/provider-ingestion pipeline CI: passed (`#58`)
+- canonical publication CI: passed (`#30`)
+- reference repair runtime CI: passed (`#6`)
 - Vercel consolidation preview: READY on the same commit
 - consolidation preview database: `0057_nhtsa_ingest_audit`
 - production database: intentionally unchanged at `0020_catalog_coverage`
 - PR #84: remains draft/unmerged
 
-The consolidation preview now contains 267 reviewed canonical Civic Hybrid part fitments and the first fully canonical repair workflow: `engine-oil-filter-change` version 1, with 8 requirements, 6 ordered procedure actions, `diy_supported` capability, and 14 verified evidence links. The final non-skippable action resets the Maintenance Minder engine-oil-life display to 100% using the vehicle's dashboard controls.
+The consolidation preview contains 267 reviewed canonical Civic Hybrid part fitments and the first fully canonical repair workflow: `engine-oil-filter-change` version 1, with 8 requirements, 6 ordered procedure actions, `diy_supported` capability, and 14 verified evidence links. The final non-skippable action resets the Maintenance Minder engine-oil-life display to 100% using the vehicle's dashboard controls. A permanent fresh-database runtime gate now reconstructs this approved repair and proves required-readiness blocking, blocker recovery, ordered action progression, pause/resume reorientation, and final mechanical completion.
 
 This file is intentionally allowed to be newer than `docs/ROADMAP.md` on `main`. It tracks completed work immediately while implementation continues on the consolidation branch.
 
@@ -271,7 +272,7 @@ Current safety boundary:
 
 ## Phase 7 — Primary end-to-end vehicle
 
-Status: **In progress. The exact 2009 Civic Hybrid identity, reviewed parts/fitment coverage, first tool/fluid/requirement set, first verified procedure, and DIY capability classification are now canonical. Runtime session/readiness/completion validation and additional repair domains remain.**
+Status: **In progress. The first canonical 2009 Civic Hybrid repair now passes a permanent fresh-database runtime path through readiness, blocker enforcement/recovery, ordered guidance, pause/resume reorientation, and mechanical completion. Additional repair/domain coverage remains.**
 
 Use the 2009 Honda Civic Hybrid as the deepest first validation configuration.
 
@@ -283,13 +284,13 @@ Use the 2009 Honda Civic Hybrid as the deepest first validation configuration.
 - [ ] specifications coverage — torque/capacity are evidence-backed inside the repair workflow, but first-class specification-table coverage is still pending
 - [x] repair requirements coverage — first canonical repair has 8 verified requirement uses
 - [x] procedures coverage — `engine-oil-filter-change` v1 has 6 ordered, non-skippable actions with evidence; final action resets engine oil life to 100%
-- [ ] readiness coverage
-- [ ] blockers coverage
-- [ ] downstream operations coverage
+- [x] readiness coverage — fresh-database runtime proof loads all 8 requirements, blocks on all 7 required missing items, and allows one recommended item to remain missing
+- [x] blockers coverage — the first action cannot complete while its required screwdriver/workspace inputs are missing; setting verified readiness clears the blocker deterministically
+- [ ] downstream operations coverage — this oil-change definition has no triggered downstream operation, so the primary-vehicle downstream path is not yet exercised
 - [ ] observations/photos coverage
-- [ ] pause/resume coverage
+- [x] pause/resume coverage — session pauses after oil drain, preserves the last mechanical checkpoint, and resumes with `Replace the oil filter` as the next verified action
 - [x] capability-boundary coverage — first canonical repair is explicitly `diy_supported`; dashboard reset uses physical vehicle controls rather than scan-tool/computer authority
-- [ ] completion coverage
+- [x] completion coverage — all 6 supported actions complete in order and the projection reaches `fully_mechanically_complete` with no downstream or unsupported work pending
 
 Current primary-vehicle canonical repair proof:
 - repair key: `engine-oil-filter-change`
@@ -298,6 +299,8 @@ Current primary-vehicle canonical repair proof:
 - procedure actions: `6`
 - verified evidence/claim links: `14`
 - capability: `diy_supported`
+- runtime acceptance: `.github/workflows/reference-runtime.yml` / `api/tests/test_reference_repair_runtime.py`
+- runtime CI proof: `Reference Repair Runtime CI #6` on `f5f7c67e947a5adcb8789805893889ac9e5cbf94`
 - source: Honda OEM service evidence, project-owner reviewed
 - repository reference dataset: `api/data/reference/2009_honda_civic_hybrid_repairs_v1/`
 
@@ -338,7 +341,7 @@ Status: **Pending functional MVP completion. Permanent CI gates already created 
 - [ ] data-free-source-code check
 - [ ] RBAC authorization tests
 
-Existing permanent CI, including migration history, adopted-baseline equivalence, RBAC, source-authority, extraction, canonical publication, container build, and readiness smoke, remains active and is not discarded while Phase 9 is pending.
+Existing permanent CI, including migration history, adopted-baseline equivalence, RBAC, source-authority, extraction, canonical publication, reference-repair runtime, container build, and readiness smoke, remains active and is not discarded while Phase 9 is pending.
 
 ---
 
