@@ -13,6 +13,8 @@ dependencies = [
   "cryptography==50.0.1",
   "email-validator==2.3.0",
   "fastapi[standard]==0.141.1",
+  "pillow==12.3.0",
+  "pillow-heif==1.7.0",
   "sqlalchemy==2.0.52",
   "psycopg[binary]==3.3.4",
 ]
