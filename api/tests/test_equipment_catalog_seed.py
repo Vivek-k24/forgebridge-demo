@@ -24,7 +24,6 @@ from partgraph.equipment.inventory_catalog_v2 import (
 )
 from partgraph.equipment.manual_reference_v1 import (
     MANUAL_REFERENCE_QUERY_TARGETS,
-    REFERENCE_ADDITIONS,
     augment_equipment_catalog_rows,
 )
 from partgraph.equipment.service import _search_without_whitespace
