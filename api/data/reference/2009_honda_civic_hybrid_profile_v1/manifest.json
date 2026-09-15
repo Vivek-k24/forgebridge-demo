@@ -2,11 +2,14 @@
   "schema_version": 1,
   "dataset_key": "reference-2009-honda-civic-hybrid-profile-v1",
   "vehicle_configuration_id": "7feb13e9-bca0-5d8b-b701-f0260cce5da1",
-  "purpose": "External data fixture preserving the reviewed reference-vehicle identity, profile, source observations, and approved first-class primary-vehicle coverage used to validate generic canonical materialization.",
+  "purpose": "External data fixture preserving reviewed reference-vehicle identity, a legacy candidate profile and observations, and separately approved first-class primary-vehicle coverage used to validate generic canonical materialization.",
   "review": {
-    "status": "historical_verified_reference",
+    "status": "mixed_governance_reference",
     "externalized_on": "2026-09-13",
-    "note": "The legacy migrations remain unchanged for production upgrade compatibility. Future clean-baseline installs must consume reference facts from data fixtures or the canonical ingestion pipeline rather than schema migrations. The canonical coverage file added later contains only reviewed facts already supported by approved exact-vehicle evidence."
+    "remediated_revision": "0061_retire_legacy_specs",
+    "legacy_profile_status": "candidate",
+    "canonical_coverage_status": "approved_reference_derivation",
+    "note": "The legacy profile and curated observations remain available for historical/reference use but do not satisfy the current immutable-evidence publication boundary. Identity evidence and the separately approved canonical coverage retain their own review status. Historical migrations remain unchanged for production upgrade compatibility."
   },
   "historical_migrations": [
     "0016_curated_vehicle_identity_bootstrap.py",
