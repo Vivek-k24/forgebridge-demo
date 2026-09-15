@@ -30,11 +30,13 @@ OperatorAuditAction = Literal[
     "provider_source_binding_created",
     "provider_source_binding_enabled",
     "provider_source_binding_disabled",
+    "reference_parts_dataset_staged",
     "preview_operator_bootstrap",
     "user_role_changed",
 ]
 PROVIDER_KEY_PATTERN = r"^[a-z0-9][a-z0-9_-]{1,95}$"
 SOURCE_KEY_PATTERN = r"^[a-z0-9][a-z0-9_.-]{0,127}$"
+DATASET_KEY_PATTERN = r"^[a-z0-9][a-z0-9_.-]{0,159}$"
 
 
 def _clean_optional(value: str | None) -> str | None:
@@ -289,6 +291,29 @@ class ProviderSourceBindingRead(BaseModel):
     ready_for_ingestion: bool
     created_at: datetime
     updated_at: datetime
+
+
+class ReferencePartsStageRequest(BaseModel):
+    dataset_key: str = Field(
+        min_length=1,
+        max_length=160,
+        pattern=DATASET_KEY_PATTERN,
+    )
+    binding_ids: dict[SourceClass, UUID] = Field(min_length=1, max_length=7)
+
+    @field_validator("dataset_key")
+    @classmethod
+    def normalize_dataset_key(cls, value: str) -> str:
+        return value.strip().casefold()
+
+
+class ReferencePartsStageRead(BaseModel):
+    dataset_key: str
+    source_record_count: int
+    candidate_count: int
+    inserted_count: int
+    ingestion_batch_ids: list[UUID]
+    staging_record_ids: list[UUID]
 
 
 class OperatorAuditRead(BaseModel):

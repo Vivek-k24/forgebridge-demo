@@ -12,6 +12,7 @@ from .local_bootstrap import (
     local_operator_bootstrap_environment,
     local_operator_bootstrap_status,
 )
+from .reference_parts import stage_reference_parts_dataset
 from .schemas import (
     CatalogSourceCreate,
     CatalogSourceRead,
@@ -25,6 +26,8 @@ from .schemas import (
     ProviderSourceBindingRead,
     ProviderSourceBindingUpdate,
     ProviderUpdate,
+    ReferencePartsStageRead,
+    ReferencePartsStageRequest,
     UserRoleUpdate,
 )
 from .service import (
@@ -237,6 +240,23 @@ async def change_provider_source_binding(
         session,
         actor_id=user.id,
         binding_id=binding_id,
+        payload=payload,
+    )
+
+
+@router.post(
+    "/reference-parts/stage",
+    response_model=ReferencePartsStageRead,
+    dependencies=[CsrfDep],
+)
+async def stage_reference_parts(
+    payload: ReferencePartsStageRequest,
+    user: OperatorAdminDep,
+    session: AuthSessionDep,
+) -> ReferencePartsStageRead:
+    return await stage_reference_parts_dataset(
+        session,
+        actor_id=user.id,
         payload=payload,
     )
 

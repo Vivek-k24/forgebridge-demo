@@ -13,6 +13,7 @@ on:
       - 'api/tests/test_extraction_pipeline.py'
       - 'api/tests/test_nhtsa_collector.py'
       - 'api/tests/test_reference_parts_dataset.py'
+      - 'api/tests/test_operator_reference_parts_staging.py'
       - 'api/tests/test_provider_source_binding.py'
       - 'api/tests/test_operator_source_binding_controls.py'
       - 'api/migrations/**'
@@ -33,6 +34,7 @@ on:
       - 'api/tests/test_extraction_pipeline.py'
       - 'api/tests/test_nhtsa_collector.py'
       - 'api/tests/test_reference_parts_dataset.py'
+      - 'api/tests/test_operator_reference_parts_staging.py'
       - 'api/tests/test_provider_source_binding.py'
       - 'api/tests/test_operator_source_binding_controls.py'
       - 'api/migrations/**'
@@ -94,6 +96,7 @@ jobs:
           api/tests/test_extraction_pipeline.py
           api/tests/test_nhtsa_collector.py
           api/tests/test_reference_parts_dataset.py
+          api/tests/test_operator_reference_parts_staging.py
           api/tests/test_provider_source_binding.py
           api/tests/test_operator_source_binding_controls.py
 
@@ -126,3 +129,10 @@ jobs:
         run: >-
           python -m unittest discover -s api/tests
           -p 'test_reference_parts_dataset.py'
+
+      - name: Test operator-triggered reference-parts staging
+        env:
+          PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
+        run: >-
+          python -m unittest discover -s api/tests
+          -p 'test_operator_reference_parts_staging.py'
