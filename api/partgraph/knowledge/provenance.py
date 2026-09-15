@@ -43,6 +43,8 @@ CLAIM_DOMAINS = (
     "repair_requirement",
     "repair_procedure",
     "part_fitment",
+    "vehicle_structure",
+    "vehicle_specification",
 )
 _CANONICAL_DOMAIN_SQL = ", ".join(f"'{item}'" for item in CANONICAL_DOMAINS)
 _CLAIM_DOMAIN_SQL = ", ".join(f"'{item}'" for item in CLAIM_DOMAINS)
