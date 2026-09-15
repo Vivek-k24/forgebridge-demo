@@ -5,12 +5,10 @@ from uuid import NAMESPACE_URL, uuid5
 
 import psycopg
 
-from partgraph.equipment.catalog_seed_v1 import build_equipment_catalog_seed
-from partgraph.equipment.inventory_catalog_v2 import (
-    RETIRED_CATALOG_KEYS,
-    current_inventory_catalog,
+from partgraph.equipment.catalog_dataset import (
+    load_equipment_catalog_rows,
+    load_retired_catalog_keys,
 )
-from partgraph.equipment.manual_reference_v1 import augment_equipment_catalog_rows
 
 EXPECTED_CURRENT_CATALOG_ITEMS = 1178
 DATABASE_URL_ENV = "PARTGRAPH_DATABASE_URL"
@@ -22,12 +20,10 @@ def _database_url() -> str:
 
 
 def _current_rows() -> list[dict[str, object]]:
-    rows = current_inventory_catalog(
-        augment_equipment_catalog_rows(build_equipment_catalog_seed())
-    )
+    rows = load_equipment_catalog_rows()
     if len(rows) != EXPECTED_CURRENT_CATALOG_ITEMS:
         raise RuntimeError(
-            "equipment seed catalog size drifted: "
+            "equipment dataset size drifted: "
             f"expected {EXPECTED_CURRENT_CATALOG_ITEMS}, got {len(rows)}"
         )
 
@@ -44,6 +40,7 @@ def _current_rows() -> list[dict[str, object]]:
 def seed_equipment_catalog(connection: psycopg.Connection[object]) -> int:
     rows = _current_rows()
     catalog_keys = [str(row["catalog_key"]) for row in rows]
+    retired_catalog_keys = sorted(load_retired_catalog_keys())
 
     with connection.cursor() as cursor:
         cursor.executemany(
@@ -75,14 +72,15 @@ def seed_equipment_catalog(connection: psycopg.Connection[object]) -> int:
             """,
             rows,
         )
-        cursor.execute(
-            """
-            UPDATE equipment_catalog_items
-               SET is_active = false
-             WHERE catalog_key = ANY(%s)
-            """,
-            (sorted(RETIRED_CATALOG_KEYS),),
-        )
+        if retired_catalog_keys:
+            cursor.execute(
+                """
+                UPDATE equipment_catalog_items
+                   SET is_active = false
+                 WHERE catalog_key = ANY(%s)
+                """,
+                (retired_catalog_keys,),
+            )
         cursor.execute(
             """
             SELECT count(*)
