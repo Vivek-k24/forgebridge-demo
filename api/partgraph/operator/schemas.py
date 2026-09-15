@@ -31,6 +31,7 @@ OperatorAuditAction = Literal[
     "provider_source_binding_enabled",
     "provider_source_binding_disabled",
     "reference_parts_dataset_staged",
+    "nhtsa_recall_query_staged",
     "preview_operator_bootstrap",
     "user_role_changed",
 ]
@@ -313,6 +314,32 @@ class ReferencePartsStageRead(BaseModel):
     candidate_count: int
     inserted_count: int
     ingestion_batch_ids: list[UUID]
+    staging_record_ids: list[UUID]
+
+
+class NhtsaRecallStageRequest(BaseModel):
+    binding_id: UUID
+    year: int = Field(ge=1996, le=2100)
+    make: str = Field(min_length=1, max_length=80)
+    model: str = Field(min_length=1, max_length=120)
+
+    @field_validator("make", "model")
+    @classmethod
+    def normalize_vehicle_text(cls, value: str) -> str:
+        cleaned = " ".join(value.split())
+        if not cleaned:
+            raise ValueError("vehicle text cannot be blank")
+        return cleaned
+
+
+class NhtsaRecallStageRead(BaseModel):
+    binding_id: UUID
+    year: int
+    make: str
+    model: str
+    candidate_count: int
+    inserted_count: int
+    ingestion_batch_id: UUID
     staging_record_ids: list[UUID]
 
 

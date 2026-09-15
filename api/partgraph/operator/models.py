@@ -164,7 +164,7 @@ class OperatorAuditEvent(Base):
             "'source_created', 'source_updated', 'provider_source_binding_created', "
             "'provider_source_binding_enabled', 'provider_source_binding_disabled', "
             "'preview_operator_bootstrap', 'user_role_changed', "
-            "'reference_parts_dataset_staged')",
+            "'reference_parts_dataset_staged', 'nhtsa_recall_query_staged')",
             name="ck_operator_audit_events_action",
         ),
     )

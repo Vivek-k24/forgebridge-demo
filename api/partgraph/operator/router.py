@@ -12,11 +12,14 @@ from .local_bootstrap import (
     local_operator_bootstrap_environment,
     local_operator_bootstrap_status,
 )
+from .nhtsa import stage_nhtsa_recall_query
 from .reference_parts import stage_reference_parts_dataset
 from .schemas import (
     CatalogSourceCreate,
     CatalogSourceRead,
     CatalogSourceUpdate,
+    NhtsaRecallStageRead,
+    NhtsaRecallStageRequest,
     OperatorAuditRead,
     OperatorUserRead,
     PreviewOperatorBootstrapStatus,
@@ -255,6 +258,23 @@ async def stage_reference_parts(
     session: AuthSessionDep,
 ) -> ReferencePartsStageRead:
     return await stage_reference_parts_dataset(
+        session,
+        actor_id=user.id,
+        payload=payload,
+    )
+
+
+@router.post(
+    "/nhtsa/recalls/stage",
+    response_model=NhtsaRecallStageRead,
+    dependencies=[CsrfDep],
+)
+async def stage_nhtsa_recalls(
+    payload: NhtsaRecallStageRequest,
+    user: OperatorAdminDep,
+    session: AuthSessionDep,
+) -> NhtsaRecallStageRead:
+    return await stage_nhtsa_recall_query(
         session,
         actor_id=user.id,
         payload=payload,
