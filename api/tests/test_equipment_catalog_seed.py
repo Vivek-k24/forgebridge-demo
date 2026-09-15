@@ -1,6 +1,12 @@
 import unittest
 from collections import Counter
 
+from partgraph.equipment.catalog_dataset import (
+    equipment_catalog_dataset_version,
+    load_equipment_catalog_rows,
+    load_equipment_category_meta,
+    load_retired_catalog_keys,
+)
 from partgraph.equipment.catalog_meta import CATEGORY_META as ACTIVE_CATEGORY_META
 from partgraph.equipment.catalog_seed_v1 import (
     CATEGORY_LIMITS,
@@ -33,6 +39,12 @@ def _matches(rows: list[dict[str, str]], query: str) -> set[str]:
     }
 
 
+def _legacy_current_rows() -> list[dict[str, str]]:
+    return current_inventory_catalog(
+        augment_equipment_catalog_rows(build_equipment_catalog_seed())
+    )
+
+
 class EquipmentCatalogSeedTests(unittest.TestCase):
     def test_equipment_catalog_seed_is_stable_and_unique(self) -> None:
         rows = build_equipment_catalog_seed()
@@ -45,6 +57,22 @@ class EquipmentCatalogSeedTests(unittest.TestCase):
 
         counts = Counter(row["category"] for row in rows)
         self.assertEqual(counts, Counter(CATEGORY_LIMITS))
+
+    def test_versioned_dataset_matches_legacy_current_catalog_exactly(self) -> None:
+        legacy_rows = _legacy_current_rows()
+        dataset_rows = load_equipment_catalog_rows()
+
+        self.assertEqual(equipment_catalog_dataset_version(), "equipment-catalog-v1")
+        self.assertEqual(dataset_rows, legacy_rows)
+        self.assertEqual(len(dataset_rows), 1178)
+        self.assertEqual(load_equipment_category_meta(), ACTIVE_CATEGORY_META)
+        self.assertEqual(load_retired_catalog_keys(), frozenset(RETIRED_CATALOG_KEYS))
+
+    def test_versioned_dataset_returns_mutable_row_copies(self) -> None:
+        first = load_equipment_catalog_rows()
+        second = load_equipment_catalog_rows()
+        first[0]["name"] = "changed only in caller"
+        self.assertNotEqual(first[0]["name"], second[0]["name"])
 
     def test_equipment_search_ignores_spacing(self) -> None:
         self.assertEqual(_search_without_whitespace("10 mm"), "10mm")
@@ -63,9 +91,7 @@ class EquipmentCatalogSeedTests(unittest.TestCase):
             )
 
     def test_current_inventory_catalog_includes_fluids_and_wheel_hardware(self) -> None:
-        rows = current_inventory_catalog(
-            augment_equipment_catalog_rows(build_equipment_catalog_seed())
-        )
+        rows = _legacy_current_rows()
         self.assertEqual(len(rows), 1178)
         self.assertEqual(len({row["catalog_key"] for row in rows}), len(rows))
         self.assertFalse(RETIRED_CATALOG_KEYS & {row["catalog_key"] for row in rows})
@@ -84,9 +110,7 @@ class EquipmentCatalogSeedTests(unittest.TestCase):
         self.assertTrue(expected_categories.issubset(ACTIVE_CATEGORY_META))
 
     def test_engine_oil_grade_and_formulation_combinations_are_searchable(self) -> None:
-        rows = current_inventory_catalog(
-            augment_equipment_catalog_rows(build_equipment_catalog_seed())
-        )
+        rows = _legacy_current_rows()
         expected_oil_count = sum(len(grades) for _, grades in ENGINE_OIL_GRADES.values())
         self.assertEqual(expected_oil_count, 42)
         self.assertIn("full-synthetic-engine-oil-sae-0w-20", _matches(rows, "full synthetic 0w20"))
@@ -101,9 +125,7 @@ class EquipmentCatalogSeedTests(unittest.TestCase):
         )
 
     def test_coolant_funnel_lug_nuts_and_refrigerant_specific_ac_equipment_are_covered(self) -> None:
-        rows = current_inventory_catalog(
-            augment_equipment_catalog_rows(build_equipment_catalog_seed())
-        )
+        rows = _legacy_current_rows()
         self.assertIn("spill-free-coolant-funnel", _matches(rows, "coolant air bleed funnel"))
         self.assertIn("wheel-lug-nut-m12-x-1-5", _matches(rows, "M12x1.5 lug nut"))
         self.assertIn(
