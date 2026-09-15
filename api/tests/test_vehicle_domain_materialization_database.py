@@ -7,6 +7,7 @@ import psycopg
 from psycopg.types.json import Jsonb
 from sqlalchemy import text
 
+import partgraph.orm_registry  # noqa: F401
 from partgraph.database import session_factory
 from partgraph.knowledge.vehicle_domain_materialization import (
     materialize_vehicle_domain_claim_service,
@@ -190,7 +191,7 @@ class VehicleDomainMaterializationDatabaseTests(unittest.IsolatedAsyncioTestCase
 
     async def test_structure_hierarchy_is_insert_only_and_evidence_backed(self) -> None:
         engine = await self._publish(self.engine_claim_id, f"structure:{uuid4().hex}")
-        cooling = await self._publish(self.cooling_claim_id, f"structure:{uuid4().hex}")
+        await self._publish(self.cooling_claim_id, f"structure:{uuid4().hex}")
         pump = await self._publish(self.pump_claim_id, f"structure:{uuid4().hex}")
 
         self.assertEqual(engine.canonical_domain, "structure")
