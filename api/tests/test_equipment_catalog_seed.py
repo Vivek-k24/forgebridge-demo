@@ -1,5 +1,7 @@
+import ast
 import unittest
 from collections import Counter
+from pathlib import Path
 
 from partgraph.equipment.catalog_dataset import (
     equipment_catalog_dataset_version,
@@ -27,6 +29,13 @@ from partgraph.equipment.manual_reference_v1 import (
 )
 from partgraph.equipment.service import _search_without_whitespace
 
+API_ROOT = Path(__file__).resolve().parents[1]
+LEGACY_GENERATOR_MODULES = {
+    "partgraph.equipment.catalog_seed_v1",
+    "partgraph.equipment.inventory_catalog_v2",
+    "partgraph.equipment.manual_reference_v1",
+}
+
 
 def _matches(rows: list[dict[str, str]], query: str) -> set[str]:
     normalized_query = " ".join(query.strip().split()).lower()
@@ -40,13 +49,25 @@ def _matches(rows: list[dict[str, str]], query: str) -> set[str]:
 
 
 def _legacy_current_rows() -> list[dict[str, str]]:
+    """Rebuild the historical migration catalog only for parity verification."""
     return current_inventory_catalog(
         augment_equipment_catalog_rows(build_equipment_catalog_seed())
     )
 
 
+def _imported_modules(path: Path) -> set[str]:
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    modules: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            modules.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            modules.add(node.module)
+    return modules
+
+
 class EquipmentCatalogSeedTests(unittest.TestCase):
-    def test_equipment_catalog_seed_is_stable_and_unique(self) -> None:
+    def test_legacy_migration_equipment_seed_is_stable_and_unique(self) -> None:
         rows = build_equipment_catalog_seed()
 
         self.assertEqual(len(rows), EXPECTED_ITEM_COUNT)
@@ -58,7 +79,7 @@ class EquipmentCatalogSeedTests(unittest.TestCase):
         counts = Counter(row["category"] for row in rows)
         self.assertEqual(counts, Counter(CATEGORY_LIMITS))
 
-    def test_versioned_dataset_matches_legacy_current_catalog_exactly(self) -> None:
+    def test_versioned_dataset_matches_legacy_migration_catalog_exactly(self) -> None:
         legacy_rows = _legacy_current_rows()
         dataset_rows = load_equipment_catalog_rows()
 
@@ -67,6 +88,23 @@ class EquipmentCatalogSeedTests(unittest.TestCase):
         self.assertEqual(len(dataset_rows), 1178)
         self.assertEqual(load_equipment_category_meta(), ACTIVE_CATEGORY_META)
         self.assertEqual(load_retired_catalog_keys(), frozenset(RETIRED_CATALOG_KEYS))
+
+    def test_active_paths_do_not_import_legacy_catalog_generators(self) -> None:
+        active_paths = (
+            API_ROOT / "partgraph" / "equipment" / "catalog_meta.py",
+            API_ROOT / "scripts" / "seed_equipment_catalog.py",
+        )
+        for path in active_paths:
+            imported = _imported_modules(path)
+            self.assertTrue(
+                "partgraph.equipment.catalog_dataset" in imported
+                or "catalog_dataset" in imported,
+                f"active equipment path must use the versioned dataset: {path}",
+            )
+            self.assertFalse(
+                imported & LEGACY_GENERATOR_MODULES,
+                f"active equipment path imports legacy generator(s): {path}",
+            )
 
     def test_versioned_dataset_returns_mutable_row_copies(self) -> None:
         first = load_equipment_catalog_rows()
@@ -79,22 +117,19 @@ class EquipmentCatalogSeedTests(unittest.TestCase):
         self.assertEqual(_search_without_whitespace("10mm"), "10mm")
         self.assertEqual(_search_without_whitespace("  3/8   in  drive "), "3/8indrive")
 
-    def test_manual_reference_equipment_is_searchable(self) -> None:
-        rows = augment_equipment_catalog_rows(build_equipment_catalog_seed())
-        self.assertEqual(len(rows), EXPECTED_ITEM_COUNT + len(REFERENCE_ADDITIONS))
-        self.assertEqual(len({row["catalog_key"] for row in rows}), len(rows))
-
+    def test_manual_reference_equipment_is_searchable_in_versioned_dataset(self) -> None:
+        rows = load_equipment_catalog_rows()
         for query, expected_keys in MANUAL_REFERENCE_QUERY_TARGETS.items():
             self.assertTrue(
                 set(expected_keys).issubset(_matches(rows, query)),
                 f"manual equipment query is not fully covered: {query!r}",
             )
 
-    def test_current_inventory_catalog_includes_fluids_and_wheel_hardware(self) -> None:
-        rows = _legacy_current_rows()
+    def test_versioned_catalog_includes_fluids_and_wheel_hardware(self) -> None:
+        rows = load_equipment_catalog_rows()
         self.assertEqual(len(rows), 1178)
         self.assertEqual(len({row["catalog_key"] for row in rows}), len(rows))
-        self.assertFalse(RETIRED_CATALOG_KEYS & {row["catalog_key"] for row in rows})
+        self.assertFalse(load_retired_catalog_keys() & {row["catalog_key"] for row in rows})
 
         counts = Counter(row["category"] for row in rows)
         self.assertEqual(counts["engine-oil"], 42)
@@ -110,7 +145,7 @@ class EquipmentCatalogSeedTests(unittest.TestCase):
         self.assertTrue(expected_categories.issubset(ACTIVE_CATEGORY_META))
 
     def test_engine_oil_grade_and_formulation_combinations_are_searchable(self) -> None:
-        rows = _legacy_current_rows()
+        rows = load_equipment_catalog_rows()
         expected_oil_count = sum(len(grades) for _, grades in ENGINE_OIL_GRADES.values())
         self.assertEqual(expected_oil_count, 42)
         self.assertIn("full-synthetic-engine-oil-sae-0w-20", _matches(rows, "full synthetic 0w20"))
@@ -125,7 +160,7 @@ class EquipmentCatalogSeedTests(unittest.TestCase):
         )
 
     def test_coolant_funnel_lug_nuts_and_refrigerant_specific_ac_equipment_are_covered(self) -> None:
-        rows = _legacy_current_rows()
+        rows = load_equipment_catalog_rows()
         self.assertIn("spill-free-coolant-funnel", _matches(rows, "coolant air bleed funnel"))
         self.assertIn("wheel-lug-nut-m12-x-1-5", _matches(rows, "M12x1.5 lug nut"))
         self.assertIn(
