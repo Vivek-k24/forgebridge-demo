@@ -45,6 +45,7 @@ class SourceAuthorityPolicyDatabaseTests(unittest.TestCase):
             return bool(row[0])
 
     def test_claim_policy_matrix_is_complete_and_unique(self) -> None:
+        expected_count = len(ClaimDomain) * len(SourceClass) * len(ClaimRisk)
         with self.connection.cursor() as cursor:
             cursor.execute(
                 """
@@ -54,7 +55,7 @@ class SourceAuthorityPolicyDatabaseTests(unittest.TestCase):
                   AND policy_key LIKE 'claim.%'
                 """
             )
-            self.assertEqual(cursor.fetchone()[0], 70)
+            self.assertEqual(cursor.fetchone()[0], expected_count)
             cursor.execute(
                 """
                 SELECT count(*)
@@ -69,7 +70,7 @@ class SourceAuthorityPolicyDatabaseTests(unittest.TestCase):
             )
             self.assertEqual(cursor.fetchone()[0], 0)
 
-    def test_seed_preserves_representative_legacy_authority_decisions(self) -> None:
+    def test_seed_preserves_representative_authority_decisions(self) -> None:
         expected = {
             ("vehicle_identity", "government", "normal"): (
                 "vehicle_identity",
@@ -93,6 +94,22 @@ class SourceAuthorityPolicyDatabaseTests(unittest.TestCase):
                 "accepted",
             ),
             ("part_fitment", "retailer", "normal"): ("fitment", "rejected"),
+            ("vehicle_structure", "oem_service", "normal"): (
+                "structure",
+                "accepted",
+            ),
+            ("vehicle_structure", "licensed_oem_derived", "safety_critical"): (
+                "structure",
+                "conditional",
+            ),
+            ("vehicle_specification", "oem_service", "normal"): (
+                "specification",
+                "accepted",
+            ),
+            ("vehicle_specification", "retailer", "normal"): (
+                "specification",
+                "rejected",
+            ),
         }
         with self.connection.cursor() as cursor:
             for scope, expected_value in expected.items():
@@ -167,6 +184,44 @@ class SourceAuthorityPolicyRuntimeTests(unittest.IsolatedAsyncioTestCase):
             assessment.decision,
             PromotionDecision.HUMAN_REVIEW_REQUIRED,
         )
+
+    async def test_primary_vehicle_domains_use_the_same_runtime_authority_path(self) -> None:
+        if DATABASE_URL_ENV not in os.environ:
+            raise unittest.SkipTest(f"{DATABASE_URL_ENV} is not configured")
+
+        async with session_factory() as db:
+            async with db.begin():
+                await db.execute(text(f"SET LOCAL ROLE {CURATOR_ROLE}"))
+                structure_policy = await load_source_authority_policy(
+                    db,
+                    source_class=SourceClass.OEM_SERVICE,
+                    claim_domain=ClaimDomain.VEHICLE_STRUCTURE,
+                    risk=ClaimRisk.NORMAL,
+                )
+                specification_policy = await load_source_authority_policy(
+                    db,
+                    source_class=SourceClass.LICENSED_OEM_DERIVED,
+                    claim_domain=ClaimDomain.VEHICLE_SPECIFICATION,
+                    risk=ClaimRisk.NORMAL,
+                )
+                self.assertIsNotNone(structure_policy)
+                self.assertIsNotNone(specification_policy)
+                structure_assessment = assess_mechanical_claim(
+                    policy=structure_policy,
+                    source_class=SourceClass.OEM_SERVICE,
+                    claim_domain=ClaimDomain.VEHICLE_STRUCTURE,
+                    exact_applicability=True,
+                    explicit_claim=True,
+                )
+                specification_assessment = assess_mechanical_claim(
+                    policy=specification_policy,
+                    source_class=SourceClass.LICENSED_OEM_DERIVED,
+                    claim_domain=ClaimDomain.VEHICLE_SPECIFICATION,
+                    exact_applicability=True,
+                    explicit_claim=True,
+                )
+        self.assertEqual(structure_assessment.decision, PromotionDecision.ELIGIBLE)
+        self.assertEqual(specification_assessment.decision, PromotionDecision.ELIGIBLE)
 
 
 if __name__ == "__main__":
