@@ -1,8 +1,13 @@
+import json
 import os
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from partgraph import config
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+VERCEL_CONFIG_PATH = REPO_ROOT / "api" / "vercel.json"
 
 
 class AuthOriginTests(unittest.TestCase):
@@ -58,6 +63,45 @@ class AuthOriginTests(unittest.TestCase):
             origins = config._allowed_web_origins("http://localhost:5173")
 
         self.assertEqual(origins, frozenset({"http://localhost:5173"}))
+
+    def test_hosted_vercel_config_enforces_content_security_policy(self) -> None:
+        payload = json.loads(VERCEL_CONFIG_PATH.read_text(encoding="utf-8"))
+        header_rules = payload.get("headers", [])
+        self.assertTrue(header_rules)
+
+        csp_values = [
+            header["value"]
+            for rule in header_rules
+            for header in rule.get("headers", [])
+            if header.get("key", "").casefold() == "content-security-policy"
+        ]
+        self.assertEqual(len(csp_values), 1)
+        csp = csp_values[0]
+
+        required_directives = (
+            "default-src 'self'",
+            "connect-src 'self' https://vercel.live wss://ws-us3.pusher.com",
+            "img-src 'self' https://vercel.live https://vercel.com data: blob:",
+            "style-src 'self' https://vercel.live 'unsafe-inline'",
+            "script-src 'self' https://vercel.live",
+            "font-src 'self' https://vercel.live https://assets.vercel.com",
+            "frame-src https://vercel.live",
+            "object-src 'none'",
+            "base-uri 'self'",
+            "frame-ancestors 'none'",
+            "form-action 'self'",
+        )
+        for directive in required_directives:
+            self.assertIn(directive, csp)
+
+        self.assertNotIn("'unsafe-eval'", csp)
+        script_src = next(
+            directive.strip()
+            for directive in csp.split(";")
+            if directive.strip().startswith("script-src ")
+        )
+        self.assertNotIn("'unsafe-inline'", script_src)
+        self.assertNotIn("*", script_src)
 
 
 if __name__ == "__main__":
