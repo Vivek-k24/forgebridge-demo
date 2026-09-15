@@ -164,7 +164,8 @@ class MechanicalClaim(Base):
     __table_args__ = (
         CheckConstraint(
             "claim_domain IN ('vehicle_identity', 'safety_campaign', "
-            "'repair_requirement', 'repair_procedure', 'part_fitment')",
+            "'repair_requirement', 'repair_procedure', 'part_fitment', "
+            "'vehicle_structure', 'vehicle_specification')",
             name="ck_mechanical_claims_domain",
         ),
         CheckConstraint(
