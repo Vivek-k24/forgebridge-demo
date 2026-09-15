@@ -6,5 +6,16 @@
     "partgraph/main.py": {
       "maxDuration": 60
     }
-  }
+  },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; connect-src 'self' https://vercel.live wss://ws-us3.pusher.com; img-src 'self' https://vercel.live https://vercel.com data: blob:; style-src 'self' https://vercel.live 'unsafe-inline'; script-src 'self' https://vercel.live; font-src 'self' https://vercel.live https://assets.vercel.com; frame-src https://vercel.live; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+        }
+      ]
+    }
+  ]
 }
