@@ -7,6 +7,7 @@ on:
       - 'api/partgraph/knowledge/staging.py'
       - 'api/partgraph/knowledge/nhtsa.py'
       - 'api/partgraph/knowledge/reference_parts.py'
+      - 'api/partgraph/knowledge/provider_network.py'
       - 'api/data/reference/**'
       - 'api/data/reference_candidates/**'
       - 'api/partgraph/operator/**'
@@ -19,6 +20,7 @@ on:
       - 'api/tests/test_operator_reference_parts_staging.py'
       - 'api/tests/test_provider_source_binding.py'
       - 'api/tests/test_operator_source_binding_controls.py'
+      - 'api/tests/test_provider_network_policy.py'
       - 'api/migrations/**'
       - 'api/pyproject.toml'
       - '.github/workflows/extraction.yml'
@@ -31,6 +33,7 @@ on:
       - 'api/partgraph/knowledge/staging.py'
       - 'api/partgraph/knowledge/nhtsa.py'
       - 'api/partgraph/knowledge/reference_parts.py'
+      - 'api/partgraph/knowledge/provider_network.py'
       - 'api/data/reference/**'
       - 'api/data/reference_candidates/**'
       - 'api/partgraph/operator/**'
@@ -43,6 +46,7 @@ on:
       - 'api/tests/test_operator_reference_parts_staging.py'
       - 'api/tests/test_provider_source_binding.py'
       - 'api/tests/test_operator_source_binding_controls.py'
+      - 'api/tests/test_provider_network_policy.py'
       - 'api/migrations/**'
       - 'api/pyproject.toml'
       - '.github/workflows/extraction.yml'
@@ -95,6 +99,7 @@ jobs:
           api/partgraph/knowledge/staging.py
           api/partgraph/knowledge/nhtsa.py
           api/partgraph/knowledge/reference_parts.py
+          api/partgraph/knowledge/provider_network.py
           api/partgraph/operator
           api/partgraph/identity/auth/roles.py
           api/migrations/versions/0051_provider_source_binding.py
@@ -109,6 +114,7 @@ jobs:
           api/tests/test_operator_reference_parts_staging.py
           api/tests/test_provider_source_binding.py
           api/tests/test_operator_source_binding_controls.py
+          api/tests/test_provider_network_policy.py
 
       - name: Apply database migrations
         env:
@@ -129,6 +135,9 @@ jobs:
         env:
           PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
         run: python -m unittest discover -s api/tests -p 'test_operator_source_binding_controls.py'
+
+      - name: Test provider outbound network policy
+        run: python -m unittest discover -s api/tests -p 'test_provider_network_policy.py'
 
       - name: Test NHTSA recall collector boundary
         env:
