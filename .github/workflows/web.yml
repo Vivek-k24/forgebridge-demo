@@ -82,6 +82,10 @@ jobs:
         working-directory: web
         run: node scripts/validate-offline-privacy.mjs
 
+      - name: Validate service-worker cache lifecycle
+        working-directory: web
+        run: node scripts/validate-service-worker-cache.mjs
+
       - name: Typecheck web
         working-directory: web
         run: npm run typecheck
