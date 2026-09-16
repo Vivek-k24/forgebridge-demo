@@ -98,6 +98,10 @@ jobs:
         working-directory: web
         run: node scripts/validate-accessible-workflow-announcements.mjs
 
+      - name: Validate Garage add-mode semantics
+        working-directory: web
+        run: node scripts/validate-garage-mode-semantics.mjs
+
       - name: Typecheck web
         working-directory: web
         run: npm run typecheck
