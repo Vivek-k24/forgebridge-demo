@@ -52,6 +52,26 @@
   overflow-wrap: anywhere;
 }
 
+.settings-radio-fieldset {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.settings-radio-fieldset > legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 .settings-choice-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -60,6 +80,7 @@
 }
 
 .settings-choice {
+  position: relative;
   display: grid;
   gap: 0.3rem;
   min-height: 100px;
@@ -69,6 +90,28 @@
   background: transparent;
   color: inherit;
   text-align: left;
+  cursor: pointer;
+}
+
+.settings-choice input[type='radio'],
+.settings-text-scale input[type='radio'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.settings-choice:focus-within,
+.settings-text-scale:focus-within {
+  outline: 3px solid var(--pg-accent, #68c997);
+  outline-offset: 2px;
+}
+
+.settings-choice input[type='radio']:disabled ~ strong,
+.settings-choice input[type='radio']:disabled ~ span {
+  opacity: 0.55;
 }
 
 .settings-choice span {
