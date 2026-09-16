@@ -3,17 +3,20 @@ name: Extraction Pipeline CI
 on:
   pull_request:
     paths:
+      - 'api/partgraph/config.py'
       - 'api/partgraph/knowledge/extraction.py'
       - 'api/partgraph/knowledge/staging.py'
       - 'api/partgraph/knowledge/nhtsa.py'
       - 'api/partgraph/knowledge/reference_parts.py'
       - 'api/partgraph/knowledge/provider_network.py'
+      - 'api/partgraph/identity/vehicle/model_catalog.py'
       - 'api/data/reference/**'
       - 'api/data/reference_candidates/**'
       - 'api/partgraph/operator/**'
       - 'api/partgraph/identity/auth/roles.py'
       - 'api/tests/test_extraction_pipeline.py'
       - 'api/tests/test_nhtsa_collector.py'
+      - 'api/tests/test_provider_timeout_hierarchy.py'
       - 'api/tests/test_operator_nhtsa_ingestion.py'
       - 'api/tests/test_reference_parts_dataset.py'
       - 'api/tests/test_reference_repair_candidates.py'
@@ -21,6 +24,7 @@ on:
       - 'api/tests/test_provider_source_binding.py'
       - 'api/tests/test_operator_source_binding_controls.py'
       - 'api/tests/test_provider_network_policy.py'
+      - 'web/src/api.ts'
       - 'api/migrations/**'
       - 'api/pyproject.toml'
       - '.github/workflows/extraction.yml'
@@ -29,17 +33,20 @@ on:
       - main
       - partgraph-mvp-consolidation
     paths:
+      - 'api/partgraph/config.py'
       - 'api/partgraph/knowledge/extraction.py'
       - 'api/partgraph/knowledge/staging.py'
       - 'api/partgraph/knowledge/nhtsa.py'
       - 'api/partgraph/knowledge/reference_parts.py'
       - 'api/partgraph/knowledge/provider_network.py'
+      - 'api/partgraph/identity/vehicle/model_catalog.py'
       - 'api/data/reference/**'
       - 'api/data/reference_candidates/**'
       - 'api/partgraph/operator/**'
       - 'api/partgraph/identity/auth/roles.py'
       - 'api/tests/test_extraction_pipeline.py'
       - 'api/tests/test_nhtsa_collector.py'
+      - 'api/tests/test_provider_timeout_hierarchy.py'
       - 'api/tests/test_operator_nhtsa_ingestion.py'
       - 'api/tests/test_reference_parts_dataset.py'
       - 'api/tests/test_reference_repair_candidates.py'
@@ -47,6 +54,7 @@ on:
       - 'api/tests/test_provider_source_binding.py'
       - 'api/tests/test_operator_source_binding_controls.py'
       - 'api/tests/test_provider_network_policy.py'
+      - 'web/src/api.ts'
       - 'api/migrations/**'
       - 'api/pyproject.toml'
       - '.github/workflows/extraction.yml'
@@ -95,11 +103,13 @@ jobs:
       - name: Lint extraction and operator source boundary
         run: >-
           ruff check
+          api/partgraph/config.py
           api/partgraph/knowledge/extraction.py
           api/partgraph/knowledge/staging.py
           api/partgraph/knowledge/nhtsa.py
           api/partgraph/knowledge/reference_parts.py
           api/partgraph/knowledge/provider_network.py
+          api/partgraph/identity/vehicle/model_catalog.py
           api/partgraph/operator
           api/partgraph/identity/auth/roles.py
           api/migrations/versions/0051_provider_source_binding.py
@@ -108,6 +118,7 @@ jobs:
           api/migrations/versions/0057_nhtsa_ingest_audit.py
           api/tests/test_extraction_pipeline.py
           api/tests/test_nhtsa_collector.py
+          api/tests/test_provider_timeout_hierarchy.py
           api/tests/test_operator_nhtsa_ingestion.py
           api/tests/test_reference_parts_dataset.py
           api/tests/test_reference_repair_candidates.py
@@ -138,6 +149,9 @@ jobs:
 
       - name: Test provider outbound network policy
         run: python -m unittest discover -s api/tests -p 'test_provider_network_policy.py'
+
+      - name: Test provider API browser timeout hierarchy
+        run: python -m unittest discover -s api/tests -p 'test_provider_timeout_hierarchy.py'
 
       - name: Test NHTSA recall collector boundary
         env:
