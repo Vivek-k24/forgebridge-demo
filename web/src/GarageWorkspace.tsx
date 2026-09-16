@@ -400,9 +400,9 @@ export function GarageWorkspace({
       </header>
 
       <section className="garage-add panel">
-        <div className="segmented" role="tablist" aria-label="Add vehicle method">
-          <button type="button" className={mode === 'manual' ? 'active' : ''} onClick={() => setMode('manual')}>Enter details</button>
-          <button type="button" className={mode === 'vin' ? 'active' : ''} onClick={() => setMode('vin')}>Use VIN</button>
+        <div className="segmented" role="group" aria-label="Add vehicle method">
+          <button type="button" aria-pressed={mode === 'manual'} className={mode === 'manual' ? 'active' : ''} onClick={() => setMode('manual')}>Enter details</button>
+          <button type="button" aria-pressed={mode === 'vin'} className={mode === 'vin' ? 'active' : ''} onClick={() => setMode('vin')}>Use VIN</button>
         </div>
 
         {mode === 'manual' ? (
