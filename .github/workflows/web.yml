@@ -71,7 +71,7 @@ jobs:
                 sleep $((attempt * 5))
                 continue
               fi
-              echo '::warning::npm audit advisory service remained unavailable after 3 attempts. Dependency integrity passed; the advisory scan is explicitly degraded for this run.'
+              echo '::warning::npm audit advisory service remained unavailable after 3 attempts. Dependency integrity passed; the advisory scan is explicitly degraded for this development run. Production image publication has a separate fail-closed advisory gate.'
               exit 0
             fi
 
@@ -127,6 +127,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
+      - name: Set up Node.js for release advisory gate
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install locked Web dependencies for release gate
+        working-directory: web
+        run: npm ci --no-audit --no-fund
+
+      - name: Require successful high-severity advisory scan for release
+        working-directory: web
+        env:
+          NPM_CONFIG_FETCH_TIMEOUT: '30000'
+          NPM_CONFIG_FETCH_RETRIES: '2'
+        run: npm audit --audit-level=high
+
       - name: Authenticate to GHCR
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -144,5 +162,6 @@ jobs:
             echo '### PartGraph Web delivery'
             echo "- Image: \`$IMAGE:$GITHUB_SHA\`"
             echo "- Rolling tag: \`$IMAGE:main\`"
+            echo "- Release advisory gate: npm audit --audit-level=high passed"
             echo "- [GHCR package](https://github.com/users/${GITHUB_REPOSITORY_OWNER}/packages/container/package/partgraph-web)"
           } >> "$GITHUB_STEP_SUMMARY"
