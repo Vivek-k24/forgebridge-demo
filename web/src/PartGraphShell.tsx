@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { AccountSettingsWorkspace } from './AccountSettings'
 import { AdminWorkspace } from './AdminWorkspace'
 import { type ApiAvailability, apiRequest, probeApiAvailability } from './api'
@@ -63,6 +63,8 @@ export default function PartGraphShell() {
   const [isAdminSetupAvailable, setIsAdminSetupAvailable] = useState(false)
   const [availability, setAvailability] = useState<ApiAvailability | null>(null)
   const [checkingAvailability, setCheckingAvailability] = useState(false)
+  const appShellRef = useRef<HTMLDivElement>(null)
+  const sidebarRef = useRef<HTMLElement>(null)
 
   const refreshAvailability = useCallback(async () => {
     setCheckingAvailability(true)
@@ -77,6 +79,30 @@ export default function PartGraphShell() {
     const onHashChange = () => setPage(pageFromHash())
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
+
+  useEffect(() => {
+    const appShell = appShellRef.current
+    const sidebar = sidebarRef.current
+    const accountStrip = appShell?.closest('.authenticated-shell')?.querySelector<HTMLElement>('.account-strip') ?? null
+    if (!appShell || !sidebar || !accountStrip) return
+
+    const updateStickyOffsets = () => {
+      appShell.style.setProperty('--partgraph-account-strip-height', `${accountStrip.getBoundingClientRect().height}px`)
+      appShell.style.setProperty('--partgraph-workspace-nav-height', `${sidebar.getBoundingClientRect().height}px`)
+    }
+
+    updateStickyOffsets()
+    window.addEventListener('resize', updateStickyOffsets)
+
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(updateStickyOffsets)
+    observer?.observe(accountStrip)
+    observer?.observe(sidebar)
+
+    return () => {
+      observer?.disconnect()
+      window.removeEventListener('resize', updateStickyOffsets)
+    }
   }, [])
 
   useEffect(() => {
@@ -193,8 +219,8 @@ export default function PartGraphShell() {
         : 'checking service'
 
   return (
-    <div className="partgraph-app-shell">
-      <aside className="partgraph-sidebar" aria-label="PartGraph workspace navigation">
+    <div className="partgraph-app-shell" ref={appShellRef}>
+      <aside ref={sidebarRef} className="partgraph-sidebar" aria-label="PartGraph workspace navigation">
         <button type="button" className="partgraph-brand" aria-label="PartGraph home" onClick={() => navigate('home')}>
           <div className="partgraph-brand-mark" aria-hidden="true">PG</div>
           <div><strong>PartGraph</strong><span>Repair continuity</span></div>
