@@ -86,6 +86,10 @@ jobs:
         working-directory: web
         run: node scripts/validate-service-worker-cache.mjs
 
+      - name: Validate current form-control accessibility names
+        working-directory: web
+        run: node scripts/validate-accessible-form-labels.mjs
+
       - name: Typecheck web
         working-directory: web
         run: npm run typecheck
