@@ -1,5 +1,11 @@
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Protocol
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from .provenance import SourceAuthorityPolicy
 
 
 class SourceClass(StrEnum):
@@ -16,7 +22,10 @@ class ClaimDomain(StrEnum):
     VEHICLE_IDENTITY = "vehicle_identity"
     SAFETY_CAMPAIGN = "safety_campaign"
     REPAIR_REQUIREMENT = "repair_requirement"
+    REPAIR_PROCEDURE = "repair_procedure"
     PART_FITMENT = "part_fitment"
+    VEHICLE_STRUCTURE = "vehicle_structure"
+    VEHICLE_SPECIFICATION = "vehicle_specification"
 
 
 class ClaimRisk(StrEnum):
@@ -30,26 +39,68 @@ class PromotionDecision(StrEnum):
     CANDIDATE_ONLY = "candidate_only"
 
 
+CLAIM_CANONICAL_DOMAIN: dict[ClaimDomain, str | None] = {
+    ClaimDomain.VEHICLE_IDENTITY: "vehicle_identity",
+    ClaimDomain.SAFETY_CAMPAIGN: None,
+    ClaimDomain.REPAIR_REQUIREMENT: "requirement",
+    ClaimDomain.REPAIR_PROCEDURE: "procedure",
+    ClaimDomain.PART_FITMENT: "fitment",
+    ClaimDomain.VEHICLE_STRUCTURE: "structure",
+    ClaimDomain.VEHICLE_SPECIFICATION: "specification",
+}
+
+
+class AuthorityPolicyRecord(Protocol):
+    claim_domain: str | None
+    canonical_domain: str | None
+    source_class: str
+    risk_class: str
+    authority_state: str
+    requires_exact_applicability: bool
+    minimum_evidence_count: int
+    rationale: str
+
+
 @dataclass(frozen=True, slots=True)
 class PromotionAssessment:
     decision: PromotionDecision
     reason: str
 
 
+async def load_source_authority_policy(
+    db: AsyncSession,
+    *,
+    source_class: SourceClass,
+    claim_domain: ClaimDomain,
+    risk: ClaimRisk,
+) -> SourceAuthorityPolicy | None:
+    """Load the exact policy row governing one mechanical-claim authority scope."""
+
+    return await db.scalar(
+        select(SourceAuthorityPolicy).where(
+            SourceAuthorityPolicy.claim_domain == claim_domain.value,
+            SourceAuthorityPolicy.source_class == source_class.value,
+            SourceAuthorityPolicy.risk_class == risk.value,
+        )
+    )
+
+
 def assess_mechanical_claim(
     *,
+    policy: AuthorityPolicyRecord | None,
     source_class: SourceClass,
     claim_domain: ClaimDomain,
     exact_applicability: bool,
     explicit_claim: bool,
     risk: ClaimRisk = ClaimRisk.NORMAL,
+    evidence_count: int = 1,
     has_conflict: bool = False,
 ) -> PromotionAssessment:
-    """Evaluate whether evidence may establish canonical mechanical truth.
+    """Evaluate a claim using structural invariants plus canonical authority data.
 
-    Source authority is evaluated separately from parser/model confidence.
-    Licensing and terms remain a separate source-instance gate before
-    automation may ingest from a source.
+    Exact applicability, explicit support, and unresolved conflicts are product
+    invariants. Which source class is authoritative for a claim/risk scope is
+    data in ``source_authority_policies`` rather than a Python source matrix.
     """
 
     if has_conflict:
@@ -70,57 +121,40 @@ def assess_mechanical_claim(
             "mechanical truth cannot be promoted from unsupported inference",
         )
 
-    if source_class is SourceClass.GOVERNMENT:
-        if claim_domain is ClaimDomain.VEHICLE_IDENTITY:
-            return PromotionAssessment(
-                PromotionDecision.ELIGIBLE,
-                "government vehicle identity data is authoritative for identity evidence",
-            )
-        if claim_domain is ClaimDomain.SAFETY_CAMPAIGN:
-            return PromotionAssessment(
-                PromotionDecision.HUMAN_REVIEW_REQUIRED,
-                "campaign metadata is authoritative but repair implications require review",
-            )
+    if policy is None:
         return PromotionAssessment(
             PromotionDecision.CANDIDATE_ONLY,
-            "government identity/safety datasets do not establish general repair requirements",
+            "no source authority policy is registered for this claim scope",
         )
 
-    if source_class in {SourceClass.OEM_SERVICE, SourceClass.LICENSED_OEM_DERIVED}:
-        if risk is ClaimRisk.SAFETY_CRITICAL:
-            return PromotionAssessment(
-                PromotionDecision.HUMAN_REVIEW_REQUIRED,
-                "safety-critical mechanical claims require human review initially",
-            )
-        return PromotionAssessment(
-            PromotionDecision.ELIGIBLE,
-            "explicit exact-applicability OEM service evidence is eligible for promotion",
-        )
-
-    if source_class is SourceClass.OEM_PARTS:
-        if claim_domain is ClaimDomain.PART_FITMENT:
-            return PromotionAssessment(
-                PromotionDecision.ELIGIBLE,
-                "explicit exact-applicability OEM parts evidence may establish part fitment",
-            )
+    expected_domain = CLAIM_CANONICAL_DOMAIN[claim_domain]
+    if (
+        policy.claim_domain != claim_domain.value
+        or policy.canonical_domain != expected_domain
+        or policy.source_class != source_class.value
+        or policy.risk_class != risk.value
+    ):
         return PromotionAssessment(
             PromotionDecision.CANDIDATE_ONLY,
-            "a parts catalog does not establish repair procedure or tool requirements",
+            "source authority policy scope is inconsistent with the mechanical claim",
         )
 
-    if source_class is SourceClass.INDUSTRY_STANDARD:
+    if policy.requires_exact_applicability and not exact_applicability:
+        return PromotionAssessment(
+            PromotionDecision.HUMAN_REVIEW_REQUIRED,
+            "source authority policy requires exact vehicle applicability",
+        )
+
+    if evidence_count < policy.minimum_evidence_count:
         return PromotionAssessment(
             PromotionDecision.CANDIDATE_ONLY,
-            "industry standards normalize communication but do not supply application truth",
+            "source authority policy requires additional independent evidence",
         )
 
-    if source_class is SourceClass.RETAILER:
-        return PromotionAssessment(
-            PromotionDecision.CANDIDATE_ONLY,
-            "retailer listings are procurement evidence, not canonical mechanical truth",
-        )
-
-    return PromotionAssessment(
-        PromotionDecision.CANDIDATE_ONLY,
-        "community evidence may support discovery but cannot auto-promote mechanical truth",
-    )
+    if policy.authority_state == "accepted":
+        decision = PromotionDecision.ELIGIBLE
+    elif policy.authority_state == "conditional":
+        decision = PromotionDecision.HUMAN_REVIEW_REQUIRED
+    else:
+        decision = PromotionDecision.CANDIDATE_ONLY
+    return PromotionAssessment(decision, policy.rationale)

@@ -17,17 +17,6 @@
   max-width: 760px;
 }
 
-.memory-device {
-  flex: 0 0 auto;
-  border: 1px solid rgba(104, 153, 131, 0.35);
-  border-radius: 999px;
-  padding: 8px 12px;
-  color: var(--muted, #a8bac1);
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 .memory-alert {
   margin: 0 0 16px;
   padding: 12px 14px;
@@ -43,13 +32,9 @@
   border-color: rgba(92, 166, 121, 0.45);
 }
 
+/* Current repair selection belongs to Garage. Keep this legacy block hidden until Inventory is replaced by the equipment catalog UI. */
 .memory-session-bar {
-  display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) auto;
-  align-items: end;
-  gap: 16px;
-  margin-bottom: 14px;
-  padding: 16px;
+  display: none;
 }
 
 .memory-session-bar label,
@@ -75,37 +60,8 @@
 .memory-session-state span,
 .memory-card span,
 .memory-card small,
-.memory-photo-card small,
 .memory-muted {
   color: var(--muted, #a8bac1);
-}
-
-.memory-tabs {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin: 0 0 14px;
-  padding: 6px;
-  border: 1px solid rgba(104, 153, 131, 0.2);
-  border-radius: 12px;
-  background: rgba(8, 18, 24, 0.72);
-  position: sticky;
-  top: 8px;
-  z-index: 5;
-  backdrop-filter: blur(8px);
-}
-
-.memory-tab {
-  min-height: 46px;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--muted, #a8bac1);
-}
-
-.memory-tab--active {
-  border-color: rgba(99, 174, 132, 0.4);
-  background: rgba(54, 103, 77, 0.2);
-  color: #f2f6f7;
 }
 
 .memory-grid {
@@ -151,11 +107,6 @@
   box-sizing: border-box;
 }
 
-.memory-form-panel textarea {
-  resize: vertical;
-  min-height: 96px;
-}
-
 .memory-chip-list {
   display: flex;
   flex-wrap: wrap;
@@ -192,6 +143,31 @@
   border: 1px solid rgba(104, 153, 131, 0.3);
 }
 
+.memory-readiness-score {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(95, 157, 124, 0.28);
+  background: rgba(95, 157, 124, 0.08);
+  color: #376a54;
+  font-size: 0.88rem;
+}
+
+.memory-progress {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(100, 116, 139, 0.12);
+}
+
+.memory-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #5f9d7c;
+  transition: width 180ms ease;
+}
+
 .memory-card-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -207,6 +183,22 @@
   background: rgba(13, 24, 32, 0.72);
 }
 
+.memory-card--have {
+  border-color: rgba(92, 166, 121, 0.32);
+  box-shadow: inset 3px 0 0 rgba(92, 166, 121, 0.7);
+}
+
+.memory-card--ordered {
+  border-color: rgba(176, 128, 37, 0.32);
+  box-shadow: inset 3px 0 0 rgba(176, 128, 37, 0.65);
+}
+
+.memory-card--missing,
+.memory-card--unavailable {
+  border-color: rgba(181, 74, 74, 0.28);
+  box-shadow: inset 3px 0 0 rgba(181, 74, 74, 0.58);
+}
+
 .memory-card > div:first-child {
   display: grid;
   gap: 5px;
@@ -215,67 +207,6 @@
 .memory-card p {
   margin: 0;
   line-height: 1.55;
-}
-
-.memory-evidence-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
-}
-
-.memory-evidence-grid > div {
-  display: grid;
-  align-content: start;
-  gap: 10px;
-}
-
-.memory-evidence-grid h3 {
-  margin: 0 0 4px;
-}
-
-.memory-photo-input input[type='file'] {
-  padding: 10px;
-}
-
-.memory-preview {
-  width: 100%;
-  max-height: 320px;
-  object-fit: contain;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  background: #071017;
-}
-
-.memory-photo-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.memory-photo-card {
-  overflow: hidden;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  background: rgba(13, 24, 32, 0.72);
-}
-
-.memory-photo-card img {
-  width: 100%;
-  aspect-ratio: 4 / 3;
-  object-fit: cover;
-  display: block;
-  background: #071017;
-}
-
-.memory-photo-card > div {
-  display: grid;
-  gap: 4px;
-  padding: 10px 12px;
-}
-
-.memory-photo-card button {
-  margin: 0 12px 12px;
-  width: calc(100% - 24px);
 }
 
 .memory-loading {
@@ -293,17 +224,7 @@
     display: grid;
   }
 
-  .memory-device {
-    width: fit-content;
-  }
-
-  .memory-session-bar {
-    grid-template-columns: 1fr;
-    align-items: stretch;
-  }
-
-  .memory-grid,
-  .memory-evidence-grid {
+  .memory-grid {
     grid-template-columns: 1fr;
   }
 
@@ -313,14 +234,8 @@
 }
 
 @media (max-width: 560px) {
-  .memory-tabs {
-    bottom: 8px;
-    top: auto;
-  }
-
   .memory-two-col,
-  .memory-card-grid,
-  .memory-photo-grid {
+  .memory-card-grid {
     grid-template-columns: 1fr;
   }
 
@@ -332,5 +247,14 @@
 
   .memory-heading h1 {
     font-size: clamp(1.8rem, 9vw, 2.6rem);
+  }
+
+  .memory-section-title {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .memory-readiness-score {
+    width: fit-content;
   }
 }

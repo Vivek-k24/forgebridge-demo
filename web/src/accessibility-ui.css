@@ -1,0 +1,340 @@
+:root {
+  --pg-accent-soft: #a8f0cc;
+  --pg-accent: #68c997;
+  --pg-accent-ink: #2f7653;
+  --pg-accent-fill: rgba(104, 201, 151, 0.14);
+  font-family: "Segoe UI Variable Text", "Segoe UI", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: "Segoe UI Variable Text", "Segoe UI", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+body {
+  font-weight: 400;
+}
+
+.partgraph-app-shell button,
+.partgraph-app-shell input,
+.partgraph-app-shell select,
+.partgraph-app-shell textarea,
+.partgraph-app-shell label,
+.partgraph-app-shell dt,
+.partgraph-app-shell dd {
+  font-weight: 400;
+}
+
+.partgraph-app-shell button,
+.partgraph-app-shell label {
+  font-weight: 500;
+}
+
+.partgraph-app-shell strong,
+.partgraph-app-shell b,
+.partgraph-main h1,
+.partgraph-main h2,
+.partgraph-main h3 {
+  font-weight: 600;
+}
+
+/* Keep page introductions compact so the primary action appears above the fold. */
+.partgraph-main h1 {
+  margin-bottom: 0.4rem;
+  font-size: clamp(1.55rem, 2.15vw, 2.15rem) !important;
+  line-height: 1.16;
+  letter-spacing: -0.025em;
+}
+
+.partgraph-main h2 {
+  color: #9eddbd;
+  font-size: clamp(1.15rem, 1.5vw, 1.35rem);
+  line-height: 1.25;
+  letter-spacing: -0.012em;
+}
+
+.partgraph-main h3 {
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+.partgraph-main .lede {
+  font-size: 0.98rem;
+  line-height: 1.5;
+}
+
+.partgraph-main .eyebrow {
+  color: #a8f0cc;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.partgraph-main > main {
+  padding-top: 1.15rem;
+}
+
+.memory-heading,
+.settings-heading {
+  margin-bottom: 0.9rem;
+}
+
+/* Brighter navigation: menu labels stay white; green is reserved for state and focus. */
+.partgraph-brand {
+  width: 100%;
+  min-height: auto;
+  border: 0;
+  border-radius: 10px;
+  padding: 2px 4px 18px;
+  color: #ffffff;
+  background: transparent;
+  text-align: left;
+  font-weight: 400 !important;
+}
+
+.partgraph-brand:hover,
+.partgraph-brand:focus-visible {
+  background: rgba(168, 240, 204, 0.06);
+}
+
+.partgraph-brand-mark {
+  border-color: rgba(168, 240, 204, 0.52);
+  color: var(--pg-accent-soft);
+  font-weight: 600;
+}
+
+.partgraph-brand strong {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.partgraph-brand span {
+  color: #d7e3df;
+}
+
+.partgraph-nav-primary,
+.partgraph-nav-utility {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.partgraph-nav-utility {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid rgba(168, 240, 204, 0.16);
+}
+
+.partgraph-nav-item,
+.partgraph-nav-item:hover:not(:disabled),
+.partgraph-nav-item--active {
+  color: #ffffff !important;
+  font-size: 0.94rem;
+  font-weight: 500 !important;
+}
+
+.partgraph-nav-item:hover:not(:disabled) {
+  background: rgba(168, 240, 204, 0.07);
+}
+
+.partgraph-nav-item--active {
+  border-color: rgba(168, 240, 204, 0.42);
+  background: rgba(168, 240, 204, 0.1);
+  box-shadow: inset 3px 0 0 var(--pg-accent-soft);
+}
+
+.partgraph-runtime-note span {
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.partgraph-runtime-note i {
+  background: var(--pg-accent-soft);
+  box-shadow: 0 0 0 4px rgba(168, 240, 204, 0.1);
+}
+
+/* The current-repair strip is on a light surface, so its green text stays darker for contrast. */
+.partgraph-repair-nav > span,
+.partgraph-repair-nav__item {
+  font-weight: 500;
+}
+
+.partgraph-repair-nav > span {
+  color: var(--pg-accent-ink);
+}
+
+.partgraph-repair-nav__item {
+  color: #455f54;
+}
+
+.partgraph-repair-nav__item:hover {
+  border-color: rgba(104, 201, 151, 0.34);
+  background: rgba(104, 201, 151, 0.08);
+}
+
+.partgraph-repair-nav__item--active {
+  border-color: rgba(104, 201, 151, 0.58);
+  background: var(--pg-accent-fill);
+  color: #205f42;
+}
+
+/* Supersede the older muted-green dark repair theme with the brighter accessible accent. */
+.repair-workspace-shell .panel h2,
+.repair-workspace-shell .panel .eyebrow {
+  color: #a8f0cc;
+}
+
+.repair-workspace-shell .next-action-card {
+  border-color: rgba(168, 240, 204, 0.5);
+  box-shadow: inset 3px 0 #86dcb3;
+}
+
+.repair-workspace-shell .start-repair-form input:focus,
+.repair-workspace-shell .start-repair-form select:focus,
+.repair-workspace-shell .compact-form input:focus,
+.repair-workspace-shell .compact-form select:focus,
+.repair-workspace-shell .compact-form textarea:focus,
+.repair-workspace-shell .repair-panel select:focus {
+  border-color: #86dcb3;
+  box-shadow: 0 0 0 3px rgba(168, 240, 204, 0.14);
+}
+
+.repair-workspace-shell button:not(.text-button):not(.secondary) {
+  color: #082117;
+  background: #9eddbd;
+  border-color: #b8f4d6;
+  box-shadow: inset 0 -2px rgba(19, 91, 61, 0.2);
+}
+
+.repair-workspace-shell button:not(.text-button):not(.secondary):hover:not(:disabled) {
+  color: #082117;
+  background: #b2ebd0;
+  border-color: #c5f6df;
+}
+
+.repair-workspace-shell .text-button {
+  color: #a8f0cc !important;
+}
+
+.memory-readiness-score {
+  color: #b8f4d6;
+  border-color: rgba(168, 240, 204, 0.38);
+  background: rgba(168, 240, 204, 0.09);
+}
+
+.memory-progress > span {
+  background: #86dcb3;
+}
+
+button:not(.partgraph-brand):not(.partgraph-nav-item):not(.partgraph-repair-nav__item):not(.settings-choice):not(.settings-text-scale) {
+  font-weight: 500;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--pg-accent);
+  outline-offset: 2px;
+}
+
+/* Text-size controls follow the W3C pattern: explicit incremental choices through 200%. */
+.settings-text-scale-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.settings-text-scale {
+  display: grid;
+  align-content: center;
+  gap: 0.25rem;
+  min-height: 74px;
+  padding: 0.8rem;
+  border: 1px solid var(--line, #d8dde6);
+  border-radius: 11px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font-weight: 500 !important;
+}
+
+.settings-text-scale span {
+  font-weight: 600;
+}
+
+.settings-text-scale small {
+  font-size: 0.8rem;
+  font-weight: 400;
+  opacity: 0.72;
+}
+
+.settings-text-scale:hover {
+  border-color: rgba(104, 201, 151, 0.5);
+  background: rgba(104, 201, 151, 0.06);
+}
+
+.settings-text-scale--active {
+  border-color: var(--pg-accent);
+  background: var(--pg-accent-fill);
+  box-shadow: inset 3px 0 0 var(--pg-accent);
+}
+
+.settings-choice,
+.settings-identity dd,
+.field-label-row,
+.combo__option,
+.year-wheel__item,
+.start-repair-form label > span,
+.count-grid dd,
+.resume-photo-strip figcaption {
+  font-weight: 500;
+}
+
+.settings-choice strong {
+  font-weight: 600;
+}
+
+.settings-choice--active {
+  border-color: rgba(104, 201, 151, 0.58);
+  background: var(--pg-accent-fill);
+  box-shadow: inset 3px 0 0 var(--pg-accent);
+}
+
+@media (max-width: 900px) {
+  .partgraph-nav-primary,
+  .partgraph-nav-utility {
+    display: contents;
+  }
+
+  .partgraph-nav-utility {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .partgraph-nav-item--active {
+    box-shadow: inset 0 -3px 0 var(--pg-accent-soft);
+  }
+}
+
+@media (max-width: 560px) {
+  .partgraph-main h1 {
+    font-size: clamp(1.4rem, 7vw, 1.85rem) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

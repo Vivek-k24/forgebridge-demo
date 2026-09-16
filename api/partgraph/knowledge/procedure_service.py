@@ -18,6 +18,7 @@ from .models import (
     RequirementUse,
 )
 from .schemas import ProcedureActionRead, RepairProcedureRead
+from .support_boundaries import ProcedureBoundaryAction, validate_computer_service_boundary
 
 REPAIR_PROCEDURE_NOT_AVAILABLE = "REPAIR_PROCEDURE_NOT_AVAILABLE"
 REPAIR_PROCEDURE_INTEGRITY_ERROR = "REPAIR_PROCEDURE_INTEGRITY_ERROR"
@@ -85,6 +86,20 @@ def _validate_dependency_graph(
         resolved.add(eligible[0].id)
 
 
+def _validate_support_boundaries(actions: list[ProcedureAction]) -> None:
+    try:
+        validate_computer_service_boundary(
+            ProcedureBoundaryAction(
+                action_key=action.action_key,
+                position=action.position,
+                skippable=action.skippable,
+            )
+            for action in actions
+        )
+    except ValueError as exc:
+        raise _integrity_error(str(exc)) from exc
+
+
 async def _procedure_for_definition(
     session: AsyncSession,
     *,
@@ -121,6 +136,7 @@ async def _procedure_for_definition(
             message="No verified guided procedure exists for this exact repair definition.",
             status_code=status.HTTP_404_NOT_FOUND,
         )
+    _validate_support_boundaries(actions)
 
     action_ids = [action.id for action in actions]
     action_by_id = {action.id: action for action in actions}

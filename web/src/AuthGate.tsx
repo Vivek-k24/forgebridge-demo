@@ -116,6 +116,15 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     }
   }, [auth.status])
 
+  useEffect(() => {
+    const onPreferencesChanged = (event: Event) => {
+      const detail = (event as CustomEvent<PreferenceRead>).detail
+      if (detail?.units) setUnits(detail.units)
+    }
+    window.addEventListener('partgraph:preferences-changed', onPreferencesChanged)
+    return () => window.removeEventListener('partgraph:preferences-changed', onPreferencesChanged)
+  }, [])
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setFailure(null)

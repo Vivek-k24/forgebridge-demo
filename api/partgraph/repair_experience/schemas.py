@@ -111,8 +111,8 @@ class ResumeCountsRead(BaseModel):
     hardware_not_installed: int
     hardware_stored: int
     hardware_loose: int
-    inventory_total: int
-    procurement_blockers: int
+    supplemental_inventory_total: int
+    verified_readiness_blockers: int
     observations_total: int
     photos_total: int
 

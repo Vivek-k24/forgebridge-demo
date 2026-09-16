@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2009-honda-civic-hybrid-primary-coverage-v1",
+  "vehicle_configuration_id": "7feb13e9-bca0-5d8b-b701-f0260cce5da1",
+  "review": {
+    "status": "approved_reference_derivation",
+    "reviewed_on": "2026-09-15",
+    "note": "This fixture reorganizes facts already present in project-owner-reviewed exact-vehicle repair evidence into first-class canonical structure and specification records. It adds no inferred repair instruction and grants no automated source access."
+  },
+  "sources": {
+    "honda-2009-civic-hybrid-owner-manual": {
+      "source_class": "oem_service",
+      "license_status": "approved",
+      "automation_allowed": false,
+      "document": "2009 Civic Hybrid Online Reference Owner's Manual",
+      "document_part_number": "00X31-SNC-6300",
+      "url": "https://techinfo.honda.com/rjanisis/pubs/OM/NC0909/NC0909OM.PDF"
+    },
+    "charmli-2009-civic-hybrid-service-manual-mirror": {
+      "source_class": "licensed_oem_derived",
+      "license_status": "approved",
+      "automation_allowed": false,
+      "reviewed_on": "2026-09-15",
+      "reviewed_by": "project_owner",
+      "url": "https://charm.li/Honda/2009/Civic%20L4-1.3L%20Hybrid/Repair%20and%20Diagnosis/Engine%2C%20Cooling%20and%20Exhaust/Engine/Water%20Pump/Service%20and%20Repair/"
+    }
+  },
+  "structure": [
+    {
+      "node_key": "engine",
+      "node_type": "system",
+      "display_name": "Engine",
+      "parent_node_key": null,
+      "placement": "front",
+      "position": 0,
+      "source_key": "honda-2009-civic-hybrid-owner-manual",
+      "evidence_note": "The approved oil-change procedure explicitly locates the drain bolt, oil filter, and mating surface on the engine and engine block."
+    },
+    {
+      "node_key": "engine-cooling",
+      "node_type": "subsystem",
+      "display_name": "Engine cooling system",
+      "parent_node_key": "engine",
+      "placement": "front",
+      "position": 0,
+      "source_key": "charmli-2009-civic-hybrid-service-manual-mirror",
+      "evidence_note": "The approved water-pump service evidence places the water pump under the exact-vehicle Engine/Cooling service path and requires cooling-system refill and air bleed."
+    },
+    {
+      "node_key": "engine-water-pump",
+      "node_type": "assembly",
+      "display_name": "Engine water-pump assembly",
+      "parent_node_key": "engine-cooling",
+      "placement": "front",
+      "position": 0,
+      "source_key": "charmli-2009-civic-hybrid-service-manual-mirror",
+      "evidence_note": "The approved water-pump repair and reviewed OEM-parts evidence explicitly identify the engine water-pump assembly."
+    }
+  ],
+  "specifications": [
+    {
+      "specification_key": "engine-oil-change-capacity-with-filter",
+      "specification_type": "capacity",
+      "value_kind": "scalar",
+      "display_name": "Engine oil change capacity with filter",
+      "quantity_kind": "volume",
+      "description": "Refill quantity for an engine-oil change when the oil filter is replaced.",
+      "application_key": "engine-oil-change",
+      "nominal_value": 3.4,
+      "minimum_value": null,
+      "maximum_value": null,
+      "unit": "US qt",
+      "text_value": null,
+      "qualifier_key": "with-filter",
+      "conditions": {
+        "filter_replaced": true
+      },
+      "source_key": "honda-2009-civic-hybrid-owner-manual",
+      "source_pages": [297, 299]
+    },
+    {
+      "specification_key": "engine-oil-drain-bolt-torque",
+      "specification_type": "torque",
+      "value_kind": "scalar",
+      "display_name": "Engine oil drain-bolt torque",
+      "quantity_kind": "torque",
+      "description": "Tightening torque for the engine-oil drain bolt during the approved oil-change workflow.",
+      "application_key": "engine-oil-drain-bolt",
+      "nominal_value": 39,
+      "minimum_value": null,
+      "maximum_value": null,
+      "unit": "N·m",
+      "text_value": null,
+      "qualifier_key": "",
+      "conditions": {},
+      "source_key": "honda-2009-civic-hybrid-owner-manual",
+      "source_pages": [299]
+    }
+  ]
+}

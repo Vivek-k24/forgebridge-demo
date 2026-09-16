@@ -8,6 +8,11 @@ from sqlalchemy import select
 
 from ..auth.dependencies import AuthSessionDep, CurrentUserDep, require_csrf
 from ..errors import ErrorCode, ErrorEnvelope, PartGraphError
+from ..knowledge.support_boundaries import (
+    COMPUTER_SERVICE_BOUNDARY_CODE,
+    COMPUTER_SERVICE_BOUNDARY_MESSAGE,
+    is_computer_service_boundary,
+)
 from ..repair_definition.models import ProcedureAction, RepairDefinition, RequirementUse
 from ..repair_definition.procedure_service import (
     REPAIR_PROCEDURE_INTEGRITY_ERROR,
@@ -32,6 +37,7 @@ GuidanceStatus = Literal[
     "action_available",
     "action_blocked",
     "inventory_blocked",
+    "unsupported_boundary",
     "procedure_complete",
 ]
 PROCEDURE_EVENT = "procedure_action_state_changed"
@@ -62,6 +68,8 @@ class GuidanceActionRead(BaseModel):
     dependency_action_keys: list[str]
     inventory_blockers: list[GuidanceInventoryBlockerRead]
     supporting_claim_ids: list[UUID]
+    completion_allowed: bool = True
+    boundary_code: str | None = None
 
 
 class GuidanceSummaryRead(BaseModel):
@@ -251,6 +259,10 @@ async def _guidance_view(
     for item in procedure.actions:
         row = progress.get(item.action_id)
         state = cast(ProgressState, "pending" if row is None else row.progress_state)
+        if is_computer_service_boundary(item.action_key) and state != "pending":
+            raise _integrity_error(
+                "Unsupported computer-service boundary cannot have a completed, skipped, or blocked progress state."
+            )
         if state == "skipped" and not action_models[item.action_id].skippable:
             raise _integrity_error("A non-skippable canonical action is recorded as skipped.")
         state_by_key[item.action_key] = state
@@ -296,12 +308,15 @@ async def _guidance_view(
     action_reads: list[GuidanceActionRead] = []
     for item in procedure.actions:
         blocker_code, notes = details_by_action[item.action_id]
+        is_boundary = is_computer_service_boundary(item.action_key)
         action_reads.append(
             GuidanceActionRead(
                 action_id=item.action_id,
                 action_key=item.action_key,
                 title=item.title,
-                instruction=item.instruction,
+                instruction=(
+                    COMPUTER_SERVICE_BOUNDARY_MESSAGE if is_boundary else item.instruction
+                ),
                 warning_text=item.warning_text,
                 workspace_note=item.workspace_note,
                 position=item.position,
@@ -312,6 +327,8 @@ async def _guidance_view(
                 dependency_action_keys=item.dependency_action_keys,
                 inventory_blockers=blockers_by_action[item.action_id],
                 supporting_claim_ids=item.supporting_claim_ids,
+                completion_allowed=not is_boundary,
+                boundary_code=COMPUTER_SERVICE_BOUNDARY_CODE if is_boundary else None,
             )
         )
 
@@ -347,6 +364,8 @@ async def _guidance_view(
     guidance_status: GuidanceStatus
     if procedure_complete:
         guidance_status = "procedure_complete"
+    elif current is not None and current.boundary_code is not None:
+        guidance_status = "unsupported_boundary"
     elif current is not None and current.progress_state == "blocked":
         guidance_status = "action_blocked"
     elif current is not None and current.inventory_blockers:
@@ -466,6 +485,13 @@ async def update_action_progress(
             status_code=status.HTTP_409_CONFLICT,
         )
 
+    if not current.completion_allowed:
+        raise PartGraphError(
+            code="REPAIR_PROCEDURE_ACTION_UNSUPPORTED_BOUNDARY",
+            message=COMPUTER_SERVICE_BOUNDARY_MESSAGE,
+            status_code=status.HTTP_409_CONFLICT,
+            details={"boundary_code": current.boundary_code},
+        )
     if payload.progress_state == "completed" and current.inventory_blockers:
         raise PartGraphError(
             code="REPAIR_PROCEDURE_ACTION_INVENTORY_BLOCKED",

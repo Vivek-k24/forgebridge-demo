@@ -37,7 +37,7 @@ def require_csrf(request: Request) -> None:
             status_code=status.HTTP_403_FORBIDDEN,
         )
     origin = request.headers.get("origin")
-    if origin is not None and origin.rstrip("/") != settings.web_origin.rstrip("/"):
+    if origin is not None and origin.rstrip("/") not in settings.allowed_web_origins:
         raise PartGraphError(
             code=ErrorCode.AUTH_ORIGIN_REJECTED,
             message="Origin not allowed.",
