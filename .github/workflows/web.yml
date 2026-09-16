@@ -94,6 +94,10 @@ jobs:
         working-directory: web
         run: node scripts/validate-responsive-sticky-stack.mjs
 
+      - name: Validate workflow status announcements
+        working-directory: web
+        run: node scripts/validate-accessible-workflow-announcements.mjs
+
       - name: Typecheck web
         working-directory: web
         run: npm run typecheck
