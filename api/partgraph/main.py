@@ -32,6 +32,7 @@ from .knowledge.coverage_router import router as catalog_coverage_router
 from .knowledge.curation import router as knowledge_curation_router
 from .knowledge.repair_materialization import router as repair_materialization_router
 from .knowledge.router import router as repair_definition_router
+from .observability import bind_request_context, emit_event, is_mutation_method
 from .operator.router import router as operator_router
 from .repair_experience.completion import router as repair_completion_router
 from .repair_experience.guidance import router as repair_guidance_router
@@ -86,8 +87,14 @@ app.add_middleware(
         "X-Request-ID",
         "X-PartGraph-Device-ID",
         "Idempotency-Key",
+        "traceparent",
     ],
-    expose_headers=["X-Request-ID", "X-PartGraph-API-Version", "Retry-After"],
+    expose_headers=[
+        "X-Request-ID",
+        "X-PartGraph-API-Version",
+        "Retry-After",
+        "traceparent",
+    ],
 )
 app.include_router(auth_router)
 app.include_router(operator_router)
@@ -132,11 +139,21 @@ def _request_body_limit(request: Request) -> tuple[int, str] | None:
     return None
 
 
+def _route_template(request: Request) -> str:
+    route = request.scope.get("route")
+    route_path = getattr(route, "path", None)
+    return route_path if isinstance(route_path, str) and route_path else "unmatched"
+
+
 @app.middleware("http")
 async def platform_boundary(request: Request, call_next) -> Response:
     supplied_request_id = request.headers.get("x-request-id", "")
     request.state.request_id = (
         supplied_request_id if REQUEST_ID_PATTERN.fullmatch(supplied_request_id) else uuid4().hex
+    )
+    request.state.trace_context = bind_request_context(
+        request_id=request.state.request_id,
+        traceparent=request.headers.get("traceparent"),
     )
 
     body_limit = _request_body_limit(request)
@@ -221,6 +238,7 @@ def _finish_response(request: Request, response: Response, duration_ms: float) -
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["Permissions-Policy"] = "camera=(self), microphone=(self), geolocation=()"
+    response.headers["traceparent"] = request.state.trace_context.traceparent
 
     if request.url.path.startswith(
         (
@@ -260,6 +278,27 @@ def _finish_response(request: Request, response: Response, duration_ms: float) -
             request.url.path,
             response.status_code,
             duration_ms,
+        )
+
+    if request.url.path.startswith("/api/"):
+        if response.status_code >= 500:
+            event_level = logging.ERROR
+        elif response.status_code >= 400:
+            event_level = logging.WARNING
+        else:
+            event_level = logging.INFO
+        emit_event(
+            "http.server.request",
+            level=event_level,
+            request_id=request.state.request_id,
+            trace_context=request.state.trace_context,
+            **{
+                "http.request.method": request.method,
+                "http.route": _route_template(request),
+                "http.response.status_code": response.status_code,
+                "server.duration_ms": round(duration_ms, 2),
+                "partgraph.request.is_mutation": is_mutation_method(request.method),
+            },
         )
     return response
 
@@ -322,6 +361,17 @@ async def unexpected_error_handler(request: Request, exc: Exception) -> Response
         getattr(request.state, "request_id", "unknown"),
         request.method,
         request.url.path,
+    )
+    emit_event(
+        "error.unhandled",
+        level=logging.ERROR,
+        request_id=getattr(request.state, "request_id", None),
+        trace_context=getattr(request.state, "trace_context", None),
+        **{
+            "exception.type": type(exc).__name__,
+            "http.request.method": request.method,
+            "http.route": _route_template(request),
+        },
     )
     return error_response(
         request,
