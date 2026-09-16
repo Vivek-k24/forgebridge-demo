@@ -5,6 +5,7 @@ export const repairDeviceId = partGraphDeviceId
 export const REPAIR_STATE_CHANGED_EVENT = 'partgraph:repair-state-changed'
 
 const RECOVERY_DELAYS_MS = [0, 350, 1_000]
+const SERVER_WRITE_STATE_UNCERTAIN = 'DATABASE_WRITE_STATE_UNCERTAIN'
 
 type MutationRecovery = {
   session_id: string
@@ -49,7 +50,11 @@ export function repairMutationHeaders(options: { json?: boolean } = {}): Record<
 
 function ambiguousTransportFailure(error: unknown): error is ApiFailure {
   return error instanceof ApiFailure
-    && (error.code === 'CLIENT_REQUEST_TIMEOUT' || error.code === 'CLIENT_NETWORK_FAILURE')
+    && (
+      error.code === 'CLIENT_REQUEST_TIMEOUT'
+      || error.code === 'CLIENT_NETWORK_FAILURE'
+      || error.code === SERVER_WRITE_STATE_UNCERTAIN
+    )
 }
 
 function uncertainWriteFailure(error: ApiFailure): ApiFailure {
