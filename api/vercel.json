@@ -7,6 +7,12 @@
       "maxDuration": 60
     }
   },
+  "crons": [
+    {
+      "path": "/api/v1/repair-sessions/maintenance/photo-storage/reconcile",
+      "schedule": "17 4 * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
