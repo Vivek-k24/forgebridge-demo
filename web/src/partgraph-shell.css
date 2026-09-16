@@ -1,5 +1,7 @@
 .partgraph-app-shell {
   min-height: 100vh;
+  --partgraph-account-strip-height: 46px;
+  --partgraph-workspace-nav-height: 50px;
 }
 
 .partgraph-sidebar {
@@ -234,7 +236,7 @@
 
 .partgraph-repair-nav {
   position: sticky;
-  top: 46px;
+  top: var(--partgraph-account-strip-height, 46px);
   z-index: 35;
   display: flex;
   align-items: center;
@@ -312,7 +314,7 @@
 @media (max-width: 900px) {
   .partgraph-sidebar {
     position: sticky;
-    top: 46px;
+    top: var(--partgraph-account-strip-height, 46px);
     inset-inline: 0;
     z-index: 70;
     width: 100%;
@@ -362,7 +364,7 @@
   }
 
   .partgraph-repair-nav {
-    top: 96px;
+    top: calc(var(--partgraph-account-strip-height, 46px) + var(--partgraph-workspace-nav-height, 50px));
     width: min(100% - 1rem, 1180px);
   }
 
@@ -379,7 +381,7 @@
 
 @media (max-width: 560px) {
   .partgraph-sidebar {
-    top: 46px;
+    top: var(--partgraph-account-strip-height, 46px);
   }
 
   .partgraph-nav-item {
@@ -396,7 +398,7 @@
   }
 
   .partgraph-repair-nav {
-    top: 98px;
+    top: calc(var(--partgraph-account-strip-height, 46px) + var(--partgraph-workspace-nav-height, 50px));
     display: grid;
     gap: 7px;
     padding-top: 8px;
