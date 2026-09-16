@@ -177,6 +177,27 @@
   align-items: end;
 }
 
+.repair-photo-description-field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.repair-photo-description-field > span {
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.repair-photo-description-field small {
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+.repair-photo-description-help {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
 .repair-log-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -279,6 +300,12 @@
 .repair-photo-card span {
   font-size: 0.75rem;
   opacity: 0.68;
+}
+
+.repair-photo-description {
+  margin: 0.25rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
 }
 
 .repair-photo-card .text-button {
