@@ -19,8 +19,9 @@ class Base(DeclarativeBase):
     pass
 
 
-def _engine_options() -> dict[str, Any]:
-    if not settings.database_pooling:
+def _engine_options(*, pooling_enabled: bool | None = None) -> dict[str, Any]:
+    enabled = settings.database_pooling if pooling_enabled is None else pooling_enabled
+    if not enabled:
         return {"poolclass": NullPool}
     return {
         "pool_pre_ping": True,
