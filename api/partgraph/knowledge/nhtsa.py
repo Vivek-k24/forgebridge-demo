@@ -11,6 +11,7 @@ from urllib.request import Request, urlopen
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..config import settings
 from .extraction import (
     MECHANICAL_CLAIM_CAPABILITY,
     ExtractedCandidate,
@@ -129,10 +130,17 @@ def _fetch_json(url: str, *, timeout_seconds: float) -> dict[str, object]:
 class NhtsaRecallCollector:
     """Fetch one official NHTSA recall response for a broad vehicle identity."""
 
-    def __init__(self, *, timeout_seconds: float = 10.0) -> None:
-        if timeout_seconds <= 0:
+    def __init__(self, *, timeout_seconds: float | None = None) -> None:
+        effective_timeout = (
+            settings.nhtsa_timeout_seconds if timeout_seconds is None else timeout_seconds
+        )
+        if effective_timeout <= 0:
             raise ValueError("timeout_seconds must be positive")
-        self.timeout_seconds = timeout_seconds
+        if effective_timeout > settings.nhtsa_timeout_seconds:
+            raise ValueError(
+                "timeout_seconds cannot exceed the configured NHTSA provider timeout budget"
+            )
+        self.timeout_seconds = effective_timeout
 
     async def fetch(self, query: NhtsaVehicleQuery) -> RawProviderRecord:
         url = build_nhtsa_recall_url(query)
