@@ -78,6 +78,10 @@ jobs:
             exit "$audit_status"
           done
 
+      - name: Validate offline repair cache privacy
+        working-directory: web
+        run: node scripts/validate-offline-privacy.mjs
+
       - name: Typecheck web
         working-directory: web
         run: npm run typecheck
