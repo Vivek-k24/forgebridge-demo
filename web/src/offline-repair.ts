@@ -1,9 +1,8 @@
 import { apiRequest, AUTH_STATE_CLEARED_EVENT } from './api'
 
-const PACK_KEY = 'partgraph:offline-repair-pack:v1'
-const OWNER_KEY = 'partgraph:offline-owner:v1'
-
-export type OfflineOwner = { id: string; email: string; username: string }
+const PACK_KEY = 'partgraph:offline-repair-pack:v2'
+const LEGACY_PACK_KEY = 'partgraph:offline-repair-pack:v1'
+const LEGACY_OWNER_KEY = 'partgraph:offline-owner:v1'
 
 type ResumeAttention = {
   kind: string
@@ -35,7 +34,6 @@ export type OfflineRepairPack = {
   pack_version: string
   read_only: true
   generated_at: string
-  owner_id: string
   session_id: string
   server_sequence: number
   repair_definition_id: string
@@ -102,54 +100,54 @@ export type OfflineRepairPack = {
   }
 }
 
+type ServerOfflineRepairPack = OfflineRepairPack & { owner_id?: string }
+
 function storage(): Storage | null {
   try { return window.sessionStorage } catch { return null }
 }
 
-export function rememberOfflineOwner(owner: OfflineOwner): void {
-  storage()?.setItem(OWNER_KEY, JSON.stringify(owner))
+function removeLegacyIdentityCache(): void {
+  const target = storage()
+  target?.removeItem(LEGACY_PACK_KEY)
+  target?.removeItem(LEGACY_OWNER_KEY)
 }
 
-export function cachedOfflineOwner(): OfflineOwner | null {
-  const raw = storage()?.getItem(OWNER_KEY)
-  if (!raw) return null
-  try {
-    const value = JSON.parse(raw) as Partial<OfflineOwner>
-    return value.id && value.email && value.username
-      ? { id: value.id, email: value.email, username: value.username }
-      : null
-  } catch { return null }
+function privacyMinimizedPack(pack: ServerOfflineRepairPack): OfflineRepairPack {
+  const { owner_id: _ownerId, ...offlinePack } = pack
+  return offlinePack
 }
 
-export function cacheOfflineRepairPack(pack: OfflineRepairPack): void {
-  storage()?.setItem(PACK_KEY, JSON.stringify(pack))
+export function cacheOfflineRepairPack(pack: ServerOfflineRepairPack): OfflineRepairPack {
+  removeLegacyIdentityCache()
+  const minimized = privacyMinimizedPack(pack)
+  storage()?.setItem(PACK_KEY, JSON.stringify(minimized))
+  return minimized
 }
 
-export function loadCachedOfflineRepairPack(ownerId?: string | null, sessionId?: string | null): OfflineRepairPack | null {
+export function loadCachedOfflineRepairPack(_ownerId?: string | null, sessionId?: string | null): OfflineRepairPack | null {
+  removeLegacyIdentityCache()
   const raw = storage()?.getItem(PACK_KEY)
   if (!raw) return null
   try {
-    const pack = JSON.parse(raw) as OfflineRepairPack
+    const pack = JSON.parse(raw) as OfflineRepairPack & { owner_id?: unknown; email?: unknown; username?: unknown }
     if (pack.schema_version !== 1 || pack.read_only !== true) return null
-    if (ownerId && pack.owner_id !== ownerId) return null
+    if (pack.owner_id !== undefined || pack.email !== undefined || pack.username !== undefined) return null
     if (sessionId && pack.session_id !== sessionId) return null
     return pack
   } catch { return null }
 }
 
-export function hasOfflineRepairPackForOwner(ownerId: string): boolean {
-  return loadCachedOfflineRepairPack(ownerId) !== null
-}
-
 export function clearOfflineRepairCache(): void {
-  storage()?.removeItem(PACK_KEY)
-  storage()?.removeItem(OWNER_KEY)
+  const target = storage()
+  target?.removeItem(PACK_KEY)
+  target?.removeItem(LEGACY_PACK_KEY)
+  target?.removeItem(LEGACY_OWNER_KEY)
 }
 
 export async function refreshOfflineRepairPack(sessionId: string): Promise<OfflineRepairPack> {
-  const pack = await apiRequest<OfflineRepairPack>(`/api/v1/repair-sessions/${sessionId}/offline-pack`)
-  cacheOfflineRepairPack(pack)
-  return pack
+  const pack = await apiRequest<ServerOfflineRepairPack>(`/api/v1/repair-sessions/${sessionId}/offline-pack`)
+  return cacheOfflineRepairPack(pack)
 }
 
+removeLegacyIdentityCache()
 window.addEventListener(AUTH_STATE_CLEARED_EVENT, clearOfflineRepairCache)
