@@ -1,0 +1,68 @@
+name: Operational Observability CI
+
+on:
+  pull_request:
+    paths:
+      - 'api/partgraph/observability.py'
+      - 'api/partgraph/main.py'
+      - 'api/partgraph/database.py'
+      - 'api/partgraph/operator/nhtsa.py'
+      - 'api/partgraph/repair_experience/memory/photo_lifecycle.py'
+      - 'api/tests/test_operational_observability.py'
+      - 'docs/OPERATIONAL_OBSERVABILITY_RUNBOOK.md'
+      - 'ops/observability/**'
+      - '.github/workflows/operational-observability.yml'
+      - 'api/scripts/validate_ci_security.py'
+  push:
+    branches: [main]
+    paths:
+      - 'api/partgraph/observability.py'
+      - 'api/partgraph/main.py'
+      - 'api/partgraph/database.py'
+      - 'api/partgraph/operator/nhtsa.py'
+      - 'api/partgraph/repair_experience/memory/photo_lifecycle.py'
+      - 'api/tests/test_operational_observability.py'
+      - 'docs/OPERATIONAL_OBSERVABILITY_RUNBOOK.md'
+      - 'ops/observability/**'
+      - '.github/workflows/operational-observability.yml'
+      - 'api/scripts/validate_ci_security.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: observability-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    name: Telemetry + SLO + runbook contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.14'
+
+      - name: Validate GitHub Actions supply-chain policy
+        run: python3 api/scripts/validate_ci_security.py
+
+      - name: Compile observability integration points
+        run: >-
+          python3 -m py_compile
+          api/partgraph/observability.py
+          api/partgraph/main.py
+          api/partgraph/database.py
+          api/partgraph/operator/nhtsa.py
+          api/partgraph/repair_experience/memory/photo_lifecycle.py
+
+      - name: Test telemetry, SLO, and alert/runbook contract
+        env:
+          PYTHONPATH: api
+        run: python3 api/tests/test_operational_observability.py
