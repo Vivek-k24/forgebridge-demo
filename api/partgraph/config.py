@@ -4,6 +4,10 @@ from urllib.parse import urlparse
 
 DEFAULT_DATABASE_URL = "postgresql+psycopg://partgraph:partgraph@localhost:5432/partgraph"
 DEFAULT_WEB_ORIGIN = "http://localhost:5173"
+DEFAULT_NHTSA_TIMEOUT_SECONDS = 4.0
+DEFAULT_REQUEST_DEADLINE_SECONDS = 8.0
+MAX_REQUEST_DEADLINE_SECONDS = 9.0
+MAX_PROVIDER_DEADLINE_RESERVE_SECONDS = 1.0
 
 
 def _bool_env(name: str, default: bool = False) -> bool:
@@ -38,6 +42,27 @@ def _float_env(name: str, default: float, *, minimum: float, maximum: float) -> 
     if not minimum <= value <= maximum:
         raise ValueError(f"{name} must be between {minimum} and {maximum}")
     return value
+
+
+def _validate_provider_timeout_hierarchy(
+    *,
+    provider_timeout_seconds: float,
+    request_deadline_seconds: float,
+) -> None:
+    # Normal API budgets retain a full second after the upstream provider has
+    # timed out. Very small explicitly configured deadlines retain half of the
+    # business deadline so the provider can still use the supported 0.5 s floor.
+    reserve_seconds = min(
+        MAX_PROVIDER_DEADLINE_RESERVE_SECONDS,
+        request_deadline_seconds / 2,
+    )
+    maximum_provider_timeout = request_deadline_seconds - reserve_seconds
+    if provider_timeout_seconds > maximum_provider_timeout:
+        raise ValueError(
+            "PARTGRAPH_NHTSA_TIMEOUT_SECONDS must leave provider/API deadline reserve: "
+            f"provider timeout must be <= {maximum_provider_timeout:g}s when "
+            f"PARTGRAPH_REQUEST_DEADLINE_SECONDS is {request_deadline_seconds:g}s"
+        )
 
 
 def _database_url() -> str:
@@ -157,6 +182,23 @@ def _load_settings() -> Settings:
     vin_lookup_key = os.getenv("PARTGRAPH_VIN_LOOKUP_KEY")
     provider_credential_keys = os.getenv("PARTGRAPH_PROVIDER_CREDENTIAL_KEYS")
 
+    nhtsa_timeout_seconds = _float_env(
+        "PARTGRAPH_NHTSA_TIMEOUT_SECONDS",
+        DEFAULT_NHTSA_TIMEOUT_SECONDS,
+        minimum=0.5,
+        maximum=8.0,
+    )
+    request_deadline_seconds = _float_env(
+        "PARTGRAPH_REQUEST_DEADLINE_SECONDS",
+        DEFAULT_REQUEST_DEADLINE_SECONDS,
+        minimum=1.0,
+        maximum=MAX_REQUEST_DEADLINE_SECONDS,
+    )
+    _validate_provider_timeout_hierarchy(
+        provider_timeout_seconds=nhtsa_timeout_seconds,
+        request_deadline_seconds=request_deadline_seconds,
+    )
+
     return Settings(
         database_url=database_url,
         database_pooling=database_pooling,
@@ -189,12 +231,8 @@ def _load_settings() -> Settings:
             "PARTGRAPH_NHTSA_BASE_URL",
             "https://vpic.nhtsa.dot.gov/api/vehicles",
         ),
-        nhtsa_timeout_seconds=_float_env(
-            "PARTGRAPH_NHTSA_TIMEOUT_SECONDS", 4.0, minimum=0.5, maximum=8.0
-        ),
-        request_deadline_seconds=_float_env(
-            "PARTGRAPH_REQUEST_DEADLINE_SECONDS", 8.0, minimum=1.0, maximum=9.0
-        ),
+        nhtsa_timeout_seconds=nhtsa_timeout_seconds,
+        request_deadline_seconds=request_deadline_seconds,
         repair_edit_lease_seconds=_int_env(
             "PARTGRAPH_REPAIR_EDIT_LEASE_SECONDS", 300, minimum=30, maximum=3_600
         ),
