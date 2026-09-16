@@ -21,6 +21,23 @@ function human(value: string): string {
   return value.replaceAll('_', ' ')
 }
 
+function userPhotoDescription(photo: Photo, observations: Observation[]): string | null {
+  if (!photo.observation_id) return null
+  const observation = observations.find((item) => (
+    item.id === photo.observation_id
+    && item.source === 'user'
+    && item.review_state === 'confirmed'
+  ))
+  return observation?.text ?? null
+}
+
+function photoAltText(photo: Photo, observations: Observation[]): string {
+  const description = userPhotoDescription(photo, observations)
+  return description
+    ? `${human(photo.purpose)} photo: ${description}`
+    : 'Repair photo. No user-provided description is available.'
+}
+
 async function loadEventHistory(sessionId: string): Promise<EventItem[]> {
   const items: EventItem[] = []
   let afterSequence: number | null = null
@@ -63,12 +80,14 @@ export function RepairLogWorkspace() {
   const [observationText, setObservationText] = useState('')
   const [observationCategory, setObservationCategory] = useState<(typeof OBSERVATION_CATEGORIES)[number]>('general')
   const [photoPurpose, setPhotoPurpose] = useState<(typeof PHOTO_PURPOSES)[number]>('current_step')
+  const [photoObservationId, setPhotoObservationId] = useState('')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
 
   const selectedSession = useMemo(() => sessions.find((session) => session.id === selectedId) || null, [sessions, selectedId])
   const canEdit = Boolean(resume?.lease.can_edit)
   const hardwareOut = fasteners.filter((item) => item.physical_state !== 'installed').length
   const hardwareStored = fasteners.filter((item) => item.physical_state === 'stored').length
+  const userDescriptionNotes = observations.filter((item) => item.source === 'user' && item.review_state === 'confirmed')
 
   const loadSessions = useCallback(async () => {
     const rows = await apiRequest<RepairSession[]>('/api/v1/repair-sessions', undefined, { retryIdempotent: true })
@@ -85,6 +104,7 @@ export function RepairLogWorkspace() {
       setPhotos([])
       setEvents([])
       setTargetStorageId('')
+      setPhotoObservationId('')
       setActiveRepairSessionId(null)
       return
     }
@@ -110,6 +130,7 @@ export function RepairLogWorkspace() {
       setPhotos(photoResult)
       setEvents(eventResult)
       setTargetStorageId((current) => storageResult.some((location) => location.id === current) ? current : storageResult[0]?.id || '')
+      setPhotoObservationId((current) => observationResult.some((item) => item.id === current && item.source === 'user' && item.review_state === 'confirmed') ? current : '')
       setActiveRepairSessionId(sessionId)
     } catch (failure) {
       setError(formatApiFailure(failure, 'Could not load the repair log.'))
@@ -252,6 +273,7 @@ export function RepairLogWorkspace() {
     const body = new FormData()
     body.set('photo', photoFile)
     body.set('purpose', photoPurpose)
+    if (photoObservationId) body.set('observation_id', photoObservationId)
     setBusy(true)
     setError(null)
     try {
@@ -262,6 +284,7 @@ export function RepairLogWorkspace() {
         { prefix: 'photo_add' },
       )
       setPhotoFile(null)
+      setPhotoObservationId('')
       await loadMemory(selectedId)
     } catch (failure) {
       setError(formatApiFailure(failure, 'Could not attach this photo.'))
@@ -361,18 +384,33 @@ export function RepairLogWorkspace() {
               <p className="eyebrow">PHOTOS</p><h2>Visual repair memory</h2>
               <form className="compact-form" onSubmit={(event) => void uploadPhoto(event)}>
                 <select aria-label="Photo purpose" disabled={!canEdit} value={photoPurpose} onChange={(event) => setPhotoPurpose(event.target.value as (typeof PHOTO_PURPOSES)[number])}>{PHOTO_PURPOSES.map((purpose) => <option key={purpose} value={purpose}>{human(purpose)}</option>)}</select>
+                <label className="repair-photo-description-field">
+                  <span>Photo description note <small>optional</small></span>
+                  <select aria-label="Photo description note" disabled={!canEdit || busy} value={photoObservationId} onChange={(event) => setPhotoObservationId(event.target.value)}>
+                    <option value="">No description note</option>
+                    {userDescriptionNotes.slice().reverse().map((observation) => <option key={observation.id} value={observation.id}>{observation.text}</option>)}
+                  </select>
+                </label>
+                <p className="muted repair-photo-description-help">Choose one of your saved notes only when it describes what this photo actually shows. PartGraph does not generate or guess image descriptions.</p>
                 <input aria-label="Repair photo" disabled={!canEdit} type="file" accept="image/*" onChange={(event) => setPhotoFile(event.target.files?.[0] || null)} />
                 <button disabled={!canEdit || busy || !photoFile}>Attach photo</button>
               </form>
               {photos.length === 0 ? <p className="muted">No photos saved yet.</p> : (
                 <div className="repair-photo-grid">
-                  {photos.slice().reverse().slice(0, 12).map((photo) => (
-                    <article className="repair-photo-card" key={photo.id}>
-                      <img src={photo.content_url} alt={`${human(photo.purpose)} repair`} loading="lazy" />
-                      <div><strong>{human(photo.purpose)}</strong><span>{new Date(photo.created_at).toLocaleString()}</span></div>
-                      <button type="button" className="text-button" disabled={!canEdit || busy} onClick={() => void deletePhoto(photo.id)}>Delete</button>
-                    </article>
-                  ))}
+                  {photos.slice().reverse().slice(0, 12).map((photo) => {
+                    const description = userPhotoDescription(photo, observations)
+                    return (
+                      <article className="repair-photo-card" key={photo.id}>
+                        <img src={photo.content_url} alt={photoAltText(photo, observations)} loading="lazy" />
+                        <div>
+                          <strong>{human(photo.purpose)}</strong>
+                          <span>{new Date(photo.created_at).toLocaleString()}</span>
+                          {description && <p className="repair-photo-description">{description}</p>}
+                        </div>
+                        <button type="button" className="text-button" disabled={!canEdit || busy} onClick={() => void deletePhoto(photo.id)}>Delete</button>
+                      </article>
+                    )
+                  })}
                 </div>
               )}
             </section>
