@@ -19,6 +19,7 @@ RUNBOOK_PATH = ROOT / "docs" / "OPERATIONAL_OBSERVABILITY_RUNBOOK.md"
 MAIN_PATH = ROOT / "api" / "partgraph" / "main.py"
 DATABASE_PATH = ROOT / "api" / "partgraph" / "database.py"
 NHTSA_PATH = ROOT / "api" / "partgraph" / "operator" / "nhtsa.py"
+REFERENCE_PARTS_PATH = ROOT / "api" / "partgraph" / "operator" / "reference_parts.py"
 PHOTO_LIFECYCLE_PATH = (
     ROOT / "api" / "partgraph" / "repair_experience" / "memory" / "photo_lifecycle.py"
 )
@@ -131,6 +132,7 @@ class OperationalObservabilityTest(unittest.TestCase):
         main_source = MAIN_PATH.read_text(encoding="utf-8")
         database_source = DATABASE_PATH.read_text(encoding="utf-8")
         nhtsa_source = NHTSA_PATH.read_text(encoding="utf-8")
+        reference_parts_source = REFERENCE_PARTS_PATH.read_text(encoding="utf-8")
         photo_source = PHOTO_LIFECYCLE_PATH.read_text(encoding="utf-8")
 
         self.assertIn('"http.server.request"', main_source)
@@ -138,6 +140,11 @@ class OperationalObservabilityTest(unittest.TestCase):
         self.assertIn('response.headers["traceparent"]', main_source)
         self.assertIn('"database.readiness"', database_source)
         self.assertIn('"provider.ingestion"', nhtsa_source)
+        self.assertIn('"provider.name": "nhtsa"', nhtsa_source)
+        self.assertIn('"provider.ingestion"', reference_parts_source)
+        self.assertIn('"provider.name": "reference_parts"', reference_parts_source)
+        self.assertIn('outcome="failure"', reference_parts_source)
+        self.assertIn('outcome="success"', reference_parts_source)
         self.assertIn('"media.reconciliation.item"', photo_source)
         self.assertIn('"media.reconciliation.batch"', photo_source)
 
