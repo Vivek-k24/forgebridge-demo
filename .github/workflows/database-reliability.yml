@@ -7,6 +7,7 @@ on:
       - 'api/partgraph/database.py'
       - 'api/partgraph/errors.py'
       - 'api/partgraph/identity/auth/**'
+      - 'api/partgraph/identity/database.py'
       - 'api/partgraph/repair_experience/recovery.py'
       - 'api/migrations/**'
       - 'api/tests/test_database_connection_strategy.py'
@@ -24,6 +25,7 @@ on:
       - 'api/partgraph/database.py'
       - 'api/partgraph/errors.py'
       - 'api/partgraph/identity/auth/**'
+      - 'api/partgraph/identity/database.py'
       - 'api/partgraph/repair_experience/recovery.py'
       - 'api/migrations/**'
       - 'api/tests/test_database_connection_strategy.py'
@@ -81,6 +83,7 @@ jobs:
           api/partgraph/database.py
           api/partgraph/errors.py
           api/partgraph/identity/auth/dependencies.py
+          api/partgraph/identity/database.py
           api/tests/test_database_connection_strategy.py
           api/tests/test_database_write_recovery.py
 
