@@ -36,6 +36,20 @@ const REPAIR_WORKSPACE_ITEMS: NavItem[] = [
   { key: 'log', label: 'Repair log' },
 ]
 
+const PAGE_TITLES: Record<PageKey, string> = {
+  home: 'Home',
+  settings: 'Settings',
+  admin: 'Admin',
+  garage: 'Garage',
+  inventory: 'Inventory',
+  start: 'Start repair',
+  resume: 'Repair overview',
+  readiness: 'Repair readiness',
+  guidance: 'Guided repair',
+  completion: 'Repair completion',
+  log: 'Repair log',
+}
+
 const REPAIR_WORKSPACE_KEYS = new Set<PageKey>(REPAIR_WORKSPACE_ITEMS.map((item) => item.key))
 const PAGE_KEYS = new Set<PageKey>([
   'home',
@@ -65,6 +79,8 @@ export default function PartGraphShell() {
   const [checkingAvailability, setCheckingAvailability] = useState(false)
   const appShellRef = useRef<HTMLDivElement>(null)
   const sidebarRef = useRef<HTMLElement>(null)
+  const mainContentRef = useRef<HTMLDivElement>(null)
+  const previousPageRef = useRef<PageKey>(page)
 
   const refreshAvailability = useCallback(async () => {
     setCheckingAvailability(true)
@@ -80,6 +96,23 @@ export default function PartGraphShell() {
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
+
+  useEffect(() => {
+    document.title = `${PAGE_TITLES[page]} | PartGraph`
+    if (previousPageRef.current === page) return
+    previousPageRef.current = page
+
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const frame = window.requestAnimationFrame(() => {
+      const content = mainContentRef.current
+      const focusTarget = content?.querySelector<HTMLElement>('h1') ?? content
+      if (focusTarget && focusTarget !== content) focusTarget.setAttribute('tabindex', '-1')
+      focusTarget?.focus({ preventScroll: true })
+      window.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' })
+    })
+
+    return () => window.cancelAnimationFrame(frame)
+  }, [page])
 
   useEffect(() => {
     const appShell = appShellRef.current
@@ -152,7 +185,14 @@ export default function PartGraphShell() {
   function navigate(next: PageKey) {
     setPage(next)
     window.location.hash = `#/${next}`
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function skipToMain() {
+    const content = mainContentRef.current
+    const focusTarget = content?.querySelector<HTMLElement>('h1') ?? content
+    if (focusTarget && focusTarget !== content) focusTarget.setAttribute('tabindex', '-1')
+    focusTarget?.focus()
+    content?.scrollIntoView({ block: 'start' })
   }
 
   function navButton(item: NavItem) {
@@ -220,6 +260,16 @@ export default function PartGraphShell() {
 
   return (
     <div className="partgraph-app-shell" ref={appShellRef}>
+      <a
+        className="partgraph-skip-link"
+        href="#partgraph-main-content"
+        onClick={(event) => {
+          event.preventDefault()
+          skipToMain()
+        }}
+      >
+        Skip to main content
+      </a>
       <aside ref={sidebarRef} className="partgraph-sidebar" aria-label="PartGraph workspace navigation">
         <button type="button" className="partgraph-brand" aria-label="PartGraph home" onClick={() => navigate('home')}>
           <div className="partgraph-brand-mark" aria-hidden="true">PG</div>
@@ -269,7 +319,9 @@ export default function PartGraphShell() {
             <div>{REPAIR_WORKSPACE_ITEMS.map((item) => <button key={item.key} type="button" className={item.key === page ? 'partgraph-repair-nav__item partgraph-repair-nav__item--active' : 'partgraph-repair-nav__item'} aria-current={item.key === page ? 'page' : undefined} onClick={() => navigate(item.key)}>{item.label}</button>)}</div>
           </nav>
         )}
-        {content}
+        <div id="partgraph-main-content" ref={mainContentRef} tabIndex={-1} className="partgraph-main-content">
+          {content}
+        </div>
       </div>
     </div>
   )
