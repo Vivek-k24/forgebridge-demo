@@ -23,7 +23,7 @@ from ..errors import ErrorCode, PartGraphError
 _STORAGE_KEY_PATTERN = re.compile(r"^[0-9a-f]{32}\.(?:jpg|png|webp|heic)$")
 _BLOB_API_URL = "https://vercel.com/api/blob"
 _BLOB_API_VERSION = "12"
-_BLOB_TIMEOUT_SECONDS = 10
+_BLOB_TIMEOUT_SECONDS = 5
 MAX_PHOTO_PIXELS = 24_000_000
 MAX_PHOTO_DIMENSION = 8_192
 
@@ -233,7 +233,9 @@ def _blob_put(storage_key: str, data: bytes, token: str) -> None:
         "Content-Type": "application/octet-stream",
         "x-vercel-blob-access": "private",
         "x-add-random-suffix": "0",
-        "x-allow-overwrite": "0",
+        # The deterministic photo ID is the idempotency key. Reconciliation must be
+        # able to replay after a database commit acknowledgement is lost.
+        "x-allow-overwrite": "1",
         "x-content-type": media_type,
     }
     try:
@@ -278,7 +280,11 @@ def _blob_delete(storage_key: str, token: str) -> None:
             timeout=_BLOB_TIMEOUT_SECONDS,
         ) as response:
             response.read()
-    except (HTTPError, URLError, TimeoutError) as exc:
+    except HTTPError as exc:
+        if exc.code == 404:
+            return
+        raise _blob_unavailable() from exc
+    except (URLError, TimeoutError) as exc:
         raise _blob_unavailable() from exc
 
 
