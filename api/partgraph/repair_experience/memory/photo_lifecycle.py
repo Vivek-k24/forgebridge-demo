@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import os
 import secrets
 from datetime import UTC, datetime
@@ -13,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from partgraph.database import session_factory
 
+from ...observability import emit_event
 from ..errors import ErrorCode, PartGraphError
 from ..repair_session.service import append_domain_event, prepare_domain_mutation
 from .models import RepairPhotoEvidence
@@ -249,8 +251,10 @@ async def reconcile_photo_storage_row(
     if state not in _PENDING_STATES:
         return state
 
+    operation = "upload" if state == "pending_upload" else "delete"
     row.storage_attempts += 1
     row.storage_updated_at = datetime.now(UTC)
+    exception_type: str | None = None
     try:
         if state == "pending_upload":
             if row.pending_content is None:
@@ -269,9 +273,24 @@ async def reconcile_photo_storage_row(
         result = row.storage_state
     except Exception as exc:
         row.storage_error = _storage_error_label(exc)
+        exception_type = type(exc).__name__
         result = "failed"
 
     await session.flush()
+    attributes = {
+        "outcome": "failure" if result == "failed" else "success",
+        "partgraph.media.operation": operation,
+        "partgraph.media.result": result,
+        "partgraph.media.storage_attempt": row.storage_attempts,
+        "partgraph.photo_id": str(row.id),
+    }
+    if exception_type is not None:
+        attributes["exception.type"] = exception_type
+    emit_event(
+        "media.reconciliation.item",
+        level=logging.ERROR if result == "failed" else logging.INFO,
+        **attributes,
+    )
     return result
 
 
@@ -317,6 +336,19 @@ async def reconcile_photo_storage_batch(*, limit: int = 20) -> dict[str, int]:
             counts[result] += 1
         else:
             counts["noop"] += 1
+
+    emit_event(
+        "media.reconciliation.batch",
+        level=logging.ERROR if counts["failed"] else logging.INFO,
+        **{
+            "outcome": "failure" if counts["failed"] else "success",
+            "partgraph.media.ready_count": counts["ready"],
+            "partgraph.media.deleted_count": counts["deleted"],
+            "partgraph.media.failed_count": counts["failed"],
+            "partgraph.media.noop_count": counts["noop"],
+            "partgraph.media.selected_count": len(pending_ids),
+        },
+    )
     return counts
 
 
