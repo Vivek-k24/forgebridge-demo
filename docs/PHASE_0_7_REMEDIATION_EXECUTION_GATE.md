@@ -97,13 +97,13 @@ If an item depends on any of those unfinished tasks, or on another unfinished re
 
 # E. Frontend accessibility, reflow and browser behavior
 
-Phase 8 is data-only by architecture, so concrete current-UI defects that can be implemented and tested against the existing UI remain eligible. Final cross-browser campaign infrastructure belongs to Phase 9.
+Phase 8 is data-only by architecture, so concrete current-UI defects that can be implemented and tested against the existing UI remain eligible. Final cross-browser and assistive-technology campaign infrastructure belongs to Phase 9. When a current code control is complete but the original acceptance criteria require live browser/accessibility-tree/screen-reader proof, use `CURRENT CONTROL COMPLETE / FUTURE BACKLOG` rather than claiming final completion early.
 
 | Item | Execution status | Dependency decision |
 | --- | --- | --- |
-| `PG-AUD-UI-001` | ELIGIBLE | Programmatic labels are a concrete current UI defect. |
-| `PG-AUD-UI-002` | ELIGIBLE | Sticky/reflow behavior can be fixed and stress-tested on the current UI. |
-| `PG-AUD-UI-003` | ELIGIBLE | Current asynchronous status announcements can be fixed independently. |
+| `PG-AUD-UI-001` | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | Current programmatic-name defects are fixed and statically gated. Final browser accessibility-tree/axe/manual screen-reader proof remains Phase 9 validation work. |
+| `PG-AUD-UI-002` | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | Sticky offsets now follow measured rendered header/navigation heights rather than fixed mobile pixels, and the contract is statically gated. Final 320px/zoom/text-scale/browser stress proof remains Phase 9 validation work. |
+| `PG-AUD-UI-003` | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | Audited async workflow outcomes now feed shared polite/assertive live regions without focus movement, with duplicate-live-region suppression and CI coverage. Final real screen-reader announcement-once proof remains Phase 9 validation work. |
 | `PG-AUD-UI-004` | ELIGIBLE | Incorrect tab semantics are a concrete current UI defect. |
 | `PG-AUD-UI-005` | ELIGIBLE | Incorrect radio-group behavior is a concrete current UI defect. |
 | `PG-AUD-UI-006` | ELIGIBLE | SPA focus/orientation behavior is a current navigation defect. |
@@ -112,6 +112,18 @@ Phase 8 is data-only by architecture, so concrete current-UI defects that can be
 | `PG-AUD-UI-009` | BACKLOG | Final browser-support matrix enforcement depends on the Phase 9 representative-browser suite. |
 | `PG-AUD-UI-010` | ELIGIBLE | Current contrast/target-size defects are concrete and independently measurable. |
 | `PG-AUD-UI-011` | BLOCKED | Resolve the dead-code/import decision under `PG-AUD-CODE-003` first; if retained, accessibility proof can be scheduled with later browser/AT work. |
+
+Current-control proof for `PG-AUD-UI-001` through `PG-AUD-UI-003`:
+
+- `PG-AUD-UI-001`: Repair Log controls now have programmatic accessible names and Garage model year is associated with its visible label; `web/scripts/validate-accessible-form-labels.mjs` permanently gates the named controls.
+- `PG-AUD-UI-002`: `ResizeObserver`-driven shell measurements feed sticky-stack CSS variables, replacing stale `46px`/`96px`/`98px` mobile assumptions; `web/scripts/validate-responsive-sticky-stack.mjs` guards the measured-offset contract.
+- `PG-AUD-UI-003`: `AccessibleWorkflowAnnouncements.tsx` provides always-mounted polite `StatusMessage` and assertive `ErrorAlert` live regions, mirrors the audited Garage/Repair Log/Readiness/Start Repair/Completion message classes, skips messages already inside live regions, and does not move focus; `web/scripts/validate-accessible-workflow-announcements.mjs` guards the contract.
+- shared exact proof head: `e9f79f48a80d70d6e0c3a19a807fed2e541b8133`
+- exact-head API CI/CD #942, Web CI/CD #805, Extraction Pipeline CI #261, Canonical Publication CI #213, Reference Repair Runtime CI #202, Database Reliability CI #65, Operational Observability CI #27, and Web Dependency Advisory Scan #69 passed
+- Web CI explicitly passed form-label, responsive sticky-stack, workflow-status-announcement, typecheck, production build, container build, and HTTP/security-header smoke steps
+- exact-head Vercel deployment: `dpl_Gwu7DbFLy8rYCFH47H9XieZoTEz9` READY; its build also passed the schema-read-only Vercel migration boundary
+- no database migration, production write, provider activation, publication, merge, or cutover was performed
+- remaining browser accessibility-tree, axe, screen-reader, zoom/reflow and representative-browser acceptance proof stays in the existing Phase 9 backlog rather than being pulled forward
 
 ---
 
