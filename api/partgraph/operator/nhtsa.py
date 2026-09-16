@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+import logging
 from urllib.parse import urlparse
 from uuid import UUID, uuid4
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..config import settings
 from ..errors import ErrorCode, PartGraphError
 from ..knowledge.extraction import ExtractionError, extract_and_stage_bound_provider_record
 from ..knowledge.nhtsa import NhtsaRecallAdapter, NhtsaRecallCollector, NhtsaVehicleQuery
+from ..observability import emit_event
 from .models import OperatorAuditEvent
 from .schemas import NhtsaRecallStageRead, NhtsaRecallStageRequest
 
@@ -72,16 +75,42 @@ async def stage_nhtsa_recall_query(
     payload: NhtsaRecallStageRequest,
     collector: NhtsaRecallCollector | None = None,
 ) -> NhtsaRecallStageRead:
-    await _validate_nhtsa_binding_semantics(
-        session,
-        binding_id=payload.binding_id,
-    )
+    try:
+        await _validate_nhtsa_binding_semantics(
+            session,
+            binding_id=payload.binding_id,
+        )
+    except PartGraphError as exc:
+        emit_event(
+            "provider.ingestion",
+            level=logging.WARNING,
+            **{
+                "provider.name": "nhtsa",
+                "partgraph.ingestion.mode": settings.provider_ingestion_mode,
+                "stage": "binding_validation",
+                "outcome": "blocked",
+                "exception.type": type(exc).__name__,
+            },
+        )
+        raise
+
     query = NhtsaVehicleQuery(payload.year, payload.make, payload.model)
     active_collector = collector or NhtsaRecallCollector()
 
     try:
         record = await active_collector.fetch(query)
     except ExtractionError as exc:
+        emit_event(
+            "provider.ingestion",
+            level=logging.ERROR,
+            **{
+                "provider.name": "nhtsa",
+                "partgraph.ingestion.mode": settings.provider_ingestion_mode,
+                "stage": "acquisition",
+                "outcome": "failure",
+                "exception.type": type(exc).__name__,
+            },
+        )
         raise PartGraphError(
             code=ErrorCode.REQUEST_CONFLICT,
             message="NHTSA recall acquisition failed validation or was unavailable.",
@@ -114,12 +143,34 @@ async def stage_nhtsa_recall_query(
             record=record,
         )
     except ExtractionError as exc:
+        emit_event(
+            "provider.ingestion",
+            level=logging.ERROR,
+            **{
+                "provider.name": "nhtsa",
+                "partgraph.ingestion.mode": settings.provider_ingestion_mode,
+                "stage": "governed_staging",
+                "outcome": "failure",
+                "exception.type": type(exc).__name__,
+            },
+        )
         raise PartGraphError(
             code=ErrorCode.REQUEST_CONFLICT,
             message="NHTSA recall staging was blocked by provider/source governance.",
             status_code=409,
         ) from exc
 
+    emit_event(
+        "provider.ingestion",
+        **{
+            "provider.name": "nhtsa",
+            "partgraph.ingestion.mode": settings.provider_ingestion_mode,
+            "stage": "governed_staging",
+            "outcome": "success",
+            "partgraph.ingestion.candidate_count": len(result.staging_record_ids),
+            "partgraph.ingestion.inserted_count": result.inserted_count,
+        },
+    )
     return NhtsaRecallStageRead(
         binding_id=payload.binding_id,
         year=query.year,
