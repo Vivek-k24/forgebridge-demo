@@ -105,31 +105,62 @@ export function AccountSettingsWorkspace() {
             <p className="eyebrow">MEASUREMENTS</p>
             <h2>Units</h2>
             <p className="muted">Choose how supported measurements are displayed.</p>
-            <div className="settings-choice-grid" role="radiogroup" aria-label="Measurement units">
-              <button type="button" role="radio" aria-checked={units === 'us_customary'} className={units === 'us_customary' ? 'settings-choice settings-choice--active' : 'settings-choice'} disabled={busy} onClick={() => void changeUnits('us_customary')}><strong>US customary</strong><span>Use US customary measurements.</span></button>
-              <button type="button" role="radio" aria-checked={units === 'metric'} className={units === 'metric' ? 'settings-choice settings-choice--active' : 'settings-choice'} disabled={busy} onClick={() => void changeUnits('metric')}><strong>Metric</strong><span>Use metric measurements.</span></button>
-            </div>
+            <fieldset className="settings-radio-fieldset">
+              <legend>Measurement units</legend>
+              <div className="settings-choice-grid">
+                <label className={units === 'us_customary' ? 'settings-choice settings-choice--active' : 'settings-choice'}>
+                  <input
+                    type="radio"
+                    name="measurement-units"
+                    value="us_customary"
+                    checked={units === 'us_customary'}
+                    disabled={busy}
+                    onChange={() => void changeUnits('us_customary')}
+                  />
+                  <strong>US customary</strong>
+                  <span>Use US customary measurements.</span>
+                </label>
+                <label className={units === 'metric' ? 'settings-choice settings-choice--active' : 'settings-choice'}>
+                  <input
+                    type="radio"
+                    name="measurement-units"
+                    value="metric"
+                    checked={units === 'metric'}
+                    disabled={busy}
+                    onChange={() => void changeUnits('metric')}
+                  />
+                  <strong>Metric</strong>
+                  <span>Use metric measurements.</span>
+                </label>
+              </div>
+            </fieldset>
           </section>
 
           <section className="panel settings-panel settings-span-all">
             <p className="eyebrow">ACCESSIBILITY</p>
             <h2>Text size</h2>
             <p className="muted">Choose a comfortable reading size. This display preference is saved in this browser on this device and does not replace your browser's zoom controls.</p>
-            <div className="settings-text-scale-grid" role="radiogroup" aria-label="Text size">
-              {TEXT_SCALE_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  role="radio"
-                  aria-checked={textScale === option.value}
-                  className={textScale === option.value ? 'settings-text-scale settings-text-scale--active' : 'settings-text-scale'}
-                  onClick={() => changeTextScale(option.value)}
-                >
-                  <span>{option.label}</span>
-                  <small>{option.description}</small>
-                </button>
-              ))}
-            </div>
+            <fieldset className="settings-radio-fieldset">
+              <legend>Text size</legend>
+              <div className="settings-text-scale-grid">
+                {TEXT_SCALE_OPTIONS.map((option) => (
+                  <label
+                    key={option.value}
+                    className={textScale === option.value ? 'settings-text-scale settings-text-scale--active' : 'settings-text-scale'}
+                  >
+                    <input
+                      type="radio"
+                      name="text-size"
+                      value={option.value}
+                      checked={textScale === option.value}
+                      onChange={() => changeTextScale(option.value)}
+                    />
+                    <span>{option.label}</span>
+                    <small>{option.description}</small>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
           </section>
 
           <section className="panel settings-panel settings-span-all">
