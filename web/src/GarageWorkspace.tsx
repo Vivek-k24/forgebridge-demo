@@ -409,8 +409,9 @@ export function GarageWorkspace({
           <form className="garage-form" onSubmit={(event) => void resolveManual(event)}>
             <div className="garage-vehicle-selector">
               <div className="garage-year-field">
-                <div className="garage-field-label"><span>Model year</span><small>required</small></div>
+                <label className="garage-field-label" htmlFor="garage-model-year"><span>Model year</span><small>required</small></label>
                 <input
+                  id="garage-model-year"
                   required
                   type="number"
                   inputMode="numeric"
