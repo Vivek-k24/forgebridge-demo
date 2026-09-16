@@ -54,6 +54,16 @@ def _database_url() -> str:
     return database_url
 
 
+def _database_pooling(*, running_on_vercel: bool) -> bool:
+    enabled = _bool_env("PARTGRAPH_DATABASE_POOLING", not running_on_vercel)
+    if running_on_vercel and enabled:
+        raise ValueError(
+            "PARTGRAPH_DATABASE_POOLING must be disabled on Vercel; "
+            "serverless instances must not retain per-instance SQLAlchemy pools"
+        )
+    return enabled
+
+
 def _validate_origin(value: str, *, source: str) -> str:
     normalized = value.strip().rstrip("/")
     parsed = urlparse(normalized)
@@ -138,6 +148,7 @@ def _load_settings() -> Settings:
     web_origin = _web_origin()
     allowed_web_origins = _allowed_web_origins(web_origin)
     running_on_vercel = os.getenv("VERCEL") == "1"
+    database_pooling = _database_pooling(running_on_vercel=running_on_vercel)
     cookie_secure = _bool_env("PARTGRAPH_COOKIE_SECURE", running_on_vercel)
     if web_origin.startswith("https://") and not cookie_secure:
         raise ValueError("PARTGRAPH_COOKIE_SECURE must be enabled for an HTTPS web origin")
@@ -148,7 +159,7 @@ def _load_settings() -> Settings:
 
     return Settings(
         database_url=database_url,
-        database_pooling=_bool_env("PARTGRAPH_DATABASE_POOLING", True),
+        database_pooling=database_pooling,
         web_origin=web_origin,
         allowed_web_origins=allowed_web_origins,
         cookie_secure=cookie_secure,
