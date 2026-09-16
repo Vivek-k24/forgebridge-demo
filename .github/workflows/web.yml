@@ -102,6 +102,10 @@ jobs:
         working-directory: web
         run: node scripts/validate-garage-mode-semantics.mjs
 
+      - name: Validate Settings radio semantics
+        working-directory: web
+        run: node scripts/validate-settings-radio-semantics.mjs
+
       - name: Typecheck web
         working-directory: web
         run: npm run typecheck
