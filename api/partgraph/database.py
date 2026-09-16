@@ -1,3 +1,4 @@
+import logging
 from collections.abc import AsyncIterator
 from time import perf_counter
 from typing import Any
@@ -14,6 +15,7 @@ from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.pool import NullPool
 
 from .config import settings
+from .observability import emit_event
 
 
 class Base(DeclarativeBase):
@@ -46,6 +48,27 @@ async def get_session() -> AsyncIterator[AsyncSession]:
 
 async def database_readiness() -> float:
     started = perf_counter()
-    async with engine.connect() as connection:
-        await connection.execute(text("SELECT 1"))
-    return round((perf_counter() - started) * 1000, 2)
+    try:
+        async with engine.connect() as connection:
+            await connection.execute(text("SELECT 1"))
+    except Exception as exc:
+        emit_event(
+            "database.readiness",
+            level=logging.ERROR,
+            **{
+                "outcome": "failure",
+                "database.duration_ms": round((perf_counter() - started) * 1000, 2),
+                "exception.type": type(exc).__name__,
+            },
+        )
+        raise
+
+    duration_ms = round((perf_counter() - started) * 1000, 2)
+    emit_event(
+        "database.readiness",
+        **{
+            "outcome": "success",
+            "database.duration_ms": duration_ms,
+        },
+    )
+    return duration_ms
