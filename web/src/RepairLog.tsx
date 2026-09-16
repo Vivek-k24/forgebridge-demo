@@ -300,7 +300,7 @@ export function RepairLogWorkspace() {
       <section className="repair-panel panel">
         <div className="section-heading-row">
           <div><p className="eyebrow">CURRENT REPAIR</p><h2>{selectedSession?.title || 'Choose a repair'}</h2></div>
-          {sessions.length > 0 && <select value={selectedId} onChange={(event) => chooseSession(event.target.value)}>{sessions.map((session) => <option key={session.id} value={session.id}>{session.title} · {session.status}</option>)}</select>}
+          {sessions.length > 0 && <select aria-label="Current repair" value={selectedId} onChange={(event) => chooseSession(event.target.value)}>{sessions.map((session) => <option key={session.id} value={session.id}>{session.title} · {session.status}</option>)}</select>}
         </div>
         {loading && <p className="muted">Loading repair log…</p>}
         {!loading && sessions.length === 0 && <div className="repair-empty"><h2>No repair available</h2><p>Start a repair first, then use this log to keep track of the physical work.</p></div>}
@@ -328,8 +328,8 @@ export function RepairLogWorkspace() {
             <section className="repair-panel panel">
               <p className="eyebrow">STORAGE</p><h2>Where removed items are kept</h2>
               <form className="compact-form" onSubmit={(event) => void createStorage(event)}>
-                <input disabled={!canEdit} value={storageLabel} placeholder="Location name" onChange={(event) => setStorageLabel(event.target.value)} />
-                <input disabled={!canEdit} value={storageNotes} placeholder="Notes (optional)" onChange={(event) => setStorageNotes(event.target.value)} />
+                <input aria-label="Storage location name" disabled={!canEdit} value={storageLabel} placeholder="Location name" onChange={(event) => setStorageLabel(event.target.value)} />
+                <input aria-label="Storage location notes" disabled={!canEdit} value={storageNotes} placeholder="Notes (optional)" onChange={(event) => setStorageNotes(event.target.value)} />
                 <button disabled={!canEdit || busy}>Add location</button>
               </form>
               {storage.length > 0 && <label className="compact-form"><span>Store hardware in</span><select disabled={!canEdit || busy} value={targetStorageId} onChange={(event) => setTargetStorageId(event.target.value)}>{storage.map((location) => <option key={location.id} value={location.id}>{location.label}</option>)}</select></label>}
@@ -339,9 +339,9 @@ export function RepairLogWorkspace() {
             <section className="repair-panel panel repair-span-2">
               <p className="eyebrow">HARDWARE & SMALL PARTS</p><h2>What has been removed and where it is now</h2>
               <form className="compact-form compact-form--wide" onSubmit={(event) => void createFastener(event)}>
-                <select disabled={!canEdit} value={fastenerKind} onChange={(event) => setFastenerKind(event.target.value as 'fastener' | 'small_part')}><option value="fastener">Fastener</option><option value="small_part">Small part</option></select>
-                <input disabled={!canEdit} value={fastenerLabel} placeholder="Item label" onChange={(event) => setFastenerLabel(event.target.value)} />
-                <input disabled={!canEdit} value={fastenerOrigin} placeholder="Origin / position" onChange={(event) => setFastenerOrigin(event.target.value)} />
+                <select aria-label="Hardware item type" disabled={!canEdit} value={fastenerKind} onChange={(event) => setFastenerKind(event.target.value as 'fastener' | 'small_part')}><option value="fastener">Fastener</option><option value="small_part">Small part</option></select>
+                <input aria-label="Hardware item label" disabled={!canEdit} value={fastenerLabel} placeholder="Item label" onChange={(event) => setFastenerLabel(event.target.value)} />
+                <input aria-label="Hardware origin or position" disabled={!canEdit} value={fastenerOrigin} placeholder="Origin / position" onChange={(event) => setFastenerOrigin(event.target.value)} />
                 <button disabled={!canEdit || busy}>Record removed item</button>
               </form>
               {fasteners.length === 0 ? <p className="muted">No hardware recorded yet.</p> : <div className="hardware-grid">{fasteners.map((fastener) => <article key={fastener.id} className={`hardware-card hardware-card--${fastener.physical_state}`}><div><strong>{fastener.label}</strong><span>{human(fastener.kind)} · {human(fastener.physical_state)}</span>{fastener.origin && <small>{fastener.origin}</small>}</div><div className="repair-button-row"><button type="button" className="secondary" disabled={!canEdit || busy} onClick={() => void updateFastener(fastener, 'removed')}>Removed</button><button type="button" className="secondary" disabled={!canEdit || busy || !targetStorageId} onClick={() => void updateFastener(fastener, 'stored')}>Stored</button><button type="button" disabled={!canEdit || busy} onClick={() => void updateFastener(fastener, 'installed')}>Installed</button><button type="button" className="secondary" disabled={!canEdit || busy} onClick={() => void updateFastener(fastener, 'missing')}>Missing</button></div></article>)}</div>}
@@ -350,8 +350,8 @@ export function RepairLogWorkspace() {
             <section className="repair-panel panel">
               <p className="eyebrow">NOTES</p><h2>What you noticed</h2>
               <form className="compact-form" onSubmit={(event) => void createObservation(event)}>
-                <select disabled={!canEdit} value={observationCategory} onChange={(event) => setObservationCategory(event.target.value as (typeof OBSERVATION_CATEGORIES)[number])}>{OBSERVATION_CATEGORIES.map((category) => <option key={category} value={category}>{human(category)}</option>)}</select>
-                <textarea disabled={!canEdit} rows={3} maxLength={1000} value={observationText} placeholder="What did you observe?" onChange={(event) => setObservationText(event.target.value)} />
+                <select aria-label="Observation category" disabled={!canEdit} value={observationCategory} onChange={(event) => setObservationCategory(event.target.value as (typeof OBSERVATION_CATEGORIES)[number])}>{OBSERVATION_CATEGORIES.map((category) => <option key={category} value={category}>{human(category)}</option>)}</select>
+                <textarea aria-label="Observation details" disabled={!canEdit} rows={3} maxLength={1000} value={observationText} placeholder="What did you observe?" onChange={(event) => setObservationText(event.target.value)} />
                 <button disabled={!canEdit || busy}>Save note</button>
               </form>
               <ul className="repair-list">{observations.slice().reverse().slice(0, 12).map((observation) => <li key={observation.id}><strong>{human(observation.category)}</strong><span>{observation.text}</span><small>{new Date(observation.created_at).toLocaleString()}</small></li>)}</ul>
@@ -360,8 +360,8 @@ export function RepairLogWorkspace() {
             <section className="repair-panel panel">
               <p className="eyebrow">PHOTOS</p><h2>Visual repair memory</h2>
               <form className="compact-form" onSubmit={(event) => void uploadPhoto(event)}>
-                <select disabled={!canEdit} value={photoPurpose} onChange={(event) => setPhotoPurpose(event.target.value as (typeof PHOTO_PURPOSES)[number])}>{PHOTO_PURPOSES.map((purpose) => <option key={purpose} value={purpose}>{human(purpose)}</option>)}</select>
-                <input disabled={!canEdit} type="file" accept="image/*" onChange={(event) => setPhotoFile(event.target.files?.[0] || null)} />
+                <select aria-label="Photo purpose" disabled={!canEdit} value={photoPurpose} onChange={(event) => setPhotoPurpose(event.target.value as (typeof PHOTO_PURPOSES)[number])}>{PHOTO_PURPOSES.map((purpose) => <option key={purpose} value={purpose}>{human(purpose)}</option>)}</select>
+                <input aria-label="Repair photo" disabled={!canEdit} type="file" accept="image/*" onChange={(event) => setPhotoFile(event.target.files?.[0] || null)} />
                 <button disabled={!canEdit || busy || !photoFile}>Attach photo</button>
               </form>
               {photos.length === 0 ? <p className="muted">No photos saved yet.</p> : (
