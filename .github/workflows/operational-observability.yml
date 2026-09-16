@@ -7,6 +7,7 @@ on:
       - 'api/partgraph/main.py'
       - 'api/partgraph/database.py'
       - 'api/partgraph/operator/nhtsa.py'
+      - 'api/partgraph/operator/reference_parts.py'
       - 'api/partgraph/repair_experience/memory/photo_lifecycle.py'
       - 'api/tests/test_operational_observability.py'
       - 'docs/OPERATIONAL_OBSERVABILITY_RUNBOOK.md'
@@ -20,6 +21,7 @@ on:
       - 'api/partgraph/main.py'
       - 'api/partgraph/database.py'
       - 'api/partgraph/operator/nhtsa.py'
+      - 'api/partgraph/operator/reference_parts.py'
       - 'api/partgraph/repair_experience/memory/photo_lifecycle.py'
       - 'api/tests/test_operational_observability.py'
       - 'docs/OPERATIONAL_OBSERVABILITY_RUNBOOK.md'
@@ -60,6 +62,7 @@ jobs:
           api/partgraph/main.py
           api/partgraph/database.py
           api/partgraph/operator/nhtsa.py
+          api/partgraph/operator/reference_parts.py
           api/partgraph/repair_experience/memory/photo_lifecycle.py
 
       - name: Test telemetry, SLO, and alert/runbook contract
