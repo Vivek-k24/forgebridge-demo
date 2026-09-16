@@ -90,6 +90,10 @@ jobs:
         working-directory: web
         run: node scripts/validate-accessible-form-labels.mjs
 
+      - name: Validate responsive sticky navigation offsets
+        working-directory: web
+        run: node scripts/validate-responsive-sticky-stack.mjs
+
       - name: Typecheck web
         working-directory: web
         run: npm run typecheck
