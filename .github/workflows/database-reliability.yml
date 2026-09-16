@@ -5,10 +5,15 @@ on:
     paths:
       - 'api/partgraph/config.py'
       - 'api/partgraph/database.py'
+      - 'api/partgraph/errors.py'
       - 'api/partgraph/identity/auth/**'
+      - 'api/partgraph/repair_experience/recovery.py'
       - 'api/migrations/**'
       - 'api/tests/test_database_connection_strategy.py'
+      - 'api/tests/test_database_write_recovery.py'
       - 'api/pyproject.toml'
+      - 'web/src/repair-client.ts'
+      - 'web/scripts/validate-repair-recovery.mjs'
       - '.github/workflows/database-reliability.yml'
   push:
     branches:
@@ -17,10 +22,15 @@ on:
     paths:
       - 'api/partgraph/config.py'
       - 'api/partgraph/database.py'
+      - 'api/partgraph/errors.py'
       - 'api/partgraph/identity/auth/**'
+      - 'api/partgraph/repair_experience/recovery.py'
       - 'api/migrations/**'
       - 'api/tests/test_database_connection_strategy.py'
+      - 'api/tests/test_database_write_recovery.py'
       - 'api/pyproject.toml'
+      - 'web/src/repair-client.ts'
+      - 'web/scripts/validate-repair-recovery.mjs'
       - '.github/workflows/database-reliability.yml'
   workflow_dispatch:
 
@@ -32,8 +42,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  serverless-connections:
-    name: Serverless connection bound gate
+  database-reliability:
+    name: Database reliability gate
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -69,7 +79,10 @@ jobs:
           ruff check
           api/partgraph/config.py
           api/partgraph/database.py
+          api/partgraph/errors.py
+          api/partgraph/identity/auth/dependencies.py
           api/tests/test_database_connection_strategy.py
+          api/tests/test_database_write_recovery.py
 
       - name: Apply database migrations
         env:
@@ -82,3 +95,11 @@ jobs:
         run: >-
           python -m unittest discover -s api/tests
           -p 'test_database_connection_strategy.py'
+
+      - name: Test indeterminate database write recovery
+        run: >-
+          python -m unittest discover -s api/tests
+          -p 'test_database_write_recovery.py'
+
+      - name: Validate browser recovery key reuse
+        run: node web/scripts/validate-repair-recovery.mjs
