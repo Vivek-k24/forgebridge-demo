@@ -8,6 +8,8 @@ DEFAULT_NHTSA_TIMEOUT_SECONDS = 4.0
 DEFAULT_REQUEST_DEADLINE_SECONDS = 8.0
 MAX_REQUEST_DEADLINE_SECONDS = 9.0
 MAX_PROVIDER_DEADLINE_RESERVE_SECONDS = 1.0
+DEFAULT_PROVIDER_INGESTION_MODE = "operator_sync"
+SUPPORTED_PROVIDER_INGESTION_MODES = frozenset({DEFAULT_PROVIDER_INGESTION_MODE})
 
 
 def _bool_env(name: str, default: bool = False) -> bool:
@@ -42,6 +44,20 @@ def _float_env(name: str, default: float, *, minimum: float, maximum: float) -> 
     if not minimum <= value <= maximum:
         raise ValueError(f"{name} must be between {minimum} and {maximum}")
     return value
+
+
+def _provider_ingestion_mode() -> str:
+    mode = os.getenv(
+        "PARTGRAPH_PROVIDER_INGESTION_MODE",
+        DEFAULT_PROVIDER_INGESTION_MODE,
+    ).strip().casefold()
+    if mode not in SUPPORTED_PROVIDER_INGESTION_MODES:
+        raise ValueError(
+            "PARTGRAPH_PROVIDER_INGESTION_MODE only supports 'operator_sync' for the MVP; "
+            "scheduled, continuous, bulk, or worker ingestion requires the documented "
+            "durable queue/backpressure design before it can be enabled"
+        )
+    return mode
 
 
 def _validate_provider_timeout_hierarchy(
@@ -158,6 +174,7 @@ class Settings:
     vin_lookup_key: str | None
     provider_credential_keys: str | None
     provider_credential_active_key_version: int
+    provider_ingestion_mode: str
     vin_cache_hours: int
     nhtsa_base_url: str
     nhtsa_timeout_seconds: float
@@ -181,6 +198,7 @@ def _load_settings() -> Settings:
     vin_encryption_keys = os.getenv("PARTGRAPH_VIN_ENCRYPTION_KEYS")
     vin_lookup_key = os.getenv("PARTGRAPH_VIN_LOOKUP_KEY")
     provider_credential_keys = os.getenv("PARTGRAPH_PROVIDER_CREDENTIAL_KEYS")
+    provider_ingestion_mode = _provider_ingestion_mode()
 
     nhtsa_timeout_seconds = _float_env(
         "PARTGRAPH_NHTSA_TIMEOUT_SECONDS",
@@ -226,6 +244,7 @@ def _load_settings() -> Settings:
             minimum=1,
             maximum=32_767,
         ),
+        provider_ingestion_mode=provider_ingestion_mode,
         vin_cache_hours=_int_env("PARTGRAPH_VIN_CACHE_HOURS", 720, minimum=1, maximum=2_160),
         nhtsa_base_url=_http_base_url(
             "PARTGRAPH_NHTSA_BASE_URL",
