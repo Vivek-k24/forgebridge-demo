@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import re
+import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW_DIR = ROOT / ".github" / "workflows"
 DEPENDABOT_PATH = ROOT / ".github" / "dependabot.yml"
+API_PYPROJECT_PATH = ROOT / "api" / "pyproject.toml"
 SHA_REF = re.compile(r"^[0-9a-f]{40}$")
 USES_LINE = re.compile(r"^\s*uses:\s*([^\s#]+)", re.MULTILINE)
 JOB_HEADER = re.compile(r"^  ([A-Za-z0-9_-]+):\s*$")
@@ -56,6 +58,36 @@ def _jobs(text: str) -> dict[str, str]:
     return jobs
 
 
+def _validate_vercel_migration_boundary() -> None:
+    data = tomllib.loads(API_PYPROJECT_PATH.read_text(encoding="utf-8"))
+    try:
+        build_script = data["tool"]["vercel"]["scripts"]["build"]
+    except KeyError as exc:
+        raise SystemExit(f"{API_PYPROJECT_PATH}: missing Vercel build-script configuration: {exc}") from exc
+
+    if not isinstance(build_script, str) or not build_script.strip():
+        raise SystemExit(f"{API_PYPROJECT_PATH}: Vercel build script must remain explicit and non-empty")
+
+    forbidden_markers = (
+        "alembic",
+        "upgrade head",
+        "PARTGRAPH_DATABASE_URL",
+        "PARTGRAPH_ALLOW_DATABASE_MIGRATION",
+    )
+    present = [marker for marker in forbidden_markers if marker in build_script]
+    if present:
+        raise SystemExit(
+            f"{API_PYPROJECT_PATH}: Vercel build must be schema-read-only; found database migration marker(s): "
+            + ", ".join(present)
+        )
+
+    required = "python scripts/validate_vercel_migration_boundary.py"
+    if required not in build_script:
+        raise SystemExit(
+            f"{API_PYPROJECT_PATH}: Vercel build must execute the migration-boundary self-check before build work"
+        )
+
+
 def validate() -> None:
     workflow_files = _workflow_files()
     if not workflow_files:
@@ -99,7 +131,9 @@ def validate() -> None:
     if missing:
         raise SystemExit(f"Dependabot GitHub Actions policy is incomplete: missing {missing}")
 
+    _validate_vercel_migration_boundary()
+
 
 if __name__ == "__main__":
     validate()
-    print("GitHub Actions supply-chain policy validated.")
+    print("GitHub Actions supply-chain and Vercel migration-boundary policy validated.")
