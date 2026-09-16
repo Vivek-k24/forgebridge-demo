@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import AccessibleWorkflowAnnouncements from './AccessibleWorkflowAnnouncements'
 import AuthGate from './AuthGate'
 import OfflineBootstrap from './OfflineBootstrap'
 import OfflineContinuity from './OfflineContinuity'
@@ -15,6 +16,7 @@ registerPartGraphServiceWorker()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
+    <AccessibleWorkflowAnnouncements />
     <OfflineBootstrap>
       <AuthGate>
         <OfflineContinuity>
