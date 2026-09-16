@@ -22,6 +22,7 @@ from partgraph.knowledge.vehicle_domain_materialization import (
     materialize_vehicle_domain_claim_service,
 )
 from partgraph.knowledge.vehicle_structure import VehicleStructureNode
+from partgraph.repair_experience.memory.models import RepairPhotoEvidence
 from partgraph.repair_experience.memory.schemas import ObservationCreate
 from partgraph.repair_experience.memory.service import (
     create_observation,
@@ -29,7 +30,6 @@ from partgraph.repair_experience.memory.service import (
     delete_photo,
     list_observations,
     list_photos,
-    photo_content,
 )
 from partgraph.repair_experience.service import create_repair_session
 
@@ -329,13 +329,11 @@ class ReferencePrimaryVehicleRuntimeTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([item.id for item in observations], [observation.id])
         self.assertEqual([item.id for item in photos], [photo.id])
 
-        _, path = await photo_content(
-            self.db,
-            user_id=self.user.id,
-            session_id=session_id,
-            photo_id=photo.id,
-        )
-        self.assertEqual(path.read_bytes(), image_bytes)
+        photo_row = await self.db.get(RepairPhotoEvidence, photo.id)
+        self.assertIsNotNone(photo_row)
+        assert photo_row is not None
+        self.assertEqual(photo_row.storage_state, "pending_upload")
+        self.assertEqual(bytes(photo_row.pending_content or b""), image_bytes)
 
         deleted = await delete_photo(
             self.db,
@@ -346,7 +344,9 @@ class ReferencePrimaryVehicleRuntimeTests(unittest.IsolatedAsyncioTestCase):
             idempotency_key="phase7_owner_photo_delete",
         )
         self.assertEqual(deleted.id, photo.id)
-        self.assertFalse(path.exists())
+        self.assertEqual(photo_row.storage_state, "delete_pending")
+        self.assertIsNotNone(photo_row.deleted_at)
+        self.assertIsNone(photo_row.pending_content)
         self.assertEqual(
             await list_photos(self.db, user_id=self.user.id, session_id=session_id),
             [],
