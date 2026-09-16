@@ -110,6 +110,10 @@ jobs:
         working-directory: web
         run: node scripts/validate-spa-navigation-accessibility.mjs
 
+      - name: Validate repair photo descriptions
+        working-directory: web
+        run: node scripts/validate-repair-photo-descriptions.mjs
+
       - name: Typecheck web
         working-directory: web
         run: npm run typecheck
