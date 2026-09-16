@@ -3,6 +3,7 @@ from time import perf_counter
 from typing import Any
 
 from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -28,6 +29,10 @@ def _engine_options(*, pooling_enabled: bool | None = None) -> dict[str, Any]:
         "pool_size": 5,
         "max_overflow": 5,
     }
+
+
+def database_connection_was_invalidated(exc: BaseException) -> bool:
+    return isinstance(exc, DBAPIError) and exc.connection_invalidated
 
 
 engine: AsyncEngine = create_async_engine(settings.database_url, **_engine_options())
