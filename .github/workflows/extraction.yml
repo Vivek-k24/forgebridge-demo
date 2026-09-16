@@ -17,6 +17,7 @@ on:
       - 'api/tests/test_extraction_pipeline.py'
       - 'api/tests/test_nhtsa_collector.py'
       - 'api/tests/test_provider_timeout_hierarchy.py'
+      - 'api/tests/test_provider_ingestion_scale_gate.py'
       - 'api/tests/test_operator_nhtsa_ingestion.py'
       - 'api/tests/test_reference_parts_dataset.py'
       - 'api/tests/test_reference_repair_candidates.py'
@@ -24,6 +25,8 @@ on:
       - 'api/tests/test_provider_source_binding.py'
       - 'api/tests/test_operator_source_binding_controls.py'
       - 'api/tests/test_provider_network_policy.py'
+      - 'api/vercel.json'
+      - 'docs/PROVIDER_INGESTION_SCALE_GATE.md'
       - 'web/src/api.ts'
       - 'api/migrations/**'
       - 'api/pyproject.toml'
@@ -47,6 +50,7 @@ on:
       - 'api/tests/test_extraction_pipeline.py'
       - 'api/tests/test_nhtsa_collector.py'
       - 'api/tests/test_provider_timeout_hierarchy.py'
+      - 'api/tests/test_provider_ingestion_scale_gate.py'
       - 'api/tests/test_operator_nhtsa_ingestion.py'
       - 'api/tests/test_reference_parts_dataset.py'
       - 'api/tests/test_reference_repair_candidates.py'
@@ -54,6 +58,8 @@ on:
       - 'api/tests/test_provider_source_binding.py'
       - 'api/tests/test_operator_source_binding_controls.py'
       - 'api/tests/test_provider_network_policy.py'
+      - 'api/vercel.json'
+      - 'docs/PROVIDER_INGESTION_SCALE_GATE.md'
       - 'web/src/api.ts'
       - 'api/migrations/**'
       - 'api/pyproject.toml'
@@ -119,6 +125,7 @@ jobs:
           api/tests/test_extraction_pipeline.py
           api/tests/test_nhtsa_collector.py
           api/tests/test_provider_timeout_hierarchy.py
+          api/tests/test_provider_ingestion_scale_gate.py
           api/tests/test_operator_nhtsa_ingestion.py
           api/tests/test_reference_parts_dataset.py
           api/tests/test_reference_repair_candidates.py
@@ -152,6 +159,9 @@ jobs:
 
       - name: Test provider API browser timeout hierarchy
         run: python -m unittest discover -s api/tests -p 'test_provider_timeout_hierarchy.py'
+
+      - name: Test provider ingestion scale gate
+        run: python -m unittest discover -s api/tests -p 'test_provider_ingestion_scale_gate.py'
 
       - name: Test NHTSA recall collector boundary
         env:
