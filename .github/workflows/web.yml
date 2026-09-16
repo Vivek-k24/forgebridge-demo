@@ -106,6 +106,10 @@ jobs:
         working-directory: web
         run: node scripts/validate-settings-radio-semantics.mjs
 
+      - name: Validate SPA navigation accessibility
+        working-directory: web
+        run: node scripts/validate-spa-navigation-accessibility.mjs
+
       - name: Typecheck web
         working-directory: web
         run: npm run typecheck
