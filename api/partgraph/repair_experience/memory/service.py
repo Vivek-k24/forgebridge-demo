@@ -35,14 +35,6 @@ from .schemas import (
     StorageLocationCreate,
     StorageLocationRead,
 )
-from .storage import (
-    PhotoFormatError,
-    delete_photo_file,
-    detect_photo_media_type,
-    new_storage_key,
-    photo_path,
-    store_photo,
-)
 
 
 def _fingerprint(payload: dict[str, object]) -> str:
@@ -745,105 +737,23 @@ async def create_photo(
     data: bytes,
     maximum_bytes: int,
 ) -> PhotoEvidenceRead:
-    if not data or len(data) > maximum_bytes:
-        raise PartGraphError(
-            code=ErrorCode.PHOTO_TOO_LARGE,
-            message=f"Photo must be between 1 byte and {maximum_bytes} bytes.",
-            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
-        )
-    try:
-        media_type, extension = detect_photo_media_type(data)
-    except PhotoFormatError as exc:
-        raise PartGraphError(
-            code=ErrorCode.PHOTO_MEDIA_TYPE_UNSUPPORTED,
-            message="Photo content must be JPEG, PNG, WebP, or HEIC.",
-            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-        ) from exc
-    if purpose == "fastener" and fastener_id is None:
-        raise PartGraphError(
-            code=ErrorCode.PHOTO_ATTACHMENT_INVALID,
-            message="Fastener photo evidence requires a fastener_id.",
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-        )
-    if observation_id is not None:
-        await _observation(
-            session,
-            user_id=user_id,
-            session_id=session_id,
-            observation_id=observation_id,
-        )
-    if fastener_id is not None:
-        await _fastener(
-            session,
-            user_id=user_id,
-            session_id=session_id,
-            fastener_id=fastener_id,
-        )
+    """Compatibility entry point; all photo creation uses the durable lifecycle."""
 
-    digest = hashlib.sha256(data).hexdigest()
-    request_data = {
-        "purpose": purpose,
-        "observation_id": str(observation_id) if observation_id else None,
-        "fastener_id": str(fastener_id) if fastener_id else None,
-        "sha256": digest,
-    }
-    fingerprint = _fingerprint(request_data)
-    bundle, existing = await prepare_domain_mutation(
+    from .photo_lifecycle import create_photo as durable_create_photo
+
+    return await durable_create_photo(
         session,
         user_id=user_id,
         session_id=session_id,
         device_id=device_id,
         idempotency_key=idempotency_key,
-        event_type="photo_evidence_added",
+        purpose=purpose,
+        observation_id=observation_id,
+        fastener_id=fastener_id,
+        filename=filename,
+        data=data,
+        maximum_bytes=maximum_bytes,
     )
-    if existing is not None:
-        _assert_replay(existing, fingerprint)
-        return serialize_photo(
-            await _photo(
-                session,
-                user_id=user_id,
-                session_id=session_id,
-                photo_id=_payload_uuid(existing, "photo_id"),
-            )
-        )
-
-    photo_id = uuid4()
-    storage_key = new_storage_key(photo_id, extension)
-    await store_photo(storage_key, data)
-    try:
-        row = RepairPhotoEvidence(
-            id=photo_id,
-            user_id=user_id,
-            session_id=session_id,
-            purpose=purpose,
-            observation_id=observation_id,
-            fastener_id=fastener_id,
-            storage_key=storage_key,
-            original_filename=_clean_filename(filename),
-            media_type=media_type,
-            byte_size=len(data),
-            sha256=digest,
-        )
-        session.add(row)
-        await session.flush()
-        await append_domain_event(
-            session,
-            bundle=bundle,
-            user_id=user_id,
-            device_id=device_id,
-            idempotency_key=idempotency_key,
-            event_type="photo_evidence_added",
-            payload={
-                "photo_id": str(row.id),
-                "purpose": row.purpose,
-                "sha256": row.sha256,
-                "request_fingerprint": fingerprint,
-            },
-        )
-    except Exception:
-        await delete_photo_file(storage_key)
-        raise
-    return serialize_photo(row)
 
 
 async def photo_content(
@@ -853,13 +763,16 @@ async def photo_content(
     session_id: UUID,
     photo_id: UUID,
 ) -> tuple[RepairPhotoEvidence, Path]:
-    row = await _photo(
+    """Compatibility entry point; content retrieval honors storage state."""
+
+    from .photo_lifecycle import photo_content as durable_photo_content
+
+    return await durable_photo_content(
         session,
         user_id=user_id,
         session_id=session_id,
         photo_id=photo_id,
     )
-    return row, photo_path(row.storage_key)
 
 
 async def delete_photo(
@@ -871,52 +784,15 @@ async def delete_photo(
     device_id: UUID,
     idempotency_key: str,
 ) -> PhotoDeleteRead:
-    request_data = {"photo_id": str(photo_id)}
-    fingerprint = _fingerprint(request_data)
-    bundle, existing = await prepare_domain_mutation(
-        session,
-        user_id=user_id,
-        session_id=session_id,
-        device_id=device_id,
-        idempotency_key=idempotency_key,
-        event_type="photo_evidence_deleted",
-    )
-    if existing is not None:
-        _assert_replay(existing, fingerprint)
-        row = await _photo(
-            session,
-            user_id=user_id,
-            session_id=session_id,
-            photo_id=_payload_uuid(existing, "photo_id"),
-            include_deleted=True,
-        )
-        if row.deleted_at is None:
-            raise PartGraphError(
-                code=ErrorCode.REPAIR_SESSION_STATE_CORRUPT,
-                message="Photo deletion event exists without a deleted photo state.",
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-        return PhotoDeleteRead(id=row.id, deleted_at=row.deleted_at)
+    """Compatibility entry point; deletion records a durable tombstone first."""
 
-    row = await _photo(
+    from .photo_lifecycle import delete_photo as durable_delete_photo
+
+    return await durable_delete_photo(
         session,
         user_id=user_id,
         session_id=session_id,
         photo_id=photo_id,
-    )
-    await delete_photo_file(row.storage_key)
-    row.deleted_at = datetime.now(UTC)
-    await session.flush()
-    await append_domain_event(
-        session,
-        bundle=bundle,
-        user_id=user_id,
         device_id=device_id,
         idempotency_key=idempotency_key,
-        event_type="photo_evidence_deleted",
-        payload={
-            "photo_id": str(row.id),
-            "request_fingerprint": fingerprint,
-        },
     )
-    return PhotoDeleteRead(id=row.id, deleted_at=row.deleted_at)
