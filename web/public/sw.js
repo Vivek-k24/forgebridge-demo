@@ -1,5 +1,41 @@
-const SHELL_CACHE = 'partgraph-shell-v1'
+const SHELL_CACHE = 'partgraph-shell-v2'
 const SHELL_ENTRIES = ['/', '/index.html']
+
+function safeShellUrls(values) {
+  const urls = new Set(SHELL_ENTRIES)
+  for (const value of values) {
+    if (typeof value !== 'string') continue
+    try {
+      const url = new URL(value, self.location.origin)
+      if (url.origin === self.location.origin && !url.pathname.startsWith('/api/')) {
+        urls.add(url.href)
+      }
+    } catch {
+      // Ignore malformed shell manifest entries.
+    }
+  }
+  return [...urls]
+}
+
+function absoluteCacheKey(value) {
+  return new URL(value, self.location.origin).href
+}
+
+async function synchronizeShellCache(values) {
+  const urls = safeShellUrls(values)
+  const keep = new Set(urls.map(absoluteCacheKey))
+  const cache = await caches.open(SHELL_CACHE)
+
+  // Populate the complete replacement shell before removing the previous one.
+  await cache.addAll(urls)
+
+  const cachedRequests = await cache.keys()
+  await Promise.all(
+    cachedRequests
+      .filter((request) => !keep.has(request.url))
+      .map((request) => cache.delete(request)),
+  )
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -23,16 +59,7 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('message', (event) => {
   if (event.data?.type !== 'CACHE_APP_SHELL_ASSETS' || !Array.isArray(event.data.urls)) return
-  const safeUrls = event.data.urls.filter((value) => {
-    if (typeof value !== 'string') return false
-    try {
-      const url = new URL(value, self.location.origin)
-      return url.origin === self.location.origin && !url.pathname.startsWith('/api/')
-    } catch {
-      return false
-    }
-  })
-  event.waitUntil(caches.open(SHELL_CACHE).then((cache) => cache.addAll(safeUrls)))
+  event.waitUntil(synchronizeShellCache(event.data.urls))
 })
 
 self.addEventListener('fetch', (event) => {
@@ -52,25 +79,20 @@ self.addEventListener('fetch', (event) => {
           }
           return response
         })
-        .catch(async () => (
-          await caches.match('/index.html')
-          || await caches.match('/')
-          || Response.error()
-        )),
+        .catch(async () => {
+          const cache = await caches.open(SHELL_CACHE)
+          return await cache.match('/index.html')
+            || await cache.match('/')
+            || Response.error()
+        }),
     )
     return
   }
 
   event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached
-      return fetch(request).then((response) => {
-        if (response.ok && response.type === 'basic') {
-          const copy = response.clone()
-          caches.open(SHELL_CACHE).then((cache) => cache.put(request, copy))
-        }
-        return response
-      })
-    }),
+    caches.open(SHELL_CACHE).then(async (cache) => (
+      await cache.match(request)
+      || fetch(request)
+    )),
   )
 })
