@@ -42,4 +42,4 @@ entrypoint = "partgraph.main:app"
 cdn = false
 
 [tool.vercel.scripts]
-build = "sh -c 'python -m unittest discover -s tests -p \"test_equipment_catalog_seed.py\" && npm --prefix ../web ci && npm --prefix ../web run build && rm -rf partgraph/frontend && mkdir -p partgraph/frontend && cp -R ../web/dist/. partgraph/frontend/'"
+build = "sh -c 'python scripts/validate_vercel_migration_boundary.py && python -m unittest discover -s tests -p \"test_equipment_catalog_seed.py\" && npm --prefix ../web ci && npm --prefix ../web run build && rm -rf partgraph/frontend && mkdir -p partgraph/frontend && cp -R ../web/dist/. partgraph/frontend/'"
