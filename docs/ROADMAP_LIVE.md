@@ -9,16 +9,17 @@ Last updated: **2026-09-16**
 
 Current exact implementation proof tracked here:
 - active implementation branch: `partgraph-mvp-consolidation`
-- latest exact green implementation/data commit: `5048467d80dc9df782a2ba300f31fee565d8db30`
-- full API CI: passed (`#986`)
-- Web CI: passed (`#849`)
-- extraction/provider-ingestion pipeline CI: passed (`#317`)
-- canonical publication CI: passed (`#257`)
-- reference repair runtime CI: passed (`#256`)
-- database reliability CI: passed (`#109`)
-- operational observability CI: passed (`#71`)
-- Web dependency advisory CI: passed (`#113`)
-- latest observed READY Vercel consolidation preview for the Phase 8 Tucson data line: `dpl_2f9YRc4BEN9nHc3PJRHdU9fwPBy3` on `6862983d386a879fd7ef4ac5acd0c2e7bb27a6e5`; the exact green `5048467d...` proof is the GitHub CI/runtime proof after the final source-page correction and fleet-index update
+- latest exact green implementation/data commit: `e16136275a70671b36c384d843a82bfb2012bef7`
+- MVP Final Validation CI: passed (`#2`)
+- full API CI: passed (`#987`)
+- Web CI: passed (`#850`)
+- extraction/provider-ingestion pipeline CI: passed (`#318`)
+- canonical publication CI: passed (`#258`)
+- reference repair runtime CI: passed (`#257`)
+- database reliability CI: passed (`#110`)
+- operational observability CI: passed (`#72`)
+- Web dependency advisory CI: passed (`#114`)
+- latest observed READY Vercel consolidation preview for the Phase 8 Tucson data line: `dpl_2f9YRc4BEN9nHc3PJRHdU9fwPBy3` on `6862983d386a879fd7ef4ac5acd0c2e7bb27a6e5`; the exact green `e1613627...` proof is the GitHub CI/runtime proof after the Phase 9 validation workflow addition
 - consolidation preview database schema: `0059_primary_vehicle_domains`
 - production database: intentionally unchanged at `0020_catalog_coverage`
 - PR #84: remains draft/unmerged
@@ -26,6 +27,8 @@ Current exact implementation proof tracked here:
 Phase 7 is complete for the primary deep-test vehicle, the 2009 Honda Civic Hybrid. Fresh-database runtime proof covers exact identity, reviewed fitments, requirements, tools, fluids, ordered procedures, readiness and blockers, pause/resume, honest completion, a repair-triggered downstream repair, first-class systems/assemblies, first-class specifications, and owner-scoped observations/photos. The representative repair set contains a standalone oil-change workflow plus the water-pump replacement and its separately required coolant refill/air-bleed workflow. No make/model/year/trim application-code branch was added to achieve that coverage.
 
 Phase 8 is also complete. The same generic identity/publication/readiness/guidance/completion code now executes reviewed reference repairs for the 2015 Toyota Camry, 2018 Ford F-150, 2020 Subaru Forester, and 2022 Hyundai Tucson in addition to the Phase 7 Civic proof. The four additional datasets are selected through `api/data/reference/phase8_reference_fleet_v1.json` and exercised by one data-indexed runtime test; no make/model/year/trim application service or conditional branch was added for the new vehicles.
+
+Phase 9 is now in progress. The first fresh final-validation layer is complete: `.github/workflows/mvp-final-validation.yml` runs the release-oriented unit/domain contract set together rather than relying only on scattered historical greens. On `e16136275a70671b36c384d843a82bfb2012bef7`, that gate and every established exact-head regression passed. API-level final-MVP validation is the next Phase 9 task.
 
 The new primary-vehicle canonical domains are data-driven. Reviewed exact-vehicle claims materialize an `Engine` system, `Engine cooling system` subsystem, and `Engine water-pump assembly`; first-class specifications record the 3.4 US qt engine-oil change capacity with filter and 39 N·m oil-drain-bolt torque. The same source-authority, verified-evidence, MechanicalClaim, restricted-materializer, conflict-quarantine, canonical-version, and evidence-link rules used by existing canonical knowledge apply to these domains.
 
@@ -381,9 +384,9 @@ Exit gate: **satisfied.** The same source code executes the selected reference-f
 
 ## Phase 9 — Build the fresh MVP validation suite
 
-Status: **Ready next. Phase 8 is complete; the final cross-system validation campaign has not yet started. Permanent CI gates already created remain active.**
+Status: **In progress. The fresh release-oriented validation campaign has started; the unit/domain layer is complete and API-level final-MVP validation is next. Existing permanent CI gates remain active.**
 
-- [ ] unit/domain tests for final MVP behavior
+- [x] unit/domain tests for final MVP behavior
 - [ ] API tests for final MVP behavior
 - [ ] authentication/security tests
 - [ ] RLS/owner-isolation tests
@@ -401,6 +404,14 @@ Status: **Ready next. Phase 8 is complete; the final cross-system validation cam
 - [ ] durable photo persistence
 - [ ] data-free-source-code check
 - [ ] RBAC authorization tests
+
+Completed Phase 9 proof so far:
+- final-validation workflow: `.github/workflows/mvp-final-validation.yml`
+- unit/domain contract job: `Phase 9 unit/domain contracts`
+- exact proof head: `e16136275a70671b36c384d843a82bfb2012bef7`
+- proof run: `MVP Final Validation CI #2`
+- contract set covers fail-closed source authority and repair materialization, unsupported computer/service-tool boundaries, provider network safety, provider/API/browser timeout hierarchy, ambiguous-write recovery, and vehicle-fact externalization
+- all eight established exact-head regression workflows also passed on the same commit
 
 Existing permanent CI, including migration history, adopted-baseline equivalence, RBAC, source-authority, extraction, canonical publication, reference-repair runtime, container build, and readiness smoke, remains active and is not discarded while Phase 9 is pending.
 
@@ -452,9 +463,9 @@ This section says the same thing as the technical tracker above, but in plain En
 
 ### Where the project stands right now
 
-**Phase 8 is complete.** PartGraph has now proved that the same basic repair system works across the full five-model reference fleet without adding special make/model application logic.
+**Phase 9 is now in progress.** The five-model Phase 8 proof remains complete, and the first fresh final-MVP validation layer has now been run successfully.
 
-The exact green implementation/data commit is `5048467d80dc9df782a2ba300f31fee565d8db30`. On that commit, the full API suite, web suite, extraction/staging suite, canonical-publication suite, reference runtime suite, database-reliability suite, observability suite, and web dependency advisory suite all passed. The latest observed READY Vercel preview on this Phase 8 line is `dpl_2f9YRc4BEN9nHc3PJRHdU9fwPBy3`, and the preview database schema remains `0059_primary_vehicle_domains`.
+The exact green implementation/data commit is `e16136275a70671b36c384d843a82bfb2012bef7`. On that commit, the new MVP Final Validation unit/domain job passed, along with the full API suite, web suite, extraction/staging suite, canonical-publication suite, reference runtime suite, database-reliability suite, observability suite, and web dependency advisory suite. The latest observed READY Vercel preview on the preceding Phase 8 application/data line remains `dpl_2f9YRc4BEN9nHc3PJRHdU9fwPBy3`, and the preview database schema remains `0059_primary_vehicle_domains`.
 
 The production application has **not** been switched to the consolidation branch. PR #84 remains a draft and unmerged, and the production database remains deliberately at `0020_catalog_coverage`.
 
@@ -535,7 +546,11 @@ No Toyota-, Ford-, Subaru-, or Hyundai-specific application service or make/mode
 
 ### Phase 9 — Run the final MVP test campaign
 
-Phase 9 is now the **next roadmap phase**. Existing permanent gates are already green, but the fresh final campaign has not started yet. It will validate the completed MVP as one system: unit/domain tests, APIs, security, owner isolation, migrations, browser flows, randomized acceptance, the full five-model fleet, offline/degraded behavior, timeout recovery, downstream semantics, unsupported-computer boundaries, durable hosted photos, source-code data checks, and RBAC.
+**In progress.** The first layer is complete: PartGraph now has a dedicated final-validation workflow that reruns the core unit/domain contracts together as one release-oriented checkpoint instead of depending only on tests that happened to be green in separate historical workflows.
+
+That first Phase 9 job checks the most important low-level contracts currently available without requiring a database integration environment: source authority fails closed, repair materialization cannot bypass its evidence rules, unsupported computer/service-tool work stays outside supported mechanical completion, provider URLs and redirects cannot target private/internal networks, provider/API/browser timeout budgets stay ordered, ambiguous committed writes require authoritative recovery, and vehicle facts remain externalized from application code.
+
+The new job passed on `e16136275a70671b36c384d843a82bfb2012bef7`, and every established regression workflow also passed on that same commit. The **next Phase 9 task is API tests for final MVP behavior**. Security, owner isolation, migrations, browser flows, randomized/reference-fleet acceptance, offline/degraded behavior, timeout recovery, downstream semantics, durable hosted photos, data-free-source-code checks, and RBAC remain later Phase 9 items.
 
 ### Phase 10 — Move the finished MVP into production
 
@@ -551,6 +566,6 @@ Charm.li approval remains narrow: manually reviewed evidence for the approved 20
 
 ### Exact place to resume work
 
-Phase 8 is complete. The next roadmap phase is **Phase 9 — build and run the fresh MVP validation suite**.
+Phase 9 is in progress. The next roadmap task is **API tests for final MVP behavior** in the fresh MVP validation suite.
 
-The separate Phase 6 live NHTSA HTTP-ingestion proof and broad repair-knowledge work, Phase 1 hosted durable-photo proof, Phase 9 final validation campaign, and production cutover requirements all remain pending in their existing roadmap locations.
+The separate Phase 6 live NHTSA HTTP-ingestion proof and broad repair-knowledge work, Phase 1 hosted durable-photo proof, remaining Phase 9 validation campaign, and production cutover requirements all remain pending in their existing roadmap locations.
