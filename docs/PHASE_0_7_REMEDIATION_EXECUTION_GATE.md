@@ -158,7 +158,7 @@ Current-control proof for `PG-AUD-UI-010`:
 | --- | --- | --- |
 | `PG-AUD-CODE-001` | BACKLOG | Retire compatibility bridges only after remaining functional work and final import usage are stable. |
 | `PG-AUD-CODE-002` | BACKLOG | CSS consolidation depends on current accessibility/reflow fixes and later visual/browser regression. |
-| `PG-AUD-CODE-003` | BACKLOG | Final dead-asset/import proof belongs after current UI work stabilizes; this also gates `PG-AUD-UI-011`. |
+| `PG-AUD-CODE-003` | ELIGIBLE | Current UI remediation is stabilized at the available Phase 7 boundary; import/dead-asset proof can now run without pulling Phase 8/9/10 forward. Its result still gates `PG-AUD-UI-011`. |
 | `PG-AUD-CODE-004` | BLOCKED | Resolve only after current Readiness/UI cleanup establishes whether the hidden session bar is intentionally redundant or still needed. |
 
 ---
