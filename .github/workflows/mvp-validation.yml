@@ -270,8 +270,6 @@ jobs:
         run: ruff check api/migrations api/tests/test_mvp_migrations.py
 
       - name: Run static migration-history contracts
-        env:
-          PARTGRAPH_DATABASE_URL: ''
         run: >-
           python -m unittest
           api.tests.test_mvp_migrations.FinalMvpMigrationTests.test_revision_graph_has_one_linear_head_and_one_base
