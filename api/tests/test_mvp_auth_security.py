@@ -28,7 +28,7 @@ class FinalMvpAuthenticationSecurityTests(unittest.TestCase):
     def _identity(self, prefix: str) -> tuple[str, str]:
         suffix = uuid4().hex[:12]
         username = f"{prefix}_{suffix}"
-        return username, f"{username}@example.test"
+        return username, f"{username}@example.com"
 
     def _csrf_headers(self, *, origin: str | None = None) -> dict[str, str]:
         headers = {CSRF_HEADER: CSRF_VALUE}
