@@ -273,7 +273,7 @@ jobs:
         run: >-
           python -m unittest
           api.tests.test_mvp_migrations.FinalMvpMigrationTests.test_revision_graph_has_one_linear_head_and_one_base
-          api.tests.test_mvp_migrations.FinalMvpMigrationTests.test_revision_filename_matches_declared_revision
+          api.tests.test_mvp_migrations.FinalMvpMigrationTests.test_every_parent_revision_is_present
           -v
 
       - name: Apply complete migration history to fresh database
