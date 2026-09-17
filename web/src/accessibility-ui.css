@@ -305,6 +305,51 @@ textarea:focus-visible {
   box-shadow: inset 3px 0 0 var(--pg-accent);
 }
 
+/*
+ * Current UI-010 controls. Ordinary muted text on the named dark workspaces keeps
+ * at least 4.5:1 contrast. Standalone primary touch controls use a 44px minimum;
+ * compact inline controls may remain smaller when their spacing/context satisfies
+ * the target-size exception rather than being enlarged indiscriminately.
+ */
+:root {
+  --pg-dark-muted-text: #82979e;
+  --pg-primary-touch-target: 44px;
+}
+
+.repair-workspace-shell input::placeholder,
+.repair-workspace-shell textarea::placeholder {
+  color: var(--pg-dark-muted-text);
+  -webkit-text-fill-color: var(--pg-dark-muted-text);
+  opacity: 1;
+}
+
+.partgraph-main .home-metrics small,
+.partgraph-main .home-empty-state p,
+.partgraph-main .home-repair-main p,
+.partgraph-main .home-repair-meta > span,
+.partgraph-main .home-action-stack span,
+.partgraph-main .home-trust-panel p:last-child {
+  color: var(--pg-dark-muted-text);
+}
+
+.partgraph-main .home-primary-action,
+.partgraph-main .home-secondary-action,
+.partgraph-main .home-alert button,
+.partgraph-main .home-empty-state button {
+  min-height: var(--pg-primary-touch-target);
+}
+
+.partgraph-main .equipment-search-box {
+  grid-template-columns: var(--pg-primary-touch-target) minmax(0, 1fr) auto;
+  min-height: var(--pg-primary-touch-target);
+}
+
+.partgraph-main .equipment-mic {
+  width: var(--pg-primary-touch-target);
+  height: var(--pg-primary-touch-target);
+  min-height: var(--pg-primary-touch-target);
+}
+
 @media (max-width: 900px) {
   .partgraph-nav-primary,
   .partgraph-nav-utility {
