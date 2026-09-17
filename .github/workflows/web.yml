@@ -114,6 +114,10 @@ jobs:
         working-directory: web
         run: node scripts/validate-repair-photo-descriptions.mjs
 
+      - name: Validate current contrast and primary target sizing
+        working-directory: web
+        run: node scripts/validate-current-contrast-targets.mjs
+
       - name: Typecheck web
         working-directory: web
         run: npm run typecheck
