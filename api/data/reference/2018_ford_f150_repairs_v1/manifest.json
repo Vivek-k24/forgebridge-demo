@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2018-ford-f150-repairs-v1",
+  "vehicle": {
+    "market": "US",
+    "year": 2018,
+    "make": "Ford",
+    "model": "F-150"
+  },
+  "review": {
+    "status": "source_reviewed_reference_fixture",
+    "reviewed_through": "2026-09-16",
+    "reviewed_by": "partgraph_phase8_manual_review",
+    "note": "The Phase 8 reference fixture uses only facts explicitly supported by Ford's U.S./Canada 2018 F-150 owner manual. Optional trim, engine, transmission, drivetrain, and generation fields remain unset rather than inferred."
+  },
+  "sources": [
+    {
+      "source_key": "ford-2018-f150-owner-manual-second-printing",
+      "source_class": "oem_service",
+      "license_status": "approved",
+      "automation_allowed": false,
+      "document": "2018 F-150 Owner's Manual, Second Printing",
+      "url": "https://www.fordservicecontent.com/Ford_Content/Catalog/owner_information/2018-Ford-F-150-Owners-Manual-version-2_om-EN-US_10_2017_V3.pdf",
+      "supports": [
+        "vehicle_identity",
+        "license_plate_light_bulb_specification",
+        "license_plate_light_bulb_replacement_procedure",
+        "light_bulb_safety"
+      ]
+    }
+  ],
+  "repairs": [
+    {
+      "repair_key": "license-plate-light-bulb-replacement",
+      "path": "license_plate_light_bulb_replacement.json",
+      "source_key": "ford-2018-f150-owner-manual-second-printing",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 1,
+      "action_count": 4
+    }
+  ]
+}
