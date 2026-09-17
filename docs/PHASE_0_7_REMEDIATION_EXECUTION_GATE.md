@@ -104,10 +104,10 @@ Phase 8 is data-only by architecture, so concrete current-UI defects that can be
 | `PG-AUD-UI-001` | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | Current programmatic-name defects are fixed and statically gated. Final browser accessibility-tree/axe/manual screen-reader proof remains Phase 9 validation work. |
 | `PG-AUD-UI-002` | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | Sticky offsets now follow measured rendered header/navigation heights rather than fixed mobile pixels, and the contract is statically gated. Final 320px/zoom/text-scale/browser stress proof remains Phase 9 validation work. |
 | `PG-AUD-UI-003` | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | Audited async workflow outcomes now feed shared polite/assertive live regions without focus movement, with duplicate-live-region suppression and CI coverage. Final real screen-reader announcement-once proof remains Phase 9 validation work. |
-| `PG-AUD-UI-004` | ELIGIBLE | Incorrect tab semantics are a concrete current UI defect. |
-| `PG-AUD-UI-005` | ELIGIBLE | Incorrect radio-group behavior is a concrete current UI defect. |
-| `PG-AUD-UI-006` | ELIGIBLE | SPA focus/orientation behavior is a current navigation defect. |
-| `PG-AUD-UI-007` | ELIGIBLE | Current repair-photo accessible-description model can be corrected without later fleet work. |
+| `PG-AUD-UI-004` | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | Garage add-mode controls now use ordinary grouped toggle-button semantics with `aria-pressed`; final live accessibility-tree/keyboard verification remains Phase 9 work. |
+| `PG-AUD-UI-005` | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | Settings Units and Text Size now use native same-name radio inputs in labeled fieldsets; final representative-browser/assistive-technology proof remains Phase 9 work. |
+| `PG-AUD-UI-006` | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | SPA route changes now update document titles, move focus to the new view context, expose a skip link, and honor reduced motion; final live browser/screen-reader validation remains Phase 9 work. |
+| `PG-AUD-UI-007` | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | Repair Log photos can now reuse confirmed user-authored observations as equivalent descriptions without inventing image content or changing the database schema; final live accessibility validation and remaining photo-surface review remain Phase 9 work. |
 | `PG-AUD-UI-008` | BACKLOG | Automated browser E2E/accessibility/cross-browser final regression gate is Phase 9 work. |
 | `PG-AUD-UI-009` | BACKLOG | Final browser-support matrix enforcement depends on the Phase 9 representative-browser suite. |
 | `PG-AUD-UI-010` | ELIGIBLE | Current contrast/target-size defects are concrete and independently measurable. |
@@ -124,6 +124,19 @@ Current-control proof for `PG-AUD-UI-001` through `PG-AUD-UI-003`:
 - exact-head Vercel deployment: `dpl_Gwu7DbFLy8rYCFH47H9XieZoTEz9` READY; its build also passed the schema-read-only Vercel migration boundary
 - no database migration, production write, provider activation, publication, merge, or cutover was performed
 - remaining browser accessibility-tree, axe, screen-reader, zoom/reflow and representative-browser acceptance proof stays in the existing Phase 9 backlog rather than being pulled forward
+
+Current-control proof for `PG-AUD-UI-004` through `PG-AUD-UI-007`:
+
+- `PG-AUD-UI-004`: Garage no longer advertises an incomplete tab pattern; the two add modes are a labeled button group with synchronized `aria-pressed` state, permanently gated by `web/scripts/validate-garage-mode-semantics.mjs`.
+- `PG-AUD-UI-005`: Settings uses native radio semantics for both measurement units and text size, with labeled fieldsets, same-name inputs, and synchronized checked state; `web/scripts/validate-settings-radio-semantics.mjs` prevents custom incomplete radio semantics from returning.
+- `PG-AUD-UI-006`: PartGraph route transitions update `document.title`, focus the new view heading/fallback main target after render, provide a keyboard-visible skip link, and avoid unconditional animation when reduced motion is requested; `web/scripts/validate-spa-navigation-accessibility.mjs` guards the contract.
+- `PG-AUD-UI-007`: Repair Log photo upload can associate an existing confirmed user-authored observation through the already-supported nullable `observation_id`; that text becomes visible/equivalent image description, while unassociated legacy photos remain valid with an explicit no-user-description fallback and no generated visual claims. `web/scripts/validate-repair-photo-descriptions.mjs` guards the no-invention/association contract.
+- shared exact proof head: `9c3c571edb18ad35ce26195131d8958c35272f5b`
+- exact-head API CI/CD #958, Web CI/CD #821, Extraction Pipeline CI #277, Canonical Publication CI #229, Reference Repair Runtime CI #218, Database Reliability CI #81, Operational Observability CI #43, and Web Dependency Advisory Scan #85 passed
+- Web CI explicitly passed Garage mode semantics, Settings radio semantics, SPA navigation accessibility, repair-photo description accessibility, the earlier UI accessibility contracts, typecheck, production build, container build, and HTTP/security-header smoke steps
+- exact-head Vercel deployment: `dpl_J5j6S1J6n1GPZA2tfAoqjPkSh2GE` READY
+- no database migration, production write, provider activation, publication, merge, or cutover was performed
+- final accessibility-tree, keyboard/screen-reader, representative-browser, and complete photo-surface acceptance proof remains in the existing Phase 9 backlog rather than being pulled forward
 
 ---
 
