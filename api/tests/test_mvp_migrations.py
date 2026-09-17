@@ -45,14 +45,17 @@ class FinalMvpMigrationTests(unittest.TestCase):
 
         self.assertEqual(len(bases), 1, bases)
 
-    def test_revision_filename_matches_declared_revision(self) -> None:
-        for revision in _script_directory().walk_revisions():
-            filename = Path(revision.path)
-            self.assertEqual(
-                filename.stem,
-                revision.revision,
-                f"{filename.name} does not match revision {revision.revision}",
-            )
+    def test_every_parent_revision_is_present(self) -> None:
+        revisions = list(_script_directory().walk_revisions())
+        revision_ids = {revision.revision for revision in revisions}
+
+        for revision in revisions:
+            if revision.down_revision is not None:
+                self.assertIn(
+                    revision.down_revision,
+                    revision_ids,
+                    f"missing parent for revision {revision.revision}",
+                )
 
     @unittest.skipUnless(
         os.getenv(DATABASE_URL_ENV),
