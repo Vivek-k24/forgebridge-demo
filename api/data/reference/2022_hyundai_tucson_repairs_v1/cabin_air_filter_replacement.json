@@ -4,7 +4,7 @@
   "repair_key": "cabin-air-filter-replacement",
   "title": "Cabin air filter replacement",
   "capability_policy_key": "diy_supported",
-  "source_pages": [26, 557],
+  "source_pages": [576],
   "operations": [],
   "requirements": [
     {
@@ -18,7 +18,7 @@
       "necessity": "required",
       "fulfillment_mode": "replacement_required",
       "timing": "before_start",
-      "source_pages": [557]
+      "source_pages": [576]
     }
   ],
   "actions": [
@@ -30,7 +30,7 @@
       "instruction": "Open the glove box and remove the support rod from the glove box.",
       "requirement_use_keys": [],
       "prerequisite_action_keys": [],
-      "source_pages": [557]
+      "source_pages": [576]
     },
     {
       "action_key": "release-glove-box-stoppers",
@@ -40,7 +40,7 @@
       "instruction": "Push in both sides of the glove box so the stopper pins release and the glove box can hang down.",
       "requirement_use_keys": [],
       "prerequisite_action_keys": ["open-glove-box-remove-support-rod"],
-      "source_pages": [557]
+      "source_pages": [576]
     },
     {
       "action_key": "press-filter-cover-lock",
@@ -50,7 +50,7 @@
       "instruction": "Press and hold the lock on the right side of the cabin-air-filter cover.",
       "requirement_use_keys": [],
       "prerequisite_action_keys": ["release-glove-box-stoppers"],
-      "source_pages": [557]
+      "source_pages": [576]
     },
     {
       "action_key": "remove-filter-cover",
@@ -60,7 +60,7 @@
       "instruction": "Pull the cabin-air-filter cover out while the right-side lock is released.",
       "requirement_use_keys": [],
       "prerequisite_action_keys": ["press-filter-cover-lock"],
-      "source_pages": [557]
+      "source_pages": [576]
     },
     {
       "action_key": "replace-cabin-air-filter",
@@ -70,7 +70,7 @@
       "instruction": "Remove the old cabin air filter and install the replacement filter with its arrow symbol facing downward.",
       "requirement_use_keys": ["cabin-filter-use"],
       "prerequisite_action_keys": ["remove-filter-cover"],
-      "source_pages": [557]
+      "source_pages": [576]
     },
     {
       "action_key": "reassemble-glove-box",
@@ -80,7 +80,7 @@
       "instruction": "Reassemble the cabin-filter cover, glove-box stopper arrangement, and support rod in the reverse order of disassembly.",
       "requirement_use_keys": [],
       "prerequisite_action_keys": ["replace-cabin-air-filter"],
-      "source_pages": [557]
+      "source_pages": [576]
     }
   ]
 }
