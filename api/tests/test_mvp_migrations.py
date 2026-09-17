@@ -47,10 +47,11 @@ class FinalMvpMigrationTests(unittest.TestCase):
 
     def test_revision_filename_matches_declared_revision(self) -> None:
         for revision in _script_directory().walk_revisions():
-            filename = Path(revision.path).name
-            self.assertTrue(
-                filename.startswith(f"{revision.revision}_"),
-                f"{filename} does not match revision {revision.revision}",
+            filename = Path(revision.path)
+            self.assertEqual(
+                filename.stem,
+                revision.revision,
+                f"{filename.name} does not match revision {revision.revision}",
             )
 
     @unittest.skipUnless(
