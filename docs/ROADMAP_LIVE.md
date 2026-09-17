@@ -5,26 +5,31 @@ Architecture authority: `docs/BLUEPRINT.md`
 Implementation-sequence source: `docs/ROADMAP.md`  
 Maintenance rule: **update this file directly on `main` as soon as a roadmap task is completed. Do not wait for the implementation branch to merge or for its PR to close. Keep the technical tracker and the `Layman Live progress` section synchronized so they describe the same completed, pending, and next work without changing roadmap scope, order, or architecture.**
 
-Last updated: **2026-09-15**
+Last updated: **2026-09-16**
 
 Current exact implementation proof tracked here:
 - active implementation branch: `partgraph-mvp-consolidation`
-- latest exact green implementation/data commit: `7b1d7df912bdc5749cad46efee771f97c5a20107`
-- full API CI: passed (`#809`)
-- Web CI: passed (`#672`)
-- extraction/provider-ingestion pipeline CI: passed (`#97`)
-- canonical publication CI: passed (`#65`)
-- reference repair runtime CI: passed (`#43`)
-- Vercel consolidation preview: READY on the same commit (`dpl_7xb81oafGi48d9kXGBUtrT7SypuB`)
+- latest exact green implementation/data commit: `5048467d80dc9df782a2ba300f31fee565d8db30`
+- full API CI: passed (`#986`)
+- Web CI: passed (`#849`)
+- extraction/provider-ingestion pipeline CI: passed (`#317`)
+- canonical publication CI: passed (`#257`)
+- reference repair runtime CI: passed (`#256`)
+- database reliability CI: passed (`#109`)
+- operational observability CI: passed (`#71`)
+- Web dependency advisory CI: passed (`#113`)
+- latest observed READY Vercel consolidation preview for the Phase 8 Tucson data line: `dpl_2f9YRc4BEN9nHc3PJRHdU9fwPBy3` on `6862983d386a879fd7ef4ac5acd0c2e7bb27a6e5`; the exact green `5048467d...` proof is the GitHub CI/runtime proof after the final source-page correction and fleet-index update
 - consolidation preview database schema: `0059_primary_vehicle_domains`
 - production database: intentionally unchanged at `0020_catalog_coverage`
 - PR #84: remains draft/unmerged
 
-Phase 7 is complete for the primary deep-test vehicle, the 2009 Honda Civic Hybrid. Fresh-database runtime proof now covers exact identity, reviewed fitments, requirements, tools, fluids, ordered procedures, readiness and blockers, pause/resume, honest completion, a repair-triggered downstream repair, first-class systems/assemblies, first-class specifications, and owner-scoped observations/photos. The representative repair set contains a standalone oil-change workflow plus the water-pump replacement and its separately required coolant refill/air-bleed workflow. No make/model/year/trim application-code branch was added to achieve that coverage.
+Phase 7 is complete for the primary deep-test vehicle, the 2009 Honda Civic Hybrid. Fresh-database runtime proof covers exact identity, reviewed fitments, requirements, tools, fluids, ordered procedures, readiness and blockers, pause/resume, honest completion, a repair-triggered downstream repair, first-class systems/assemblies, first-class specifications, and owner-scoped observations/photos. The representative repair set contains a standalone oil-change workflow plus the water-pump replacement and its separately required coolant refill/air-bleed workflow. No make/model/year/trim application-code branch was added to achieve that coverage.
+
+Phase 8 is also complete. The same generic identity/publication/readiness/guidance/completion code now executes reviewed reference repairs for the 2015 Toyota Camry, 2018 Ford F-150, 2020 Subaru Forester, and 2022 Hyundai Tucson in addition to the Phase 7 Civic proof. The four additional datasets are selected through `api/data/reference/phase8_reference_fleet_v1.json` and exercised by one data-indexed runtime test; no make/model/year/trim application service or conditional branch was added for the new vehicles.
 
 The new primary-vehicle canonical domains are data-driven. Reviewed exact-vehicle claims materialize an `Engine` system, `Engine cooling system` subsystem, and `Engine water-pump assembly`; first-class specifications record the 3.4 US qt engine-oil change capacity with filter and 39 N·m oil-drain-bolt torque. The same source-authority, verified-evidence, MechanicalClaim, restricted-materializer, conflict-quarantine, canonical-version, and evidence-link rules used by existing canonical knowledge apply to these domains.
 
-The long-lived consolidation preview remains deliberately non-seeding. It is migrated to `0059_primary_vehicle_domains`, but deployment did not silently create Civic structure/specification rows; the exact reviewed reference facts are reconstructed and proven through canonical materialization on a fresh database. The preview still contains the previously published Civic fitments and persistent oil-change repair unless knowledge is explicitly published through the authorized path.
+The long-lived consolidation preview remains deliberately non-seeding. It is migrated to `0059_primary_vehicle_domains`, but deployment did not silently create Civic structure/specification rows or Phase 8 reference repairs; reviewed facts are reconstructed and proven through canonical materialization on fresh databases. The preview still contains previously published knowledge unless knowledge is explicitly published through the authorized path.
 
 Owner observation/photo coverage is proven at repair-session runtime: create an owner observation, attach photo evidence, list it, retrieve and hash-verify the stored content, delete it, and verify removal. This closes the Phase 7 observation/photo behavior requirement. It does **not** close the separate Phase 1/Phase 9 hosted durable-photo-storage requirement; hosted persistence remains pending exactly where the roadmap already places it.
 
@@ -264,7 +269,7 @@ Remaining Phase 6 work:
 - [ ] complete real-provider live ingestion proof through the deployed operator path
 - [x] expose safe provider/source configuration and enable/disable controls through authenticated operator/admin flow where required
 - [x] broaden canonical materialization to additional domains where the MVP provider pipeline requires it
-- [ ] populate **broad** canonical repair knowledge; the approved Civic reference set is still only a small beginning, not broad automotive coverage
+- [ ] populate **broad** canonical repair knowledge; the reviewed Civic + Phase 8 reference set is still a narrow validation corpus, not broad automotive coverage
 
 Current safety boundary:
 - collector/extractor output is candidate data only
@@ -350,17 +355,33 @@ Exit gate: **satisfied.** Representative repairs work start-to-finish without ve
 
 ## Phase 8 — Five-model reference fleet
 
-Status: **Ready next; not started. Phase 7 is complete.**
+Status: **Complete.** The five-model validation fleet now executes through the same generic source-review, identity materialization, repair-definition publication, readiness, guidance, and completion code paths.
 
-- [ ] Populate the remaining reference fleet through data only.
+- [x] Populate the remaining reference fleet through data only.
+
+Phase 8 data/runtime proof:
+- 2009 Honda Civic Hybrid — Phase 7 deep proof remains the primary vehicle and supplies the first model-family runtime coverage
+- 2015 Toyota Camry — reviewed Toyota owner-manual evidence; `license-plate-light-bulb-replacement`
+- 2018 Ford F-150 — reviewed Ford owner-manual evidence; `license-plate-light-bulb-replacement`
+- 2020 Subaru Forester — reviewed Subaru owner-manual evidence; `backup-light-bulb-replacement`
+- 2022 Hyundai Tucson, Smartstream G 2.5 GDI — reviewed Hyundai owner-manual evidence; `cabin-air-filter-replacement`
+- fleet index: `api/data/reference/phase8_reference_fleet_v1.json`
+- generic fleet runtime: `api/tests/test_reference_fleet_runtime.py`
+- permanent gate: `.github/workflows/reference-runtime.yml`
+- exact five-model proof head: `5048467d80dc9df782a2ba300f31fee565d8db30`
+- exact fleet runtime proof: `Reference Repair Runtime CI #256`
+
+The Phase 8 runner is data-indexed. Camry, F-150, Forester, and Tucson are discovered from the fleet index and execute the same runtime implementation. No make/model/year/trim conditional was added to the application or the test runner for any of them.
 
 Rule: adding another vehicle may require more data, but must not require make/model/year/trim application-code branches.
+
+Exit gate: **satisfied.** The same source code executes the selected reference-fleet workflows without a make-specific application service.
 
 ---
 
 ## Phase 9 — Build the fresh MVP validation suite
 
-Status: **Pending functional MVP completion. Permanent CI gates already created remain active.**
+Status: **Ready next. Phase 8 is complete; the final cross-system validation campaign has not yet started. Permanent CI gates already created remain active.**
 
 - [ ] unit/domain tests for final MVP behavior
 - [ ] API tests for final MVP behavior
@@ -431,17 +452,19 @@ This section says the same thing as the technical tracker above, but in plain En
 
 ### Where the project stands right now
 
-**Phase 7 is complete.** PartGraph can now take the 2009 Honda Civic Hybrid through the deep primary-vehicle proof we defined without adding special Civic-only application logic.
+**Phase 8 is complete.** PartGraph has now proved that the same basic repair system works across the full five-model reference fleet without adding special make/model application logic.
 
-The exact green implementation/data commit is `7b1d7df912bdc5749cad46efee771f97c5a20107`. On that commit, the full API suite, web suite, extraction/staging suite, canonical-publication suite, and reference runtime suite all passed. The Vercel consolidation preview is READY, and its database schema is now `0059_primary_vehicle_domains`.
+The exact green implementation/data commit is `5048467d80dc9df782a2ba300f31fee565d8db30`. On that commit, the full API suite, web suite, extraction/staging suite, canonical-publication suite, reference runtime suite, database-reliability suite, observability suite, and web dependency advisory suite all passed. The latest observed READY Vercel preview on this Phase 8 line is `dpl_2f9YRc4BEN9nHc3PJRHdU9fwPBy3`, and the preview database schema remains `0059_primary_vehicle_domains`.
 
 The production application has **not** been switched to the consolidation branch. PR #84 remains a draft and unmerged, and the production database remains deliberately at `0020_catalog_coverage`.
 
-For the Civic Hybrid, PartGraph now has proof for much more than a list of parts. It understands a small but real vehicle structure: the engine contains the engine-cooling subsystem, and that subsystem contains the water-pump assembly. It also stores two important values as real specification records instead of leaving them buried only inside repair wording: the oil-change refill quantity with filter is 3.4 US qt, and the oil-drain bolt torque is 39 N·m.
+The Civic Hybrid remains the deep test vehicle. PartGraph has proof for much more than a list of parts on that car: vehicle structure, specifications, multiple repairs, downstream work, readiness, blockers, pause/resume, observations/photos, and honest completion. The additional Phase 8 vehicles are intentionally narrower validation cases whose job is to prove that the generic system really carries to other manufacturers and years.
 
-Those new facts still go through the trust system. An approved exact-vehicle source supports a reviewed claim; a restricted materializer publishes it; contradictory claims become explicit conflicts; ordinary users and data collectors cannot directly rewrite trusted automotive knowledge. Deployment itself does not insert the Civic facts automatically.
+For the four added vehicles, the application reads reviewed data and uses the same runtime machinery: a Toyota Camry license-plate bulb repair, a Ford F-150 license-plate bulb repair, a Subaru Forester backup-light bulb repair, and a gasoline 2022 Hyundai Tucson cabin-air-filter repair. One fleet index selects those datasets, and one generic fleet test runs them. We did not add `if Toyota`, `if Ford`, `if Subaru`, or `if Hyundai` behavior.
 
-PartGraph also now proves owner observations and photos inside a repair session. A user observation can be created, a photo can be attached to it, both can be listed again, the stored photo can be read and hash-checked, and the photo can be deleted cleanly. This proves the Phase 7 repair-memory behavior. It does **not** mean hosted durable photo storage is finished; proving that photos survive the real hosted environment remains a separate Phase 1/Phase 9 item.
+The trusted-data rules are unchanged. An approved exact-vehicle source supports a reviewed claim; a restricted materializer publishes it; contradictory claims become explicit conflicts; ordinary users and data collectors cannot directly rewrite trusted automotive knowledge. Deployment itself does not insert the reference facts automatically.
+
+PartGraph also proves owner observations and photos inside a repair session. A user observation can be created, a photo can be attached to it, both can be listed again, the stored photo can be read and hash-checked, and the photo can be deleted cleanly. This proves the Phase 7 repair-memory behavior. It does **not** mean hosted durable photo storage is finished; proving that photos survive the real hosted environment remains a separate Phase 1/Phase 9 item.
 
 ### Phase 0 — Put the repository onto one controlled path
 
@@ -481,27 +504,15 @@ Production remains intentionally at `0020_catalog_coverage` until a separate pro
 
 Most of the pipeline is built. PartGraph can register sources/providers, preserve raw data, stage candidate facts, apply source-authority rules, detect conflicts, require human review, create verified evidence and claims, and publish through restricted materializer roles.
 
-The new Phase 7 work expands this same mechanism to systems/assemblies and specifications. These are not Civic-specific shortcuts; the same generic path can be reused for the remaining reference vehicles.
+The Phase 7/8 work reuses this mechanism for vehicle structure, specifications, additional identities, requirements, and procedures. These are not vehicle-specific shortcuts; the same generic path is what allowed the reference fleet to expand.
 
-Still pending in Phase 6 are the real deployed HTTP proof of operator-triggered NHTSA ingestion and broad automotive repair knowledge beyond the small reviewed reference set.
+Still pending in Phase 6 are the real deployed HTTP proof of operator-triggered NHTSA ingestion and broad automotive repair knowledge beyond the narrow reviewed validation set.
 
 ### Phase 7 — Make the 2009 Honda Civic Hybrid work deeply from beginning to end
 
 **Complete.**
 
-The completed proof now includes:
-- exact Civic Hybrid identity
-- 267 reviewed part fitments already available in the preview
-- an engine → cooling system → water-pump assembly hierarchy
-- first-class oil-capacity and drain-bolt-torque specifications
-- oil-change parts, tools, fluid, readiness checks, blockers, six ordered actions, pause/resume, and final oil-life reset
-- water-pump replacement parts/requirements and four ordered actions
-- a separate required coolant refill/air-bleed repair with four physical actions
-- automatic activation of that follow-on repair when the water pump is installed
-- refusal to call the water-pump job complete before the coolant work is actually complete
-- owner repair-session observations and attached photo evidence
-- capability boundaries that keep unsupported computer/service-tool work out of supported physical DIY completion
-- mechanically honest final completion
+The completed proof includes exact Civic Hybrid identity, 267 reviewed part fitments, an engine → cooling system → water-pump assembly hierarchy, first-class oil-capacity and drain-bolt-torque specifications, oil-change parts/tools/fluid/readiness/blockers and six ordered actions, pause/resume, water-pump replacement, the required coolant refill/air-bleed follow-on repair, owner observations/photos, capability boundaries, and mechanically honest completion.
 
 Most importantly, the application did not need a special `if 2009 Honda Civic Hybrid` code path. The vehicle facts live in data/evidence; the application uses the same generic publication and repair-runtime machinery.
 
@@ -509,13 +520,22 @@ That satisfies the Phase 7 exit gate.
 
 ### Phase 8 — Prove the same design works on five different vehicle models
 
-Phase 8 is now the next roadmap phase, but it has **not started** in this update.
+**Complete.**
 
-The remaining reference vehicles are the 2015 Toyota Camry, 2018 Ford F-150, 2020 Subaru Forester, and 2022 Hyundai Tucson. They must be added through data using the same generic system; adding a vehicle must not require make/model/year/trim application-code branches.
+The full validation fleet is now represented:
+- 2009 Honda Civic Hybrid — deep primary proof
+- 2015 Toyota Camry — license-plate light bulb replacement
+- 2018 Ford F-150 — license-plate light bulb replacement
+- 2020 Subaru Forester — backup-light bulb replacement
+- 2022 Hyundai Tucson with Smartstream G 2.5 GDI — cabin-air-filter replacement
+
+Camry, F-150, Forester, and Tucson are listed in one data index and run by one generic reference-fleet test. The test creates an unverified configuration from the data, publishes reviewed vehicle identity through the restricted materializer, publishes reviewed repair requirements/actions, proves readiness blockers, executes the ordered physical repair actions, and requires final mechanical completion. The same source code does this for every listed dataset.
+
+No Toyota-, Ford-, Subaru-, or Hyundai-specific application service or make/model conditional was introduced. That satisfies the Phase 8 exit gate.
 
 ### Phase 9 — Run the final MVP test campaign
 
-Not yet the active final campaign. Existing permanent test gates remain running, but Phase 9 will validate the completed MVP as one system: unit/domain tests, APIs, security, owner isolation, migrations, browser flows, randomized acceptance, the five-model fleet, offline/degraded behavior, timeout recovery, downstream semantics, unsupported-computer boundaries, durable hosted photos, source-code data checks, and RBAC.
+Phase 9 is now the **next roadmap phase**. Existing permanent gates are already green, but the fresh final campaign has not started yet. It will validate the completed MVP as one system: unit/domain tests, APIs, security, owner isolation, migrations, browser flows, randomized acceptance, the full five-model fleet, offline/degraded behavior, timeout recovery, downstream semantics, unsupported-computer boundaries, durable hosted photos, source-code data checks, and RBAC.
 
 ### Phase 10 — Move the finished MVP into production
 
@@ -531,6 +551,6 @@ Charm.li approval remains narrow: manually reviewed evidence for the approved 20
 
 ### Exact place to resume work
 
-Phase 7 is complete. The next roadmap phase is **Phase 8 — populate the remaining reference fleet through data only**.
+Phase 8 is complete. The next roadmap phase is **Phase 9 — build and run the fresh MVP validation suite**.
 
-Phase 8 has not been started by this update. The separate Phase 6 live NHTSA HTTP-ingestion proof, Phase 1 hosted durable-photo proof, Phase 9 final validation campaign, and production cutover requirements all remain pending in their existing roadmap locations.
+The separate Phase 6 live NHTSA HTTP-ingestion proof and broad repair-knowledge work, Phase 1 hosted durable-photo proof, Phase 9 final validation campaign, and production cutover requirements all remain pending in their existing roadmap locations.
