@@ -9,17 +9,17 @@ Last updated: **2026-09-17**
 
 Current exact implementation proof tracked here:
 - active implementation branch: `partgraph-mvp-consolidation`
-- latest exact green implementation/data commit: `e81dd1659b4b5e2c7ea952b5d406313c2ce1ea51`
-- MVP Final Validation CI: passed (`#44`)
-- full API CI: passed (`#1008`)
-- Web CI: passed (`#871`)
-- extraction/provider-ingestion pipeline CI: passed (`#339`)
-- canonical publication CI: passed (`#279`)
-- reference repair runtime CI: passed (`#278`)
-- database reliability CI: passed (`#131`)
-- operational observability CI: passed (`#93`)
-- Web dependency advisory CI: passed (`#135`)
-- latest observed READY Vercel consolidation preview for the Phase 8 Tucson data line: `dpl_2f9YRc4BEN9nHc3PJRHdU9fwPBy3` on `6862983d386a879fd7ef4ac5acd0c2e7bb27a6e5`; the exact green `e81dd165...` proof is the GitHub CI/runtime proof after the Phase 9 unit/domain, API, authentication/security, RLS/owner-isolation, migration, and production-copy migration validation layers
+- latest exact green implementation/data commit: `9ea4e48c4b2567cf564f8a0f23706255b1cd1f2c`
+- MVP Final Validation CI: passed (`#48`)
+- full API CI: passed (`#1010`)
+- Web CI: passed (`#873`)
+- extraction/provider-ingestion pipeline CI: passed (`#341`)
+- canonical publication CI: passed (`#281`)
+- reference repair runtime CI: passed (`#280`)
+- database reliability CI: passed (`#133`)
+- operational observability CI: passed (`#95`)
+- Web dependency advisory CI: passed (`#137`)
+- latest observed READY Vercel consolidation preview for the Phase 8 Tucson data line: `dpl_2f9YRc4BEN9nHc3PJRHdU9fwPBy3` on `6862983d386a879fd7ef4ac5acd0c2e7bb27a6e5`; the exact green `9ea4e48c...` proof is the GitHub CI/runtime proof after the Phase 9 unit/domain, API, authentication/security, RLS/owner-isolation, migration, production-copy migration, and full-stack integration layers
 - consolidation preview database schema: `0059_primary_vehicle_domains`
 - production database: intentionally unchanged at `0020_catalog_coverage`
 - PR #84: remains draft/unmerged
@@ -28,7 +28,7 @@ Phase 7 is complete for the primary deep-test vehicle, the 2009 Honda Civic Hybr
 
 Phase 8 is also complete. The same generic identity/publication/readiness/guidance/completion code now executes reviewed reference repairs for the 2015 Toyota Camry, 2018 Ford F-150, 2020 Subaru Forester, and 2022 Hyundai Tucson in addition to the Phase 7 Civic proof. The four additional datasets are selected through `api/data/reference/phase8_reference_fleet_v1.json` and exercised by one data-indexed runtime test; no make/model/year/trim application service or conditional branch was added for the new vehicles.
 
-Phase 9 is now in progress. The first six fresh final-validation layers are complete: `.github/workflows/mvp-validation.yml` runs the release-oriented unit/domain, migrated-Postgres HTTP API, authentication/security, RLS/owner-isolation, migration, and production-copy migration contracts together instead of relying only on scattered historical greens. On `e81dd1659b4b5e2c7ea952b5d406313c2ce1ea51`, all six jobs and every established exact-head regression passed. A real isolated Neon copy of production was also migrated from `0020_catalog_coverage` to `0063_photo_storage_outbox` with all 18 baseline private-table fingerprints preserved. Full-stack integration is the next Phase 9 task.
+Phase 9 is now in progress. The first seven fresh final-validation layers are complete: `.github/workflows/mvp-validation.yml` runs the release-oriented unit/domain, migrated-Postgres HTTP API, authentication/security, RLS/owner-isolation, migration, production-copy migration, and full-stack integration contracts together instead of relying only on scattered historical greens. On `9ea4e48c4b2567cf564f8a0f23706255b1cd1f2c`, all seven jobs and every established exact-head regression passed. The full-stack gate builds the React frontend, packages it into the FastAPI runtime, migrates PostgreSQL, starts the assembled same-origin application, and proves real session/preferences/Garage persistence over HTTP. Verified-guidance integration is the next Phase 9 task.
 
 The new primary-vehicle canonical domains are data-driven. Reviewed exact-vehicle claims materialize an `Engine` system, `Engine cooling system` subsystem, and `Engine water-pump assembly`; first-class specifications record the 3.4 US qt engine-oil change capacity with filter and 39 N·m oil-drain-bolt torque. The same source-authority, verified-evidence, MechanicalClaim, restricted-materializer, conflict-quarantine, canonical-version, and evidence-link rules used by existing canonical knowledge apply to these domains.
 
@@ -384,7 +384,7 @@ Exit gate: **satisfied.** The same source code executes the selected reference-f
 
 ## Phase 9 — Build the fresh MVP validation suite
 
-Status: **In progress. The fresh release-oriented validation campaign has completed its unit/domain, API, authentication/security, RLS/owner-isolation, migration, and production-copy migration layers; full-stack integration is next. Existing permanent CI gates remain active.**
+Status: **In progress. The fresh release-oriented validation campaign has completed its unit/domain, API, authentication/security, RLS/owner-isolation, migration, production-copy migration, and full-stack integration layers; verified-guidance integration is next. Existing permanent CI gates remain active.**
 
 - [x] unit/domain tests for final MVP behavior
 - [x] API tests for final MVP behavior
@@ -392,7 +392,7 @@ Status: **In progress. The fresh release-oriented validation campaign has comple
 - [x] RLS/owner-isolation tests
 - [x] migration tests
 - [x] production-copy migration validation
-- [ ] full-stack integration
+- [x] full-stack integration
 - [ ] verified-guidance integration
 - [ ] browser E2E
 - [ ] randomized acceptance
@@ -418,8 +418,10 @@ Completed Phase 9 proof so far:
 - migration suite: `api/tests/test_mvp_migrations.py`
 - production-copy migration job: `Phase 9 production-copy migration contracts`
 - production-copy verifier: `api/scripts/verify_production_copy_upgrade.py`
-- exact proof head: `e81dd1659b4b5e2c7ea952b5d406313c2ce1ea51`
-- proof run: `MVP Final Validation CI #44`
+- full-stack job: `Phase 9 full-stack integration`
+- full-stack verifier: `api/scripts/verify_full_stack_runtime.py`
+- exact proof head: `9ea4e48c4b2567cf564f8a0f23706255b1cd1f2c`
+- proof run: `MVP Final Validation CI #48`
 - unit/domain contracts cover fail-closed source authority and repair materialization, unsupported computer/service-tool boundaries, provider network safety, provider/API/browser timeout hierarchy, ambiguous-write recovery, and vehicle-fact externalization
 - API contracts run against the FastAPI application with a migrated fresh PostgreSQL service and verify live/readiness health, platform response headers, standardized 404/405 error envelopes, request-size enforcement, authenticated Garage/repair collection wiring, and the core MVP repair HTTP surface
 - authentication/security contracts run against the real authentication/session path with a migrated fresh PostgreSQL service and verify unauthenticated rejection, CSRF and exact-origin enforcement, secure HttpOnly session-cookie/HSTS behavior, Argon2 password hashing, hashed session-token storage, logout revocation, non-enumerating invalid-login responses, and persisted failed-login rate limiting through 429
@@ -428,8 +430,10 @@ Completed Phase 9 proof so far:
 - migration contracts require one Alembic head and one base, require every declared parent revision to exist, apply the complete migration history to an empty PostgreSQL database, verify the database is stamped at the exact current head, require every registered ORM table/column to exist in the migrated schema, and prove re-applying `upgrade head` is idempotent
 - production-copy CI reconstructs `0020_catalog_coverage`, seeds representative persisted owner/session state, fingerprints baseline private columns without recording owner values, upgrades to current head, and requires every baseline row-count/digest fingerprint to remain unchanged
 - live production-copy proof used Neon child branch `br-shiny-sunset-aebi1qvo` cloned from production `br-shiny-silence-aexgk2zm`; it started at `0020_catalog_coverage`, reached `0063_photo_storage_outbox`, and preserved all 18 baseline private-table fingerprints with zero mismatches; production itself was re-checked and remained at `0020_catalog_coverage`
-- the live-copy SQL was emitted on validation commit `91a701e7229bf869bdc32aa488c7584b3a200e5a`; final head `e81dd1659b4b5e2c7ea952b5d406313c2ce1ea51` differs only by removal of the temporary 14-line SQL-emission diagnostic from `.github/workflows/mvp-validation.yml`, with no migration/application/verifier change
+- the live-copy SQL was emitted on validation commit `91a701e7229bf869bdc32aa488c7584b3a200e5a`; final head `9ea4e48c4b2567cf564f8a0f23706255b1cd1f2c` differs only by removal of the temporary 14-line SQL-emission diagnostic from `.github/workflows/mvp-validation.yml`, with no migration/application/verifier change
 - the Neon validation branch is intentionally retained pending explicit branch-cleanup approval
+- full-stack integration builds the locked React/Vite frontend with same-origin API configuration, packages `web/dist` into `api/partgraph/frontend`, migrates a fresh PostgreSQL database, starts FastAPI, proves the built JavaScript asset is served, proves database readiness, registers a real user with an HttpOnly session cookie, persists and rereads account preferences, creates and rereads a private Garage vehicle, logs out, and confirms the revoked session can no longer access `/api/v1/auth/me`
+- browser automation is intentionally not claimed by this gate; DOM/browser E2E remains a later separate Phase 9 item
 - all eight established exact-head regression workflows also passed on the final commit
 
 Existing permanent CI, including migration history, adopted-baseline equivalence, RBAC, source-authority, extraction, canonical publication, reference-repair runtime, container build, and readiness smoke, remains active and is not discarded while Phase 9 is pending.
@@ -482,9 +486,9 @@ This section says the same thing as the technical tracker above, but in plain En
 
 ### Where the project stands right now
 
-**Phase 9 is now in progress.** The five-model Phase 8 proof remains complete, and the first six fresh final-MVP validation layers have now run successfully: unit/domain contracts, HTTP API contracts, authentication/security contracts, owner-data isolation at the PostgreSQL row-security boundary, migration contracts, and production-copy migration validation.
+**Phase 9 is now in progress.** The five-model Phase 8 proof remains complete, and the first seven fresh final-MVP validation layers have now run successfully: unit/domain contracts, HTTP API contracts, authentication/security contracts, owner-data isolation at the PostgreSQL row-security boundary, migration contracts, production-copy migration validation, and full-stack integration.
 
-The exact green implementation/data commit is `e81dd1659b4b5e2c7ea952b5d406313c2ce1ea51`. On that commit, all six jobs in MVP Final Validation CI #44 passed, along with API CI #1008, Web CI #871, Extraction Pipeline CI #339, Canonical Publication CI #279, Reference Repair Runtime CI #278, Database Reliability CI #131, Operational Observability CI #93, and Web Dependency Advisory CI #135. The latest observed READY Vercel preview on the preceding Phase 8 application/data line remains `dpl_2f9YRc4BEN9nHc3PJRHdU9fwPBy3`, and the preview database schema remains `0059_primary_vehicle_domains`.
+The exact green implementation/data commit is `9ea4e48c4b2567cf564f8a0f23706255b1cd1f2c`. On that commit, all seven jobs in MVP Final Validation CI #48 passed, along with API CI #1010, Web CI #873, Extraction Pipeline CI #341, Canonical Publication CI #281, Reference Repair Runtime CI #280, Database Reliability CI #133, Operational Observability CI #95, and Web Dependency Advisory CI #137. The latest observed READY Vercel preview on the preceding Phase 8 application/data line remains `dpl_2f9YRc4BEN9nHc3PJRHdU9fwPBy3`, and the preview database schema remains `0059_primary_vehicle_domains`.
 
 The production application has **not** been switched to the consolidation branch. PR #84 remains a draft and unmerged, and the production database remains deliberately at `0020_catalog_coverage`.
 
@@ -565,7 +569,7 @@ No Toyota-, Ford-, Subaru-, or Hyundai-specific application service or make/mode
 
 ### Phase 9 — Run the final MVP test campaign
 
-**In progress.** The first six layers are complete. The final-validation workflow now reruns the core unit/domain contracts together, runs a true HTTP API contract job against the FastAPI application with a freshly migrated PostgreSQL service, runs a real authentication/session security job against a separate freshly migrated PostgreSQL service, runs a dedicated owner-isolation job against another freshly migrated PostgreSQL service, runs a fresh migration-history job against another empty PostgreSQL database, and runs a production-era migration-preservation job starting from `0020_catalog_coverage`.
+**In progress.** The first seven layers are complete. The final-validation workflow now reruns the core unit/domain contracts together, runs a true HTTP API contract job against the FastAPI application with a freshly migrated PostgreSQL service, runs a real authentication/session security job against a separate freshly migrated PostgreSQL service, runs a dedicated owner-isolation job against another freshly migrated PostgreSQL service, runs a fresh migration-history job against another empty PostgreSQL database, runs a production-era migration-preservation job starting from `0020_catalog_coverage`, and runs the built React frontend together with FastAPI and PostgreSQL as one same-origin application.
 
 The unit/domain layer checks fail-closed source authority, evidence-backed repair materialization, unsupported computer/service-tool boundaries, provider network safety, timeout hierarchy, ambiguous-write recovery, and vehicle-fact externalization. The API layer checks live/readiness health, request/version/security response headers, standardized 404/405 error envelopes, request-size enforcement, authenticated Garage and repair collection routing, and that the core repair API endpoints are actually exposed. The authentication/security layer checks unauthenticated rejection, CSRF and exact-origin enforcement, secure HttpOnly session cookies and HSTS, Argon2 password hashing, hashed session-token storage, logout revocation, matching invalid-credential responses for known and unknown identities, and persisted failed-login rate limiting through HTTP 429.
 
@@ -575,7 +579,9 @@ The migration layer validates the migration history itself and then builds a com
 
 The production-copy layer goes further. The permanent CI job starts from the actual production-era revision `0020_catalog_coverage`, seeds persisted owner/session data, fingerprints the baseline private columns without storing private values, upgrades to current head, and proves the fingerprints are unchanged. We then repeated that against a real isolated Neon child of production: the copy upgraded from `0020_catalog_coverage` to `0063_photo_storage_outbox`, all 18 private-table fingerprints matched exactly before and after, and production itself remained untouched at `0020_catalog_coverage`. The validation branch is being kept until branch cleanup is explicitly approved.
 
-All six jobs passed in MVP Final Validation CI #44 on `e81dd1659b4b5e2c7ea952b5d406313c2ce1ea51`, and every established exact-head regression workflow also passed on that same commit. The **next Phase 9 task is full-stack integration**. Verified-guidance integration, browser E2E, randomized/reference-fleet acceptance, offline/degraded behavior, timeout recovery, downstream semantics, durable hosted photos, data-free-source-code checks, and RBAC remain later Phase 9 items.
+The full-stack layer proves that the frontend and backend are not merely passing tests in isolation. CI builds the real React/Vite bundle, places it where FastAPI serves production-style frontend files, migrates PostgreSQL, starts the assembled application, fetches the built JavaScript asset, verifies API/database readiness, creates a real user session, saves and rereads account preferences, creates and rereads a Garage vehicle, and logs out. This is HTTP/runtime integration only; browser clicking and DOM behavior remain for the separate browser-E2E task.
+
+All seven jobs passed in MVP Final Validation CI #48 on `9ea4e48c4b2567cf564f8a0f23706255b1cd1f2c`, and every established exact-head regression workflow also passed on that same commit. The **next Phase 9 task is verified-guidance integration**. Browser E2E, randomized/reference-fleet acceptance, offline/degraded behavior, timeout recovery, downstream semantics, durable hosted photos, data-free-source-code checks, and RBAC remain later Phase 9 items.
 
 ### Phase 10 — Move the finished MVP into production
 
@@ -591,6 +597,6 @@ Charm.li approval remains narrow: manually reviewed evidence for the approved 20
 
 ### Exact place to resume work
 
-Phase 9 is in progress. The next roadmap task is **full-stack integration** in the fresh MVP validation suite.
+Phase 9 is in progress. The next roadmap task is **verified-guidance integration** in the fresh MVP validation suite.
 
 The separate Phase 6 live NHTSA HTTP-ingestion proof and broad repair-knowledge work, Phase 1 hosted durable-photo proof, remaining Phase 9 validation campaign, and production cutover requirements all remain pending in their existing roadmap locations.
