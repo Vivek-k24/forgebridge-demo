@@ -9,17 +9,17 @@ Last updated: **2026-09-16**
 
 Current exact implementation proof tracked here:
 - active implementation branch: `partgraph-mvp-consolidation`
-- latest exact green implementation/data commit: `751a9629cd8fc3acf61e02ee8e03b1c4f03ba7c2`
-- MVP Final Validation CI: passed (`#6`)
-- full API CI: passed (`#989`)
-- Web CI: passed (`#852`)
-- extraction/provider-ingestion pipeline CI: passed (`#320`)
-- canonical publication CI: passed (`#260`)
-- reference repair runtime CI: passed (`#259`)
-- database reliability CI: passed (`#112`)
-- operational observability CI: passed (`#74`)
-- Web dependency advisory CI: passed (`#116`)
-- latest observed READY Vercel consolidation preview for the Phase 8 Tucson data line: `dpl_2f9YRc4BEN9nHc3PJRHdU9fwPBy3` on `6862983d386a879fd7ef4ac5acd0c2e7bb27a6e5`; the exact green `751a9629...` proof is the GitHub CI/runtime proof after the Phase 9 unit/domain and API validation layers
+- latest exact green implementation/data commit: `e9a20cc3e490a98c7338185f1bfa07f32090738e`
+- MVP Final Validation CI: passed (`#16`)
+- full API CI: passed (`#994`)
+- Web CI: passed (`#857`)
+- extraction/provider-ingestion pipeline CI: passed (`#325`)
+- canonical publication CI: passed (`#265`)
+- reference repair runtime CI: passed (`#264`)
+- database reliability CI: passed (`#117`)
+- operational observability CI: passed (`#79`)
+- Web dependency advisory CI: passed (`#121`)
+- latest observed READY Vercel consolidation preview for the Phase 8 Tucson data line: `dpl_2f9YRc4BEN9nHc3PJRHdU9fwPBy3` on `6862983d386a879fd7ef4ac5acd0c2e7bb27a6e5`; the exact green `e9a20cc3...` proof is the GitHub CI/runtime proof after the Phase 9 unit/domain, API, and authentication/security validation layers
 - consolidation preview database schema: `0059_primary_vehicle_domains`
 - production database: intentionally unchanged at `0020_catalog_coverage`
 - PR #84: remains draft/unmerged
@@ -28,9 +28,9 @@ Phase 7 is complete for the primary deep-test vehicle, the 2009 Honda Civic Hybr
 
 Phase 8 is also complete. The same generic identity/publication/readiness/guidance/completion code now executes reviewed reference repairs for the 2015 Toyota Camry, 2018 Ford F-150, 2020 Subaru Forester, and 2022 Hyundai Tucson in addition to the Phase 7 Civic proof. The four additional datasets are selected through `api/data/reference/phase8_reference_fleet_v1.json` and exercised by one data-indexed runtime test; no make/model/year/trim application service or conditional branch was added for the new vehicles.
 
-Phase 9 is now in progress. The first two fresh final-validation layers are complete: `.github/workflows/mvp-validation.yml` runs the release-oriented unit/domain contracts and the migrated-Postgres HTTP API contract job together instead of relying only on scattered historical greens. On `751a9629cd8fc3acf61e02ee8e03b1c4f03ba7c2`, both jobs and every established exact-head regression passed. Authentication/security validation is the next Phase 9 task.
+Phase 9 is now in progress. The first three fresh final-validation layers are complete: `.github/workflows/mvp-validation.yml` runs the release-oriented unit/domain contracts, the migrated-Postgres HTTP API contracts, and migrated-Postgres authentication/security contracts together instead of relying only on scattered historical greens. On `e9a20cc3e490a98c7338185f1bfa07f32090738e`, all three jobs and every established exact-head regression passed. RLS/owner-isolation validation is the next Phase 9 task.
 
-The new primary-vehicle canonical domains are data-driven. Reviewed exact-vehicle claims materialize an `Engine` system, `Engine cooling system` subsystem, and `Engine water-pump assembly`; first-class specifications record the 3.4 US qt engine-oil change capacity with filter and 39 N·m engine-oil drain-bolt torque. The same source-authority, verified-evidence, MechanicalClaim, restricted-materializer, conflict-quarantine, canonical-version, and evidence-link rules used by existing canonical knowledge apply to these domains.
+The new primary-vehicle canonical domains are data-driven. Reviewed exact-vehicle claims materialize an `Engine` system, `Engine cooling system` subsystem, and `Engine water-pump assembly`; first-class specifications record the 3.4 US qt engine-oil change capacity with filter and 39 N·m oil-drain-bolt torque. The same source-authority, verified-evidence, MechanicalClaim, restricted-materializer, conflict-quarantine, canonical-version, and evidence-link rules used by existing canonical knowledge apply to these domains.
 
 The long-lived consolidation preview remains deliberately non-seeding. It is migrated to `0059_primary_vehicle_domains`, but deployment did not silently create Civic structure/specification rows or Phase 8 reference repairs; reviewed facts are reconstructed and proven through canonical materialization on fresh databases. The preview still contains previously published knowledge unless knowledge is explicitly published through the authorized path.
 
@@ -384,11 +384,11 @@ Exit gate: **satisfied.** The same source code executes the selected reference-f
 
 ## Phase 9 — Build the fresh MVP validation suite
 
-Status: **In progress. The fresh release-oriented validation campaign has completed its unit/domain and API layers; authentication/security validation is next. Existing permanent CI gates remain active.**
+Status: **In progress. The fresh release-oriented validation campaign has completed its unit/domain, API, and authentication/security layers; RLS/owner-isolation validation is next. Existing permanent CI gates remain active.**
 
 - [x] unit/domain tests for final MVP behavior
 - [x] API tests for final MVP behavior
-- [ ] authentication/security tests
+- [x] authentication/security tests
 - [ ] RLS/owner-isolation tests
 - [ ] migration tests
 - [ ] production-copy migration validation
@@ -410,10 +410,14 @@ Completed Phase 9 proof so far:
 - unit/domain contract job: `Phase 9 unit/domain contracts`
 - API contract job: `Phase 9 API contracts`
 - API contract suite: `api/tests/test_mvp_api_contracts.py`
-- exact proof head: `751a9629cd8fc3acf61e02ee8e03b1c4f03ba7c2`
-- proof run: `MVP Final Validation CI #6`
+- authentication/security job: `Phase 9 authentication/security contracts`
+- authentication/security suite: `api/tests/test_mvp_auth_security.py`
+- exact proof head: `e9a20cc3e490a98c7338185f1bfa07f32090738e`
+- proof run: `MVP Final Validation CI #16`
 - unit/domain contracts cover fail-closed source authority and repair materialization, unsupported computer/service-tool boundaries, provider network safety, provider/API/browser timeout hierarchy, ambiguous-write recovery, and vehicle-fact externalization
 - API contracts run against the FastAPI application with a migrated fresh PostgreSQL service and verify live/readiness health, platform response headers, standardized 404/405 error envelopes, request-size enforcement, authenticated Garage/repair collection wiring, and the core MVP repair HTTP surface
+- authentication/security contracts run against the real authentication/session path with a migrated fresh PostgreSQL service and verify unauthenticated rejection, CSRF and exact-origin enforcement, secure HttpOnly session-cookie/HSTS behavior, Argon2 password hashing, hashed session-token storage, logout revocation, non-enumerating invalid-login responses, and persisted failed-login rate limiting through 429
+- existing exact-origin/CSP contracts are rerun in the authentication/security job
 - all eight established exact-head regression workflows also passed on the same commit
 
 Existing permanent CI, including migration history, adopted-baseline equivalence, RBAC, source-authority, extraction, canonical publication, reference-repair runtime, container build, and readiness smoke, remains active and is not discarded while Phase 9 is pending.
@@ -466,9 +470,9 @@ This section says the same thing as the technical tracker above, but in plain En
 
 ### Where the project stands right now
 
-**Phase 9 is now in progress.** The five-model Phase 8 proof remains complete, and the first two fresh final-MVP validation layers have now run successfully: unit/domain contracts and HTTP API contracts.
+**Phase 9 is now in progress.** The five-model Phase 8 proof remains complete, and the first three fresh final-MVP validation layers have now run successfully: unit/domain contracts, HTTP API contracts, and authentication/security contracts.
 
-The exact green implementation/data commit is `751a9629cd8fc3acf61e02ee8e03b1c4f03ba7c2`. On that commit, both jobs in MVP Final Validation CI #6 passed, along with API CI #989, Web CI #852, Extraction Pipeline CI #320, Canonical Publication CI #260, Reference Repair Runtime CI #259, Database Reliability CI #112, Operational Observability CI #74, and Web Dependency Advisory CI #116. The latest observed READY Vercel preview on the preceding Phase 8 application/data line remains `dpl_2f9YRc4BEN9nHc3PJRHdU9fwPBy3`, and the preview database schema remains `0059_primary_vehicle_domains`.
+The exact green implementation/data commit is `e9a20cc3e490a98c7338185f1bfa07f32090738e`. On that commit, all three jobs in MVP Final Validation CI #16 passed, along with API CI #994, Web CI #857, Extraction Pipeline CI #325, Canonical Publication CI #265, Reference Repair Runtime CI #264, Database Reliability CI #117, Operational Observability CI #79, and Web Dependency Advisory CI #121. The latest observed READY Vercel preview on the preceding Phase 8 application/data line remains `dpl_2f9YRc4BEN9nHc3PJRHdU9fwPBy3`, and the preview database schema remains `0059_primary_vehicle_domains`.
 
 The production application has **not** been switched to the consolidation branch. PR #84 remains a draft and unmerged, and the production database remains deliberately at `0020_catalog_coverage`.
 
@@ -500,7 +504,7 @@ Offline writing and reconciliation are not part of this MVP.
 
 ### Phase 3 — Keep private data and powerful actions separated
 
-Functionally complete. Users, contributors, reviewers, curators, collectors, materializers, and operators have separate permissions. Owner Garage/session information remains private, while canonical automotive knowledge is shared but read-only to ordinary users.
+Functionally complete. Users, contributors, reviewers, curators, collectors, materializers, and operators have separate permissions. Owner Garage/session information remains private, while canonical automotive knowledge is shared but read-only to ordinary authenticated users.
 
 ### Phase 4 — Give the database a place for the full repair model
 
@@ -549,11 +553,11 @@ No Toyota-, Ford-, Subaru-, or Hyundai-specific application service or make/mode
 
 ### Phase 9 — Run the final MVP test campaign
 
-**In progress.** The first two layers are complete. The final-validation workflow now reruns the core unit/domain contracts together and also runs a true HTTP API contract job against the FastAPI application with a freshly migrated PostgreSQL service.
+**In progress.** The first three layers are complete. The final-validation workflow now reruns the core unit/domain contracts together, runs a true HTTP API contract job against the FastAPI application with a freshly migrated PostgreSQL service, and runs a real authentication/session security job against a separate freshly migrated PostgreSQL service.
 
-The unit/domain layer checks fail-closed source authority, evidence-backed repair materialization, unsupported computer/service-tool boundaries, provider network safety, timeout hierarchy, ambiguous-write recovery, and vehicle-fact externalization. The API layer checks live/readiness health, request/version/security response headers, standardized 404/405 error envelopes, request-size enforcement, authenticated Garage and repair collection routing, and that the core repair API endpoints are actually exposed.
+The unit/domain layer checks fail-closed source authority, evidence-backed repair materialization, unsupported computer/service-tool boundaries, provider network safety, timeout hierarchy, ambiguous-write recovery, and vehicle-fact externalization. The API layer checks live/readiness health, request/version/security response headers, standardized 404/405 error envelopes, request-size enforcement, authenticated Garage and repair collection routing, and that the core repair API endpoints are actually exposed. The authentication/security layer checks unauthenticated rejection, CSRF and exact-origin enforcement, secure HttpOnly session cookies and HSTS, Argon2 password hashing, hashed session-token storage, logout revocation, matching invalid-credential responses for known and unknown identities, and persisted failed-login rate limiting through HTTP 429.
 
-Both jobs passed in MVP Final Validation CI #6 on `751a9629cd8fc3acf61e02ee8e03b1c4f03ba7c2`, and every established exact-head regression workflow also passed on that same commit. The **next Phase 9 task is authentication/security tests**. Owner isolation, migrations, browser flows, randomized/reference-fleet acceptance, offline/degraded behavior, timeout recovery, downstream semantics, durable hosted photos, data-free-source-code checks, and RBAC remain later Phase 9 items.
+All three jobs passed in MVP Final Validation CI #16 on `e9a20cc3e490a98c7338185f1bfa07f32090738e`, and every established exact-head regression workflow also passed on that same commit. The **next Phase 9 task is RLS/owner-isolation tests**. Migrations, browser flows, randomized/reference-fleet acceptance, offline/degraded behavior, timeout recovery, downstream semantics, durable hosted photos, data-free-source-code checks, and RBAC remain later Phase 9 items.
 
 ### Phase 10 — Move the finished MVP into production
 
@@ -569,6 +573,6 @@ Charm.li approval remains narrow: manually reviewed evidence for the approved 20
 
 ### Exact place to resume work
 
-Phase 9 is in progress. The next roadmap task is **authentication/security tests** in the fresh MVP validation suite.
+Phase 9 is in progress. The next roadmap task is **RLS/owner-isolation tests** in the fresh MVP validation suite.
 
 The separate Phase 6 live NHTSA HTTP-ingestion proof and broad repair-knowledge work, Phase 1 hosted durable-photo proof, remaining Phase 9 validation campaign, and production cutover requirements all remain pending in their existing roadmap locations.
