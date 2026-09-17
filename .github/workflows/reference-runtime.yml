@@ -3,9 +3,7 @@ name: Reference Repair Runtime CI
 on:
   pull_request:
     paths:
-      - 'api/data/reference/2009_honda_civic_hybrid_repairs_v1/**'
-      - 'api/data/reference/2009_honda_civic_hybrid_profile_v1/**'
-      - 'api/data/reference/2015_toyota_camry_repairs_v1/**'
+      - 'api/data/reference/**'
       - 'api/partgraph/repair_experience/**'
       - 'api/partgraph/repair_definition/**'
       - 'api/partgraph/knowledge/repair_materialization*.py'
@@ -26,9 +24,7 @@ on:
       - main
       - partgraph-mvp-consolidation
     paths:
-      - 'api/data/reference/2009_honda_civic_hybrid_repairs_v1/**'
-      - 'api/data/reference/2009_honda_civic_hybrid_profile_v1/**'
-      - 'api/data/reference/2015_toyota_camry_repairs_v1/**'
+      - 'api/data/reference/**'
       - 'api/partgraph/repair_experience/**'
       - 'api/partgraph/repair_definition/**'
       - 'api/partgraph/knowledge/repair_materialization*.py'
