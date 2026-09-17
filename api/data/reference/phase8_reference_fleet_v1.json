@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "dataset_key": "phase8-reference-fleet-v1",
+  "datasets": [
+    {
+      "path": "2015_toyota_camry_repairs_v1",
+      "manifest": "manifest.json",
+      "repair": "license_plate_light_bulb_replacement.json"
+    },
+    {
+      "path": "2018_ford_f150_repairs_v1",
+      "manifest": "manifest.json",
+      "repair": "license_plate_light_bulb_replacement.json"
+    }
+  ]
+}
