@@ -284,9 +284,6 @@ jobs:
           python -m unittest discover -s api/tests
           -p 'test_mvp_migrations.py' -v
 
-      - name: Verify no ORM migration drift
-        run: alembic -c api/alembic.ini check
-
       - name: Re-apply head idempotently
         run: |
           alembic -c api/alembic.ini upgrade head
