@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2015-toyota-camry-repairs-v1",
+  "repair_key": "license-plate-light-bulb-replacement",
+  "title": "License plate light bulb replacement",
+  "capability_policy_key": "diy_supported",
+  "source_pages": [427, 434, 435, 508],
+  "operations": [],
+  "requirements": [
+    {
+      "use_key": "license-plate-bulb-use",
+      "requirement_key": "part.license_plate_light_bulb.w5w_5w_clear",
+      "category": "part",
+      "display_name": "W5W 5 W clear wedge-base license plate light bulb",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "replacement_required",
+      "timing": "before_start",
+      "source_pages": [427, 508]
+    },
+    {
+      "use_key": "flat-screwdriver-use",
+      "requirement_key": "tool.flat_tip_screwdriver",
+      "category": "tool",
+      "display_name": "Flat-tipped screwdriver",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair",
+      "source_pages": [434]
+    },
+    {
+      "use_key": "protective-tape-use",
+      "requirement_key": "consumable.protective_tape",
+      "category": "consumable",
+      "display_name": "Protective tape for screwdriver tip",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "consumed",
+      "timing": "whole_repair",
+      "source_pages": [434]
+    }
+  ],
+  "actions": [
+    {
+      "action_key": "prepare-replacement-bulb",
+      "title": "Confirm the replacement bulb and let the lamp cool",
+      "position": 0,
+      "skippable": false,
+      "instruction": "Confirm the replacement is a W5W 5 W clear wedge-base bulb. Turn the lights off and do not begin replacement until the existing bulb has cooled.",
+      "warning_text": "A recently illuminated bulb can be hot enough to cause burns.",
+      "requirement_use_keys": ["license-plate-bulb-use"],
+      "prerequisite_action_keys": [],
+      "source_pages": [427, 435, 508]
+    },
+    {
+      "action_key": "remove-license-plate-light-cover",
+      "title": "Remove the license plate light cover",
+      "position": 1,
+      "skippable": false,
+      "instruction": "Wrap the flat-tipped screwdriver tip with protective tape, then remove the license plate light cover without damaging the vehicle finish.",
+      "requirement_use_keys": ["flat-screwdriver-use", "protective-tape-use"],
+      "prerequisite_action_keys": ["prepare-replacement-bulb"],
+      "source_pages": [434]
+    },
+    {
+      "action_key": "remove-lens-and-old-bulb",
+      "title": "Remove the lens and old bulb",
+      "position": 2,
+      "skippable": false,
+      "instruction": "Place the taped flat-tipped screwdriver behind the lens tab and turn it as shown in the owner manual to pry off the lens. Remove the old light bulb.",
+      "requirement_use_keys": ["flat-screwdriver-use", "protective-tape-use"],
+      "prerequisite_action_keys": ["remove-license-plate-light-cover"],
+      "source_pages": [434]
+    },
+    {
+      "action_key": "install-bulb-and-restore-cover",
+      "title": "Install the new bulb and restore the lamp",
+      "position": 3,
+      "skippable": false,
+      "instruction": "Install the new W5W 5 W bulb, then reinstall the lens and cover by reversing the removal steps. Fully seat the bulb and the parts used to secure it before finishing.",
+      "warning_text": "Do not touch the glass portion of the bulb with bare hands. Make sure the bulb and securing parts are fully installed.",
+      "requirement_use_keys": ["license-plate-bulb-use"],
+      "prerequisite_action_keys": ["remove-lens-and-old-bulb"],
+      "source_pages": [434, 435, 508]
+    }
+  ]
+}
