@@ -16,6 +16,11 @@
       "path": "2020_subaru_forester_repairs_v1",
       "manifest": "manifest.json",
       "repair": "backup_light_bulb_replacement.json"
+    },
+    {
+      "path": "2022_hyundai_tucson_repairs_v1",
+      "manifest": "manifest.json",
+      "repair": "cabin_air_filter_replacement.json"
     }
   ]
 }
