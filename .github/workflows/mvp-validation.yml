@@ -358,3 +358,105 @@ jobs:
           path: /tmp/phase9-production-copy.json
           if-no-files-found: ignore
           retention-days: 7
+
+
+  full-stack:
+    name: Phase 9 full-stack integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
+      PARTGRAPH_WEB_ORIGIN: http://127.0.0.1:8000
+      PARTGRAPH_COOKIE_SECURE: 'false'
+      PARTGRAPH_FULL_STACK_URL: http://127.0.0.1:8000
+      PARTGRAPH_MEDIA_ROOT: /tmp/partgraph-phase9-media
+
+    services:
+      postgres:
+        image: postgres:18.6-alpine
+        env:
+          POSTGRES_DB: partgraph
+          POSTGRES_USER: partgraph
+          POSTGRES_PASSWORD: partgraph
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U partgraph -d partgraph"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.14'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install API dependencies
+        run: python -m pip install -e './api[dev]'
+
+      - name: Install locked web dependencies
+        working-directory: web
+        run: npm ci --no-audit --no-fund
+
+      - name: Lint full-stack verifier
+        run: ruff check api/scripts/verify_full_stack_runtime.py
+
+      - name: Build same-origin frontend bundle
+        working-directory: web
+        env:
+          VITE_API_BASE_URL: ''
+        run: npm run build
+
+      - name: Package frontend into API runtime
+        run: |
+          rm -rf api/partgraph/frontend
+          mkdir -p api/partgraph/frontend
+          cp -R web/dist/. api/partgraph/frontend/
+
+      - name: Apply database migrations
+        run: alembic -c api/alembic.ini upgrade head
+
+      - name: Start assembled PartGraph stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m uvicorn partgraph.main:app \
+            --app-dir api \
+            --host 127.0.0.1 \
+            --port 8000 \
+            > /tmp/partgraph-phase9-full-stack.log 2>&1 &
+          echo "$!" > /tmp/partgraph-phase9-full-stack.pid
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error \
+                http://127.0.0.1:8000/api/v1/health/ready >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/partgraph-phase9-full-stack.log
+          exit 1
+
+      - name: Run final-MVP full-stack integration
+        run: python api/scripts/verify_full_stack_runtime.py
+
+      - name: Stop assembled PartGraph stack
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/partgraph-phase9-full-stack.pid ]; then
+            kill "$(cat /tmp/partgraph-phase9-full-stack.pid)" >/dev/null 2>&1 || true
+          fi
+          if [ -f /tmp/partgraph-phase9-full-stack.log ]; then
+            cat /tmp/partgraph-phase9-full-stack.log
+          fi
