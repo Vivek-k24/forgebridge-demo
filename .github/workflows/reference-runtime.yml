@@ -5,6 +5,7 @@ on:
     paths:
       - 'api/data/reference/2009_honda_civic_hybrid_repairs_v1/**'
       - 'api/data/reference/2009_honda_civic_hybrid_profile_v1/**'
+      - 'api/data/reference/2015_toyota_camry_repairs_v1/**'
       - 'api/partgraph/repair_experience/**'
       - 'api/partgraph/repair_definition/**'
       - 'api/partgraph/knowledge/repair_materialization*.py'
@@ -16,6 +17,7 @@ on:
       - 'api/tests/test_reference_photo_storage_runtime.py'
       - 'api/tests/test_reference_downstream_runtime.py'
       - 'api/tests/test_reference_primary_vehicle_runtime.py'
+      - 'api/tests/test_reference_fleet_runtime.py'
       - 'api/migrations/**'
       - 'api/pyproject.toml'
       - '.github/workflows/reference-runtime.yml'
@@ -26,6 +28,7 @@ on:
     paths:
       - 'api/data/reference/2009_honda_civic_hybrid_repairs_v1/**'
       - 'api/data/reference/2009_honda_civic_hybrid_profile_v1/**'
+      - 'api/data/reference/2015_toyota_camry_repairs_v1/**'
       - 'api/partgraph/repair_experience/**'
       - 'api/partgraph/repair_definition/**'
       - 'api/partgraph/knowledge/repair_materialization*.py'
@@ -37,6 +40,7 @@ on:
       - 'api/tests/test_reference_photo_storage_runtime.py'
       - 'api/tests/test_reference_downstream_runtime.py'
       - 'api/tests/test_reference_primary_vehicle_runtime.py'
+      - 'api/tests/test_reference_fleet_runtime.py'
       - 'api/migrations/**'
       - 'api/pyproject.toml'
       - '.github/workflows/reference-runtime.yml'
@@ -51,7 +55,7 @@ concurrency:
 
 jobs:
   reference-runtime:
-    name: Civic Hybrid repair runtime gate
+    name: Reference fleet repair runtime gate
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -98,6 +102,7 @@ jobs:
           api/tests/test_reference_photo_storage_runtime.py
           api/tests/test_reference_downstream_runtime.py
           api/tests/test_reference_primary_vehicle_runtime.py
+          api/tests/test_reference_fleet_runtime.py
 
       - name: Apply database migrations
         env:
