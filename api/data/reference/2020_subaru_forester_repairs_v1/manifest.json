@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2020-subaru-forester-repairs-v1",
+  "vehicle": {
+    "market": "US",
+    "year": 2020,
+    "make": "Subaru",
+    "model": "FORESTER"
+  },
+  "review": {
+    "status": "source_reviewed_reference_fixture",
+    "reviewed_through": "2026-09-16",
+    "reviewed_by": "partgraph_phase8_manual_review",
+    "note": "The Phase 8 reference fixture uses only facts explicitly supported by Subaru's U.S. 2020 Forester Owner's Manual. Optional trim, engine, transmission, drivetrain, body-style, and generation fields remain unset rather than inferred."
+  },
+  "sources": [
+    {
+      "source_key": "subaru-2020-forester-owner-manual-msa5m2002a",
+      "source_class": "oem_service",
+      "license_status": "approved",
+      "automation_allowed": false,
+      "document": "2020MY Forester Owner's Manual",
+      "document_part_number": "MSA5M2002A",
+      "url": "https://techinfo.subaru.com/stis/doc/ownerManual/MSA5M2002A_STIS-opt.pdf",
+      "supports": [
+        "vehicle_identity",
+        "backup_light_bulb_specification",
+        "backup_light_bulb_replacement_procedure",
+        "light_bulb_safety"
+      ]
+    }
+  ],
+  "repairs": [
+    {
+      "repair_key": "backup-light-bulb-replacement",
+      "path": "backup_light_bulb_replacement.json",
+      "source_key": "subaru-2020-forester-owner-manual-msa5m2002a",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 2,
+      "action_count": 6
+    }
+  ]
+}
