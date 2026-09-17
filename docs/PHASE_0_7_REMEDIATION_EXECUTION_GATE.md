@@ -110,7 +110,7 @@ Phase 8 is data-only by architecture, so concrete current-UI defects that can be
 | `PG-AUD-UI-007` | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | Repair Log photos can now reuse confirmed user-authored observations as equivalent descriptions without inventing image content or changing the database schema; final live accessibility validation and remaining photo-surface review remain Phase 9 work. |
 | `PG-AUD-UI-008` | BACKLOG | Automated browser E2E/accessibility/cross-browser final regression gate is Phase 9 work. |
 | `PG-AUD-UI-009` | BACKLOG | Final browser-support matrix enforcement depends on the Phase 9 representative-browser suite. |
-| `PG-AUD-UI-010` | ELIGIBLE | Current contrast/target-size defects are concrete and independently measurable. |
+| `PG-AUD-UI-010` | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | The named repair-placeholder/Home-muted contrast defects and undersized standalone inventory mic are corrected and statically measured/gated. The complete contrast/state/browser inventory remains Phase 9 validation work. |
 | `PG-AUD-UI-011` | BLOCKED | Resolve the dead-code/import decision under `PG-AUD-CODE-003` first; if retained, accessibility proof can be scheduled with later browser/AT work. |
 
 Current-control proof for `PG-AUD-UI-001` through `PG-AUD-UI-003`:
@@ -137,6 +137,18 @@ Current-control proof for `PG-AUD-UI-004` through `PG-AUD-UI-007`:
 - exact-head Vercel deployment: `dpl_J5j6S1J6n1GPZA2tfAoqjPkSh2GE` READY
 - no database migration, production write, provider activation, publication, merge, or cutover was performed
 - final accessibility-tree, keyboard/screen-reader, representative-browser, and complete photo-surface acceptance proof remains in the existing Phase 9 backlog rather than being pulled forward
+
+Current-control proof for `PG-AUD-UI-010`:
+
+- `accessibility-ui.css` now raises the audited repair placeholder and named Home muted strings to `--pg-dark-muted-text: #82979e`; across the audited dark backgrounds (`#0f1a20`, `#132126`, `#16262b`) the permanent validator calculates a minimum contrast of 5.10:1, above the 4.5:1 ordinary-text target.
+- standalone primary touch controls use `--pg-primary-touch-target: 44px`; the inventory voice-search mic is now 44×44 minimum, while compact inline controls are not enlarged indiscriminately.
+- `web/scripts/validate-current-contrast-targets.mjs` calculates relative-luminance contrast, guards the named selectors, enforces the 44px primary-target floor, and verifies `accessibility-ui.css` remains loaded after the older repair contrast layer.
+- exact implementation proof head: `c98e17fbe73f75c30fecc942f3889f86a83f0fa9`
+- exact-head API CI/CD #962, Web CI/CD #825, Extraction Pipeline CI #281, Canonical Publication CI #233, Reference Repair Runtime CI #222, Database Reliability CI #85, Operational Observability CI #47, and Web Dependency Advisory Scan #89 passed
+- Web CI explicitly passed the new calculated contrast/target-size gate, all earlier UI accessibility contracts, typecheck, production build, container build, and HTTP/security-header smoke steps
+- exact-head Vercel deployment: `dpl_2F7YemQVnb7MSbgU5LuWu9hYXSWR` READY; its build passed the schema-read-only Vercel migration boundary before building the application
+- no database migration, production write, provider activation, publication, merge, or cutover was performed
+- the exhaustive contrast inventory, interactive-state measurement, representative-browser checks, and manual visual/accessibility validation remain in the existing Phase 9 backlog rather than being pulled forward
 
 ---
 
