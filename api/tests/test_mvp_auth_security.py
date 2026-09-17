@@ -3,8 +3,8 @@ import json
 import unittest
 from uuid import uuid4
 
-import psycopg
 from fastapi.testclient import TestClient
+import psycopg
 
 from partgraph.config import settings
 from partgraph.identity.auth.service import CSRF_HEADER, CSRF_VALUE, SESSION_COOKIE
