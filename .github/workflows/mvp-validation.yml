@@ -358,3 +358,17 @@ jobs:
           path: /tmp/phase9-production-copy.json
           if-no-files-found: ignore
           retention-days: 7
+
+      - name: Emit exact migration SQL for isolated production-copy validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! alembic -c api/alembic.ini upgrade 0020_catalog_coverage:head --sql \
+              > /tmp/phase9-production-copy-upgrade.sql \
+              2> /tmp/phase9-production-copy-upgrade.log; then
+            cat /tmp/phase9-production-copy-upgrade.log
+            exit 1
+          fi
+          echo 'PHASE9_PRODUCTION_COPY_SQL_BEGIN'
+          cat /tmp/phase9-production-copy-upgrade.sql
+          echo 'PHASE9_PRODUCTION_COPY_SQL_END'
