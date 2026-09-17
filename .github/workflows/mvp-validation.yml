@@ -230,3 +230,66 @@ jobs:
         run: >-
           python -m unittest discover -s api/tests
           -p 'test_mvp_owner_isolation.py' -v
+
+
+  migrations:
+    name: Phase 9 migration contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
+
+    services:
+      postgres:
+        image: postgres:18.6-alpine
+        env:
+          POSTGRES_DB: partgraph
+          POSTGRES_USER: partgraph
+          POSTGRES_PASSWORD: partgraph
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U partgraph -d partgraph"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.14'
+
+      - name: Install API dependencies
+        run: python -m pip install -e './api[dev]'
+
+      - name: Lint Phase 9 migration boundary
+        run: ruff check api/migrations api/tests/test_mvp_migrations.py
+
+      - name: Run static migration-history contracts
+        env:
+          PARTGRAPH_DATABASE_URL: ''
+        run: >-
+          python -m unittest
+          api.tests.test_mvp_migrations.FinalMvpMigrationTests.test_revision_graph_has_one_linear_head_and_one_base
+          api.tests.test_mvp_migrations.FinalMvpMigrationTests.test_revision_filename_matches_declared_revision
+          -v
+
+      - name: Apply complete migration history to fresh database
+        run: alembic -c api/alembic.ini upgrade head
+
+      - name: Run migrated-database contracts
+        run: >-
+          python -m unittest discover -s api/tests
+          -p 'test_mvp_migrations.py' -v
+
+      - name: Verify no ORM migration drift
+        run: alembic -c api/alembic.ini check
+
+      - name: Re-apply head idempotently
+        run: |
+          alembic -c api/alembic.ini upgrade head
+          test "$(alembic -c api/alembic.ini current | awk 'NR == 1 {print $1}')" = "$(alembic -c api/alembic.ini heads | awk 'NR == 1 {print $1}')"
