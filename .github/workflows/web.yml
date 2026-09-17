@@ -118,6 +118,10 @@ jobs:
         working-directory: web
         run: node scripts/validate-current-contrast-targets.mjs
 
+      - name: Validate retired frontend assets stay removed
+        working-directory: web
+        run: node scripts/validate-retired-frontend-assets.mjs
+
       - name: Typecheck web
         working-directory: web
         run: npm run typecheck
