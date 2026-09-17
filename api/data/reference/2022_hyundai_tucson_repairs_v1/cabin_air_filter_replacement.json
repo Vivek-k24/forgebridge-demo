@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2022-hyundai-tucson-repairs-v1",
+  "repair_key": "cabin-air-filter-replacement",
+  "title": "Cabin air filter replacement",
+  "capability_policy_key": "diy_supported",
+  "source_pages": [26, 557],
+  "operations": [],
+  "requirements": [
+    {
+      "use_key": "cabin-filter-use",
+      "requirement_key": "part.cabin_air_filter.replacement",
+      "category": "part",
+      "display_name": "Replacement cabin air filter specified for the vehicle",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "replacement_required",
+      "timing": "before_start",
+      "source_pages": [557]
+    }
+  ],
+  "actions": [
+    {
+      "action_key": "open-glove-box-remove-support-rod",
+      "title": "Open the glove box and remove the support rod",
+      "position": 0,
+      "skippable": false,
+      "instruction": "Open the glove box and remove the support rod from the glove box.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [],
+      "source_pages": [557]
+    },
+    {
+      "action_key": "release-glove-box-stoppers",
+      "title": "Release the glove-box stopper pins",
+      "position": 1,
+      "skippable": false,
+      "instruction": "Push in both sides of the glove box so the stopper pins release and the glove box can hang down.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": ["open-glove-box-remove-support-rod"],
+      "source_pages": [557]
+    },
+    {
+      "action_key": "press-filter-cover-lock",
+      "title": "Press the cabin-filter cover lock",
+      "position": 2,
+      "skippable": false,
+      "instruction": "Press and hold the lock on the right side of the cabin-air-filter cover.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": ["release-glove-box-stoppers"],
+      "source_pages": [557]
+    },
+    {
+      "action_key": "remove-filter-cover",
+      "title": "Remove the cabin-filter cover",
+      "position": 3,
+      "skippable": false,
+      "instruction": "Pull the cabin-air-filter cover out while the right-side lock is released.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": ["press-filter-cover-lock"],
+      "source_pages": [557]
+    },
+    {
+      "action_key": "replace-cabin-air-filter",
+      "title": "Replace the cabin air filter",
+      "position": 4,
+      "skippable": false,
+      "instruction": "Remove the old cabin air filter and install the replacement filter with its arrow symbol facing downward.",
+      "requirement_use_keys": ["cabin-filter-use"],
+      "prerequisite_action_keys": ["remove-filter-cover"],
+      "source_pages": [557]
+    },
+    {
+      "action_key": "reassemble-glove-box",
+      "title": "Reassemble the glove box",
+      "position": 5,
+      "skippable": false,
+      "instruction": "Reassemble the cabin-filter cover, glove-box stopper arrangement, and support rod in the reverse order of disassembly.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": ["replace-cabin-air-filter"],
+      "source_pages": [557]
+    }
+  ]
+}
