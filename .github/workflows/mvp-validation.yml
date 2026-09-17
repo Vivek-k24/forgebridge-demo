@@ -1,0 +1,66 @@
+name: MVP Final Validation CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - partgraph-mvp-consolidation
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mvp-final-validation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit-domain:
+    name: Phase 9 unit/domain contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.14'
+
+      - name: Install API dependencies
+        run: python -m pip install -e './api[dev]'
+
+      - name: Lint Phase 9 unit/domain boundary
+        run: >-
+          ruff check
+          api/partgraph/knowledge/source_policy.py
+          api/partgraph/knowledge/provider_network.py
+          api/partgraph/knowledge/repair_materialization_contract.py
+          api/partgraph/knowledge/support_boundaries.py
+          api/partgraph/repair_experience/recovery.py
+          api/tests/test_claim_pipeline_policy.py
+          api/tests/test_repair_materialization_policy.py
+          api/tests/test_provider_network_policy.py
+          api/tests/test_provider_timeout_hierarchy.py
+          api/tests/test_database_write_recovery.py
+          api/tests/test_reference_fixture_externalization.py
+
+      - name: Run final-MVP unit/domain contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          tests=(
+            test_claim_pipeline_policy.py
+            test_repair_materialization_policy.py
+            test_provider_network_policy.py
+            test_provider_timeout_hierarchy.py
+            test_database_write_recovery.py
+            test_reference_fixture_externalization.py
+          )
+          for test_file in "${tests[@]}"; do
+            echo "=== ${test_file} ==="
+            python -m unittest discover -s api/tests -p "${test_file}" -v
+          done
