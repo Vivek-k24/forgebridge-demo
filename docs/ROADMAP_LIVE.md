@@ -9,17 +9,17 @@ Last updated: **2026-09-17**
 
 Current exact implementation proof tracked here:
 - active implementation branch: `partgraph-mvp-consolidation`
-- latest exact green implementation/data commit: `ae97b0c4fce79aa3bbd11fc25902440567309987`
-- MVP Final Validation CI: passed (`#22`)
-- full API CI: passed (`#997`)
-- Web CI: passed (`#860`)
-- extraction/provider-ingestion pipeline CI: passed (`#328`)
-- canonical publication CI: passed (`#268`)
-- reference repair runtime CI: passed (`#267`)
-- database reliability CI: passed (`#120`)
-- operational observability CI: passed (`#82`)
-- Web dependency advisory CI: passed (`#124`)
-- latest observed READY Vercel consolidation preview for the Phase 8 Tucson data line: `dpl_2f9YRc4BEN9nHc3PJRHdU9fwPBy3` on `6862983d386a879fd7ef4ac5acd0c2e7bb27a6e5`; the exact green `ae97b0c4...` proof is the GitHub CI/runtime proof after the Phase 9 unit/domain, API, authentication/security, and RLS/owner-isolation validation layers
+- latest exact green implementation/data commit: `292e977ea83135cf4105a0dd3de7e59eacb76c43`
+- MVP Final Validation CI: passed (`#36`)
+- full API CI: passed (`#1004`)
+- Web CI: passed (`#867`)
+- extraction/provider-ingestion pipeline CI: passed (`#335`)
+- canonical publication CI: passed (`#275`)
+- reference repair runtime CI: passed (`#274`)
+- database reliability CI: passed (`#127`)
+- operational observability CI: passed (`#89`)
+- Web dependency advisory CI: passed (`#131`)
+- latest observed READY Vercel consolidation preview for the Phase 8 Tucson data line: `dpl_2f9YRc4BEN9nHc3PJRHdU9fwPBy3` on `6862983d386a879fd7ef4ac5acd0c2e7bb27a6e5`; the exact green `292e977e...` proof is the GitHub CI/runtime proof after the Phase 9 unit/domain, API, authentication/security, RLS/owner-isolation, and migration validation layers
 - consolidation preview database schema: `0059_primary_vehicle_domains`
 - production database: intentionally unchanged at `0020_catalog_coverage`
 - PR #84: remains draft/unmerged
@@ -28,7 +28,7 @@ Phase 7 is complete for the primary deep-test vehicle, the 2009 Honda Civic Hybr
 
 Phase 8 is also complete. The same generic identity/publication/readiness/guidance/completion code now executes reviewed reference repairs for the 2015 Toyota Camry, 2018 Ford F-150, 2020 Subaru Forester, and 2022 Hyundai Tucson in addition to the Phase 7 Civic proof. The four additional datasets are selected through `api/data/reference/phase8_reference_fleet_v1.json` and exercised by one data-indexed runtime test; no make/model/year/trim application service or conditional branch was added for the new vehicles.
 
-Phase 9 is now in progress. The first four fresh final-validation layers are complete: `.github/workflows/mvp-validation.yml` runs the release-oriented unit/domain contracts, migrated-Postgres HTTP API contracts, migrated-Postgres authentication/security contracts, and migrated-Postgres RLS/owner-isolation contracts together instead of relying only on scattered historical greens. On `ae97b0c4fce79aa3bbd11fc25902440567309987`, all four jobs and every established exact-head regression passed. Migration validation is the next Phase 9 task.
+Phase 9 is now in progress. The first five fresh final-validation layers are complete: `.github/workflows/mvp-validation.yml` runs the release-oriented unit/domain, migrated-Postgres HTTP API, authentication/security, RLS/owner-isolation, and migration contracts together instead of relying only on scattered historical greens. On `292e977ea83135cf4105a0dd3de7e59eacb76c43`, all five jobs and every established exact-head regression passed. Production-copy migration validation is the next Phase 9 task.
 
 The new primary-vehicle canonical domains are data-driven. Reviewed exact-vehicle claims materialize an `Engine` system, `Engine cooling system` subsystem, and `Engine water-pump assembly`; first-class specifications record the 3.4 US qt engine-oil change capacity with filter and 39 N·m oil-drain-bolt torque. The same source-authority, verified-evidence, MechanicalClaim, restricted-materializer, conflict-quarantine, canonical-version, and evidence-link rules used by existing canonical knowledge apply to these domains.
 
@@ -384,13 +384,13 @@ Exit gate: **satisfied.** The same source code executes the selected reference-f
 
 ## Phase 9 — Build the fresh MVP validation suite
 
-Status: **In progress. The fresh release-oriented validation campaign has completed its unit/domain, API, authentication/security, and RLS/owner-isolation layers; migration validation is next. Existing permanent CI gates remain active.**
+Status: **In progress. The fresh release-oriented validation campaign has completed its unit/domain, API, authentication/security, RLS/owner-isolation, and migration layers; production-copy migration validation is next. Existing permanent CI gates remain active.**
 
 - [x] unit/domain tests for final MVP behavior
 - [x] API tests for final MVP behavior
 - [x] authentication/security tests
 - [x] RLS/owner-isolation tests
-- [ ] migration tests
+- [x] migration tests
 - [ ] production-copy migration validation
 - [ ] full-stack integration
 - [ ] verified-guidance integration
@@ -414,13 +414,16 @@ Completed Phase 9 proof so far:
 - authentication/security suite: `api/tests/test_mvp_auth_security.py`
 - RLS/owner-isolation job: `Phase 9 RLS/owner-isolation contracts`
 - RLS/owner-isolation suite: `api/tests/test_mvp_owner_isolation.py`
-- exact proof head: `ae97b0c4fce79aa3bbd11fc25902440567309987`
-- proof run: `MVP Final Validation CI #22`
+- migration job: `Phase 9 migration contracts`
+- migration suite: `api/tests/test_mvp_migrations.py`
+- exact proof head: `292e977ea83135cf4105a0dd3de7e59eacb76c43`
+- proof run: `MVP Final Validation CI #36`
 - unit/domain contracts cover fail-closed source authority and repair materialization, unsupported computer/service-tool boundaries, provider network safety, provider/API/browser timeout hierarchy, ambiguous-write recovery, and vehicle-fact externalization
 - API contracts run against the FastAPI application with a migrated fresh PostgreSQL service and verify live/readiness health, platform response headers, standardized 404/405 error envelopes, request-size enforcement, authenticated Garage/repair collection wiring, and the core MVP repair HTTP surface
 - authentication/security contracts run against the real authentication/session path with a migrated fresh PostgreSQL service and verify unauthenticated rejection, CSRF and exact-origin enforcement, secure HttpOnly session-cookie/HSTS behavior, Argon2 password hashing, hashed session-token storage, logout revocation, non-enumerating invalid-login responses, and persisted failed-login rate limiting through 429
 - existing exact-origin/CSP contracts are rerun in the authentication/security job
 - RLS/owner-isolation contracts discover all `partgraph_app`-readable `user_id` tables, require FORCE RLS and owner policies on private owner tables, require no-owner-context reads to fail closed, prove transaction-local owner context does not leak, allow own-row updates while hiding another owner's row, and reject cross-owner inserts through `WITH CHECK`
+- migration contracts require one Alembic head and one base, require every declared parent revision to exist, apply the complete migration history to an empty PostgreSQL database, verify the database is stamped at the exact current head, require every registered ORM table/column to exist in the migrated schema, and prove re-applying `upgrade head` is idempotent
 - all eight established exact-head regression workflows also passed on the same commit
 
 Existing permanent CI, including migration history, adopted-baseline equivalence, RBAC, source-authority, extraction, canonical publication, reference-repair runtime, container build, and readiness smoke, remains active and is not discarded while Phase 9 is pending.
@@ -473,9 +476,9 @@ This section says the same thing as the technical tracker above, but in plain En
 
 ### Where the project stands right now
 
-**Phase 9 is now in progress.** The five-model Phase 8 proof remains complete, and the first four fresh final-MVP validation layers have now run successfully: unit/domain contracts, HTTP API contracts, authentication/security contracts, and owner-data isolation at the PostgreSQL row-security boundary.
+**Phase 9 is now in progress.** The five-model Phase 8 proof remains complete, and the first five fresh final-MVP validation layers have now run successfully: unit/domain contracts, HTTP API contracts, authentication/security contracts, owner-data isolation at the PostgreSQL row-security boundary, and migration contracts.
 
-The exact green implementation/data commit is `ae97b0c4fce79aa3bbd11fc25902440567309987`. On that commit, all four jobs in MVP Final Validation CI #22 passed, along with API CI #997, Web CI #860, Extraction Pipeline CI #328, Canonical Publication CI #268, Reference Repair Runtime CI #267, Database Reliability CI #120, Operational Observability CI #82, and Web Dependency Advisory CI #124. The latest observed READY Vercel preview on the preceding Phase 8 application/data line remains `dpl_2f9YRc4BEN9nHc3PJRHdU9fwPBy3`, and the preview database schema remains `0059_primary_vehicle_domains`.
+The exact green implementation/data commit is `292e977ea83135cf4105a0dd3de7e59eacb76c43`. On that commit, all five jobs in MVP Final Validation CI #36 passed, along with API CI #1004, Web CI #867, Extraction Pipeline CI #335, Canonical Publication CI #275, Reference Repair Runtime CI #274, Database Reliability CI #127, Operational Observability CI #89, and Web Dependency Advisory CI #131. The latest observed READY Vercel preview on the preceding Phase 8 application/data line remains `dpl_2f9YRc4BEN9nHc3PJRHdU9fwPBy3`, and the preview database schema remains `0059_primary_vehicle_domains`.
 
 The production application has **not** been switched to the consolidation branch. PR #84 remains a draft and unmerged, and the production database remains deliberately at `0020_catalog_coverage`.
 
@@ -556,13 +559,15 @@ No Toyota-, Ford-, Subaru-, or Hyundai-specific application service or make/mode
 
 ### Phase 9 — Run the final MVP test campaign
 
-**In progress.** The first four layers are complete. The final-validation workflow now reruns the core unit/domain contracts together, runs a true HTTP API contract job against the FastAPI application with a freshly migrated PostgreSQL service, runs a real authentication/session security job against a separate freshly migrated PostgreSQL service, and runs a dedicated owner-isolation job against another freshly migrated PostgreSQL service.
+**In progress.** The first five layers are complete. The final-validation workflow now reruns the core unit/domain contracts together, runs a true HTTP API contract job against the FastAPI application with a freshly migrated PostgreSQL service, runs a real authentication/session security job against a separate freshly migrated PostgreSQL service, runs a dedicated owner-isolation job against another freshly migrated PostgreSQL service, and runs a fresh migration-history job against another empty PostgreSQL database.
 
 The unit/domain layer checks fail-closed source authority, evidence-backed repair materialization, unsupported computer/service-tool boundaries, provider network safety, timeout hierarchy, ambiguous-write recovery, and vehicle-fact externalization. The API layer checks live/readiness health, request/version/security response headers, standardized 404/405 error envelopes, request-size enforcement, authenticated Garage and repair collection routing, and that the core repair API endpoints are actually exposed. The authentication/security layer checks unauthenticated rejection, CSRF and exact-origin enforcement, secure HttpOnly session cookies and HSTS, Argon2 password hashing, hashed session-token storage, logout revocation, matching invalid-credential responses for known and unknown identities, and persisted failed-login rate limiting through HTTP 429.
 
 The owner-isolation layer checks the database itself instead of trusting application filters. It finds private tables that the normal application role can read, requires row-level security to be both enabled and forced, verifies each owner policy uses the transaction-local `partgraph.user_id` context, proves that missing owner context reveals nothing, proves one user's context cannot see or update another user's row, proves the context disappears after the transaction, and rejects attempts to insert a row for a different owner.
 
-All four jobs passed in MVP Final Validation CI #22 on `ae97b0c4fce79aa3bbd11fc25902440567309987`, and every established exact-head regression workflow also passed on that same commit. The **next Phase 9 task is migration tests**. Production-copy migration validation, browser/full-stack flows, randomized/reference-fleet acceptance, offline/degraded behavior, timeout recovery, downstream semantics, durable hosted photos, data-free-source-code checks, and RBAC remain later Phase 9 items.
+The migration layer validates the migration history itself and then builds a completely empty PostgreSQL database to the current head. It requires one current head and one base, checks that every migration parent exists, confirms every registered application table and column is present after the upgrade, confirms the Alembic revision stamp is exact, and confirms running the head upgrade again makes no further migration change. The separate production-copy test remains the next task because it must prove the real `0020_catalog_coverage`-era owner-state upgrade path rather than an empty database.
+
+All five jobs passed in MVP Final Validation CI #36 on `292e977ea83135cf4105a0dd3de7e59eacb76c43`, and every established exact-head regression workflow also passed on that same commit. The **next Phase 9 task is production-copy migration validation**. Production-copy migration validation, browser/full-stack flows, randomized/reference-fleet acceptance, offline/degraded behavior, timeout recovery, downstream semantics, durable hosted photos, data-free-source-code checks, and RBAC remain later Phase 9 items.
 
 ### Phase 10 — Move the finished MVP into production
 
@@ -578,6 +583,6 @@ Charm.li approval remains narrow: manually reviewed evidence for the approved 20
 
 ### Exact place to resume work
 
-Phase 9 is in progress. The next roadmap task is **migration tests** in the fresh MVP validation suite.
+Phase 9 is in progress. The next roadmap task is **production-copy migration validation** in the fresh MVP validation suite.
 
 The separate Phase 6 live NHTSA HTTP-ingestion proof and broad repair-knowledge work, Phase 1 hosted durable-photo proof, remaining Phase 9 validation campaign, and production cutover requirements all remain pending in their existing roadmap locations.
