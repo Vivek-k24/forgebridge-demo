@@ -426,6 +426,18 @@ async def web_index() -> Response:
     )
 
 
+@app.get("/sw.js", include_in_schema=False)
+async def web_service_worker() -> Response:
+    service_worker = WEB_PUBLIC_ROOT / "sw.js"
+    if not service_worker.is_file():
+        raise StarletteHTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return FileResponse(
+        service_worker,
+        media_type="text/javascript",
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
 if WEB_ASSETS_ROOT.is_dir():
     app.mount(
         "/assets",
