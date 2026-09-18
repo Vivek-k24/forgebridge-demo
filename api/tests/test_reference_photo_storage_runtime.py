@@ -12,6 +12,7 @@ from partgraph.identity.auth.models import User
 from partgraph.identity.auth.service import set_user_context
 from partgraph.identity.user_vehicle.models import UserVehicle
 from partgraph.identity.vehicle.models import VehicleConfiguration
+from partgraph.knowledge.models import RepairDefinition  # noqa: F401
 from partgraph.repair_experience.memory.models import RepairPhotoEvidence
 from partgraph.repair_experience.memory.photo_lifecycle import (
     MEDIA_WORKER_ROLE,
