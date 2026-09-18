@@ -71,7 +71,7 @@ def main() -> None:
         expect(page).to_have_title(re.compile(r"Settings \| PartGraph$"))
 
         metric = page.get_by_role("radio", name=re.compile(r"^Metric"))
-        metric.check()
+        page.locator("label.settings-choice", has_text="Metric").click()
         expect(metric).to_be_checked()
         expect(page.get_by_text("Measurement units changed to Metric.")).to_be_visible()
 
