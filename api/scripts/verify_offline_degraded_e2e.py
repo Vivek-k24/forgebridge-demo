@@ -272,8 +272,13 @@ def main() -> None:
             raise AssertionError("cached offline pack belongs to the wrong repair session")
         if first_pack.get("repair_definition_id") != state["repair_definition_id"]:
             raise AssertionError("cached offline pack belongs to the wrong repair definition")
-        if first_pack.get("server_sequence") != session["session"]["current_sequence"] + 1:
-            raise AssertionError("offline pack did not capture the server-confirmed binding sequence")
+        if first_pack.get("server_sequence") != session["session"]["current_sequence"]:
+            raise AssertionError("offline pack did not preserve the server-confirmed session sequence")
+
+        page.evaluate("window.location.hash = '#/guidance'")
+        expect(
+            page.get_by_role("heading", name="Focus on what you need to do next.")
+        ).to_be_visible()
 
         page.wait_for_function(
             """
@@ -312,6 +317,7 @@ def main() -> None:
         _assert_private_pack_minimized(page, refreshed_pack)
 
         context.set_offline(True)
+        page.evaluate("window.dispatchEvent(new Event('offline'))")
         _assert_offline_workspace(page, refreshed_pack)
         page.reload(wait_until="domcontentloaded")
         _assert_offline_workspace(page, refreshed_pack)
