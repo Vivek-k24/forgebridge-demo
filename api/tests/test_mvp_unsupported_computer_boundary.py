@@ -123,7 +123,9 @@ class MvpUnsupportedComputerBoundaryTests(unittest.IsolatedAsyncioTestCase):
                 "drivetrain": None,
             },
         )
-        self.db.add_all([vehicle, source, self.user, self.user_vehicle])
+        self.db.add_all([vehicle, source, self.user])
+        await self.db.flush()
+        self.db.add(self.user_vehicle)
         await self.db.flush()
 
         actions = [
