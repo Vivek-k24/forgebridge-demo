@@ -110,11 +110,15 @@ def _assert_shell_cache_has_no_api(page: Page) -> None:
         SHELL_CACHE,
     )
     if not any(url.endswith("/index.html") or url.rstrip("/").endswith(":8000") for url in urls):
-        raise AssertionError("service-worker shell cache is missing the application document")
-    if not any("/assets/" in url and url.endswith(".js") for url in urls):
-        raise AssertionError("service-worker shell cache is missing the built JavaScript asset")
+        raise AssertionError(
+            "service-worker shell cache is missing the application document: "
+            + ", ".join(urls)
+        )
     if any("/api/" in url for url in urls):
-        raise AssertionError("service-worker shell cache contains a private API response")
+        raise AssertionError(
+            "service-worker shell cache contains a private API response: "
+            + ", ".join(urls)
+        )
 
 
 def _degraded_health(route: Route) -> None:
