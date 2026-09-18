@@ -48,16 +48,15 @@ from partgraph.repair_experience.service import (
     event_history,
     resume_repair_session,
 )
+from reference_fixture_support import (
+    primary_repair,
+    primary_vehicle_id,
+    primary_vehicle_snapshot,
+)
 
 DATABASE_URL_ENV = "PARTGRAPH_DATABASE_URL"
-REFERENCE_VEHICLE_ID = UUID("7feb13e9-bca0-5d8b-b701-f0260cce5da1")
-REFERENCE_REPAIR_PATH = (
-    Path(__file__).resolve().parents[1]
-    / "data"
-    / "reference"
-    / "2009_honda_civic_hybrid_repairs_v1"
-    / "engine_oil_filter_change.json"
-)
+REFERENCE_VEHICLE_ID = primary_vehicle_id()
+REFERENCE_VEHICLE = primary_vehicle_snapshot()
 
 
 def _claim_payload(item: dict[str, object], *, requirement: bool) -> dict[str, object]:
@@ -81,7 +80,7 @@ class ReferenceRepairRuntimeDatabaseTests(unittest.IsolatedAsyncioTestCase):
         if DATABASE_URL_ENV not in os.environ:
             raise unittest.SkipTest(f"{DATABASE_URL_ENV} is not configured")
 
-        self.reference = json.loads(REFERENCE_REPAIR_PATH.read_text(encoding="utf-8"))
+        _, self.reference = primary_repair("engine-oil-filter-change")
         self.assertEqual(self.reference["vehicle_configuration_id"], str(REFERENCE_VEHICLE_ID))
         self.assertEqual(self.reference["repair_key"], "engine-oil-filter-change")
         self.assertEqual(len(self.reference["requirements"]), 8)
@@ -94,7 +93,14 @@ class ReferenceRepairRuntimeDatabaseTests(unittest.IsolatedAsyncioTestCase):
         vehicle = await self.db.get(VehicleConfiguration, REFERENCE_VEHICLE_ID)
         self.assertIsNotNone(vehicle)
         assert vehicle is not None
-        self.assertEqual((vehicle.year, vehicle.make, vehicle.model), (2009, "Honda", "CIVIC"))
+        self.assertEqual(
+            (vehicle.year, vehicle.make, vehicle.model),
+            (
+                REFERENCE_VEHICLE["year"],
+                REFERENCE_VEHICLE["make"],
+                REFERENCE_VEHICLE["model"],
+            ),
+        )
         self.assertEqual(vehicle.verification_status, "verified")
 
         current = await self.db.scalar(
@@ -131,20 +137,10 @@ class ReferenceRepairRuntimeDatabaseTests(unittest.IsolatedAsyncioTestCase):
             id=uuid4(),
             user_id=self.user.id,
             canonical_configuration_id=REFERENCE_VEHICLE_ID,
-            nickname="Reference Civic Hybrid",
+            nickname="Reference vehicle",
             identity_source="manual",
             identity_resolution="matched",
-            identity_snapshot={
-                "year": 2009,
-                "market": "US",
-                "make": "Honda",
-                "model": "CIVIC",
-                "trim": "HYBRID",
-                "body_style": "Sedan",
-                "engine": "1.3L I4 HYBRID",
-                "transmission": "CVT",
-                "drivetrain": "FWD",
-            },
+            identity_snapshot=dict(REFERENCE_VEHICLE),
         )
         self.db.add_all([source, self.user, self.user_vehicle])
         await self.db.flush()
