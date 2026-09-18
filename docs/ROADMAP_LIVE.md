@@ -19,7 +19,7 @@ Current exact implementation proof tracked here:
 - database reliability CI: passed (`#161`)
 - operational observability CI: passed (`#123`)
 - Web dependency advisory CI: passed (`#165`)
-- latest observed READY Vercel consolidation preview for the Phase 8 Tucson data line: `dpl_2f9YRc4BEN9nHc3PJRHdU9fwPBy3` on `6862983d386a879fd7ef4ac5acd0c2e7bb27a6e5`; Vercel also reported success for exact Phase 9 head `2cd73db7d0032726f6bd1c9338c17621eacc5c77`, while the release proof tracked here is the GitHub CI/runtime proof after the Phase 9 unit/domain, API, authentication/security, RLS/owner-isolation, migration, production-copy migration, full-stack integration, verified-guidance integration, real-browser E2E, seeded randomized-acceptance, fresh reference-fleet-acceptance, real-browser offline/degraded, and timeout/ambiguous-write-recovery layers
+- latest observed READY Vercel consolidation preview for the Phase 8 Tucson data line: `dpl_2f9YRc4BEN9nHc3PJRHdU9fwPBy3` on `6862983d386a879fd7ef4ac5acd0c2e7bb27a6e5`; Vercel also reported success for exact Phase 9 head `e30afefc11a778b93346292f9173f8cc6b598807`, while the release proof tracked here is the GitHub CI/runtime proof after the Phase 9 unit/domain, API, authentication/security, RLS/owner-isolation, migration, production-copy migration, full-stack integration, verified-guidance integration, real-browser E2E, seeded randomized-acceptance, fresh reference-fleet-acceptance, real-browser offline/degraded, timeout/ambiguous-write-recovery, and downstream-operation-semantics layers
 - consolidation preview database schema: `0059_primary_vehicle_domains`
 - production database: intentionally unchanged at `0020_catalog_coverage`
 - PR #84: remains draft/unmerged
