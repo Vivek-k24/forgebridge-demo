@@ -943,9 +943,9 @@ jobs:
 
       - name: Run server timeout and commit-recovery contracts
         run: |
-          python -m unittest api.tests.test_mvp_timeout_recovery -v
-          python -m unittest api.tests.test_database_write_recovery -v
-          python -m unittest api.tests.test_provider_timeout_hierarchy -v
+          python -m unittest discover -s api/tests -p 'test_mvp_timeout_recovery.py' -v
+          python -m unittest discover -s api/tests -p 'test_database_write_recovery.py' -v
+          python -m unittest discover -s api/tests -p 'test_provider_timeout_hierarchy.py' -v
 
       - name: Build same-origin frontend bundle
         working-directory: web
