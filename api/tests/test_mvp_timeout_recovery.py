@@ -4,10 +4,10 @@ import asyncio
 import json
 import unittest
 from dataclasses import replace
+from unittest.mock import patch
 
 from starlette.requests import Request
 from starlette.responses import Response
-from unittest.mock import patch
 
 from partgraph.config import settings
 from partgraph.main import platform_boundary
