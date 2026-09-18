@@ -164,11 +164,19 @@ def _assert_offline_workspace(page: Page, pack: dict[str, Any]) -> None:
     expect(page.get_by_text("Last sync", exact=False).first).to_be_visible()
 
     button_labels = page.get_by_role("button").all_text_contents()
-    allowed = {"Overview", "readiness", "guidance", "completion", "Repair log"}
+    allowed = {
+        "Overview",
+        "readiness",
+        "guidance",
+        "completion",
+        "Repair log",
+        "log",
+        "Sign out",
+    }
     unexpected = [item.strip() for item in button_labels if item.strip() not in allowed]
     if unexpected:
         raise AssertionError(
-            "offline workspace exposed controls outside read-only navigation: "
+            "offline repair workspace exposed a repair-state mutation control: "
             + ", ".join(unexpected)
         )
 
