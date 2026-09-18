@@ -52,17 +52,15 @@ from partgraph.repair_experience.repair_definition_binding import (
     bind_repair_definition,
 )
 from partgraph.repair_experience.service import create_repair_session
+from reference_fixture_support import (
+    primary_repair,
+    primary_vehicle_id,
+    primary_vehicle_snapshot,
+)
 
 DATABASE_URL_ENV = "PARTGRAPH_DATABASE_URL"
-REFERENCE_VEHICLE_ID = UUID("7feb13e9-bca0-5d8b-b701-f0260cce5da1")
-REFERENCE_DIR = (
-    Path(__file__).resolve().parents[1]
-    / "data"
-    / "reference"
-    / "2009_honda_civic_hybrid_repairs_v1"
-)
-WATER_PUMP_PATH = REFERENCE_DIR / "engine_water_pump_replacement.json"
-COOLANT_BLEED_PATH = REFERENCE_DIR / "cooling_system_refill_air_bleed.json"
+REFERENCE_VEHICLE_ID = primary_vehicle_id()
+REFERENCE_VEHICLE = primary_vehicle_snapshot()
 
 
 def _claim_payload(item: dict[str, object], *, requirement: bool) -> dict[str, object]:
@@ -86,8 +84,8 @@ class ReferenceDownstreamRuntimeDatabaseTests(unittest.IsolatedAsyncioTestCase):
         if DATABASE_URL_ENV not in os.environ:
             raise unittest.SkipTest(f"{DATABASE_URL_ENV} is not configured")
 
-        self.water_pump = json.loads(WATER_PUMP_PATH.read_text(encoding="utf-8"))
-        self.coolant_bleed = json.loads(COOLANT_BLEED_PATH.read_text(encoding="utf-8"))
+        _, self.water_pump = primary_repair("engine-water-pump-replacement")
+        _, self.coolant_bleed = primary_repair("cooling-system-refill-air-bleed")
         self.assertEqual(
             self.water_pump["vehicle_configuration_id"], str(REFERENCE_VEHICLE_ID)
         )
@@ -106,7 +104,14 @@ class ReferenceDownstreamRuntimeDatabaseTests(unittest.IsolatedAsyncioTestCase):
         vehicle = await self.db.get(VehicleConfiguration, REFERENCE_VEHICLE_ID)
         self.assertIsNotNone(vehicle)
         assert vehicle is not None
-        self.assertEqual((vehicle.year, vehicle.make, vehicle.model), (2009, "Honda", "CIVIC"))
+        self.assertEqual(
+            (vehicle.year, vehicle.make, vehicle.model),
+            (
+                REFERENCE_VEHICLE["year"],
+                REFERENCE_VEHICLE["make"],
+                REFERENCE_VEHICLE["model"],
+            ),
+        )
         self.assertEqual(vehicle.verification_status, "verified")
 
         for reference in (self.water_pump, self.coolant_bleed):
@@ -127,7 +132,7 @@ class ReferenceDownstreamRuntimeDatabaseTests(unittest.IsolatedAsyncioTestCase):
         source = CatalogSource(
             id=uuid4(),
             source_key=f"reference-downstream-{suffix}",
-            display_name="Project-owner-reviewed Civic service-manual mirror fixture",
+            display_name="Project-owner-reviewed service-manual fixture",
             source_class="licensed_oem_derived",
             license_status="approved",
             automation_allowed=False,
@@ -144,20 +149,10 @@ class ReferenceDownstreamRuntimeDatabaseTests(unittest.IsolatedAsyncioTestCase):
             id=uuid4(),
             user_id=self.user.id,
             canonical_configuration_id=REFERENCE_VEHICLE_ID,
-            nickname="Reference Civic Hybrid",
+            nickname="Reference vehicle",
             identity_source="manual",
             identity_resolution="matched",
-            identity_snapshot={
-                "year": 2009,
-                "market": "US",
-                "make": "Honda",
-                "model": "CIVIC",
-                "trim": "HYBRID",
-                "body_style": "Sedan",
-                "engine": "1.3L I4 HYBRID",
-                "transmission": "CVT",
-                "drivetrain": "FWD",
-            },
+            identity_snapshot=dict(REFERENCE_VEHICLE),
         )
         self.db.add_all([source, self.user, self.user_vehicle])
         await self.db.flush()
