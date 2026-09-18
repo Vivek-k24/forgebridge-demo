@@ -4,7 +4,6 @@ import os
 import unittest
 from datetime import UTC, datetime
 from io import BytesIO
-from pathlib import Path
 from uuid import UUID, uuid4
 
 from PIL import Image
