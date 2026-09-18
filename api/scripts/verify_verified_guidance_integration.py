@@ -39,15 +39,29 @@ ORIGIN = BASE_URL
 CSRF_HEADER = "X-PartGraph-CSRF"
 CSRF_VALUE = "1"
 API_VERSION = "v1"
-REFERENCE_VEHICLE_ID = UUID("7feb13e9-bca0-5d8b-b701-f0260cce5da1")
-REFERENCE_REPAIR_PATH = (
-    Path(__file__).resolve().parents[1]
-    / "data"
-    / "reference"
-    / "2009_honda_civic_hybrid_repairs_v1"
-    / "engine_oil_filter_change.json"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+PRIMARY_BUNDLE_PATH = (
+    REPO_ROOT / "api" / "data" / "reference" / "primary_reference_bundle_v1.json"
 )
 DEFAULT_STATE_PATH = Path("/tmp/phase9-verified-guidance.json")
+
+
+def _primary_reference_repair() -> tuple[UUID, Path]:
+    bundle = json.loads(PRIMARY_BUNDLE_PATH.read_text(encoding="utf-8"))
+    manifest_path = (REPO_ROOT / str(bundle["repair_manifest"])).resolve()
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    repair_entry = next(
+        item
+        for item in manifest["repairs"]
+        if item["repair_key"] == "engine-oil-filter-change"
+    )
+    return (
+        UUID(str(manifest["vehicle_configuration_id"])),
+        manifest_path.parent / str(repair_entry["path"]),
+    )
+
+
+REFERENCE_VEHICLE_ID, REFERENCE_REPAIR_PATH = _primary_reference_repair()
 
 
 def _database_connection_string() -> str:
@@ -102,9 +116,9 @@ async def seed_verified_repair(state_path: Path) -> None:
         async with db.begin():
             vehicle = await db.get(VehicleConfiguration, REFERENCE_VEHICLE_ID)
             if vehicle is None:
-                raise AssertionError("reference Civic Hybrid configuration is missing")
+                raise AssertionError("primary reference vehicle configuration is missing")
             if vehicle.verification_status != "verified":
-                raise AssertionError("reference Civic Hybrid configuration is not verified")
+                raise AssertionError("primary reference vehicle configuration is not verified")
 
             existing = await db.scalar(
                 select(RepairDefinition).where(
@@ -391,7 +405,7 @@ def verify_http_guidance(state_path: Path) -> None:
         payload={
             "email": "phase9-verified-guidance@example.com",
             "username": "phase9_guidance",
-            "password": "Phase9VerifiedGuidance!2026",
+            "password": "Phase9-" + uuid4().hex + "-Aa1!",
         },
     )
     _require(registration.status == 200, f"registration returned {registration.status}")
@@ -402,7 +416,7 @@ def verify_http_guidance(state_path: Path) -> None:
         method="POST",
         csrf=True,
         payload={
-            "nickname": "Verified Guidance Civic",
+            "nickname": "Verified guidance reference vehicle",
             "selection": state["vehicle_selection"],
         },
     )
