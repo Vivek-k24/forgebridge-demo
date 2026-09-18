@@ -89,8 +89,8 @@ class VehicleDomainMaterializationDatabaseTests(unittest.IsolatedAsyncioTestCase
             "quantity_kind": "volume",
             "description": "Fixture capacity",
             "application_key": "engine-oil-change",
-            "nominal_value": "3.4",
-            "unit": "US qt",
+            "nominal_value": "7.25",
+            "unit": "L",
             "qualifier_key": "with-filter",
             "conditions": {"filter_replaced": True},
         }
@@ -103,8 +103,8 @@ class VehicleDomainMaterializationDatabaseTests(unittest.IsolatedAsyncioTestCase
                         (id, identity_hash, base_identity_hash, canonicalization_version,
                          year, market, make, model, trim, engine, transmission,
                          drivetrain, identity_source, verification_status)
-                    VALUES (%s, %s, %s, 2, 2009, 'US', 'Fixture', 'Domain', 'Exact',
-                            '1.3L I4 HYBRID', 'CVT', 'FWD', 'fixture', 'verified')
+                    VALUES (%s, %s, %s, 2, 2099, 'US', 'Fixture', 'Domain', 'Exact',
+                            'Fixture Engine', 'TEST', 'TEST', 'fixture', 'verified')
                     """,
                     (self.vehicle_id, uuid4().hex * 2, uuid4().hex * 2),
                 )
@@ -253,8 +253,8 @@ class VehicleDomainMaterializationDatabaseTests(unittest.IsolatedAsyncioTestCase
                 row = cursor.fetchone()
                 self.assertEqual(row[0], "engine-oil-change-capacity-with-filter")
                 self.assertEqual(row[1:4], ("capacity", "scalar", "engine-oil-change"))
-                self.assertEqual(str(row[4]), "3.400000")
-                self.assertEqual(row[5], "US qt")
+                self.assertEqual(str(row[4]), "7.250000")
+                self.assertEqual(row[5], "L")
                 self.assertEqual(row[6], "with-filter")
                 self.assertEqual(row[7], {"filter_replaced": True})
 
