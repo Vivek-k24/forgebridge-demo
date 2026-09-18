@@ -23,9 +23,11 @@ from partgraph.repair_experience.memory.photo_lifecycle import (
     reconcile_photo_storage_row,
 )
 from partgraph.repair_experience.service import create_repair_session
+from reference_fixture_support import primary_vehicle_id, primary_vehicle_snapshot
 
 DATABASE_URL_ENV = "PARTGRAPH_DATABASE_URL"
-REFERENCE_VEHICLE_ID = UUID("7feb13e9-bca0-5d8b-b701-f0260cce5da1")
+REFERENCE_VEHICLE_ID = primary_vehicle_id()
+REFERENCE_VEHICLE = primary_vehicle_snapshot()
 MAX_PHOTO_BYTES = 4 * 1024 * 1024
 
 
@@ -64,13 +66,7 @@ class PhotoStorageRuntimeTests(unittest.IsolatedAsyncioTestCase):
                     nickname="Photo storage fixture",
                     identity_source="manual",
                     identity_resolution="matched",
-                    identity_snapshot={
-                        "year": 2009,
-                        "market": "US",
-                        "make": "Honda",
-                        "model": "CIVIC",
-                        "trim": "HYBRID",
-                    },
+                    identity_snapshot=dict(REFERENCE_VEHICLE),
                 )
                 db.add_all([user, user_vehicle])
                 await db.flush()
