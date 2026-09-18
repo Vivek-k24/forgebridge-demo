@@ -40,9 +40,6 @@ IDENTITY_FACT_KEYS = {
     "make",
     "model",
     "trim",
-    "transmission",
-    "drivetrain",
-    "body_style",
 }
 STRONG_FACT_KEYS = {
     "vehicle_configuration_id",
