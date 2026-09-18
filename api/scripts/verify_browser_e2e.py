@@ -46,6 +46,11 @@ def main() -> None:
 
         page.goto(BASE_URL, wait_until="networkidle")
         expect(page.get_by_role("heading", name="Sign in.")).to_be_visible()
+        # A fresh signed-out browser intentionally receives AUTH_REQUIRED from
+        # the initial session probe. Start strict browser diagnostics after
+        # that expected bootstrap response has rendered the signed-out UI.
+        console_errors.clear()
+        page_errors.clear()
 
         page.get_by_role("button", name="Create account").click()
         expect(page.get_by_role("heading", name="Create your account.")).to_be_visible()
