@@ -1,23 +1,19 @@
-import json
 import unittest
-from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-PLAN_PATH = REPO_ROOT / "api/data/reference/persistent_publication_plan_v1.json"
-
-
-def _load_json(path: Path) -> dict[str, object]:
-    return json.loads(path.read_text(encoding="utf-8"))
+from reference_fixture_support import load_json, primary_publication_plan, repo_path
 
 
 class PersistentPublicationPlanTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.plan = _load_json(PLAN_PATH)
+        _, cls.plan = primary_publication_plan()
         datasets = cls.plan["datasets"]
-        cls.parts_manifest = _load_json(REPO_ROOT / datasets["parts_manifest"])
-        cls.repair_manifest = _load_json(REPO_ROOT / datasets["repair_manifest"])
-        cls.coverage = _load_json(REPO_ROOT / datasets["primary_vehicle_coverage"])
+        cls.parts_manifest_path = repo_path(str(datasets["parts_manifest"]))
+        cls.repair_manifest_path = repo_path(str(datasets["repair_manifest"]))
+        cls.coverage_path = repo_path(str(datasets["primary_vehicle_coverage"]))
+        cls.parts_manifest = load_json(cls.parts_manifest_path)
+        cls.repair_manifest = load_json(cls.repair_manifest_path)
+        cls.coverage = load_json(cls.coverage_path)
 
     def test_publication_is_explicit_and_not_deployment_driven(self) -> None:
         policy = self.plan["policy"]
@@ -58,12 +54,10 @@ class PersistentPublicationPlanTests(unittest.TestCase):
         requirement_total = 0
         procedure_total = 0
         for repair_key, manifest_entry in manifest_repairs.items():
-            repair_path = (
-                REPO_ROOT
-                / "api/data/reference/2009_honda_civic_hybrid_repairs_v1"
-                / manifest_entry["path"]
+            repair_path = self.repair_manifest_path.parent / str(
+                manifest_entry["path"]
             )
-            repair_data = _load_json(repair_path)
+            repair_data = load_json(repair_path)
             requirement_count = len(repair_data["requirements"])
             procedure_count = len(repair_data["actions"])
 
