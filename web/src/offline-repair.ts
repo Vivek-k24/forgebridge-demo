@@ -4,6 +4,8 @@ const PACK_KEY = 'partgraph:offline-repair-pack:v2'
 const LEGACY_PACK_KEY = 'partgraph:offline-repair-pack:v1'
 const LEGACY_OWNER_KEY = 'partgraph:offline-owner:v1'
 
+let cacheEpoch = 0
+
 type ResumeAttention = {
   kind: string
   id: string
@@ -138,6 +140,7 @@ export function loadCachedOfflineRepairPack(_ownerId?: string | null, sessionId?
 }
 
 export function clearOfflineRepairCache(): void {
+  cacheEpoch += 1
   const target = storage()
   target?.removeItem(PACK_KEY)
   target?.removeItem(LEGACY_PACK_KEY)
@@ -145,7 +148,10 @@ export function clearOfflineRepairCache(): void {
 }
 
 export async function refreshOfflineRepairPack(sessionId: string): Promise<OfflineRepairPack> {
+  const requestEpoch = cacheEpoch
   const pack = await apiRequest<ServerOfflineRepairPack>(`/api/v1/repair-sessions/${sessionId}/offline-pack`)
+  const minimized = privacyMinimizedPack(pack)
+  if (requestEpoch !== cacheEpoch) return minimized
   return cacheOfflineRepairPack(pack)
 }
 
