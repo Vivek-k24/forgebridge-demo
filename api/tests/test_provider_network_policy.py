@@ -67,12 +67,12 @@ class ProviderUrlConfigurationTests(unittest.TestCase):
 class ProviderExecutionNetworkPolicyTests(unittest.TestCase):
     def test_public_dns_answers_are_pinned_for_one_connection_attempt(self) -> None:
         target = resolve_provider_target(
-            "https://api.example.com:443/v1?make=Honda&year=2009",
+            "https://api.example.com:443/v1?make=Fixture&year=2099",
             resolver=_public_resolver,
         )
         self.assertEqual(
             target.url,
-            "https://api.example.com/v1?make=Honda&year=2009",
+            "https://api.example.com/v1?make=Fixture&year=2099",
         )
         self.assertEqual(target.hostname, "api.example.com")
         self.assertEqual(target.port, 443)
@@ -115,7 +115,7 @@ class ProviderExecutionNetworkPolicyTests(unittest.TestCase):
     def test_redirect_to_literal_internal_target_is_rejected(self) -> None:
         with self.assertRaises(ProviderNetworkPolicyError):
             resolve_provider_redirect(
-                "https://api.example.com/v1?make=Honda",
+                "https://api.example.com/v1?make=Fixture",
                 "https://169.254.169.254/latest/meta-data",
                 resolver=_public_resolver,
             )
