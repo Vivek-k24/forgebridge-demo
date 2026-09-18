@@ -9,17 +9,17 @@ Last updated: **2026-09-18**
 
 Current exact implementation proof tracked here:
 - active implementation branch: `partgraph-mvp-consolidation`
-- latest exact GitHub-green implementation/data commit: `274fdd7d33d5b8d58759f52c9abe1bfe6ca4b988`
-- MVP Final Validation CI: passed (`#189`, attempt 2; all 18 GitHub Phase 9 jobs)
-- full API CI: passed (`#1080`)
-- Web CI: passed (`#943`)
-- extraction/provider-ingestion pipeline CI: passed (`#417`)
-- canonical publication CI: passed (`#354`)
-- reference repair runtime CI: passed (`#365`)
-- database reliability CI: passed (`#204`)
-- operational observability CI: passed (`#165`)
-- Web dependency advisory CI: passed (`#207`)
-- exact-head Vercel preview: `dpl_GeUdp2NqutbBBYHiTB6hxLKWdm1U` failed closed at the durable-photo probe because Preview has `VERCEL_OIDC_TOKEN` but no connected Blob store (`BLOB_STORE_ID` absent and no legacy `BLOB_READ_WRITE_TOKEN`); this is the remaining hosted durable-photo blocker, not an RBAC failure
+- latest exact GitHub-green implementation/data commit: `cfa2aeade76cdcf47414df1369a4687d3e6cb526`
+- MVP Final Validation CI: passed (`#197`; all 18 GitHub Phase 9 jobs)
+- full API CI: passed (`#1084`)
+- Web CI: passed (`#947`)
+- extraction/provider-ingestion pipeline CI: passed (`#423`)
+- canonical publication CI: passed (`#360`)
+- reference repair runtime CI: passed (`#371`)
+- database reliability CI: passed (`#210`)
+- operational observability CI: passed (`#169`)
+- Web dependency advisory CI: passed (`#211`)
+- exact-head Vercel preview: `dpl_EYsxQpmAd8WdBz45qowXkwYhPmgp` failed closed at the durable-photo probe because Preview has `VERCEL_OIDC_TOKEN` but no connected Blob store (`BLOB_STORE_ID` absent and no legacy `BLOB_READ_WRITE_TOKEN`); this is the remaining hosted durable-photo blocker, not an RBAC failure
 - last fully READY Vercel Phase 9 implementation head before the fail-closed photo probe: `e92967712fef381b37068b87c236d15509677ada`
 - consolidation preview database schema: `0059_primary_vehicle_domains`
 - production database: intentionally unchanged at `0020_catalog_coverage`
@@ -29,7 +29,7 @@ Phase 7 is complete for the primary deep-test vehicle, the 2009 Honda Civic Hybr
 
 Phase 8 is also complete. The same generic identity/publication/readiness/guidance/completion code now executes reviewed reference repairs for the 2015 Toyota Camry, 2018 Ford F-150, 2020 Subaru Forester, and 2022 Hyundai Tucson in addition to the Phase 7 Civic proof. The four additional datasets are selected through `api/data/reference/phase8_reference_fleet_v1.json` and exercised by one data-indexed runtime test; no make/model/year/trim application service or conditional branch was added for the new vehicles.
 
-Phase 9 is now in progress. Seventeen roadmap validation items are complete: all code-owned Phase 9 checks through RBAC authorization. The final-validation workflow now has eighteen GitHub jobs because it also runs the code-side durable-photo contracts while the separate hosted persistence requirement remains open. On `274fdd7d33d5b8d58759f52c9abe1bfe6ca4b988`, MVP Final Validation CI #189 attempt 2 completed successfully with all eighteen jobs green, and all eight established exact-head regression workflows also passed. The RBAC layer proves the Owner/Contributor/Reviewer/Curator/Operator hierarchy and reruns the database privilege boundaries for app, contributor, reviewer, curator, materializer, operator, provenance, downstream, and capability access. The real Vercel preview still fails only at the photo probe because no Preview Blob store is connected, so durable photo persistence is now the sole remaining Phase 9 checkbox.
+Phase 9 is now in progress. Seventeen roadmap validation items are complete: all code-owned Phase 9 checks through RBAC authorization. The final-validation workflow now has eighteen GitHub jobs because it also runs the code-side durable-photo contracts while the separate hosted persistence requirement remains open. On `cfa2aeade76cdcf47414df1369a4687d3e6cb526`, MVP Final Validation CI #197 completed successfully with all eighteen jobs green, and all eight established exact-head regression workflows also passed. The RBAC layer proves the Owner/Contributor/Reviewer/Curator/Operator hierarchy and reruns the database privilege boundaries for app, contributor, reviewer, curator, materializer, operator, provenance, downstream, and capability access. The real Vercel preview still fails only at the photo probe because no Preview Blob store is connected, so durable photo persistence is now the sole remaining Phase 9 checkbox. A temporary Preview-only self-provisioning experiment was rejected by Vercel with HTTP 403 and then fully removed; the current clean head has the identical Git tree to the prior green RBAC head.
 
 The new primary-vehicle canonical domains are data-driven. Reviewed exact-vehicle claims materialize an `Engine` system, `Engine cooling system` subsystem, and `Engine water-pump assembly`; first-class specifications record the 3.4 US qt engine-oil change capacity with filter and 39 N·m oil-drain-bolt torque. The same source-authority, verified-evidence, MechanicalClaim, restricted-materializer, conflict-quarantine, canonical-version, and evidence-link rules used by existing canonical knowledge apply to these domains.
 
@@ -457,8 +457,8 @@ Completed Phase 9 proof so far:
 - human role hierarchy suite: `api/tests/test_mvp_rbac_authorization.py`
 - RBAC database suites: `api/tests/test_rbac_database_privileges.py`, `api/tests/test_pipeline_database_privileges.py`, `api/tests/test_materializer_database_privileges.py`, `api/tests/test_part_catalog_materializer_database_privileges.py`, `api/tests/test_vehicle_domain_materializer_database_privileges.py`, `api/tests/test_downstream_materializer_database_privileges.py`, `api/tests/test_source_authority_operator_database_privileges.py`, `api/tests/test_provenance_database_privileges.py`, and `api/tests/test_capability_database_privileges.py`
 - operator role-management guardrail suite: `api/tests/test_operator_role_management.py`
-- exact GitHub proof head: `274fdd7d33d5b8d58759f52c9abe1bfe6ca4b988`
-- proof run: `MVP Final Validation CI #189`, attempt 2
+- exact GitHub proof head: `cfa2aeade76cdcf47414df1369a4687d3e6cb526`
+- proof run: `MVP Final Validation CI #197`
 - unit/domain contracts cover fail-closed source authority and repair materialization, unsupported computer/service-tool boundaries, provider network safety, provider/API/browser timeout hierarchy, ambiguous-write recovery, and vehicle-fact externalization
 - API contracts run against the FastAPI application with a migrated fresh PostgreSQL service and verify live/readiness health, platform response headers, standardized 404/405 error envelopes, request-size enforcement, authenticated Garage/repair collection wiring, and the core MVP repair HTTP surface
 - authentication/security contracts run against the real authentication/session path with a migrated fresh PostgreSQL service and verify unauthenticated rejection, CSRF and exact-origin enforcement, secure HttpOnly session-cookie/HSTS behavior, Argon2 password hashing, hashed session-token storage, logout revocation, non-enumerating invalid-login responses, and persisted failed-login rate limiting through 429
@@ -467,7 +467,7 @@ Completed Phase 9 proof so far:
 - migration contracts require one Alembic head and one base, require every declared parent revision to exist, apply the complete migration history to an empty PostgreSQL database, verify the database is stamped at the exact current head, require every registered ORM table/column to exist in the migrated schema, and prove re-applying `upgrade head` is idempotent
 - production-copy CI reconstructs `0020_catalog_coverage`, seeds representative persisted owner/session state, fingerprints baseline private columns without recording owner values, upgrades to current head, and requires every baseline row-count/digest fingerprint to remain unchanged
 - live production-copy proof used Neon child branch `br-shiny-sunset-aebi1qvo` cloned from production `br-shiny-silence-aexgk2zm`; it started at `0020_catalog_coverage`, reached `0063_photo_storage_outbox`, and preserved all 18 baseline private-table fingerprints with zero mismatches; production itself was re-checked and remained at `0020_catalog_coverage`
-- the live-copy SQL was emitted on validation commit `91a701e7229bf869bdc32aa488c7584b3a200e5a`; production-copy closeout commit `e81dd1659b4b5e2c7ea952b5d406313c2ce1ea51` differed from it only by removal of the temporary 14-line SQL-emission diagnostic, while current GitHub-green head `274fdd7d33d5b8d58759f52c9abe1bfe6ca4b988` additionally contains the later Phase 9 full-stack, verified-guidance, browser-E2E, service-worker runtime, randomized-acceptance, reference-fleet-acceptance, offline/degraded browser-validation, timeout/recovery proof, offline-pack logout-race fix, downstream-operation release gate, unsupported-computer-boundary proof, durable-photo outbox/hosted-backend validation, Blob OIDC credential support, the data-free source-code invariant, and the final RBAC authorization release gate
+- the live-copy SQL was emitted on validation commit `91a701e7229bf869bdc32aa488c7584b3a200e5a`; production-copy closeout commit `e81dd1659b4b5e2c7ea952b5d406313c2ce1ea51` differed from it only by removal of the temporary 14-line SQL-emission diagnostic, while current GitHub-green head `cfa2aeade76cdcf47414df1369a4687d3e6cb526` additionally contains the later Phase 9 full-stack, verified-guidance, browser-E2E, service-worker runtime, randomized-acceptance, reference-fleet-acceptance, offline/degraded browser-validation, timeout/recovery proof, offline-pack logout-race fix, downstream-operation release gate, unsupported-computer-boundary proof, durable-photo outbox/hosted-backend validation, Blob OIDC credential support, the data-free source-code invariant, and the final RBAC authorization release gate
 - the Neon validation branch is intentionally retained pending explicit branch-cleanup approval
 - full-stack integration builds the locked React/Vite frontend with same-origin API configuration, packages `web/dist` into `api/partgraph/frontend`, migrates a fresh PostgreSQL database, starts FastAPI, proves the built JavaScript asset is served, proves database readiness, registers a real user with an HttpOnly session cookie, persists and rereads account preferences, creates and rereads a private Garage vehicle, logs out, and confirms the revoked session can no longer access `/api/v1/auth/me`
 - browser automation is intentionally not claimed by the full-stack gate; DOM/browser E2E remains a later separate Phase 9 item
@@ -508,8 +508,8 @@ Completed Phase 9 proof so far:
 - human RBAC contracts require the Blueprint hierarchy exactly: Owner has no curation authority; Contributor can submit but not review; Reviewer can review but not curator-publish; Curator can publish/resolve; only Operator/Admin can use operator-only authority
 - the RBAC release job reruns operator last-admin/audit guardrails plus PostgreSQL privilege suites for ordinary app/shared reads, contributor staging-only writes, reviewer verification boundaries, curator claim/conflict authority, append-only materializer authority across repair/parts/vehicle domains/downstream truth, operator configuration authority, and read-only provenance/capability boundaries
 - the human role hierarchy suite is also a permanent API CI contract, so role-set drift fails the normal API pipeline as well as Phase 9
-- the first #189 attempt hit the already-known nondeterministic offline verifier assertion `offline reload invented a newer sync timestamp`; no RBAC or product code changed that path, and the same exact-head offline job passed on rerun, making #189 attempt 2 fully green
-- all eight established exact-head regression workflows passed on `274fdd7d33d5b8d58759f52c9abe1bfe6ca4b988`: API #1080, Web #943, Extraction #417, Canonical Publication #354, Reference Repair Runtime #365, Database Reliability #204, Operational Observability #165, and Web Dependency Advisory #207
+- an earlier #189 run hit the already-known nondeterministic offline verifier assertion `offline reload invented a newer sync timestamp`; no RBAC or product code changed that path. The current clean head later passed MVP Final Validation #197 without that rerun dependency
+- all eight established exact-head regression workflows passed on `cfa2aeade76cdcf47414df1369a4687d3e6cb526`: API #1084, Web #947, Extraction #423, Canonical Publication #360, Reference Repair Runtime #371, Database Reliability #210, Operational Observability #169, and Web Dependency Advisory #211
 
 Existing permanent CI, including migration history, adopted-baseline equivalence, RBAC, source-authority, extraction, canonical publication, reference-repair runtime, container build, and readiness smoke, remains active and is not discarded while Phase 9 is pending.
 
@@ -678,7 +678,7 @@ The data-free check is complete. Instead of keeping a handwritten list of refere
 
 The RBAC layer is complete. It checks the five human roles directly: Owner cannot enter contribution/review/curation/operator gates; Contributor can submit candidate evidence but cannot review; Reviewer can review but cannot perform curator-only publication; Curator can publish and resolve conflicts; Operator/Admin is the only operator-only role. The same job then reruns the database privilege boundaries so an application-role mistake cannot silently grant staging, review, canonical-write, materializer, or operator power. Operator role changes remain audited and the last active operator cannot be demoted.
 
-All 18 GitHub jobs passed in MVP Final Validation CI #189 attempt 2 on `274fdd7d33d5b8d58759f52c9abe1bfe6ca4b988`, and all eight established exact-head regression workflows also passed. Attempt 1 had only the previously known timing-only offline timestamp assertion; the same exact-head offline job passed on rerun. **There is no remaining code-owned Phase 9 validation task. Hosted durable photo persistence is the sole Phase 9 blocker until the Preview Blob store is connected.**
+All 18 GitHub jobs passed in MVP Final Validation CI #197 on `cfa2aeade76cdcf47414df1369a4687d3e6cb526`, and all eight established exact-head regression workflows also passed. The current clean head has the same Git tree as the prior RBAC-green head after the temporary Preview provisioning experiment was fully removed. **There is no remaining code-owned Phase 9 validation task. Hosted durable photo persistence is the sole Phase 9 blocker until the Preview Blob store is connected.**
 
 ### Phase 10 — Move the finished MVP into production
 
