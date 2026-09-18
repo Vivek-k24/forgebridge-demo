@@ -266,7 +266,9 @@ def main() -> None:
         recovery_count_before = len(recovery_urls)
         page.get_by_role("button", name="Resume repair").click()
         expect(
-            page.get_by_text(re.compile(r"CLIENT_WRITE_STATE_UNCERTAIN"))
+            page.locator(".workspace-alert--error").filter(
+                has_text=re.compile(r"CLIENT_WRITE_STATE_UNCERTAIN")
+            ).first
         ).to_be_visible(timeout=10_000)
         page.unroute(resume_pattern, timeout_before_resume_reaches_server)
 
