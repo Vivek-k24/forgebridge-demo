@@ -89,14 +89,20 @@ class NhtsaRecallAdapterTests(unittest.TestCase):
         self.adapter = NhtsaRecallAdapter()
 
     def test_url_is_fixed_to_official_nhtsa_vehicle_recall_endpoint(self) -> None:
-        url = build_nhtsa_recall_url(NhtsaVehicleQuery(2024, " Honda ", " Civic Type-R "))
+        url = build_nhtsa_recall_url(
+            NhtsaVehicleQuery(2099, " Fixture Make ", " Fixture Model ")
+        )
         parsed = urlparse(url)
         self.assertEqual(parsed.scheme, "https")
         self.assertEqual(parsed.hostname, "api.nhtsa.gov")
         self.assertEqual(parsed.path, "/recalls/recallsByVehicle")
         self.assertEqual(
             parse_qs(parsed.query),
-            {"make": ["Honda"], "model": ["Civic Type-R"], "modelYear": ["2024"]},
+            {
+                "make": ["Fixture Make"],
+                "model": ["Fixture Model"],
+                "modelYear": ["2099"],
+            },
         )
 
     def test_adapter_keeps_recall_facts_and_discards_unrelated_fields(self) -> None:
@@ -139,7 +145,7 @@ class NhtsaRecallAdapterTests(unittest.TestCase):
 
     def test_product_year_boundary_is_enforced(self) -> None:
         with self.assertRaises(ExtractionError):
-            NhtsaVehicleQuery(1995, "Honda", "Civic")
+            NhtsaVehicleQuery(1995, "Fixture Make", "Fixture Model")
 
 
 class NhtsaRecallDatabaseTests(unittest.IsolatedAsyncioTestCase):
