@@ -40,8 +40,8 @@ class ReferenceRepairCandidateTests(unittest.TestCase):
         )
         vehicle = self.candidate["vehicle"]
         self.assertEqual(
-            {key: vehicle.get(key) for key in REFERENCE_VEHICLE},
-            {key: REFERENCE_VEHICLE.get(key) for key in REFERENCE_VEHICLE},
+            vehicle,
+            {key: REFERENCE_VEHICLE.get(key) for key in vehicle},
         )
 
     def test_water_pump_replacement_creates_supported_refill_bleed_candidate(self) -> None:
@@ -77,7 +77,7 @@ class ReferenceRepairCandidateTests(unittest.TestCase):
         approved_numbers: set[str] = set()
         for component in manifest["component_files"].values():
             payload = load_json(manifest_path.parent / str(component["path"]))
-            rows = payload if isinstance(payload, list) else payload.get("parts", [])
+            rows = payload if isinstance(payload, list) else payload.get("components", [])
             for row in rows:
                 part_number = row.get("oem_part_number")
                 if part_number:
