@@ -172,11 +172,26 @@ def _write_atomic(path: Path, data: bytes) -> None:
 
 
 def _blob_token() -> str | None:
-    value = os.getenv("BLOB_READ_WRITE_TOKEN")
-    return value.strip() if value and value.strip() else None
+    static_token = os.getenv("BLOB_READ_WRITE_TOKEN")
+    if static_token and static_token.strip():
+        return static_token.strip()
+
+    oidc_token = os.getenv("VERCEL_OIDC_TOKEN")
+    store_id = os.getenv("BLOB_STORE_ID")
+    if oidc_token and oidc_token.strip() and store_id and store_id.strip():
+        return oidc_token.strip()
+    return None
 
 
 def _blob_store_id(token: str) -> str:
+    configured_store_id = os.getenv("BLOB_STORE_ID")
+    if configured_store_id and configured_store_id.strip():
+        normalized = configured_store_id.strip()
+        if normalized.startswith("store_"):
+            normalized = normalized[len("store_") :]
+        if normalized:
+            return normalized
+
     parts = token.split("_")
     if len(parts) < 5 or not parts[3]:
         raise PartGraphError(
