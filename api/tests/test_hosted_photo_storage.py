@@ -1,4 +1,5 @@
 import asyncio
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -65,6 +66,19 @@ class HostedPhotoStorageTests(unittest.TestCase):
 
             self.assertEqual(deleted, [(storage_key, TOKEN)])
             self.assertFalse(path.exists())
+
+    def test_oidc_credentials_are_used_when_blob_store_is_connected(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "BLOB_READ_WRITE_TOKEN": "",
+                "VERCEL_OIDC_TOKEN": "oidc-fixture-token",
+                "BLOB_STORE_ID": "store_store123",
+            },
+            clear=False,
+        ):
+            self.assertEqual(storage._blob_token(), "oidc-fixture-token")
+            self.assertEqual(storage._blob_store_id("oidc-fixture-token"), "store123")
 
     def test_local_storage_remains_default_without_blob_credentials(self) -> None:
         with tempfile.TemporaryDirectory() as root, self._settings(root):
