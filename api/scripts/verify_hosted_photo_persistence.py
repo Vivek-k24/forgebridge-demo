@@ -20,8 +20,12 @@ def _probe_png() -> bytes:
 async def _run_probe() -> None:
     token = os.getenv("BLOB_READ_WRITE_TOKEN", "").strip()
     if not token:
+        store_id_configured = bool(os.getenv("BLOB_STORE_ID", "").strip())
+        oidc_configured = bool(os.getenv("VERCEL_OIDC_TOKEN", "").strip())
         raise RuntimeError(
-            "Preview durable-photo validation requires BLOB_READ_WRITE_TOKEN."
+            "Preview durable-photo validation has no BLOB_READ_WRITE_TOKEN "
+            f"(BLOB_STORE_ID configured={store_id_configured}; "
+            f"VERCEL_OIDC_TOKEN configured={oidc_configured})."
         )
 
     key = storage.new_storage_key(uuid4(), "png")
