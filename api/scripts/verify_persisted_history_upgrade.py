@@ -27,7 +27,7 @@ REQUIREMENT_ID = UUID("b0000000-0000-4000-8000-000000000001")
 GARAGE_ITEM_ID = UUID("c0000000-0000-4000-8000-000000000001")
 
 IDENTITY_SNAPSHOT = {
-    "year": 2009,
+    "year": 2099,
     "make": "Synthetic",
     "model": "Migration Fixture",
     "trim": "CI-only",
