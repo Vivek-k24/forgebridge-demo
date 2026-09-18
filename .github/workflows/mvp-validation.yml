@@ -1191,3 +1191,28 @@ jobs:
           python -m unittest discover -s api/tests
           -p 'test_reference_photo_storage_runtime.py' -v
 
+  data-free-source-code:
+    name: Phase 9 data-free source-code check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.14'
+
+      - name: Install API dependencies
+        run: python -m pip install -e './api[dev]'
+
+      - name: Lint data-free source invariant
+        run: ruff check api/tests/test_data_free_source_code.py
+
+      - name: Enforce data-free executable source
+        run: >-
+          python -m unittest discover -s api/tests
+          -p 'test_data_free_source_code.py' -v
+
