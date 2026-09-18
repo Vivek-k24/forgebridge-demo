@@ -73,7 +73,11 @@ def main() -> None:
         metric = page.get_by_role("radio", name=re.compile(r"^Metric"))
         page.locator("label.settings-choice", has_text="Metric").click()
         expect(metric).to_be_checked()
-        expect(page.get_by_text("Measurement units changed to Metric.")).to_be_visible()
+        expect(
+            page.locator("#partgraph-main-content").get_by_text(
+                "Measurement units changed to Metric."
+            )
+        ).to_be_visible()
 
         page.get_by_role("button", name="Garage").click()
         expect(
