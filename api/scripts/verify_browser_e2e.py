@@ -87,9 +87,11 @@ def main() -> None:
             )
         ).to_be_visible()
         expect(page.get_by_role("group", name="Add vehicle method")).to_be_visible()
-        expect(page.get_by_label("Model year")).to_be_visible()
-        expect(page.get_by_label("Make")).to_be_visible()
-        expect(page.get_by_label("Model")).to_be_visible()
+        expect(
+            page.get_by_role("spinbutton", name=re.compile(r"^Model year"))
+        ).to_be_visible()
+        expect(page.get_by_role("combobox", name="Make", exact=True)).to_be_visible()
+        expect(page.get_by_role("combobox", name="Model", exact=True)).to_be_visible()
         expect(page).to_have_title(re.compile(r"Garage \| PartGraph$"))
 
         page.get_by_role("button", name="Sign out").click()
