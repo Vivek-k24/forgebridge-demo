@@ -157,7 +157,9 @@ def _trigger_repair_sync(page: Page) -> None:
 def _assert_offline_workspace(page: Page, pack: dict[str, Any]) -> None:
     expect(page.get_by_text("Offline repair pack · read only", exact=True)).to_be_visible()
     expect(page.get_by_text("OFFLINE PACK · READ ONLY", exact=True)).to_be_visible()
-    expect(page.get_by_text(f"Definition v{pack['repair_definition_version']}")).to_be_visible()
+    expect(
+        page.get_by_text(f"Definition v{pack['repair_definition_version']}").first
+    ).to_be_visible()
     expect(page.get_by_text(pack["pack_version"], exact=True)).to_be_visible()
     expect(page.get_by_text("Last sync", exact=False).first).to_be_visible()
 
