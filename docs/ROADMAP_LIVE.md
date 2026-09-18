@@ -5,21 +5,22 @@ Architecture authority: `docs/BLUEPRINT.md`
 Implementation-sequence source: `docs/ROADMAP.md`  
 Maintenance rule: **update this file directly on `main` as soon as a roadmap task is completed. Do not wait for the implementation branch to merge or for its PR to close. Keep the technical tracker and the `Layman Live progress` section synchronized so they describe the same completed, pending, and next work without changing roadmap scope, order, or architecture.**
 
-Last updated: **2026-09-17**
+Last updated: **2026-09-18**
 
 Current exact implementation proof tracked here:
 - active implementation branch: `partgraph-mvp-consolidation`
-- latest exact green implementation/data commit: `e92967712fef381b37068b87c236d15509677ada`
-- MVP Final Validation CI: passed (`#111`; all 15 Phase 9 jobs)
-- full API CI: passed (`#1041`)
-- Web CI: passed (`#904`)
-- extraction/provider-ingestion pipeline CI: passed (`#372`)
-- canonical publication CI: passed (`#312`)
-- reference repair runtime CI: passed (`#311`)
-- database reliability CI: passed (`#164`)
-- operational observability CI: passed (`#126`)
-- Web dependency advisory CI: passed (`#168`)
-- latest observed READY Vercel consolidation preview for the Phase 8 Tucson data line: `dpl_2f9YRc4BEN9nHc3PJRHdU9fwPBy3` on `6862983d386a879fd7ef4ac5acd0c2e7bb27a6e5`; Vercel also reported success for exact Phase 9 head `e92967712fef381b37068b87c236d15509677ada`, while the release proof tracked here is the GitHub CI/runtime proof after the Phase 9 unit/domain, API, authentication/security, RLS/owner-isolation, migration, production-copy migration, full-stack integration, verified-guidance integration, real-browser E2E, seeded randomized-acceptance, fresh reference-fleet-acceptance, real-browser offline/degraded, timeout/ambiguous-write-recovery, downstream-operation-semantics, and unsupported-computer-boundary layers
+- latest exact GitHub-green implementation/data commit: `b2e85d4d2cff1fd39c78c0e71c5d0dc7f252eed3`
+- MVP Final Validation CI: passed (`#183`; all 17 GitHub Phase 9 jobs)
+- full API CI: passed (`#1077`)
+- Web CI: passed (`#940`)
+- extraction/provider-ingestion pipeline CI: passed (`#414`)
+- canonical publication CI: passed (`#351`)
+- reference repair runtime CI: passed (`#362`)
+- database reliability CI: passed (`#201`)
+- operational observability CI: passed (`#162`)
+- Web dependency advisory CI: passed (`#204`)
+- exact-head Vercel preview: `dpl_Fuv9fZeeh3YiFSFpFqUyBqh56xhX` failed closed at the durable-photo probe because Preview has `VERCEL_OIDC_TOKEN` but no connected Blob store (`BLOB_STORE_ID` absent and no legacy `BLOB_READ_WRITE_TOKEN`); this is the remaining hosted durable-photo blocker, not a data-free-source-code failure
+- last fully READY Vercel Phase 9 implementation head before the fail-closed photo probe: `e92967712fef381b37068b87c236d15509677ada`
 - consolidation preview database schema: `0059_primary_vehicle_domains`
 - production database: intentionally unchanged at `0020_catalog_coverage`
 - PR #84: remains draft/unmerged
@@ -28,7 +29,7 @@ Phase 7 is complete for the primary deep-test vehicle, the 2009 Honda Civic Hybr
 
 Phase 8 is also complete. The same generic identity/publication/readiness/guidance/completion code now executes reviewed reference repairs for the 2015 Toyota Camry, 2018 Ford F-150, 2020 Subaru Forester, and 2022 Hyundai Tucson in addition to the Phase 7 Civic proof. The four additional datasets are selected through `api/data/reference/phase8_reference_fleet_v1.json` and exercised by one data-indexed runtime test; no make/model/year/trim application service or conditional branch was added for the new vehicles.
 
-Phase 9 is now in progress. The first fifteen fresh final-validation layers are complete: `.github/workflows/mvp-validation.yml` runs the release-oriented unit/domain, migrated-Postgres HTTP API, authentication/security, RLS/owner-isolation, migration, production-copy migration, full-stack integration, verified-guidance integration, real-browser E2E, seeded randomized acceptance, fresh reference-fleet acceptance, real-browser offline/degraded behavior, timeout/ambiguous-write recovery, downstream-operation semantics, and unsupported computer boundary together instead of relying only on scattered historical greens. On `e92967712fef381b37068b87c236d15509677ada`, all fifteen jobs in MVP Final Validation CI #111 and every established exact-head regression passed. The unsupported-computer layer proves the reserved computer/service-tool marker is terminal and non-skippable, capability-boundary tables remain read-only to ordinary app/reviewer roles, and a runtime repair cannot complete, skip, or mark blocked a required computer-dependent step. Durable photo persistence is the next Phase 9 task.
+Phase 9 is now in progress. Sixteen roadmap validation items are complete: the original fifteen through unsupported computer boundary plus the data-free-source-code invariant. The final-validation workflow now has seventeen GitHub jobs because it also runs the code-side durable-photo contracts while the separate hosted persistence requirement remains open. On `b2e85d4d2cff1fd39c78c0e71c5d0dc7f252eed3`, all seventeen GitHub jobs in MVP Final Validation CI #183 and all eight established exact-head regression workflows passed. The data-free gate derives reference automotive facts from the versioned JSON datasets, scans executable application/frontend/test/script/CI source, and rejects strong reference facts or recognizable reference identity combinations outside the allowed data boundary. The real Vercel preview still fails the photo probe because no Preview Blob store is connected, so durable photo persistence remains unchecked. RBAC authorization tests are the next code-owned Phase 9 task.
 
 The new primary-vehicle canonical domains are data-driven. Reviewed exact-vehicle claims materialize an `Engine` system, `Engine cooling system` subsystem, and `Engine water-pump assembly`; first-class specifications record the 3.4 US qt engine-oil change capacity with filter and 39 N·m oil-drain-bolt torque. The same source-authority, verified-evidence, MechanicalClaim, restricted-materializer, conflict-quarantine, canonical-version, and evidence-link rules used by existing canonical knowledge apply to these domains.
 
@@ -384,7 +385,7 @@ Exit gate: **satisfied.** The same source code executes the selected reference-f
 
 ## Phase 9 — Build the fresh MVP validation suite
 
-Status: **In progress. The fresh release-oriented validation campaign has completed its unit/domain, API, authentication/security, RLS/owner-isolation, migration, production-copy migration, full-stack integration, verified-guidance integration, browser E2E, randomized-acceptance, reference-fleet-acceptance, offline/degraded-behavior, timeout/ambiguous-write-recovery, downstream-operation-semantics, and unsupported-computer-boundary layers; durable photo persistence is next. Existing permanent CI gates remain active.**
+Status: **In progress. Sixteen roadmap validation items are complete, including the new data-free-source-code invariant. The code-side durable-photo job is green, but the hosted durable-photo item remains blocked because the Vercel Preview project has no connected Blob store. RBAC authorization tests are the next code-owned task. Existing permanent CI gates remain active.**
 
 - [x] unit/domain tests for final MVP behavior
 - [x] API tests for final MVP behavior
@@ -402,7 +403,7 @@ Status: **In progress. The fresh release-oriented validation campaign has comple
 - [x] downstream-operation semantics
 - [x] unsupported computer boundary
 - [ ] durable photo persistence
-- [ ] data-free-source-code check
+- [x] data-free-source-code check
 - [ ] RBAC authorization tests
 
 Completed Phase 9 proof so far:
@@ -444,8 +445,16 @@ Completed Phase 9 proof so far:
 - unsupported computer runtime suite: `api/tests/test_mvp_unsupported_computer_boundary.py`
 - computer-boundary definition suite: `api/tests/test_repair_materialization_policy.py`
 - capability boundary privilege suite: `api/tests/test_capability_database_privileges.py`
-- exact proof head: `e92967712fef381b37068b87c236d15509677ada`
-- proof run: `MVP Final Validation CI #111`
+- durable-photo code-side job: `Phase 9 durable photo persistence`
+- hosted/local storage suite: `api/tests/test_hosted_photo_storage.py`
+- durable lifecycle suite: `api/tests/test_reference_photo_storage_runtime.py`
+- hosted Preview probe: `api/scripts/verify_hosted_photo_persistence.py`
+- data-free source-code job: `Phase 9 data-free source-code check`
+- data-free invariant suite: `api/tests/test_data_free_source_code.py`
+- generic reference fixture index: `api/data/reference/primary_reference_bundle_v1.json`
+- generic test fixture loader: `api/tests/reference_fixture_support.py`
+- exact GitHub proof head: `e92967712fef381b37068b87c236d15509677ada`
+- proof run: `MVP Final Validation CI #183`
 - unit/domain contracts cover fail-closed source authority and repair materialization, unsupported computer/service-tool boundaries, provider network safety, provider/API/browser timeout hierarchy, ambiguous-write recovery, and vehicle-fact externalization
 - API contracts run against the FastAPI application with a migrated fresh PostgreSQL service and verify live/readiness health, platform response headers, standardized 404/405 error envelopes, request-size enforcement, authenticated Garage/repair collection wiring, and the core MVP repair HTTP surface
 - authentication/security contracts run against the real authentication/session path with a migrated fresh PostgreSQL service and verify unauthenticated rejection, CSRF and exact-origin enforcement, secure HttpOnly session-cookie/HSTS behavior, Argon2 password hashing, hashed session-token storage, logout revocation, non-enumerating invalid-login responses, and persisted failed-login rate limiting through 429
@@ -454,7 +463,7 @@ Completed Phase 9 proof so far:
 - migration contracts require one Alembic head and one base, require every declared parent revision to exist, apply the complete migration history to an empty PostgreSQL database, verify the database is stamped at the exact current head, require every registered ORM table/column to exist in the migrated schema, and prove re-applying `upgrade head` is idempotent
 - production-copy CI reconstructs `0020_catalog_coverage`, seeds representative persisted owner/session state, fingerprints baseline private columns without recording owner values, upgrades to current head, and requires every baseline row-count/digest fingerprint to remain unchanged
 - live production-copy proof used Neon child branch `br-shiny-sunset-aebi1qvo` cloned from production `br-shiny-silence-aexgk2zm`; it started at `0020_catalog_coverage`, reached `0063_photo_storage_outbox`, and preserved all 18 baseline private-table fingerprints with zero mismatches; production itself was re-checked and remained at `0020_catalog_coverage`
-- the live-copy SQL was emitted on validation commit `91a701e7229bf869bdc32aa488c7584b3a200e5a`; production-copy closeout commit `e81dd1659b4b5e2c7ea952b5d406313c2ce1ea51` differed from it only by removal of the temporary 14-line SQL-emission diagnostic, while current head `e92967712fef381b37068b87c236d15509677ada` additionally contains the later Phase 9 full-stack, verified-guidance, browser-E2E, service-worker runtime, randomized-acceptance, reference-fleet-acceptance, offline/degraded browser-validation, timeout/recovery proof, offline-pack logout-race fix, downstream-operation release-gate addition, and unsupported-computer-boundary release proof
+- the live-copy SQL was emitted on validation commit `91a701e7229bf869bdc32aa488c7584b3a200e5a`; production-copy closeout commit `e81dd1659b4b5e2c7ea952b5d406313c2ce1ea51` differed from it only by removal of the temporary 14-line SQL-emission diagnostic, while current GitHub-green head `b2e85d4d2cff1fd39c78c0e71c5d0dc7f252eed3` additionally contains the later Phase 9 full-stack, verified-guidance, browser-E2E, service-worker runtime, randomized-acceptance, reference-fleet-acceptance, offline/degraded browser-validation, timeout/recovery proof, offline-pack logout-race fix, downstream-operation release gate, unsupported-computer-boundary proof, durable-photo outbox/hosted-backend validation, Blob OIDC credential support, and the data-free source-code invariant
 - the Neon validation branch is intentionally retained pending explicit branch-cleanup approval
 - full-stack integration builds the locked React/Vite frontend with same-origin API configuration, packages `web/dist` into `api/partgraph/frontend`, migrates a fresh PostgreSQL database, starts FastAPI, proves the built JavaScript asset is served, proves database readiness, registers a real user with an HttpOnly session cookie, persists and rereads account preferences, creates and rereads a private Garage vehicle, logs out, and confirms the revoked session can no longer access `/api/v1/auth/me`
 - browser automation is intentionally not claimed by the full-stack gate; DOM/browser E2E remains a later separate Phase 9 item
@@ -486,7 +495,13 @@ Completed Phase 9 proof so far:
 - the boundary definition contract requires that reserved step to be terminal and non-skippable, while migrated database privilege tests prove `partgraph_app` and `partgraph_reviewer` can read but cannot mutate capability-boundary truth
 - runtime proof completes the preceding physical action and then requires guidance status `unsupported_boundary`, `completion_allowed=false`, boundary code `computer_service_required`, and the fixed message that PartGraph does not support diagnostics, relearn, coding, programming, calibration, or service-tool operations
 - attempts to mark that boundary `completed`, `skipped`, or `blocked` all fail with `REPAIR_PROCEDURE_ACTION_UNSUPPORTED_BOUNDARY`; no boundary progress row or event is persisted, and overall completion remains `unsupported_or_professional_pending` rather than `fully_mechanically_complete`
-- all eight established exact-head regression workflows also passed on the final commit
+- durable-photo code-side validation passes local/private-backend contracts, image sanitization/security, the committed-before-side-effect outbox lifecycle, retry after ambiguous storage acknowledgement, tombstone-before-delete behavior, narrow NOLOGIN media-worker privileges, and both legacy Blob-token plus Vercel OIDC credential resolution
+- the Vercel Preview probe deliberately removes its transient local cache before re-reading the object; on the exact head it fails before upload because the Preview environment has Vercel OIDC identity but no connected Blob store, so hosted durability remains explicitly pending instead of silently falling back to ephemeral `/tmp`
+- the data-free invariant derives strong automotive facts and primary identity combinations from `api/data/reference` plus `api/data/reference_candidates` rather than maintaining a vehicle-name blacklist; adding/changing reference JSON therefore changes the guard automatically
+- executable application, frontend, test, script, and CI source is scanned; reference-runtime tests now discover primary vehicle identity, manifests, candidate data and publication-plan paths through the generic data index rather than embedding the deep-reference vehicle's UUID, identity, engine, OEM facts, capacities, or vehicle-named directories
+- clearly synthetic network/materialization/migration fixtures were changed to synthetic years/names/specification values where they never needed real vehicle facts
+- the same invariant is also a permanent API CI check, not only a one-time Phase 9 job
+- all eight established exact-head regression workflows passed on `b2e85d4d2cff1fd39c78c0e71c5d0dc7f252eed3`: API #1077, Web #940, Extraction #414, Canonical Publication #351, Reference Repair Runtime #362, Database Reliability #201, Operational Observability #162, and Web Dependency Advisory #204
 
 Existing permanent CI, including migration history, adopted-baseline equivalence, RBAC, source-authority, extraction, canonical publication, reference-repair runtime, container build, and readiness smoke, remains active and is not discarded while Phase 9 is pending.
 
@@ -538,9 +553,9 @@ This section says the same thing as the technical tracker above, but in plain En
 
 ### Where the project stands right now
 
-**Phase 9 is now in progress.** The five-model Phase 8 proof remains complete, and the first fifteen fresh final-MVP validation layers have now run successfully: unit/domain contracts, HTTP API contracts, authentication/security contracts, owner-data isolation at the PostgreSQL row-security boundary, migration contracts, production-copy migration validation, full-stack integration, verified-guidance integration, real-browser E2E, seeded randomized acceptance, fresh reference-fleet acceptance, real-browser offline/degraded behavior, timeout/ambiguous-write recovery, downstream-operation semantics, and unsupported computer boundary.
+**Phase 9 is now in progress.** The five-model Phase 8 proof remains complete. Sixteen roadmap validation items are complete, including the new check that prevents real reference-vehicle facts from creeping back into executable source code. The GitHub final-validation workflow currently contains seventeen jobs because it also exercises the photo-storage implementation while the separate real hosted-photo proof remains open.
 
-The exact green implementation/data commit is `e92967712fef381b37068b87c236d15509677ada`. On that commit, all fourteen jobs in MVP Final Validation CI #111 passed, along with API CI #1041, Web CI #904, Extraction Pipeline CI #372, Canonical Publication CI #312, Reference Repair Runtime CI #311, Database Reliability CI #164, Operational Observability CI #126, and Web Dependency Advisory CI #168. Vercel also reported success for this exact head. The preview database schema remains `0059_primary_vehicle_domains`.
+The current GitHub-green implementation/data commit is `b2e85d4d2cff1fd39c78c0e71c5d0dc7f252eed3`. All 17 jobs passed in MVP Final Validation CI #183, along with API CI #1077, Web CI #940, Extraction Pipeline CI #414, Canonical Publication CI #351, Reference Repair Runtime CI #362, Database Reliability CI #201, Operational Observability CI #162, and Web Dependency Advisory CI #204. The Vercel preview is intentionally **not** green on this head: the new photo probe found that Vercel supplies its normal OIDC identity but the project has no Preview Blob store connected, so PartGraph refuses to call ephemeral `/tmp` durable storage. The preview database schema remains `0059_primary_vehicle_domains`.
 
 The production application has **not** been switched to the consolidation branch. PR #84 remains a draft and unmerged, and the production database remains deliberately at `0020_catalog_coverage`.
 
@@ -562,7 +577,7 @@ The remaining item is the final merge to `main`, which stays blocked until the p
 
 The main behavioral problems are fixed. Unsupported computer/service-tool work cannot be falsely marked complete, required follow-on work is understood, repair state resumes correctly, and Garage/readiness/inventory behavior is reconciled.
 
-Hosted durable private-photo persistence is still pending. The final complete regression campaign is also intentionally reserved for Phase 9.
+Hosted durable private-photo persistence is still pending at the environment level. The application now has durable outbox/retry handling, private Blob support, and Vercel OIDC credential support, but the Preview project still needs an actual private Blob store connected before the hosted round-trip can pass. The final regression campaign continues in Phase 9.
 
 ### Phase 2 — Survive network and timeout problems safely
 
@@ -621,7 +636,7 @@ No Toyota-, Ford-, Subaru-, or Hyundai-specific application service or make/mode
 
 ### Phase 9 — Run the final MVP test campaign
 
-**In progress.** The first fifteen layers are complete. The final-validation workflow now reruns the core unit/domain contracts together, runs a true HTTP API contract job against the FastAPI application with a freshly migrated PostgreSQL service, runs a real authentication/session security job against a separate freshly migrated PostgreSQL service, runs a dedicated owner-isolation job against another freshly migrated PostgreSQL service, runs a fresh migration-history job against another empty PostgreSQL database, runs a production-era migration-preservation job starting from `0020_catalog_coverage`, runs the built React frontend together with FastAPI and PostgreSQL as one same-origin application, runs a reviewed-evidence-to-guidance integration path, drives the packaged application through real Chromium, runs 20 deterministic synthetic repair cases against another freshly migrated PostgreSQL service, rebuilds another fresh database for the complete authoritative reference-fleet runtime set, drives a verified repair through degraded API state and full browser network loss using the read-only offline continuity contract, exercises the timeout/ambiguous-write recovery contract from server deadline through browser reconciliation, reruns canonical plus runtime downstream-operation semantics on another clean migrated database, and now proves the unsupported computer/service-tool boundary through policy, privilege, and runtime tests.
+**In progress.** Sixteen roadmap validation items are complete. The final-validation workflow now has seventeen green GitHub jobs: the previous fifteen release layers, the code-side durable-photo contracts, and the new data-free source-code check. Durable photo is not marked complete because its separate real Vercel proof still cannot run without a connected Preview Blob store.
 
 The unit/domain layer checks fail-closed source authority, evidence-backed repair materialization, unsupported computer/service-tool boundaries, provider network safety, timeout hierarchy, ambiguous-write recovery, and vehicle-fact externalization. The API layer checks live/readiness health, request/version/security response headers, standardized 404/405 error envelopes, request-size enforcement, authenticated Garage and repair collection routing, and that the core repair API endpoints are actually exposed. The authentication/security layer checks unauthenticated rejection, CSRF and exact-origin enforcement, secure HttpOnly session cookies and HSTS, Argon2 password hashing, hashed session-token storage, logout revocation, matching invalid-credential responses for known and unknown identities, and persisted failed-login rate limiting through HTTP 429.
 
@@ -649,7 +664,11 @@ The downstream-operation layer proves the rule at the center of PartGraph: repla
 
 The unsupported-computer layer proves the other hard boundary. A synthetic repair completes its ordinary physical step and then reaches a required computer/service-tool step. At that point PartGraph says the step is unsupported: it cannot be marked complete, skipped, or treated as an ordinary blocked action. No fake progress is saved, and the repair cannot claim full mechanical completion. The test explicitly covers diagnostics, relearn, coding, programming, calibration, and service-tool work without pretending PartGraph can perform them.
 
-All fifteen jobs passed in MVP Final Validation CI #111 on `e92967712fef381b37068b87c236d15509677ada`, and every established exact-head regression workflow also passed on that same commit. The **next Phase 9 task is durable photo persistence**. Data-free-source-code checks and RBAC remain later Phase 9 items.
+The photo-storage code is now tested much more deeply. PartGraph records the photo payload and storage intent durably before the outside storage write, can retry safely after an uncertain storage result, deletes through a durable tombstone, restricts the media worker, sanitizes uploaded images, and supports Vercel's rotating OIDC identity. The real hosted proof is intentionally still red because the Preview project has no Blob store connected. That missing cloud resource is why the durable-photo checkbox stays open.
+
+The data-free check is complete. Instead of keeping a handwritten list of reference-fleet facts, the test reads the reference JSON itself and turns those facts into the guard. It scans executable application/frontend/test/script/CI source and fails if strong reference facts or a recognizable reference identity combination have leaked into code. Existing deep-reference tests were refactored to discover the selected vehicle and dataset paths from a generic data index, while unrelated network and migration tests use clearly synthetic vehicles and values.
+
+All 17 GitHub jobs passed in MVP Final Validation CI #183 on `b2e85d4d2cff1fd39c78c0e71c5d0dc7f252eed3`, and all eight established exact-head regression workflows also passed. The **next code-owned Phase 9 task is RBAC authorization tests**. Hosted durable photo persistence remains open until the Preview Blob store is connected.
 
 ### Phase 10 — Move the finished MVP into production
 
@@ -665,6 +684,6 @@ Charm.li approval remains narrow: manually reviewed evidence for the approved 20
 
 ### Exact place to resume work
 
-Phase 9 is in progress. The next roadmap task is **durable photo persistence** in the fresh MVP validation suite.
+Phase 9 is in progress. **Durable photo persistence remains externally blocked on connecting a private Blob store to Vercel Preview. The next code-owned roadmap task is RBAC authorization tests.**
 
 The separate Phase 6 live NHTSA HTTP-ingestion proof and broad repair-knowledge work, Phase 1 hosted durable-photo proof, remaining Phase 9 validation campaign, and production cutover requirements all remain pending in their existing roadmap locations.
