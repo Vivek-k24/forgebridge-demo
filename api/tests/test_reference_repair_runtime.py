@@ -5,6 +5,11 @@ import unittest
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
+from reference_fixture_support import (
+    primary_repair,
+    primary_vehicle_id,
+    primary_vehicle_snapshot,
+)
 from sqlalchemy import select, text
 
 from partgraph.database import session_factory
@@ -46,11 +51,6 @@ from partgraph.repair_experience.service import (
     create_repair_session,
     event_history,
     resume_repair_session,
-)
-from reference_fixture_support import (
-    primary_repair,
-    primary_vehicle_id,
-    primary_vehicle_snapshot,
 )
 
 DATABASE_URL_ENV = "PARTGRAPH_DATABASE_URL"
