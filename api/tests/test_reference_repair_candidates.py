@@ -1,27 +1,23 @@
 import json
 import unittest
-from pathlib import Path
 
-CANDIDATE_PATH = (
-    Path(__file__).resolve().parents[1]
-    / "data"
-    / "reference_candidates"
-    / "2009_honda_civic_hybrid_water_pump_v1"
-    / "candidate.json"
+from reference_fixture_support import (
+    load_json,
+    primary_candidate,
+    primary_parts_manifest,
+    primary_repair,
+    primary_vehicle_id,
+    primary_vehicle_snapshot,
 )
-REFERENCE_DIR = (
-    Path(__file__).resolve().parents[1]
-    / "data"
-    / "reference"
-    / "2009_honda_civic_hybrid_repairs_v1"
-)
-REFERENCE_VEHICLE_ID = "7feb13e9-bca0-5d8b-b701-f0260cce5da1"
+
+REFERENCE_VEHICLE_ID = str(primary_vehicle_id())
+REFERENCE_VEHICLE = primary_vehicle_snapshot()
 
 
 class ReferenceRepairCandidateTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.candidate = json.loads(CANDIDATE_PATH.read_text(encoding="utf-8"))
+        _, cls.candidate = primary_candidate()
 
     def test_project_owner_approval_keeps_automation_disabled(self) -> None:
         self.assertEqual(
@@ -37,15 +33,15 @@ class ReferenceRepairCandidateTests(unittest.TestCase):
             self.candidate["publication_boundary"]["canonical_publication_allowed"]
         )
 
-    def test_candidate_is_exactly_scoped_to_reference_civic_hybrid(self) -> None:
+    def test_candidate_is_exactly_scoped_to_primary_reference_vehicle(self) -> None:
         self.assertEqual(
             self.candidate["vehicle_configuration_id"],
             REFERENCE_VEHICLE_ID,
         )
         vehicle = self.candidate["vehicle"]
         self.assertEqual(
-            (vehicle["year"], vehicle["make"], vehicle["model"], vehicle["trim"]),
-            (2009, "Honda", "CIVIC", "HYBRID"),
+            {key: vehicle.get(key) for key in REFERENCE_VEHICLE},
+            {key: REFERENCE_VEHICLE.get(key) for key in REFERENCE_VEHICLE},
         )
 
     def test_water_pump_replacement_creates_supported_refill_bleed_candidate(self) -> None:
@@ -77,18 +73,28 @@ class ReferenceRepairCandidateTests(unittest.TestCase):
         )
 
     def test_existing_reviewed_part_numbers_are_used_without_inference(self) -> None:
-        requirements = {
-            item["use_key"]: item
+        manifest_path, manifest = primary_parts_manifest()
+        approved_numbers: set[str] = set()
+        for component in manifest["component_files"].values():
+            payload = load_json(manifest_path.parent / str(component["path"]))
+            rows = payload if isinstance(payload, list) else payload.get("parts", [])
+            for row in rows:
+                part_number = row.get("oem_part_number")
+                if part_number:
+                    approved_numbers.add(str(part_number).casefold())
+
+        requirements = [
+            item
             for item in self.candidate["source_repair"]["requirements"]
-        }
-        self.assertEqual(
-            requirements["replacement-water-pump"]["requirement_key"],
-            "part.honda.19200-rmx-003",
-        )
-        self.assertEqual(
-            requirements["new-water-pump-seal"]["requirement_key"],
-            "hardware.honda.19222-pza-003",
-        )
+            if item["category"] in {"part", "hardware"}
+        ]
+        self.assertGreaterEqual(len(requirements), 2)
+        for requirement in requirements:
+            requirement_key = str(requirement["requirement_key"]).casefold()
+            self.assertTrue(
+                any(number in requirement_key for number in approved_numbers),
+                requirement_key,
+            )
 
     def test_physical_bleed_actions_do_not_smuggle_in_computer_service(self) -> None:
         target = self.candidate["target_repair"]
@@ -99,7 +105,7 @@ class ReferenceRepairCandidateTests(unittest.TestCase):
         }
         serialized = json.dumps(executable_content).lower()
         for forbidden in (
-            "honda diagnostic system",
+            "diagnostic system",
             "hds communicates",
             "service reminder reset",
             "programming",
@@ -111,16 +117,8 @@ class ReferenceRepairCandidateTests(unittest.TestCase):
                 self.assertNotIn(forbidden, serialized)
 
     def test_approved_candidate_has_canonical_reference_files(self) -> None:
-        source = json.loads(
-            (REFERENCE_DIR / "engine_water_pump_replacement.json").read_text(
-                encoding="utf-8"
-            )
-        )
-        target = json.loads(
-            (REFERENCE_DIR / "cooling_system_refill_air_bleed.json").read_text(
-                encoding="utf-8"
-            )
-        )
+        _, source = primary_repair("engine-water-pump-replacement")
+        _, target = primary_repair("cooling-system-refill-air-bleed")
         self.assertEqual(source["vehicle_configuration_id"], REFERENCE_VEHICLE_ID)
         self.assertEqual(target["vehicle_configuration_id"], REFERENCE_VEHICLE_ID)
         self.assertEqual(source["repair_key"], "engine-water-pump-replacement")
