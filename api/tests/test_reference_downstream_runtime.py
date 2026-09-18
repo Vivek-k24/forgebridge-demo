@@ -3,7 +3,6 @@ import json
 import os
 import unittest
 from datetime import UTC, datetime
-from pathlib import Path
 from uuid import UUID, uuid4
 
 from sqlalchemy import select, text
