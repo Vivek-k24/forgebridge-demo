@@ -32,16 +32,15 @@ from partgraph.repair_experience.memory.service import (
     list_photos,
 )
 from partgraph.repair_experience.service import create_repair_session
+from reference_fixture_support import (
+    primary_profile_file,
+    primary_vehicle_id,
+    primary_vehicle_snapshot,
+)
 
 DATABASE_URL_ENV = "PARTGRAPH_DATABASE_URL"
-REFERENCE_VEHICLE_ID = UUID("7feb13e9-bca0-5d8b-b701-f0260cce5da1")
-REFERENCE_DIR = (
-    Path(__file__).resolve().parents[1]
-    / "data"
-    / "reference"
-    / "2009_honda_civic_hybrid_profile_v1"
-)
-COVERAGE_PATH = REFERENCE_DIR / "canonical_coverage.json"
+REFERENCE_VEHICLE_ID = primary_vehicle_id()
+REFERENCE_VEHICLE = primary_vehicle_snapshot()
 
 
 def _raw_sha(payload: dict[str, object]) -> str:
@@ -76,7 +75,7 @@ class ReferencePrimaryVehicleRuntimeTests(unittest.IsolatedAsyncioTestCase):
         if DATABASE_URL_ENV not in os.environ:
             raise unittest.SkipTest(f"{DATABASE_URL_ENV} is not configured")
 
-        self.coverage = json.loads(COVERAGE_PATH.read_text(encoding="utf-8"))
+        _, self.coverage = primary_profile_file("canonical_coverage")
         self.assertEqual(
             self.coverage["vehicle_configuration_id"],
             str(REFERENCE_VEHICLE_ID),
@@ -90,7 +89,14 @@ class ReferencePrimaryVehicleRuntimeTests(unittest.IsolatedAsyncioTestCase):
         vehicle = await self.db.get(VehicleConfiguration, REFERENCE_VEHICLE_ID)
         self.assertIsNotNone(vehicle)
         assert vehicle is not None
-        self.assertEqual((vehicle.year, vehicle.make, vehicle.model), (2009, "Honda", "CIVIC"))
+        self.assertEqual(
+            (vehicle.year, vehicle.make, vehicle.model),
+            (
+                REFERENCE_VEHICLE["year"],
+                REFERENCE_VEHICLE["make"],
+                REFERENCE_VEHICLE["model"],
+            ),
+        )
         self.assertEqual(vehicle.verification_status, "verified")
 
         suffix = uuid4().hex[:12]
@@ -121,20 +127,10 @@ class ReferencePrimaryVehicleRuntimeTests(unittest.IsolatedAsyncioTestCase):
             id=uuid4(),
             user_id=self.user.id,
             canonical_configuration_id=REFERENCE_VEHICLE_ID,
-            nickname="Phase 7 Civic Hybrid",
+            nickname="Primary reference vehicle",
             identity_source="manual",
             identity_resolution="matched",
-            identity_snapshot={
-                "year": 2009,
-                "market": "US",
-                "make": "Honda",
-                "model": "CIVIC",
-                "trim": "HYBRID",
-                "body_style": "Sedan",
-                "engine": "1.3L I4 HYBRID",
-                "transmission": "CVT",
-                "drivetrain": "FWD",
-            },
+            identity_snapshot=dict(REFERENCE_VEHICLE),
         )
         self.db.add_all([self.user, self.user_vehicle])
         await self.db.flush()
@@ -265,12 +261,24 @@ class ReferencePrimaryVehicleRuntimeTests(unittest.IsolatedAsyncioTestCase):
             definitions[value.specification_definition_id].specification_key: value
             for value in values
         }
+        expected_specs = {
+            str(item["specification_key"]): item
+            for item in self.coverage["specifications"]
+        }
         capacity = by_key_value["engine-oil-change-capacity-with-filter"]
-        self.assertEqual(str(capacity.nominal_value), "3.400000")
-        self.assertEqual(capacity.unit, "US qt")
+        expected_capacity = expected_specs["engine-oil-change-capacity-with-filter"]
+        self.assertEqual(
+            float(capacity.nominal_value),
+            float(expected_capacity["nominal_value"]),
+        )
+        self.assertEqual(capacity.unit, expected_capacity["unit"])
         torque = by_key_value["engine-oil-drain-bolt-torque"]
-        self.assertEqual(str(torque.nominal_value), "39.000000")
-        self.assertEqual(torque.unit, "N·m")
+        expected_torque = expected_specs["engine-oil-drain-bolt-torque"]
+        self.assertEqual(
+            float(torque.nominal_value),
+            float(expected_torque["nominal_value"]),
+        )
+        self.assertEqual(torque.unit, expected_torque["unit"])
 
     async def test_owner_observation_and_photo_evidence_round_trip(self) -> None:
         bundle = await create_repair_session(
