@@ -7,6 +7,11 @@ from io import BytesIO
 from uuid import UUID, uuid4
 
 from PIL import Image
+from reference_fixture_support import (
+    primary_profile_file,
+    primary_vehicle_id,
+    primary_vehicle_snapshot,
+)
 from sqlalchemy import select, text
 
 import partgraph.orm_registry  # noqa: F401
@@ -31,11 +36,6 @@ from partgraph.repair_experience.memory.service import (
     list_photos,
 )
 from partgraph.repair_experience.service import create_repair_session
-from reference_fixture_support import (
-    primary_profile_file,
-    primary_vehicle_id,
-    primary_vehicle_snapshot,
-)
 
 DATABASE_URL_ENV = "PARTGRAPH_DATABASE_URL"
 REFERENCE_VEHICLE_ID = primary_vehicle_id()
