@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, patch
 from uuid import UUID, uuid4
 
 from PIL import Image
+from reference_fixture_support import primary_vehicle_id, primary_vehicle_snapshot
 from sqlalchemy import select, text
 
 from partgraph.database import session_factory
@@ -23,7 +24,6 @@ from partgraph.repair_experience.memory.photo_lifecycle import (
     reconcile_photo_storage_row,
 )
 from partgraph.repair_experience.service import create_repair_session
-from reference_fixture_support import primary_vehicle_id, primary_vehicle_snapshot
 
 DATABASE_URL_ENV = "PARTGRAPH_DATABASE_URL"
 REFERENCE_VEHICLE_ID = primary_vehicle_id()
