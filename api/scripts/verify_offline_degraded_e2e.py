@@ -263,7 +263,7 @@ def main() -> None:
         _trigger_repair_sync(page)
         page.wait_for_function(
             "(key) => sessionStorage.getItem(key) !== null",
-            PACK_KEY,
+            arg=PACK_KEY,
         )
 
         first_pack = _stored_pack(page)
@@ -291,7 +291,7 @@ def main() -> None:
                 && urls.some((url) => url.includes('/assets/') && url.endsWith('.js'));
             }
             """,
-            SHELL_CACHE,
+            arg=SHELL_CACHE,
         )
         _assert_shell_cache_has_no_api(page)
 
@@ -311,7 +311,7 @@ def main() -> None:
 
         page.wait_for_function(
             "([key, generatedAt]) => JSON.parse(sessionStorage.getItem(key)).generated_at !== generatedAt",
-            [PACK_KEY, first_pack["generated_at"]],
+            arg=[PACK_KEY, first_pack["generated_at"]],
         )
         refreshed_pack = _stored_pack(page)
         _assert_private_pack_minimized(page, refreshed_pack)
@@ -341,7 +341,7 @@ def main() -> None:
 
         page.wait_for_function(
             "([key, generatedAt]) => JSON.parse(sessionStorage.getItem(key)).generated_at !== generatedAt",
-            [PACK_KEY, refreshed_pack["generated_at"]],
+            arg=[PACK_KEY, refreshed_pack["generated_at"]],
         )
 
         page.get_by_role("button", name="Sign out").click()
