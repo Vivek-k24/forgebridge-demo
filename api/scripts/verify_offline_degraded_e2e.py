@@ -359,7 +359,7 @@ def main() -> None:
         )
 
         page.get_by_role("button", name="Sign out").click()
-        expect(page.get_by_role("heading", name="Create your account.")).to_be_visible()
+        expect(page.get_by_role("heading", name="Sign in.")).to_be_visible()
         if page.evaluate("(key) => sessionStorage.getItem(key)", PACK_KEY) is not None:
             raise AssertionError("confirmed logout did not clear the private offline repair pack")
 
