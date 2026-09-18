@@ -95,6 +95,8 @@ def main() -> None:
         expect(page).to_have_title(re.compile(r"Garage \| PartGraph$"))
 
         page.get_by_role("button", name="Sign out").click()
+        expect(page.get_by_role("heading", name="Create your account.")).to_be_visible()
+        page.get_by_role("button", name="Sign in").click()
         expect(page.get_by_role("heading", name="Sign in.")).to_be_visible()
 
         page.get_by_label("Username or email").fill(USERNAME)
