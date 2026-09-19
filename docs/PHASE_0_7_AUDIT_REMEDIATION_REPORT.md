@@ -461,6 +461,21 @@ This matters because the hosted page executes JavaScript, may include Vercel too
 
 ---
 
+## PG-AUD-REL-009 — Concurrent offline-pack refreshes can rewrite the last confirmed snapshot during offline transition
+
+**Priority:** P2  
+**Type:** offline continuity / async race  
+**Execution status:** ELIGIBLE
+
+**Problem:** the Phase 9 offline/degraded acceptance run on `57d7da853a8a957e04100de1dc53cd3eb6de70e5` observed three `GET /offline-pack` requests where the scenario needs only the initial cache fill and one reconnect refresh. `OfflineContinuity` can schedule overlapping `sync()` calls from lifecycle events and its interval, while `refreshOfflineRepairPack()` writes to `sessionStorage` before the caller can reject a stale response. A later response can therefore replace the last confirmed pack while the browser is transitioning offline. The concrete failure was `offline reload invented a newer sync timestamp` in MVP Final Validation CI #243.
+
+**Proposed solution:** make offline-pack synchronization generation-aware and burst-coalesced. A newly scheduled sync must supersede older in-flight work, invalidate older cache-write eligibility without deleting the last confirmed pack, and only publish a fresh result when it is still the current generation and the client is online. Preserve the existing reconnect refresh and logout cache-clearing behavior.
+
+**Acceptance criteria:** burst lifecycle events do not create overlapping authoritative refreshes; a stale in-flight response cannot overwrite the cached pack or UI after a newer sync/offline transition; offline reload preserves `pack_version`, `server_sequence`, and `generated_at`; reconnect performs a fresh authoritative refresh; Phase 9 offline/degraded acceptance and the exact-head final matrix pass.
+
+---
+
+
 # D. Deployment, release and repository governance
 
 ## PG-AUD-DEP-001 — PR #84 must not be merged before an explicit production cutover sequence

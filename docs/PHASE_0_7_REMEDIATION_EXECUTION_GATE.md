@@ -69,6 +69,7 @@ If an item depends on Phase 10, unfinished Phase 6 work, unavailable production 
 | `PG-AUD-REL-006` | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | Current narrow `operator_sync` ingestion is intentionally retained. Durable queue/backpressure implementation stays backlog until continuous/high-volume ingestion is scheduled. |
 | `PG-AUD-REL-007` | BLOCKED | Structured telemetry/SLO/runbook implementation is complete, but final production-grade alert delivery is not. Resume only when an alert-capable hosting/backend decision exists in the appropriate hosted/production phase. |
 | `PG-AUD-REL-008` | COMPLETE | Service-worker cache lifecycle is independent of Phase 8–10 and is fully remediated/proven at the current boundary. |
+| `PG-AUD-REL-009` | ELIGIBLE | Phase 9 exposed an independent offline-pack refresh race: overlapping sync triggers can let a stale response rewrite the cached authoritative timestamp during offline transition. Fix now with generation-aware/coalesced synchronization; no Phase 10 or production dependency exists. |
 
 ---
 
