@@ -7,7 +7,6 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "verify_hosted_nhtsa_ingestion.py"
 SPEC = importlib.util.spec_from_file_location("hosted_nhtsa_proof", SCRIPT_PATH)
 if SPEC is None or SPEC.loader is None:
