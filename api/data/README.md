@@ -8,6 +8,6 @@ This directory contains versioned datasets that are still required by the curren
 
 The workbook is not authoritative automotive truth and must not be republished as verified canonical data. Its original source remains preserved by Git history at commit `ab954125d89f8ae4cfc42d35af177ec1fe3938a8`.
 
-The duplicate working-tree copy previously under `docs/` and the unused `api/data/archive/reference_fleet_legacy/` datasets were removed after dependency review. Their historical contents remain recoverable from Git history.
+Unreferenced workbook copies/test workbooks under `docs/` and the unused `api/data/archive/reference_fleet_legacy/` datasets were removed after dependency review. Their historical contents remain recoverable from Git history.
 
 Current canonical/reference datasets belong under `api/data/reference/`, while generic equipment catalog data belongs under `api/data/equipment/`.
