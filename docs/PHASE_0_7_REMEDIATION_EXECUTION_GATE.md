@@ -157,7 +157,7 @@ Current-control proof for `PG-AUD-UI-010`:
 
 | Item | Execution status | Dependency decision |
 | --- | --- | --- |
-| `PG-AUD-CODE-001` | BACKLOG | Retire compatibility bridges only after remaining functional work and final import usage are stable. |
+| `PG-AUD-CODE-001` | COMPLETE | The four audited compatibility-only packages were removed after remaining consumers were migrated to canonical modules. `api/tests/test_retired_compatibility_bridges.py` permanently rejects retired packages/imports; exact head `a1c868b39bc2ff6044093a172a761a2d5883df68` passed API CI #1103, Reference Repair Runtime #394, MVP Final Validation #235, all other exact-head regression workflows, and a READY Preview deployment. |
 | `PG-AUD-CODE-002` | BACKLOG | The current accessibility/reflow fixes are stable, but broad stylesheet/cascade consolidation is maintainability work best paired with the later visual/multi-browser regression effort. |
 | `PG-AUD-CODE-003` | COMPLETE | Dependency proof completed; `YearWheel.tsx` and `production-launch.css` were removed and `web/scripts/validate-retired-frontend-assets.mjs` prevents their return. |
 | `PG-AUD-CODE-004` | COMPLETE | The hidden Readiness session/lease subtree, dead selector/lease handlers, and stale styles were removed on `3bc78cf918cd9957beab0597b30c17da6f7b841f`; the retired-frontend guard, Web CI #956, Phase 9 Final Validation #215, and READY Preview prove the cleanup. |
@@ -188,7 +188,7 @@ Category G is roadmap-owned work, not a separate remediation implementation queu
 
 The remediation queue skips all `BLOCKED` and `BACKLOG` items automatically.
 
-At the completed Phase 9 boundary, new audit-remediation implementation may come only from items marked `ELIGIBLE`, unless verified new evidence changes a dependency status. After closing `PG-AUD-CODE-004`, there is currently no remaining decision-free `ELIGIBLE` item: the unresolved register consists of `BLOCKED`, `BACKLOG`, or `CURRENT CONTROL COMPLETE / FUTURE BACKLOG` work. A task cannot be promoted from those states merely because it is high priority or convenient to implement early.
+At the completed Phase 9 boundary, new audit-remediation implementation may come only from items marked `ELIGIBLE`, unless verified new evidence changes a dependency status. After closing `PG-AUD-CODE-004` and the now-proven-independent `PG-AUD-CODE-001`, there is currently no remaining decision-free `ELIGIBLE` item: the unresolved register consists of `BLOCKED`, `BACKLOG`, or `CURRENT CONTROL COMPLETE / FUTURE BACKLOG` work. A task cannot be promoted from those states merely because it is high priority or convenient to implement early.
 
 Before changing any dependency status:
 

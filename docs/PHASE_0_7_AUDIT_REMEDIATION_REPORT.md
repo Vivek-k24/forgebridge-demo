@@ -77,6 +77,7 @@ The Phase 9 implementation materially changes several old dependency decisions:
 - `PG-AUD-UI-011`: complete because the unused custom YearWheel was retired rather than carried into production.
 - `PG-AUD-ROAD-001`: complete. Hosted durable private-photo persistence now passes on the real Vercel Preview with the private Blob store connected.
 - `PG-AUD-TEST-001`: complete for the Blueprint Phase 9 release layers: unit/domain, API, auth/security, RLS/owner isolation, migrations, production-copy migration, full-stack, verified guidance, browser E2E, randomized acceptance, reference-fleet acceptance, offline/degraded behavior, timeout/recovery, downstream semantics, unsupported-computer boundary, durable photo, data-free-source-code, and RBAC all have permanent Phase 9 jobs.
+- `PG-AUD-CODE-001`: `COMPLETE` on remediation head `a1c868b39bc2ff6044093a172a761a2d5883df68`. The legacy `partgraph.auth`, `partgraph.user_vehicle`, `partgraph.repair_definition`, and `partgraph.repair_experience.repair_session` bridge packages were removed only after remaining consumers were migrated to canonical `identity`, `knowledge`, and `repair_experience` modules. An AST-based CI guard now rejects reintroduction of either the retired packages or imports resolving to them.
 - `PG-AUD-CODE-004`: `COMPLETE` on remediation head `3bc78cf918cd9957beab0597b30c17da6f7b841f`. The permanently hidden Readiness session/lease subtree, dead handlers, and stale CSS were removed; visible edit-control ownership remains in Overview/Guided Repair. The existing retired-frontend guard now prevents the hidden controls from returning.
 - `PG-AUD-UI-008` and `PG-AUD-UI-009`: remain `BACKLOG` as post-MVP browser/accessibility hardening. Phase 9 intentionally proves real Chromium behavior, but the repository still has no declared multi-browser support matrix, Firefox/WebKit CI, axe-style automated accessibility scan, or manual screen-reader release evidence.
 - `PG-AUD-REL-001`, `PG-AUD-REL-007`, `PG-AUD-DEP-001`, and `PG-AUD-DEP-003`: remain `BLOCKED` because their remaining acceptance depends on production infrastructure, alert delivery, Phase 10 cutover, or an explicit repository-governance decision.
@@ -681,6 +682,29 @@ Engineering accessibility target for future sign-off: **WCAG 2.2 Level AA**. At 
 
 ## Phase 8–9 Category F remediation update — 2026-09-19
 
+**`PG-AUD-CODE-001`: COMPLETE on `partgraph-mvp-consolidation`.**  
+Exact remediation proof head: `a1c868b39bc2ff6044093a172a761a2d5883df68`.
+
+Remediation performed:
+
+- removed the compatibility-only `api/partgraph/auth/`, `api/partgraph/user_vehicle/`, `api/partgraph/repair_definition/`, and `api/partgraph/repair_experience/repair_session/` namespaces after import-use proof
+- migrated remaining repair-experience consumers to canonical `partgraph.identity.*`, `partgraph.knowledge.*`, and direct `partgraph.repair_experience.*` modules
+- retained the current `repair_experience.auth` internal dependency seam; it is not the retired top-level `partgraph.auth` package
+- removed stale Reference Repair Runtime workflow paths that still linted the retired repair-definition directory
+- added `api/tests/test_retired_compatibility_bridges.py`, which resolves absolute and relative imports with Python AST and fails if a retired package or import path returns
+- wired the canonical-import guard into permanent API CI
+
+Proof on the exact remediation head:
+
+- API CI/CD #1103: passed, including canonical-import guard, migrations/baseline/RBAC checks, API container build, and running-container smoke
+- Reference Repair Runtime CI #394: passed the reference-fleet runtime gate
+- MVP Final Validation CI #235: passed all 18 Phase 9 jobs
+- Extraction Pipeline CI #442, Canonical Publication CI #379, Database Reliability CI #229, Operational Observability CI #188, Web CI/CD #966, and Web Dependency Advisory Scan #230: passed
+- Vercel Preview `dpl_cNHbTJs8zmq53EM9ijRypK8wMJSw`: READY, Preview target only
+- no API schema migration was added, no automotive data changed, no Production configuration changed, PR #84 remains unmerged, and Phase 10 was not started
+
+The original `PG-AUD-CODE-001` finding below is retained as the audit baseline.
+
 **`PG-AUD-CODE-004`: COMPLETE on `partgraph-mvp-consolidation`.**  
 Exact remediation proof head: `3bc78cf918cd9957beab0597b30c17da6f7b841f`.
 
@@ -891,7 +915,7 @@ This order is based on blast radius and production risk, not on the five audit p
 7. **Finish older roadmap gates**: hosted durable-photo proof and deployed NHTSA HTTP proof; continue Phase 6 knowledge breadth through data only.
 8. **Move generic equipment catalog data out of Python** — operational path completed through the versioned dataset; any remaining unused generator modules are a later code-cleanup concern.
 9. **Run forward legacy-data cleanup** — completed on consolidation preview through 0060/0061; production execution remains part of authorized cutover.
-10. **Remove proven dead/duplicate repo assets and compatibility bridges** — Category A duplicate/archive data cleanup completed; broader compatibility/dead-code cleanup remains under Category F.
+10. **Remove proven dead/duplicate repo assets and compatibility bridges** — Category A duplicate/archive data cleanup, the retired frontend assets, hidden Readiness controls, and the audited compatibility bridge packages are complete; remaining Category F work is the separately tagged CSS-maintainability backlog.
 
 ## Definition of audit completion
 
