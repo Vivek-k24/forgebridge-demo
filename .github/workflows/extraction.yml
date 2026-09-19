@@ -19,6 +19,8 @@ on:
       - 'api/tests/test_provider_timeout_hierarchy.py'
       - 'api/tests/test_provider_ingestion_scale_gate.py'
       - 'api/tests/test_operator_nhtsa_ingestion.py'
+      - 'api/scripts/verify_hosted_nhtsa_ingestion.py'
+      - 'api/tests/test_hosted_nhtsa_ingestion_proof.py'
       - 'api/tests/test_reference_parts_dataset.py'
       - 'api/tests/test_reference_repair_candidates.py'
       - 'api/tests/test_operator_reference_parts_staging.py'
@@ -52,6 +54,8 @@ on:
       - 'api/tests/test_provider_timeout_hierarchy.py'
       - 'api/tests/test_provider_ingestion_scale_gate.py'
       - 'api/tests/test_operator_nhtsa_ingestion.py'
+      - 'api/scripts/verify_hosted_nhtsa_ingestion.py'
+      - 'api/tests/test_hosted_nhtsa_ingestion_proof.py'
       - 'api/tests/test_reference_parts_dataset.py'
       - 'api/tests/test_reference_repair_candidates.py'
       - 'api/tests/test_operator_reference_parts_staging.py'
@@ -127,6 +131,8 @@ jobs:
           api/tests/test_provider_timeout_hierarchy.py
           api/tests/test_provider_ingestion_scale_gate.py
           api/tests/test_operator_nhtsa_ingestion.py
+          api/scripts/verify_hosted_nhtsa_ingestion.py
+          api/tests/test_hosted_nhtsa_ingestion_proof.py
           api/tests/test_reference_parts_dataset.py
           api/tests/test_reference_repair_candidates.py
           api/tests/test_operator_reference_parts_staging.py
@@ -174,6 +180,11 @@ jobs:
         run: >-
           python -m unittest discover -s api/tests
           -p 'test_operator_nhtsa_ingestion.py'
+
+      - name: Test hosted NHTSA proof harness contract
+        run: >-
+          python -m unittest discover -s api/tests
+          -p 'test_hosted_nhtsa_ingestion_proof.py'
 
       - name: Test reviewed reference-parts adapter boundary
         run: >-
