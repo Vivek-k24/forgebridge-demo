@@ -42,6 +42,23 @@ for (const absolutePath of sourceFiles(srcRoot)) {
   }
 }
 
+const repairMemoryTsx = readFileSync(path.join(srcRoot, 'RepairMemory.tsx'), 'utf8')
+const repairMemoryCss = readFileSync(path.join(srcRoot, 'repair-memory.css'), 'utf8')
+const retiredReadinessPatterns = [
+  { text: repairMemoryTsx, pattern: /memory-session-bar/, label: 'retired Readiness session bar markup' },
+  { text: repairMemoryTsx, pattern: /memory-session-state/, label: 'retired Readiness session-state markup' },
+  { text: repairMemoryTsx, pattern: /function\s+selectSession\b/, label: 'retired Readiness session selector handler' },
+  { text: repairMemoryTsx, pattern: /function\s+acquireLease\b/, label: 'retired hidden Readiness lease handler' },
+  { text: repairMemoryCss, pattern: /\.memory-session-bar\b/, label: 'retired Readiness session bar styles' },
+  { text: repairMemoryCss, pattern: /\.memory-session-state\b/, label: 'retired Readiness session-state styles' },
+]
+
+for (const { text, pattern, label } of retiredReadinessPatterns) {
+  if (pattern.test(text)) {
+    throw new Error(`${label} returned`)
+  }
+}
+
 const appCss = path.join(srcRoot, 'app.css')
 if (!statSync(appCss).isFile()) {
   throw new Error('src/app.css is missing')
