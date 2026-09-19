@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
 
-from ..user_vehicle.schemas import UserVehicleRead
+from ..identity.user_vehicle.schemas import UserVehicleRead
 
 SessionStatus = Literal["active", "paused", "archived"]
 SessionEventType = Literal[

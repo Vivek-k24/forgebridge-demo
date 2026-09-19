@@ -6,19 +6,19 @@ from fastapi import APIRouter, Depends, Header, status
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 
+from ..errors import ErrorCode, ErrorEnvelope, PartGraphError
 from ..identity.user_vehicle.models import UserVehicle
 from ..knowledge.models import ProcedureAction, RepairDefinition, RequirementUse
 from ..knowledge.procedure_service import (
     REPAIR_PROCEDURE_INTEGRITY_ERROR,
     _procedure_for_definition,
 )
-from .auth.dependencies import AuthSessionDep, CurrentUserDep, require_csrf
-from ..errors import ErrorCode, ErrorEnvelope, PartGraphError
 from ..knowledge.support_boundaries import (
     COMPUTER_SERVICE_BOUNDARY_CODE,
     COMPUTER_SERVICE_BOUNDARY_MESSAGE,
     is_computer_service_boundary,
 )
+from .auth.dependencies import AuthSessionDep, CurrentUserDep, require_csrf
 from .models import RepairProcedureActionState, RepairSession
 from .readiness import (
     DEVICE_HEADER,
