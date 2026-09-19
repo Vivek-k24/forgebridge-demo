@@ -139,8 +139,12 @@ export function loadCachedOfflineRepairPack(_ownerId?: string | null, sessionId?
   } catch { return null }
 }
 
-export function clearOfflineRepairCache(): void {
+export function invalidateOfflineRepairRefreshes(): void {
   cacheEpoch += 1
+}
+
+export function clearOfflineRepairCache(): void {
+  invalidateOfflineRepairRefreshes()
   const target = storage()
   target?.removeItem(PACK_KEY)
   target?.removeItem(LEGACY_PACK_KEY)
