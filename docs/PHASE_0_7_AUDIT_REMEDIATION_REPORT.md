@@ -465,13 +465,32 @@ This matters because the hosted page executes JavaScript, may include Vercel too
 
 **Priority:** P2  
 **Type:** offline continuity / async race  
-**Execution status:** ELIGIBLE
+**Execution status:** COMPLETE
 
-**Problem:** the Phase 9 offline/degraded acceptance run on `57d7da853a8a957e04100de1dc53cd3eb6de70e5` observed three `GET /offline-pack` requests where the scenario needs only the initial cache fill and one reconnect refresh. `OfflineContinuity` can schedule overlapping `sync()` calls from lifecycle events and its interval, while `refreshOfflineRepairPack()` writes to `sessionStorage` before the caller can reject a stale response. A later response can therefore replace the last confirmed pack while the browser is transitioning offline. The concrete failure was `offline reload invented a newer sync timestamp` in MVP Final Validation CI #243.
+**Problem:** the Phase 9 offline/degraded acceptance run on `57d7da853a8a957e04100de1dc53cd3eb6de70e5` failed with `offline reload invented a newer sync timestamp` in MVP Final Validation CI #243. `OfflineContinuity` could schedule overlapping `sync()` calls from lifecycle events and its interval, while `refreshOfflineRepairPack()` wrote to `sessionStorage` before the caller could reject a stale response. A later response could therefore replace the last confirmed pack while the browser was transitioning offline. Multiple offline-pack GETs are legitimate across initial load, active-session changes, degraded recovery, and reconnect; request count itself is not the invariant. The defect was stale refresh authority over the cached snapshot.
 
 **Proposed solution:** make offline-pack synchronization generation-aware and burst-coalesced. A newly scheduled sync must supersede older in-flight work, invalidate older cache-write eligibility without deleting the last confirmed pack, and only publish a fresh result when it is still the current generation and the client is online. Preserve the existing reconnect refresh and logout cache-clearing behavior.
 
 **Acceptance criteria:** burst lifecycle events do not create overlapping authoritative refreshes; a stale in-flight response cannot overwrite the cached pack or UI after a newer sync/offline transition; offline reload preserves `pack_version`, `server_sequence`, and `generated_at`; reconnect performs a fresh authoritative refresh; Phase 9 offline/degraded acceptance and the exact-head final matrix pass.
+
+**Remediation update — COMPLETE on `partgraph-mvp-consolidation`.**  
+Exact remediation proof head: `41ff18613a3c879a52e77b9a8454d04827a392eb`.
+
+Remediation performed:
+
+- added generation-aware sync scheduling in `OfflineContinuity.tsx`; a newer lifecycle request supersedes older work
+- coalesced burst event scheduling through one replaceable timer instead of launching an independent delayed sync for every event
+- added `invalidateOfflineRepairRefreshes()` in `offline-repair.ts`; a superseded refresh can still finish its network request but loses authority to overwrite `sessionStorage`
+- publish of a fresh pack now also requires the sync generation to remain current and the browser to still be online
+- cleanup invalidates outstanding refresh authority without deleting the last confirmed pack; logout still clears the private pack through the existing auth-clear path
+
+Proof on the exact remediation head:
+
+- the previously failing Phase 9 offline/degraded Chromium acceptance passed, including preserved `pack_version`, `server_sequence`, and `generated_at` across offline reload plus a fresh reconnect update
+- MVP Final Validation CI #247: all 18 jobs passed
+- Web CI/CD #972, API CI/CD #1109, Extraction Pipeline CI #448, Canonical Publication CI #385, Reference Repair Runtime CI #400, Database Reliability CI #235, Operational Observability CI #194, and Web Dependency Advisory Scan #236: passed
+- Vercel Preview `dpl_GRRZDdM1A8ZJS5UdcVvoPTd66X1p`: READY, Preview target only
+- no Production configuration, database schema, automotive data, PR merge, or Phase 10 action was performed
 
 ---
 
@@ -696,6 +715,26 @@ Engineering accessibility target for future sign-off: **WCAG 2.2 Level AA**. At 
 # F. Codebase maintainability and dead/legacy paths
 
 ## Phase 8–9 Category F remediation update — 2026-09-19
+
+**`PG-AUD-CODE-002`: CURRENT CONTROL COMPLETE / FUTURE BACKLOG.**  
+Exact current-control proof head: `41ff18613a3c879a52e77b9a8454d04827a392eb`.
+
+Current-control remediation performed:
+
+- audited the legacy vehicle-selector class family against every current TSX surface; exact class-token usage was zero for `vehicle-selector`, `year-field`, `selector-fields`, `vin-form`, `field-label-row`, `field-note`, the retired `combo*` family, `selector-action`, `result-card*`, and `vin-input`
+- removed 228 lines of proven-unused selector/combobox/VIN/result-card CSS from `web/src/app.css`
+- removed the two remaining dead patch-layer references (`.field-label-row` and `.combo__option`) from `web/src/accessibility-ui.css`
+- extended `web/scripts/validate-retired-frontend-assets.mjs` to scan all active TS/TSX/CSS/HTML source and fail if any exact retired class token returns
+- deliberately did **not** perform a broad token/theme/cascade rewrite; active stylesheet ownership and the later visual/multi-browser hardening remain tied to `PG-AUD-UI-008`/`PG-AUD-UI-009`
+
+Proof on the exact current-control head:
+
+- Web CI/CD #972 passed the strengthened retired-asset guard, TypeScript typecheck, production web build, container build, and running-container smoke
+- Phase 9 real Chromium browser E2E passed on the same head
+- MVP Final Validation CI #247 passed all 18 jobs after the independently discovered `PG-AUD-REL-009` offline race was remediated
+- all eight other exact-head regression workflows passed; Vercel Preview `dpl_GRRZDdM1A8ZJS5UdcVvoPTd66X1p` is READY
+- remaining CODE-002 scope is architectural stylesheet/token consolidation plus broader visual/multi-browser proof, so the finding is not falsely marked `COMPLETE`
+
 
 **`PG-AUD-CODE-001`: COMPLETE on `partgraph-mvp-consolidation`.**  
 Exact remediation proof head: `a1c868b39bc2ff6044093a172a761a2d5883df68`.
