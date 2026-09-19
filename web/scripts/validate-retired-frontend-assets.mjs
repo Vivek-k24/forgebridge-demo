@@ -33,11 +33,50 @@ const forbiddenReferences = [
   { pattern: /year-wheel(?:__|\b)/, label: 'retired year-wheel selector' },
 ]
 
+const retiredLegacyClassTokens = [
+  'vehicle-selector',
+  'year-field',
+  'selector-fields',
+  'vin-form',
+  'field-label-row',
+  'field-note',
+  'combo-field',
+  'combo',
+  'combo--disabled',
+  'combo__glyph',
+  'combo__menu',
+  'combo__option',
+  'combo__option--manual',
+  'combo__status',
+  'selector-action',
+  'result-card',
+  'result-card--matched',
+  'result-card--ambiguous',
+  'result-card--manual_candidate',
+  'result-card--error',
+  'vin-input',
+]
+
+function exactClassTokenPattern(token) {
+  const escaped = token.replace(/[.*+?^$\{\}()|[\]\\]/g, '\\const forbiddenReferences = [
+  { pattern: /YearWheel/, label: 'YearWheel' },
+  { pattern: /production-launch\.css/, label: 'production-launch.css' },
+  { pattern: /year-wheel(?:__|\b)/, label: 'retired year-wheel selector' },
+]
+')
+  return new RegExp(`(?:^|[^A-Za-z0-9_-])${escaped}(?=$|[^A-Za-z0-9_-])`)
+}
+
 for (const absolutePath of sourceFiles(srcRoot)) {
   const text = readFileSync(absolutePath, 'utf8')
   for (const { pattern, label } of forbiddenReferences) {
     if (pattern.test(text)) {
       throw new Error(`${label} reference remains in ${path.relative(webRoot, absolutePath)}`)
+    }
+  }
+  for (const token of retiredLegacyClassTokens) {
+    if (exactClassTokenPattern(token).test(text)) {
+      throw new Error(`retired legacy class token ${token} returned in ${path.relative(webRoot, absolutePath)}`)
     }
   }
 }
