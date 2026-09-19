@@ -971,6 +971,21 @@ This order is based on blast radius and production risk, not on the five audit p
 9. **Run forward legacy-data cleanup** — completed on consolidation preview through 0060/0061; production execution remains part of authorized cutover.
 10. **Remove proven dead/duplicate repo assets and compatibility bridges** — Category A duplicate/archive data cleanup, the retired frontend assets, hidden Readiness controls, and the audited compatibility bridge packages are complete; remaining Category F work is the separately tagged CSS-maintainability backlog.
 
+## Phase 0–9 remediation closure snapshot — 2026-09-19
+
+The Phase 0–9 remediation audit has no remaining decision-free implementation item.
+
+Current unresolved count: **18**.
+
+- **5 BLOCKED** — require Production infrastructure, Phase 10/cutover authorization, or an explicit repository/deployment-governance decision.
+- **5 BACKLOG** — belong to unfinished Phase 6 work, final PR synchronization, or post-MVP browser/support-policy hardening.
+- **8 CURRENT CONTROL COMPLETE / FUTURE BACKLOG** — the present MVP control is implemented and proven; additional work is conditional on future provider scale, browser/accessibility scope, database scale, or broader stylesheet architecture.
+- **0 ELIGIBLE** — there is no remediation item that should be implemented now without violating the roadmap/dependency boundary.
+
+Therefore, the Phase 0–9 remediation execution pass is **closed at the current roadmap boundary**. A deferred item is reopened only when its recorded dependency becomes true or explicit authorization changes its execution status. This closure does not mark deferred future work complete and does not authorize Phase 10 or Production changes.
+
+---
+
 ## Definition of audit completion
 
 The register is re-audited through Phase 9 when the Phase 8–9 status reassessment and any newly observed findings are recorded here with an execution status. Audit completion does **not** mean PR #84 is approved for merge, production is ready for migration, blocked/backlog items are complete, or Phase 10 has started. Remediation continues one `ELIGIBLE` item at a time on `partgraph-mvp-consolidation`; production cutover remains separately gated and unauthorized.

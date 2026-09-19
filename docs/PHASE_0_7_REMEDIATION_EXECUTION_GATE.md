@@ -185,6 +185,18 @@ Category G is roadmap-owned work, not a separate remediation implementation queu
 
 ---
 
+## Phase 0–9 remediation closure snapshot
+
+As of 2026-09-19, the execution gate contains **18 unresolved deferred items** and **0 ELIGIBLE items**:
+
+- 5 `BLOCKED`
+- 5 `BACKLOG`
+- 8 `CURRENT CONTROL COMPLETE / FUTURE BACKLOG`
+
+All decision-free remediation through the completed Phase 9 boundary is finished. Do not convert these 18 deferred items into implementation work merely to reduce the count. Reclassify an item only when its documented dependency is actually satisfied or explicit authorization changes the boundary.
+
+---
+
 ## Execution consequence
 
 The remediation queue skips all `BLOCKED` and `BACKLOG` items automatically.
