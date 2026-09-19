@@ -14,10 +14,6 @@ CSRF_HEADER = "X-PartGraph-CSRF"
 CSRF_VALUE = "1"
 API_VERSION_HEADER = "X-PartGraph-API-Version"
 EXPECTED_API_VERSION = "v1"
-DEFAULT_YEAR = 2009
-DEFAULT_MAKE = "Honda"
-DEFAULT_MODEL = "Civic"
-
 
 class HostedProofError(RuntimeError):
     pass
@@ -56,14 +52,12 @@ def _config() -> HostedProofConfig:
             )
 
     try:
-        year = int(os.getenv("PARTGRAPH_HOSTED_NHTSA_YEAR", str(DEFAULT_YEAR)))
+        year = int(_required_env("PARTGRAPH_HOSTED_NHTSA_YEAR"))
     except ValueError as exc:
         raise HostedProofError("PARTGRAPH_HOSTED_NHTSA_YEAR must be an integer") from exc
 
-    make = os.getenv("PARTGRAPH_HOSTED_NHTSA_MAKE", DEFAULT_MAKE).strip()
-    model = os.getenv("PARTGRAPH_HOSTED_NHTSA_MODEL", DEFAULT_MODEL).strip()
-    if not make or not model:
-        raise HostedProofError("NHTSA make/model cannot be blank")
+    make = _required_env("PARTGRAPH_HOSTED_NHTSA_MAKE")
+    model = _required_env("PARTGRAPH_HOSTED_NHTSA_MODEL")
 
     return HostedProofConfig(
         base_url=base_url,
