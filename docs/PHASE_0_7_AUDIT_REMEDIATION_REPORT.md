@@ -3,7 +3,7 @@
 Original audit date: 2026-09-15  
 Phase 8–9 re-audit date: 2026-09-19  
 Scope: repository, consolidation preview, production boundary, database state, CI/CD, runtime behavior, frontend/browser/accessibility, data lifecycle, security, reliability, and roadmap state through completion of Phase 9.  
-Implementation fixes performed during audit: **none**. This document is a remediation reference only.  
+Implementation fixes performed during the original 2026-09-15 audit: **none**. Phase 8–9 re-audit remediation is recorded inline below as each eligible item is completed.  
 Post-audit remediation updates are recorded inline when an entire issue category is completed.  
 Explicit audit exclusion: sign-in/sign-up mechanics themselves were not reviewed; authorization, ownership, isolation, secrets, trust boundaries, and operator access were reviewed.
 
@@ -77,7 +77,7 @@ The Phase 9 implementation materially changes several old dependency decisions:
 - `PG-AUD-UI-011`: complete because the unused custom YearWheel was retired rather than carried into production.
 - `PG-AUD-ROAD-001`: complete. Hosted durable private-photo persistence now passes on the real Vercel Preview with the private Blob store connected.
 - `PG-AUD-TEST-001`: complete for the Blueprint Phase 9 release layers: unit/domain, API, auth/security, RLS/owner isolation, migrations, production-copy migration, full-stack, verified guidance, browser E2E, randomized acceptance, reference-fleet acceptance, offline/degraded behavior, timeout/recovery, downstream semantics, unsupported-computer boundary, durable photo, data-free-source-code, and RBAC all have permanent Phase 9 jobs.
-- `PG-AUD-CODE-004`: now `ELIGIBLE`. The Readiness page still renders a permanently hidden legacy session/lease subtree, while visible repair selection/edit-control ownership exists in the current Garage/Overview/Guided Repair flow.
+- `PG-AUD-CODE-004`: `COMPLETE` on remediation head `3bc78cf918cd9957beab0597b30c17da6f7b841f`. The permanently hidden Readiness session/lease subtree, dead handlers, and stale CSS were removed; visible edit-control ownership remains in Overview/Guided Repair. The existing retired-frontend guard now prevents the hidden controls from returning.
 - `PG-AUD-UI-008` and `PG-AUD-UI-009`: remain `BACKLOG` as post-MVP browser/accessibility hardening. Phase 9 intentionally proves real Chromium behavior, but the repository still has no declared multi-browser support matrix, Firefox/WebKit CI, axe-style automated accessibility scan, or manual screen-reader release evidence.
 - `PG-AUD-REL-001`, `PG-AUD-REL-007`, `PG-AUD-DEP-001`, and `PG-AUD-DEP-003`: remain `BLOCKED` because their remaining acceptance depends on production infrastructure, alert delivery, Phase 10 cutover, or an explicit repository-governance decision.
 - `PG-AUD-ROAD-002` and `PG-AUD-ROAD-003`: remain `BACKLOG` because they are still genuine unfinished Phase 6 roadmap work.
@@ -678,6 +678,29 @@ Engineering accessibility target for future sign-off: **WCAG 2.2 Level AA**. At 
 ---
 
 # F. Codebase maintainability and dead/legacy paths
+
+## Phase 8–9 Category F remediation update — 2026-09-19
+
+**`PG-AUD-CODE-004`: COMPLETE on `partgraph-mvp-consolidation`.**  
+Exact remediation proof head: `3bc78cf918cd9957beab0597b30c17da6f7b841f`.
+
+Remediation performed:
+
+- removed the permanently hidden `.memory-session-bar` subtree from `web/src/RepairMemory.tsx`
+- removed the dead Readiness-only session selector and hidden lease-acquire/takeover handlers
+- removed the corresponding stale `.memory-session-bar` / `.memory-session-state` CSS and obsolete comment
+- preserved active-session resolution through `active-repair.ts`; visible lease/edit authority remains available in Overview and Guided Repair
+- extended `web/scripts/validate-retired-frontend-assets.mjs` so the retired hidden markup, styles, and handlers cannot return silently
+
+Proof on the exact remediation head:
+
+- Web CI/CD #956: passed, including the retired-asset guard, TypeScript typecheck, production web build, container build, and HTTP/security-header smoke
+- MVP Final Validation CI #215: passed all 18 Phase 9 jobs, including real Chromium browser E2E
+- Vercel Preview `dpl_8M4y21QZAP5xJoQSjxquAQazQpdP`: READY, Preview target only
+- no API schema, database migration, automotive data, Production configuration, PR merge, or Phase 10 action was performed
+
+The original finding statement below is retained as the audit baseline.
+
 
 ## PG-AUD-CODE-001 — Compatibility bridge packages need an explicit retirement decision
 
