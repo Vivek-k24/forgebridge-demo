@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import os
+import sys
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -12,6 +13,7 @@ SPEC = importlib.util.spec_from_file_location("hosted_nhtsa_proof", SCRIPT_PATH)
 if SPEC is None or SPEC.loader is None:
     raise RuntimeError("could not load hosted NHTSA proof script")
 MODULE = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = MODULE
 SPEC.loader.exec_module(MODULE)
 
 
