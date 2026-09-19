@@ -92,13 +92,6 @@ type RepairReadiness = {
 const PROCUREMENT_STATES: ProcurementState[] = ['needed', 'ordered', 'available', 'unavailable']
 const READINESS_STATES: ReadinessState[] = ['have', 'missing', 'ordered', 'unavailable']
 
-function vehicleLabel(snapshot: ResumeSnapshot | null): string {
-  if (!snapshot) return ''
-  const identity = snapshot.vehicle.identity
-  const base = [identity.year, identity.make, identity.model, identity.trim].filter(Boolean).join(' ')
-  return snapshot.vehicle.nickname ? `${snapshot.vehicle.nickname} · ${base}` : base
-}
-
 function procurementLabel(state: ProcurementState): string {
   switch (state) {
     case 'available': return 'Have it'
@@ -131,15 +124,8 @@ function requirementQuantity(item: RepairReadinessItem): string {
   return `Need ${item.required_quantity}${item.unit ? ` ${item.unit}` : ''}`
 }
 
-function sessionStatusLabel(status: RepairSession['status']): string {
-  if (status === 'active') return 'Active repair'
-  if (status === 'paused') return 'Paused repair'
-  return 'Archived repair'
-}
-
 export function RepairMemoryWorkspace() {
   const deviceId = useMemo(() => partGraphDeviceId(), [])
-  const [sessions, setSessions] = useState<RepairSession[]>([])
   const [sessionId, setSessionId] = useState(() => activeRepairSessionId() || '')
   const [snapshot, setSnapshot] = useState<ResumeSnapshot | null>(null)
   const [inventory, setInventory] = useState<InventoryItem[]>([])
@@ -203,7 +189,6 @@ export function RepairMemoryWorkspace() {
         setLoading(true)
         const rows = await apiRequest<RepairSession[]>('/api/v1/repair-sessions')
         if (!active) return
-        setSessions(rows)
         const selected = preferredRepairSessionId(rows, sessionId)
         setSessionId(selected)
         await loadReadiness(selected)
@@ -217,37 +202,6 @@ export function RepairMemoryWorkspace() {
     void initialize()
     return () => { active = false }
   }, [loadReadiness, sessionId])
-
-  async function selectSession(nextSessionId: string) {
-    setSessionId(nextSessionId)
-    setActiveRepairSessionId(nextSessionId || null)
-    setSnapshot(null)
-    setInventory([])
-    setReadiness(null)
-    setRepairOptions(null)
-    setSelectedRepairKey('')
-    setError(null)
-    setMessage(null)
-    await loadReadiness(nextSessionId)
-  }
-
-  async function acquireLease(takeover: boolean) {
-    if (!sessionId) return
-    try {
-      setBusy(true)
-      setError(null)
-      await apiRequest(`/api/v1/repair-sessions/${sessionId}/lease/${takeover ? 'takeover' : 'acquire'}`, {
-        method: 'POST',
-        headers: { ...CSRF_HEADERS, 'X-PartGraph-Device-ID': deviceId },
-      })
-      setMessage(takeover ? 'Editing moved to this device.' : 'You can now update this repair here.')
-      await loadReadiness(sessionId)
-    } catch (failure) {
-      setError(formatApiFailure(failure, 'Could not enable editing on this device.'))
-    } finally {
-      setBusy(false)
-    }
-  }
 
   async function bindVerifiedRepair() {
     if (!sessionId || !selectedRepairKey) return
@@ -374,27 +328,6 @@ export function RepairMemoryWorkspace() {
 
       {error && <div className="memory-alert memory-alert--error">{error}</div>}
       {message && <div className="memory-alert memory-alert--success">{message}</div>}
-
-      <section className="memory-session-bar panel">
-        <label>
-          <span>Repair</span>
-          <select value={sessionId} onChange={(event) => void selectSession(event.target.value)}>
-            {sessions.length === 0 && <option value="">No repair sessions</option>}
-            {sessions.map((item) => <option key={item.id} value={item.id}>{item.title} · {item.status}</option>)}
-          </select>
-        </label>
-        {snapshot && (
-          <div className="memory-session-state">
-            <strong>{vehicleLabel(snapshot)}</strong>
-            <span>{sessionStatusLabel(snapshot.session.status)} · {canEdit ? 'Editing here' : 'View only'}</span>
-          </div>
-        )}
-        {snapshot && !canEdit && snapshot.session.status !== 'archived' && (
-          <button type="button" disabled={busy} onClick={() => void acquireLease(snapshot.lease.status === 'held_by_other')}>
-            {snapshot.lease.status === 'held_by_other' ? 'Move editing here' : 'Edit this repair'}
-          </button>
-        )}
-      </section>
 
       {!snapshot ? (
         <section className="memory-empty panel"><h2>No repair selected.</h2><p>Start or resume a repair before checking readiness.</p></section>
