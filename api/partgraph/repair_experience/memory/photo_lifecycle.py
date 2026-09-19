@@ -16,7 +16,7 @@ from partgraph.database import session_factory
 
 from ...observability import emit_event
 from ..errors import ErrorCode, PartGraphError
-from ..repair_session.service import append_domain_event, prepare_domain_mutation
+from ..service import append_domain_event, prepare_domain_mutation
 from .models import RepairPhotoEvidence
 from .schemas import PhotoDeleteRead, PhotoEvidenceRead, PhotoPurpose
 from .service import (

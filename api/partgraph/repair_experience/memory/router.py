@@ -17,7 +17,7 @@ from starlette.responses import FileResponse
 from ..auth.dependencies import AuthSessionDep, CurrentUserDep, require_csrf
 from ..config import settings
 from ..errors import ErrorCode, ErrorEnvelope, PartGraphError
-from ..repair_session.router import (
+from ..router import (
     DEVICE_HEADER,
     IDEMPOTENCY_HEADER,
     _parse_device_id,

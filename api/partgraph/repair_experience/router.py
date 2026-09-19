@@ -4,7 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, Query, status
 
-from ..auth.dependencies import AuthSessionDep, CurrentUserDep, require_csrf
+from .auth.dependencies import AuthSessionDep, CurrentUserDep, require_csrf
 from ..errors import ErrorCode, ErrorEnvelope, PartGraphError
 from .offline import RepairOfflinePackRead, build_offline_repair_pack
 from .reorientation import build_reorientation
