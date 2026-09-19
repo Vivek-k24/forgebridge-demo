@@ -11,13 +11,29 @@ RETIRED_MODULES = (
     "partgraph.auth",
     "partgraph.user_vehicle",
     "partgraph.repair_definition",
+    "partgraph.identity.config",
+    "partgraph.identity.database",
+    "partgraph.identity.errors",
+    "partgraph.repair_experience.auth",
+    "partgraph.repair_experience.config",
+    "partgraph.repair_experience.errors",
+    "partgraph.repair_experience.memory.models",
     "partgraph.repair_experience.repair_session",
 )
 RETIRED_PACKAGES = (
     PARTGRAPH_ROOT / "auth",
     PARTGRAPH_ROOT / "user_vehicle",
     PARTGRAPH_ROOT / "repair_definition",
+    PARTGRAPH_ROOT / "repair_experience" / "auth",
     PARTGRAPH_ROOT / "repair_experience" / "repair_session",
+)
+RETIRED_FILES = (
+    PARTGRAPH_ROOT / "identity" / "config.py",
+    PARTGRAPH_ROOT / "identity" / "database.py",
+    PARTGRAPH_ROOT / "identity" / "errors.py",
+    PARTGRAPH_ROOT / "repair_experience" / "config.py",
+    PARTGRAPH_ROOT / "repair_experience" / "errors.py",
+    PARTGRAPH_ROOT / "repair_experience" / "memory" / "models.py",
 )
 
 
@@ -60,6 +76,14 @@ class RetiredCompatibilityBridgeTests(unittest.TestCase):
                 self.assertFalse(
                     package_path.exists(),
                     f"retired compatibility package returned: {package_path.relative_to(REPO_ROOT)}",
+                )
+
+    def test_retired_bridge_files_stay_removed(self) -> None:
+        for file_path in RETIRED_FILES:
+            with self.subTest(file_path=file_path.relative_to(REPO_ROOT)):
+                self.assertFalse(
+                    file_path.exists(),
+                    f"retired compatibility file returned: {file_path.relative_to(REPO_ROOT)}",
                 )
 
     def test_executable_python_uses_canonical_import_paths(self) -> None:
