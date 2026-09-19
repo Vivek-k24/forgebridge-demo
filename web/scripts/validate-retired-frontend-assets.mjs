@@ -58,13 +58,7 @@ const retiredLegacyClassTokens = [
 ]
 
 function exactClassTokenPattern(token) {
-  const escaped = token.replace(/[.*+?^$\{\}()|[\]\\]/g, '\\const forbiddenReferences = [
-  { pattern: /YearWheel/, label: 'YearWheel' },
-  { pattern: /production-launch\.css/, label: 'production-launch.css' },
-  { pattern: /year-wheel(?:__|\b)/, label: 'retired year-wheel selector' },
-]
-')
-  return new RegExp(`(?:^|[^A-Za-z0-9_-])${escaped}(?=$|[^A-Za-z0-9_-])`)
+  return new RegExp(`(?:^|[^A-Za-z0-9_-])${token}(?=$|[^A-Za-z0-9_-])`)
 }
 
 for (const absolutePath of sourceFiles(srcRoot)) {
