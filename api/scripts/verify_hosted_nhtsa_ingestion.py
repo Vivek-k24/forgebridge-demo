@@ -10,7 +10,6 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin, urlsplit
 from urllib.request import HTTPCookieProcessor, Request, build_opener
 
-
 CSRF_HEADER = "X-PartGraph-CSRF"
 CSRF_VALUE = "1"
 API_VERSION_HEADER = "X-PartGraph-API-Version"
