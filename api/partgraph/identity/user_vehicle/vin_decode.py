@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..errors import ErrorCode, PartGraphError
+from ...errors import ErrorCode, PartGraphError
 from ..vehicle.taxonomy import VehicleIdentityError, canonical_market
 from .crypto import VinCryptoError, vin_fingerprint
 from .service import (
