@@ -1,8 +1,8 @@
-# PartGraph Phase 0–7 Remediation Execution Gate
+# PartGraph Phase 0–9 Remediation Execution Gate
 
-Status: **Authoritative execution-status overlay for `docs/PHASE_0_7_AUDIT_REMEDIATION_REPORT.md` while the roadmap is only complete through the Phase 7 boundary.**
+Status: **Authoritative execution-status overlay for `docs/PHASE_0_7_AUDIT_REMEDIATION_REPORT.md`, re-audited through the completed Phase 9 boundary.**
 
-This file does not change the audit findings, architecture, roadmap order, or acceptance criteria. It prevents remediation work from pulling Phase 8, Phase 9, Phase 10, future-provider, final-release, or still-unresolved cross-task work forward prematurely.
+This file does not change the audit findings, architecture, roadmap order, or acceptance criteria. It prevents remediation work from pulling Phase 10, unfinished Phase 6 breadth/provider work, future-provider scale, post-MVP browser/accessibility hardening, production infrastructure, or still-unresolved cross-task work forward prematurely.
 
 ## Mandatory execution rule
 
@@ -19,13 +19,13 @@ A higher audit priority does **not** override `BLOCKED` or `BACKLOG`.
 The current roadmap boundary is:
 
 - Phase 7 deep primary-vehicle proof: complete.
-- Phase 8 five-model reference fleet: not started.
-- Phase 9 final MVP validation campaign: not started.
+- Phase 8 five-model reference fleet: complete.
+- Phase 9 final MVP validation campaign: complete on exact clean head `5a95001b594e14437492dd131d41f519619a0eff`; MVP Final Validation CI #205 passed all 18 jobs.
+- Phase 1 hosted durable-photo persistence proof: complete on Vercel Preview `dpl_7qkpKhUL7Yui3rT3Npvwg8kh3PCN`.
 - Phase 10 production MVP cutover: not started and requires explicit production approval.
-- Phase 1 hosted durable-photo persistence proof: still pending and explicitly tied to later hosted/final validation work.
 - Phase 6 deployed NHTSA HTTP proof and broad canonical repair-knowledge population: still pending.
 
-If an item depends on any of those unfinished tasks, or on another unfinished remediation item, it remains blocked/backlog rather than being implemented speculatively.
+If an item depends on Phase 10, unfinished Phase 6 work, unavailable production infrastructure, an explicit owner/governance decision, future provider scale, or another unfinished remediation item, it remains blocked/backlog rather than being implemented speculatively.
 
 ---
 
@@ -63,7 +63,7 @@ If an item depends on any of those unfinished tasks, or on another unfinished re
 | --- | --- | --- |
 | `PG-AUD-REL-001` | BLOCKED | Final acceptance requires real production database protection/backup capability and a restore drill against production-grade owner/repair data. Keep the runbook/gates; do not claim completion before the production infrastructure/cutover context exists. |
 | `PG-AUD-REL-002` | COMPLETE | Durable photo outbox/reconciliation semantics are independently testable now. |
-| `PG-AUD-REL-003` | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | Current serverless connection strategy is remediated. Expected-concurrency/load proof belongs with Phase 9/final hosted validation. |
+| `PG-AUD-REL-003` | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | Phase 9 now proves the current `NullPool` strategy with 24 parallel serverless-shaped instances and verifies no idle pool multiplier remains. Revalidate only if intended concurrency materially rises or an external transaction pooler is introduced. |
 | `PG-AUD-REL-004` | COMPLETE | Indeterminate-write recovery semantics are independently testable now. |
 | `PG-AUD-REL-005` | COMPLETE | Provider/API/browser timeout hierarchy is a current path and was independently remediable. |
 | `PG-AUD-REL-006` | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | Current narrow `operator_sync` ingestion is intentionally retained. Durable queue/backpressure implementation stays backlog until continuous/high-volume ingestion is scheduled. |
@@ -76,10 +76,11 @@ If an item depends on any of those unfinished tasks, or on another unfinished re
 
 | Item | Execution status | Dependency decision |
 | --- | --- | --- |
-| `PG-AUD-DEP-001` | BLOCKED | Phase 10 cutover item. Requires Phase 9 completion, production-copy rehearsal, rollback proof, exact-green commit selection, and explicit authorization. |
+| `PG-AUD-DEP-001` | BLOCKED | Phase 9 and production-copy rehearsal are complete, but the actual Phase 10 cutover still requires production DR/rollback readiness, exact-green commit selection, environment verification, and explicit authorization. |
 | `PG-AUD-DEP-002` | COMPLETE | Vercel application builds are schema-read-only; migration execution is now a separate explicit operational action. Permanent CI/build self-checks prevent Alembic from returning to the Vercel build command. Production migration remains separately blocked by Phase 9/10 and explicit approval. |
 | `PG-AUD-DEP-003` | BLOCKED | Branch protection requires an explicit repository-governance decision that preserves the standing direct-`main` roadmap bookkeeping workflow. |
-| `PG-AUD-DEP-004` | BACKLOG | PR #84 remains an evolving consolidation/cutover artifact. Final synchronization belongs after remaining implementation/remediation and before Phase 10 merge review. |
+| `PG-AUD-DEP-004` | BACKLOG | PR #84 remains an evolving consolidation/cutover artifact. Final synchronization belongs after the remaining Phase 6/remediation work and immediately before Phase 10 merge review. |
+| `PG-AUD-DEP-005` | BLOCKED | Documentation-only `main` commits currently trigger Production Vercel builds. A path-aware Production deploy-skip rule is a deployment-governance/Phase 10 change and requires explicit authorization before changing Production project behavior. |
 
 `PG-AUD-DEP-002` proof:
 
@@ -97,21 +98,21 @@ If an item depends on any of those unfinished tasks, or on another unfinished re
 
 # E. Frontend accessibility, reflow and browser behavior
 
-Phase 8 is data-only by architecture, so concrete current-UI defects that can be implemented and tested against the existing UI remain eligible. Final cross-browser and assistive-technology campaign infrastructure belongs to Phase 9. When a current code control is complete but the original acceptance criteria require live browser/accessibility-tree/screen-reader proof, use `CURRENT CONTROL COMPLETE / FUTURE BACKLOG` rather than claiming final completion early.
+Phase 8 and the intended Phase 9 Chromium validation are complete. Concrete UI defects already fixed remain complete/current-control complete. Broader multi-browser, axe-style accessibility scanning, zoom/reflow stress, and manual screen-reader sign-off were not part of the finished Phase 9 Chromium gate and remain post-MVP backlog rather than being retroactively pulled into Phase 9.
 
 | Item | Execution status | Dependency decision |
 | --- | --- | --- |
-| `PG-AUD-UI-001` | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | Current programmatic-name defects are fixed and statically gated. Final browser accessibility-tree/axe/manual screen-reader proof remains Phase 9 validation work. |
-| `PG-AUD-UI-002` | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | Sticky offsets now follow measured rendered header/navigation heights rather than fixed mobile pixels, and the contract is statically gated. Final 320px/zoom/text-scale/browser stress proof remains Phase 9 validation work. |
-| `PG-AUD-UI-003` | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | Audited async workflow outcomes now feed shared polite/assertive live regions without focus movement, with duplicate-live-region suppression and CI coverage. Final real screen-reader announcement-once proof remains Phase 9 validation work. |
-| `PG-AUD-UI-004` | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | Garage add-mode controls now use ordinary grouped toggle-button semantics with `aria-pressed`; final live accessibility-tree/keyboard verification remains Phase 9 work. |
-| `PG-AUD-UI-005` | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | Settings Units and Text Size now use native same-name radio inputs in labeled fieldsets; final representative-browser/assistive-technology proof remains Phase 9 work. |
-| `PG-AUD-UI-006` | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | SPA route changes now update document titles, move focus to the new view context, expose a skip link, and honor reduced motion; final live browser/screen-reader validation remains Phase 9 work. |
-| `PG-AUD-UI-007` | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | Repair Log photos can now reuse confirmed user-authored observations as equivalent descriptions without inventing image content or changing the database schema; final live accessibility validation and remaining photo-surface review remain Phase 9 work. |
-| `PG-AUD-UI-008` | BACKLOG | Automated browser E2E/accessibility/cross-browser final regression gate is Phase 9 work. |
-| `PG-AUD-UI-009` | BACKLOG | Final browser-support matrix enforcement depends on the Phase 9 representative-browser suite. |
-| `PG-AUD-UI-010` | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | The named repair-placeholder/Home-muted contrast defects and undersized standalone inventory mic are corrected and statically measured/gated. The complete contrast/state/browser inventory remains Phase 9 validation work. |
-| `PG-AUD-UI-011` | BLOCKED | Resolve the dead-code/import decision under `PG-AUD-CODE-003` first; if retained, accessibility proof can be scheduled with later browser/AT work. |
+| `PG-AUD-UI-001` | COMPLETE | The named programmatic-label defects are fixed and permanently statically gated. Broader automated/manual accessibility auditing remains tracked under UI-008 rather than reopening this specific defect. |
+| `PG-AUD-UI-002` | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | Measured sticky offsets replace fixed mobile pixels and are statically gated. Full 320px/zoom/text-scale/multi-browser stress remains post-MVP UI-008/UI-009 backlog. |
+| `PG-AUD-UI-003` | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | Shared polite/assertive live regions and duplicate suppression are implemented and statically gated. Manual real-screen-reader announcement-once proof remains post-MVP accessibility backlog. |
+| `PG-AUD-UI-004` | COMPLETE | Garage add-mode controls use ordinary grouped toggle-button semantics with synchronized `aria-pressed`, and the incomplete tab contract is permanently guarded against regression. |
+| `PG-AUD-UI-005` | COMPLETE | Settings Units and Text Size use native same-name radio inputs in labeled fieldsets; the original custom-radio semantic defect is removed and statically gated. |
+| `PG-AUD-UI-006` | COMPLETE | SPA route changes update titles, move focus to the destination context, expose a skip link, honor reduced motion, and the Phase 9 real Chromium browser gate verifies title/focus behavior. |
+| `PG-AUD-UI-007` | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | User-authored observations can provide equivalent photo descriptions without generated visual claims. Broader live accessibility/photo-surface review remains post-MVP backlog. |
+| `PG-AUD-UI-008` | BACKLOG | Phase 9 added permanent real Chromium E2E, offline/degraded, and timeout/recovery browser gates. Axe-style automated accessibility scanning, multi-browser coverage, and manual screen-reader release evidence remain post-MVP hardening. |
+| `PG-AUD-UI-009` | BACKLOG | The shipped Phase 9 browser contract is Chromium-only. An explicit supported-browser/version matrix plus Firefox/WebKit enforcement remains a later product/support-policy task. |
+| `PG-AUD-UI-010` | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | The named contrast and primary touch-target defects are corrected and measured/gated. Exhaustive state/contrast/multi-browser inventory remains post-MVP accessibility backlog. |
+| `PG-AUD-UI-011` | COMPLETE | `YearWheel.tsx` was proven unused and retired; no custom spinbutton remains to require assistive-technology sign-off. |
 
 Current-control proof for `PG-AUD-UI-001` through `PG-AUD-UI-003`:
 
@@ -157,21 +158,21 @@ Current-control proof for `PG-AUD-UI-010`:
 | Item | Execution status | Dependency decision |
 | --- | --- | --- |
 | `PG-AUD-CODE-001` | BACKLOG | Retire compatibility bridges only after remaining functional work and final import usage are stable. |
-| `PG-AUD-CODE-002` | BACKLOG | CSS consolidation depends on current accessibility/reflow fixes and later visual/browser regression. |
-| `PG-AUD-CODE-003` | ELIGIBLE | Current UI remediation is stabilized at the available Phase 7 boundary; import/dead-asset proof can now run without pulling Phase 8/9/10 forward. Its result still gates `PG-AUD-UI-011`. |
-| `PG-AUD-CODE-004` | BLOCKED | Resolve only after current Readiness/UI cleanup establishes whether the hidden session bar is intentionally redundant or still needed. |
+| `PG-AUD-CODE-002` | BACKLOG | The current accessibility/reflow fixes are stable, but broad stylesheet/cascade consolidation is maintainability work best paired with the later visual/multi-browser regression effort. |
+| `PG-AUD-CODE-003` | COMPLETE | Dependency proof completed; `YearWheel.tsx` and `production-launch.css` were removed and `web/scripts/validate-retired-frontend-assets.mjs` prevents their return. |
+| `PG-AUD-CODE-004` | ELIGIBLE | Phase 9 establishes the current navigation/edit-control ownership. Readiness still renders a permanently hidden legacy session/lease subtree; visible session/edit controls exist in Overview/Guided Repair, so this can now be removed without pulling later roadmap work forward. |
 
 ---
 
-# G. Incomplete roadmap work through the Phase 7 boundary
+# G. Incomplete roadmap work through the Phase 9 boundary
 
 Category G is roadmap-owned work, not a separate remediation implementation queue.
 
 | Item | Execution status | Dependency decision |
 | --- | --- | --- |
-| `PG-AUD-ROAD-001` | BACKLOG | Hosted durable-photo proof remains in its existing Phase 1/Phase 9 roadmap location. |
+| `PG-AUD-ROAD-001` | COMPLETE | Exact-head Vercel Preview private-Blob write, forced local-cache loss, rehydration/byte verification, and deletion all passed; the Phase 1/9 hosted durability gate is closed. |
 | `PG-AUD-ROAD-002` | BACKLOG | Deployed NHTSA operator HTTP proof remains unfinished Phase 6 roadmap work. |
-| `PG-AUD-ROAD-003` | BACKLOG | Broad repair-knowledge population is Phase 6 breadth plus Phase 8 reference-fleet/data work. |
+| `PG-AUD-ROAD-003` | BACKLOG | Phase 8 reference-fleet proof is complete, but broad canonical repair-knowledge population remains genuine unfinished Phase 6 breadth work. |
 
 ---
 
@@ -179,7 +180,7 @@ Category G is roadmap-owned work, not a separate remediation implementation queu
 
 | Item | Execution status | Dependency decision |
 | --- | --- | --- |
-| `PG-AUD-TEST-001` | BACKLOG | This is explicitly the Phase 9/final-release validation contract. Existing permanent CI remains active, but the final campaign waits for the functional MVP/fleet boundary it is intended to validate. |
+| `PG-AUD-TEST-001` | COMPLETE | Phase 9 now has permanent jobs for every Blueprint final-validation layer named by this finding, and MVP Final Validation CI #205 passed all 18 jobs on the exact clean head. |
 
 ---
 
@@ -187,11 +188,11 @@ Category G is roadmap-owned work, not a separate remediation implementation queu
 
 The remediation queue skips all `BLOCKED` and `BACKLOG` items automatically.
 
-At the current Phase 7 boundary, new audit-remediation implementation may come only from items marked `ELIGIBLE`, unless verified new evidence changes a dependency status. A task cannot be promoted from `BLOCKED`/`BACKLOG` merely because it is high priority or convenient to implement early.
+At the completed Phase 9 boundary, new audit-remediation implementation may come only from items marked `ELIGIBLE`, unless verified new evidence changes a dependency status. The current decision-free eligible item is `PG-AUD-CODE-004`. A task cannot be promoted from `BLOCKED`/`BACKLOG` merely because it is high priority or convenient to implement early.
 
 Before changing any dependency status:
 
 1. verify the exact live roadmap state;
 2. verify the dependent code/data/infrastructure actually exists and is complete;
-3. verify the change does not pull Phase 8, Phase 9, Phase 10, future provider scale, or production cutover work forward;
+3. verify the change does not pull Phase 10, unfinished Phase 6 breadth/provider work, future provider scale, post-MVP support-policy work, or production cutover work forward;
 4. preserve PR #84 as draft/unmerged and production at its intentionally untouched boundary unless explicit authorization says otherwise.
