@@ -17,8 +17,8 @@ from fastapi import status
 from PIL import Image, ImageOps, UnidentifiedImageError
 from pillow_heif import register_heif_opener
 
-from ..config import settings
-from ..errors import ErrorCode, PartGraphError
+from ...config import settings
+from ...errors import ErrorCode, PartGraphError
 
 _STORAGE_KEY_PATTERN = re.compile(r"^[0-9a-f]{32}\.(?:jpg|png|webp|heic)$")
 _BLOB_API_URL = "https://vercel.com/api/blob"

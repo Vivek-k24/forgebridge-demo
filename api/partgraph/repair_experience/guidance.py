@@ -18,7 +18,7 @@ from ..knowledge.support_boundaries import (
     COMPUTER_SERVICE_BOUNDARY_MESSAGE,
     is_computer_service_boundary,
 )
-from .auth.dependencies import AuthSessionDep, CurrentUserDep, require_csrf
+from ..identity.actors import AuthSessionDep, CurrentUserDep, require_csrf
 from .models import RepairProcedureActionState, RepairSession
 from .readiness import (
     DEVICE_HEADER,

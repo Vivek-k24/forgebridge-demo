@@ -15,9 +15,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from partgraph.database import session_factory
 
 from ...observability import emit_event
-from ..errors import ErrorCode, PartGraphError
+from ...errors import ErrorCode, PartGraphError
 from ..service import append_domain_event, prepare_domain_mutation
-from .models import RepairPhotoEvidence
+from ..memory_models import RepairPhotoEvidence
 from .schemas import PhotoDeleteRead, PhotoEvidenceRead, PhotoPurpose
 from .service import (
     _assert_replay,

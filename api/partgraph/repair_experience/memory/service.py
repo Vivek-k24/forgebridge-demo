@@ -10,10 +10,10 @@ from fastapi import status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..errors import ErrorCode, PartGraphError
+from ...errors import ErrorCode, PartGraphError
 from ..models import RepairSession, RepairSessionEvent
 from ..service import append_domain_event, prepare_domain_mutation
-from .models import (
+from ..memory_models import (
     RepairFastener,
     RepairInventoryItem,
     RepairObservation,
