@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Integer, String, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from ..database import Base
+from ...database import Base
 
 
 class User(Base):

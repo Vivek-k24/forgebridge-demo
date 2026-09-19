@@ -5,7 +5,7 @@ from fastapi import Depends, status
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..errors import ErrorCode, PartGraphError
+from ...errors import ErrorCode, PartGraphError
 from .dependencies import CurrentUserDep
 from .models import User
 
