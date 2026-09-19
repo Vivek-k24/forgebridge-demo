@@ -5,7 +5,6 @@ on:
     paths:
       - 'api/data/reference/**'
       - 'api/partgraph/repair_experience/**'
-      - 'api/partgraph/repair_definition/**'
       - 'api/partgraph/knowledge/repair_materialization*.py'
       - 'api/partgraph/knowledge/downstream_materialization.py'
       - 'api/partgraph/knowledge/vehicle_domain_materialization.py'
@@ -26,7 +25,6 @@ on:
     paths:
       - 'api/data/reference/**'
       - 'api/partgraph/repair_experience/**'
-      - 'api/partgraph/repair_definition/**'
       - 'api/partgraph/knowledge/repair_materialization*.py'
       - 'api/partgraph/knowledge/downstream_materialization.py'
       - 'api/partgraph/knowledge/vehicle_domain_materialization.py'
@@ -86,7 +84,6 @@ jobs:
         run: >-
           ruff check
           api/partgraph/repair_experience
-          api/partgraph/repair_definition
           api/partgraph/knowledge/repair_materialization.py
           api/partgraph/knowledge/repair_materialization_contract.py
           api/partgraph/knowledge/repair_materialization_service.py
