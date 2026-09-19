@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2015-toyota-camry-repairs-v1",
+  "vehicle": {
+    "market": "US",
+    "year": 2015,
+    "make": "Toyota",
+    "model": "CAMRY"
+  },
+  "review": {
+    "status": "source_reviewed_reference_fixture",
+    "reviewed_through": "2026-09-16",
+    "reviewed_by": "partgraph_phase8_manual_review",
+    "note": "The Phase 8 reference fixture uses only facts explicitly supported by Toyota's U.S. 2015 Camry owner manual. Optional trim, engine, transmission, drivetrain, and generation fields remain unset rather than inferred."
+  },
+  "sources": [
+    {
+      "source_key": "toyota-2015-camry-owner-manual-om33a86u",
+      "source_class": "oem_service",
+      "license_status": "approved",
+      "automation_allowed": false,
+      "document": "2015 Toyota Camry Owner's Manual",
+      "document_part_number": "OM33A86U",
+      "url": "https://assets.sia.toyota.com/publications/en/om-s/OM33A86U/pdf/OM33A86U.pdf",
+      "supports": [
+        "vehicle_identity",
+        "license_plate_light_bulb_specification",
+        "license_plate_light_bulb_replacement_procedure",
+        "light_bulb_safety"
+      ]
+    }
+  ],
+  "repairs": [
+    {
+      "repair_key": "license-plate-light-bulb-replacement",
+      "path": "license_plate_light_bulb_replacement.json",
+      "source_key": "toyota-2015-camry-owner-manual-om33a86u",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 3,
+      "action_count": 4
+    }
+  ]
+}

@@ -16,24 +16,23 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 concurrency:
   group: web-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: Web test + security + container smoke
+  build:
+    name: Web build + security + container smoke
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24
           cache: npm
@@ -72,12 +71,56 @@ jobs:
                 sleep $((attempt * 5))
                 continue
               fi
-              echo '::warning::npm audit advisory service remained unavailable after 3 attempts. Dependency integrity passed; the advisory scan is explicitly degraded for this run.'
+              echo '::warning::npm audit advisory service remained unavailable after 3 attempts. Dependency integrity passed; the advisory scan is explicitly degraded for this development run. Production image publication has a separate fail-closed advisory gate.'
               exit 0
             fi
 
             exit "$audit_status"
           done
+
+      - name: Validate offline repair cache privacy
+        working-directory: web
+        run: node scripts/validate-offline-privacy.mjs
+
+      - name: Validate service-worker cache lifecycle
+        working-directory: web
+        run: node scripts/validate-service-worker-cache.mjs
+
+      - name: Validate current form-control accessibility names
+        working-directory: web
+        run: node scripts/validate-accessible-form-labels.mjs
+
+      - name: Validate responsive sticky navigation offsets
+        working-directory: web
+        run: node scripts/validate-responsive-sticky-stack.mjs
+
+      - name: Validate workflow status announcements
+        working-directory: web
+        run: node scripts/validate-accessible-workflow-announcements.mjs
+
+      - name: Validate Garage add-mode semantics
+        working-directory: web
+        run: node scripts/validate-garage-mode-semantics.mjs
+
+      - name: Validate Settings radio semantics
+        working-directory: web
+        run: node scripts/validate-settings-radio-semantics.mjs
+
+      - name: Validate SPA navigation accessibility
+        working-directory: web
+        run: node scripts/validate-spa-navigation-accessibility.mjs
+
+      - name: Validate repair photo descriptions
+        working-directory: web
+        run: node scripts/validate-repair-photo-descriptions.mjs
+
+      - name: Validate current contrast and primary target sizing
+        working-directory: web
+        run: node scripts/validate-current-contrast-targets.mjs
+
+      - name: Validate retired frontend assets stay removed
+        working-directory: web
+        run: node scripts/validate-retired-frontend-assets.mjs
 
       - name: Typecheck web
         working-directory: web
@@ -113,13 +156,34 @@ jobs:
   publish:
     name: Publish Web image
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: test
+    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Node.js for release advisory gate
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install locked Web dependencies for release gate
+        working-directory: web
+        run: npm ci --no-audit --no-fund
+
+      - name: Require successful high-severity advisory scan for release
+        working-directory: web
+        env:
+          NPM_CONFIG_FETCH_TIMEOUT: '30000'
+          NPM_CONFIG_FETCH_RETRIES: '2'
+        run: npm audit --audit-level=high
 
       - name: Authenticate to GHCR
         env:
@@ -138,5 +202,6 @@ jobs:
             echo '### PartGraph Web delivery'
             echo "- Image: \`$IMAGE:$GITHUB_SHA\`"
             echo "- Rolling tag: \`$IMAGE:main\`"
+            echo "- Release advisory gate: npm audit --audit-level=high passed"
             echo "- [GHCR package](https://github.com/users/${GITHUB_REPOSITORY_OWNER}/packages/container/package/partgraph-web)"
           } >> "$GITHUB_STEP_SUMMARY"

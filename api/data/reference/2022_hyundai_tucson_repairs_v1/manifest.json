@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2022-hyundai-tucson-repairs-v1",
+  "vehicle": {
+    "market": "US",
+    "year": 2022,
+    "make": "Hyundai",
+    "model": "TUCSON",
+    "engine": "Smartstream G 2.5 GDI"
+  },
+  "review": {
+    "status": "source_reviewed_reference_fixture",
+    "reviewed_through": "2026-09-16",
+    "reviewed_by": "partgraph_phase8_manual_review",
+    "note": "The Phase 8 reference fixture uses only facts explicitly supported by Hyundai Motor America's U.S. 2022 Tucson Owner's Manual. The gasoline manual identifies the Smartstream G 2.5 GDI engine, so this fixture keeps that engine applicability explicit rather than claiming hybrid or plug-in-hybrid coverage. Optional trim, transmission, drivetrain, body-style, and generation fields remain unset rather than inferred."
+  },
+  "sources": [
+    {
+      "source_key": "hyundai-usa-2022-tucson-owner-manual",
+      "source_class": "oem_service",
+      "license_status": "approved",
+      "automation_allowed": false,
+      "document": "2022 Tucson Owner's Manual",
+      "url": "https://owners.hyundaiusa.com/content/dam/hyundai/us/myhyundai/manuals/glovebox-manual/2022/tucson/2022-Tucson-Owners-Manual1.pdf",
+      "supports": [
+        "vehicle_identity",
+        "cabin_air_filter_replacement_requirement",
+        "cabin_air_filter_replacement_procedure"
+      ]
+    }
+  ],
+  "repairs": [
+    {
+      "repair_key": "cabin-air-filter-replacement",
+      "path": "cabin_air_filter_replacement.json",
+      "source_key": "hyundai-usa-2022-tucson-owner-manual",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 1,
+      "action_count": 6
+    }
+  ]
+}

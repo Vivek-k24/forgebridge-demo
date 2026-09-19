@@ -1,0 +1,108 @@
+name: Database Reliability CI
+
+on:
+  pull_request:
+    paths:
+      - 'api/partgraph/config.py'
+      - 'api/partgraph/database.py'
+      - 'api/partgraph/errors.py'
+      - 'api/partgraph/identity/auth/**'
+      - 'api/partgraph/identity/database.py'
+      - 'api/partgraph/repair_experience/recovery.py'
+      - 'api/migrations/**'
+      - 'api/tests/test_database_connection_strategy.py'
+      - 'api/tests/test_database_write_recovery.py'
+      - 'api/pyproject.toml'
+      - 'web/src/repair-client.ts'
+      - 'web/scripts/validate-repair-recovery.mjs'
+      - '.github/workflows/database-reliability.yml'
+  push:
+    branches:
+      - main
+      - partgraph-mvp-consolidation
+    paths:
+      - 'api/partgraph/config.py'
+      - 'api/partgraph/database.py'
+      - 'api/partgraph/errors.py'
+      - 'api/partgraph/identity/auth/**'
+      - 'api/partgraph/identity/database.py'
+      - 'api/partgraph/repair_experience/recovery.py'
+      - 'api/migrations/**'
+      - 'api/tests/test_database_connection_strategy.py'
+      - 'api/tests/test_database_write_recovery.py'
+      - 'api/pyproject.toml'
+      - 'web/src/repair-client.ts'
+      - 'web/scripts/validate-repair-recovery.mjs'
+      - '.github/workflows/database-reliability.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: database-reliability-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  database-reliability:
+    name: Database reliability gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:18.6-alpine
+        env:
+          POSTGRES_DB: partgraph
+          POSTGRES_USER: partgraph
+          POSTGRES_PASSWORD: partgraph
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U partgraph -d partgraph"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.14'
+
+      - name: Install API dependencies
+        run: python -m pip install -e './api[dev]'
+
+      - name: Lint database reliability boundary
+        run: >-
+          ruff check
+          api/partgraph/config.py
+          api/partgraph/database.py
+          api/partgraph/errors.py
+          api/partgraph/identity/auth/dependencies.py
+          api/partgraph/identity/database.py
+          api/tests/test_database_connection_strategy.py
+          api/tests/test_database_write_recovery.py
+
+      - name: Apply database migrations
+        env:
+          PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
+        run: alembic -c api/alembic.ini upgrade head
+
+      - name: Test serverless database connection strategy
+        env:
+          PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
+        run: >-
+          python -m unittest discover -s api/tests
+          -p 'test_database_connection_strategy.py'
+
+      - name: Test indeterminate database write recovery
+        run: >-
+          python -m unittest discover -s api/tests
+          -p 'test_database_write_recovery.py'
+
+      - name: Validate browser recovery key reuse
+        run: node web/scripts/validate-repair-recovery.mjs

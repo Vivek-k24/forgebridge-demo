@@ -9,13 +9,13 @@ from fastapi import APIRouter, Depends, Header, status
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 
-from ..auth.dependencies import AuthSessionDep, CurrentUserDep, require_csrf
 from ..errors import ErrorCode, ErrorEnvelope, PartGraphError
-from ..repair_definition.models import RepairRequirementState, UserGarageInventoryItem
-from ..repair_definition.schemas import RepairDefinitionManifestRead, RequirementManifestItemRead
-from ..repair_definition.service import bound_requirement_manifest
-from ..user_vehicle.models import UserVehicle
+from ..identity.user_vehicle.models import UserVehicle
+from ..knowledge.repair_service import bound_requirement_manifest
+from ..knowledge.schemas import RepairDefinitionManifestRead, RequirementManifestItemRead
+from .auth.dependencies import AuthSessionDep, CurrentUserDep, require_csrf
 from .models import RepairSession, RepairSessionEvent
+from .readiness_models import RepairRequirementState, UserGarageInventoryItem
 from .service import append_domain_event, prepare_domain_mutation
 
 ReadinessState = Literal["have", "missing", "ordered", "unavailable"]

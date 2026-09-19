@@ -1,0 +1,93 @@
+.garage-repair-context-shell {
+  width: min(1440px, calc(100% - 1.5rem));
+  margin: 0 auto;
+  padding: 1rem 0 0;
+  color: #edf3f4;
+}
+
+.garage-repair-context {
+  display: grid;
+  grid-template-columns: minmax(260px, .9fr) minmax(300px, 1.4fr) auto;
+  gap: 1rem;
+  align-items: end;
+  padding: .9rem 1rem;
+  border: 1px solid #30444a;
+  border-radius: 14px;
+  background: #111e25;
+}
+
+.garage-repair-context label {
+  display: grid;
+  gap: .35rem;
+}
+
+.garage-repair-context label > span {
+  color: #a8f0cc;
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.garage-repair-context select {
+  width: 100%;
+  min-height: 42px;
+  padding: .55rem .7rem;
+  color: #f5f8f8;
+  background: #0d171c;
+  border: 1px solid #34505a;
+  border-radius: 9px;
+}
+
+.garage-repair-context__vehicle {
+  display: grid;
+  gap: .22rem;
+  align-self: center;
+}
+
+.garage-repair-context__vehicle strong {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.garage-repair-context__vehicle span {
+  color: #bfd1da;
+  font-size: .92rem;
+}
+
+.garage-repair-context button {
+  min-height: 42px;
+  padding: .55rem .9rem;
+  color: #082117;
+  background: #9eddbd;
+  border: 1px solid #b8f4d6;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.garage-repair-context__error {
+  margin: .45rem 0 0;
+  color: #f0c0c3;
+  font-size: .88rem;
+}
+
+@media (max-width: 980px) {
+  .garage-repair-context {
+    grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr);
+  }
+
+  .garage-repair-context button {
+    justify-self: start;
+  }
+}
+
+@media (max-width: 680px) {
+  .garage-repair-context-shell {
+    width: min(100% - 1rem, 1440px);
+  }
+
+  .garage-repair-context {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "dataset_key": "primary-reference-bundle-v1",
+  "profile_manifest": "api/data/reference/2009_honda_civic_hybrid_profile_v1/manifest.json",
+  "parts_manifest": "api/data/reference/2009_honda_civic_hybrid_parts_v1/manifest.json",
+  "repair_manifest": "api/data/reference/2009_honda_civic_hybrid_repairs_v1/manifest.json",
+  "repair_candidate": "api/data/reference_candidates/2009_honda_civic_hybrid_water_pump_v1/candidate.json",
+  "publication_plan": "api/data/reference/persistent_publication_plan_v1.json"
+}

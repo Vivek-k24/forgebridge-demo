@@ -1,12 +1,17 @@
+import asyncio
 import logging
+import os
 import re
 from contextlib import asynccontextmanager
+from pathlib import Path
 from time import perf_counter
 from uuid import uuid4
 
 from fastapi import FastAPI, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -15,25 +20,39 @@ import partgraph.orm_registry  # noqa: F401
 from .assistance.router import router as assistance_router
 from .config import settings
 from .database import database_readiness, engine
+from .equipment.router import router as equipment_router
 from .errors import ErrorCode, PartGraphError, error_response
 from .identity.auth.router import router as auth_router
 from .identity.user_vehicle.router import router as user_vehicle_router
 from .identity.vehicle.router import router as vehicle_router
+from .knowledge.claim_publication import router as claim_publication_router
+from .knowledge.conflict_resolution import router as conflict_resolution_router
+from .knowledge.contribution import router as knowledge_contribution_router
 from .knowledge.coverage_router import router as catalog_coverage_router
+from .knowledge.curation import router as knowledge_curation_router
+from .knowledge.repair_materialization import router as repair_materialization_router
 from .knowledge.router import router as repair_definition_router
+from .observability import bind_request_context, emit_event, is_mutation_method
+from .operator.router import router as operator_router
+from .repair_experience.completion import router as repair_completion_router
 from .repair_experience.guidance import router as repair_guidance_router
 from .repair_experience.memory.router import router as repair_memory_router
 from .repair_experience.readiness import router as repair_readiness_router
+from .repair_experience.recovery import router as repair_recovery_router
 from .repair_experience.repair_definition_binding import router as repair_definition_binding_router
 from .repair_experience.router import router as repair_session_router
 
 logger = logging.getLogger("partgraph.api")
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 AUTH_BODY_LIMIT_BYTES = 16 * 1024
+OPERATOR_BODY_LIMIT_BYTES = 64 * 1024
+KNOWLEDGE_BODY_LIMIT_BYTES = 256 * 1024
 USER_VEHICLE_BODY_LIMIT_BYTES = 32 * 1024
 REPAIR_SESSION_BODY_LIMIT_BYTES = 16 * 1024
 PHOTO_MULTIPART_OVERHEAD_BYTES = 256 * 1024
 API_VERSION = "v1"
+WEB_PUBLIC_ROOT = Path(__file__).resolve().parent / "frontend"
+WEB_ASSETS_ROOT = WEB_PUBLIC_ROOT / "assets"
 
 
 class LiveHealth(BaseModel):
@@ -59,7 +78,7 @@ app = FastAPI(
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.web_origin],
+    allow_origins=list(settings.allowed_web_origins),
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=[
@@ -68,19 +87,34 @@ app.add_middleware(
         "X-Request-ID",
         "X-PartGraph-Device-ID",
         "Idempotency-Key",
+        "traceparent",
     ],
-    expose_headers=["X-Request-ID", "X-PartGraph-API-Version", "Retry-After"],
+    expose_headers=[
+        "X-Request-ID",
+        "X-PartGraph-API-Version",
+        "Retry-After",
+        "traceparent",
+    ],
 )
 app.include_router(auth_router)
+app.include_router(operator_router)
 app.include_router(vehicle_router)
 app.include_router(user_vehicle_router)
+app.include_router(equipment_router)
 app.include_router(catalog_coverage_router)
+app.include_router(knowledge_curation_router)
+app.include_router(knowledge_contribution_router)
+app.include_router(claim_publication_router)
+app.include_router(conflict_resolution_router)
+app.include_router(repair_materialization_router)
 app.include_router(repair_session_router)
+app.include_router(repair_recovery_router)
 app.include_router(repair_memory_router)
 app.include_router(repair_definition_router)
 app.include_router(repair_definition_binding_router)
 app.include_router(repair_readiness_router)
 app.include_router(repair_guidance_router)
+app.include_router(repair_completion_router)
 app.include_router(assistance_router)
 
 
@@ -89,6 +123,10 @@ def _request_body_limit(request: Request) -> tuple[int, str] | None:
         return None
     if request.url.path.startswith("/api/v1/auth/"):
         return AUTH_BODY_LIMIT_BYTES, "Authentication request payload is too large."
+    if request.url.path.startswith("/api/v1/operator"):
+        return OPERATOR_BODY_LIMIT_BYTES, "Operator request payload is too large."
+    if request.url.path.startswith(("/api/v1/curation", "/api/v1/contributions")):
+        return KNOWLEDGE_BODY_LIMIT_BYTES, "Knowledge-pipeline request payload is too large."
     if request.url.path.startswith("/api/v1/user-vehicles"):
         return USER_VEHICLE_BODY_LIMIT_BYTES, "Vehicle request payload is too large."
     if request.url.path.startswith("/api/v1/repair-sessions"):
@@ -101,11 +139,21 @@ def _request_body_limit(request: Request) -> tuple[int, str] | None:
     return None
 
 
+def _route_template(request: Request) -> str:
+    route = request.scope.get("route")
+    route_path = getattr(route, "path", None)
+    return route_path if isinstance(route_path, str) and route_path else "unmatched"
+
+
 @app.middleware("http")
 async def platform_boundary(request: Request, call_next) -> Response:
     supplied_request_id = request.headers.get("x-request-id", "")
     request.state.request_id = (
         supplied_request_id if REQUEST_ID_PATTERN.fullmatch(supplied_request_id) else uuid4().hex
+    )
+    request.state.trace_context = bind_request_context(
+        request_id=request.state.request_id,
+        traceparent=request.headers.get("traceparent"),
     )
 
     body_limit = _request_body_limit(request)
@@ -148,7 +196,37 @@ async def platform_boundary(request: Request, call_next) -> Response:
             return _finish_response(request, response, 0.0)
 
     started = perf_counter()
-    response = await call_next(request)
+    if request.url.path.startswith("/api/"):
+        deadline = asyncio.timeout(settings.request_deadline_seconds)
+        try:
+            async with deadline:
+                response = await call_next(request)
+        except TimeoutError:
+            if not deadline.expired():
+                raise
+            duration_ms = (perf_counter() - started) * 1000
+            logger.warning(
+                "code=REQUEST_DEADLINE_EXCEEDED request_id=%s method=%s path=%s duration_ms=%.2f",
+                request.state.request_id,
+                request.method,
+                request.url.path,
+                duration_ms,
+            )
+            response = error_response(
+                request,
+                PartGraphError(
+                    code=ErrorCode.REQUEST_DEADLINE_EXCEEDED,
+                    message="Request exceeded PartGraph's server processing deadline.",
+                    status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                    retryable=True,
+                    details={"deadline_seconds": settings.request_deadline_seconds},
+                    headers={"Retry-After": "1"},
+                ),
+            )
+            return _finish_response(request, response, duration_ms)
+    else:
+        response = await call_next(request)
+
     duration_ms = (perf_counter() - started) * 1000
     return _finish_response(request, response, duration_ms)
 
@@ -160,13 +238,19 @@ def _finish_response(request: Request, response: Response, duration_ms: float) -
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["Permissions-Policy"] = "camera=(self), microphone=(self), geolocation=()"
+    response.headers["traceparent"] = request.state.trace_context.traceparent
 
     if request.url.path.startswith(
         (
             "/api/v1/auth",
             "/api/v1/account",
+            "/api/v1/operator",
+            "/api/v1/curation",
+            "/api/v1/contributions",
             "/api/v1/user-vehicles",
+            "/api/v1/equipment",
             "/api/v1/repair-sessions",
+            "/api/v1/repair-recovery",
         )
     ):
         response.headers["Cache-Control"] = "no-store"
@@ -194,6 +278,27 @@ def _finish_response(request: Request, response: Response, duration_ms: float) -
             request.url.path,
             response.status_code,
             duration_ms,
+        )
+
+    if request.url.path.startswith("/api/"):
+        if response.status_code >= 500:
+            event_level = logging.ERROR
+        elif response.status_code >= 400:
+            event_level = logging.WARNING
+        else:
+            event_level = logging.INFO
+        emit_event(
+            "http.server.request",
+            level=event_level,
+            request_id=request.state.request_id,
+            trace_context=request.state.trace_context,
+            **{
+                "http.request.method": request.method,
+                "http.route": _route_template(request),
+                "http.response.status_code": response.status_code,
+                "server.duration_ms": round(duration_ms, 2),
+                "partgraph.request.is_mutation": is_mutation_method(request.method),
+            },
         )
     return response
 
@@ -257,6 +362,17 @@ async def unexpected_error_handler(request: Request, exc: Exception) -> Response
         request.method,
         request.url.path,
     )
+    emit_event(
+        "error.unhandled",
+        level=logging.ERROR,
+        request_id=getattr(request.state, "request_id", None),
+        trace_context=getattr(request.state, "trace_context", None),
+        **{
+            "exception.type": type(exc).__name__,
+            "http.request.method": request.method,
+            "http.route": _route_template(request),
+        },
+    )
     return error_response(
         request,
         PartGraphError(
@@ -290,4 +406,41 @@ async def ready() -> ReadyHealth:
         status="ready",
         database="ready",
         database_ms=database_ms,
+    )
+
+
+if os.getenv("VERCEL") == "1":
+    app.frontend("/", directory="partgraph/frontend")  # type: ignore[attr-defined]
+
+
+@app.get("/", include_in_schema=False)
+@app.get("/index.html", include_in_schema=False)
+async def web_index() -> Response:
+    index_file = WEB_PUBLIC_ROOT / "index.html"
+    if not index_file.is_file():
+        raise StarletteHTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return FileResponse(
+        index_file,
+        media_type="text/html",
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
+@app.get("/sw.js", include_in_schema=False)
+async def web_service_worker() -> Response:
+    service_worker = WEB_PUBLIC_ROOT / "sw.js"
+    if not service_worker.is_file():
+        raise StarletteHTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return FileResponse(
+        service_worker,
+        media_type="text/javascript",
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
+if WEB_ASSETS_ROOT.is_dir():
+    app.mount(
+        "/assets",
+        StaticFiles(directory=WEB_ASSETS_ROOT),
+        name="partgraph-web-assets",
     )

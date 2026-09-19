@@ -1,14 +1,15 @@
-# PartGraph Phase 0–7 Audit and Remediation Register
+# PartGraph Phase 0–9 Audit and Remediation Register
 
-Audit date: 2026-09-15  
-Scope: repository, consolidation preview, production boundary, database state, CI/CD, runtime behavior, frontend/browser/accessibility, data lifecycle, security, reliability, and roadmap state through completion of Phase 7.  
-Implementation fixes performed during audit: **none**. This document is a remediation reference only.  
+Original audit date: 2026-09-15  
+Phase 8–9 re-audit date: 2026-09-19  
+Scope: repository, consolidation preview, production boundary, database state, CI/CD, runtime behavior, frontend/browser/accessibility, data lifecycle, security, reliability, and roadmap state through completion of Phase 9.  
+Implementation fixes performed during the original 2026-09-15 audit: **none**. Phase 8–9 re-audit remediation is recorded inline below as each eligible item is completed.  
 Post-audit remediation updates are recorded inline when an entire issue category is completed.  
 Explicit audit exclusion: sign-in/sign-up mechanics themselves were not reviewed; authorization, ownership, isolation, secrets, trust boundaries, and operator access were reviewed.
 
 ## Purpose
 
-This file is the durable technical handoff for the five-pass Phase 0–7 audit. It is intentionally organized by problem domain rather than audit pass so a future implementation session can fix one bounded issue at a time without reconstructing chat history.
+This file is the durable technical handoff for the original five-pass Phase 0–7 audit plus the Phase 8–9 remediation re-audit. It is intentionally organized by problem domain rather than audit pass so a future implementation session can fix one bounded issue at a time without reconstructing chat history.
 
 For every item, preserve the PartGraph architecture contract:
 
@@ -21,7 +22,7 @@ For every item, preserve the PartGraph architecture contract:
 - historical deployed migrations must remain immutable; cleanup must be forward-only
 - PR #84 must not be merged, production migrated, providers activated, source authority weakened, human review bypassed, or branches/data deleted without explicit authorization
 
-## Audited state snapshot
+## Original Phase 0–7 audited state snapshot
 
 At the end of the audit:
 
@@ -37,6 +38,56 @@ At the end of the audit:
 - Phase 1 hosted durable-photo persistence proof: still pending
 - current consolidation preview persisted counts observed during audit: 364 vehicle configurations, 282 verified evidence rows, 282 MechanicalClaims, 267 part fitments, 1 repair definition, 5 repair sessions, 0 persisted vehicle-structure rows, 0 persisted vehicle-specification values, 0 persisted repair-photo rows
 - the absence of structure/specification rows in the long-lived preview is intentional non-seeding, not a Phase 7 failure; fresh-database materialization tests prove those domains
+
+## Phase 8–9 re-audit update — 2026-09-19
+
+**Status: RE-AUDITED THROUGH PHASE 9 on `partgraph-mvp-consolidation`; remediation remains bounded by the execution-status overlay.**
+
+Current proof boundary:
+
+- consolidation head audited: `5a95001b594e14437492dd131d41f519619a0eff`
+- Phase 8 five-model reference-fleet proof: complete
+- Phase 9 final MVP validation: complete
+- MVP Final Validation CI #205: all 18 jobs passed on the exact clean head
+- all eight established exact-head regression workflows also passed on that head
+- exact-head Vercel Preview `dpl_7qkpKhUL7Yui3rT3Npvwg8kh3PCN`: READY
+- hosted private-photo persistence proof: passed real private Blob write → transient-cache deletion → Blob re-read/byte verification → deletion
+- production database: intentionally unchanged at `0020_catalog_coverage`
+- PR #84: still draft/unmerged
+- Phase 10 production cutover: not started and still requires explicit authorization
+- Phase 6 deployed NHTSA HTTP proof and broad repair-knowledge population: still pending
+
+The execution-status convention remains authoritative:
+
+- `COMPLETE`
+- `ELIGIBLE`
+- `BLOCKED`
+- `BACKLOG`
+- `CURRENT CONTROL COMPLETE / FUTURE BACKLOG`
+
+A `BLOCKED` or `BACKLOG` classification wins over audit priority. Later-phase or infrastructure-dependent work is not pulled forward merely because it is P1/P2.
+
+### Phase 8–9 status reassessment
+
+The Phase 9 implementation materially changes several old dependency decisions:
+
+- `PG-AUD-REL-003`: current serverless connection control is proven with a 24-parallel-instance `NullPool` database connection test; future higher-scale/pooler validation remains future backlog.
+- `PG-AUD-UI-006`: current SPA navigation focus/title behavior is now exercised by the real Chromium Phase 9 browser gate.
+- `PG-AUD-CODE-003`: complete. `YearWheel.tsx` and `production-launch.css` are removed and guarded by `web/scripts/validate-retired-frontend-assets.mjs`.
+- `PG-AUD-UI-011`: complete because the unused custom YearWheel was retired rather than carried into production.
+- `PG-AUD-ROAD-001`: complete. Hosted durable private-photo persistence now passes on the real Vercel Preview with the private Blob store connected.
+- `PG-AUD-TEST-001`: complete for the Blueprint Phase 9 release layers: unit/domain, API, auth/security, RLS/owner isolation, migrations, production-copy migration, full-stack, verified guidance, browser E2E, randomized acceptance, reference-fleet acceptance, offline/degraded behavior, timeout/recovery, downstream semantics, unsupported-computer boundary, durable photo, data-free-source-code, and RBAC all have permanent Phase 9 jobs.
+- `PG-AUD-CODE-001`: `COMPLETE` on remediation head `a1c868b39bc2ff6044093a172a761a2d5883df68`. The legacy `partgraph.auth`, `partgraph.user_vehicle`, `partgraph.repair_definition`, and `partgraph.repair_experience.repair_session` bridge packages were removed only after remaining consumers were migrated to canonical `identity`, `knowledge`, and `repair_experience` modules. An AST-based CI guard now rejects reintroduction of either the retired packages or imports resolving to them.
+- `PG-AUD-CODE-004`: `COMPLETE` on remediation head `3bc78cf918cd9957beab0597b30c17da6f7b841f`. The permanently hidden Readiness session/lease subtree, dead handlers, and stale CSS were removed; visible edit-control ownership remains in Overview/Guided Repair. The existing retired-frontend guard now prevents the hidden controls from returning.
+- `PG-AUD-UI-008` and `PG-AUD-UI-009`: remain `BACKLOG` as post-MVP browser/accessibility hardening. Phase 9 intentionally proves real Chromium behavior, but the repository still has no declared multi-browser support matrix, Firefox/WebKit CI, axe-style automated accessibility scan, or manual screen-reader release evidence.
+- `PG-AUD-REL-001`, `PG-AUD-REL-007`, `PG-AUD-DEP-001`, and `PG-AUD-DEP-003`: remain `BLOCKED` because their remaining acceptance depends on production infrastructure, alert delivery, Phase 10 cutover, or an explicit repository-governance decision.
+- `PG-AUD-ROAD-002` and `PG-AUD-ROAD-003`: remain `BACKLOG` because they are still genuine unfinished Phase 6 roadmap work.
+
+### Newly observed Phase 9 closeout finding
+
+`PG-AUD-DEP-005` was added below: documentation-only commits to `main` currently trigger Vercel Production builds. The observed Phase 9 roadmap closeout commit changed only `docs/ROADMAP_LIVE.md`, yet Vercel automatically produced a READY Production deployment. No application code or production schema changed, but the deploy trigger is broader than the intended production-change boundary. This finding is `BLOCKED` pending explicit production/deployment-governance authorization.
+
+---
 
 ## Confirmed controls that should not be weakened
 
@@ -410,6 +461,40 @@ This matters because the hosted page executes JavaScript, may include Vercel too
 
 ---
 
+## PG-AUD-REL-009 — Concurrent offline-pack refreshes can rewrite the last confirmed snapshot during offline transition
+
+**Priority:** P2  
+**Type:** offline continuity / async race  
+**Execution status:** COMPLETE
+
+**Problem:** the Phase 9 offline/degraded acceptance run on `57d7da853a8a957e04100de1dc53cd3eb6de70e5` failed with `offline reload invented a newer sync timestamp` in MVP Final Validation CI #243. `OfflineContinuity` could schedule overlapping `sync()` calls from lifecycle events and its interval, while `refreshOfflineRepairPack()` wrote to `sessionStorage` before the caller could reject a stale response. A later response could therefore replace the last confirmed pack while the browser was transitioning offline. Multiple offline-pack GETs are legitimate across initial load, active-session changes, degraded recovery, and reconnect; request count itself is not the invariant. The defect was stale refresh authority over the cached snapshot.
+
+**Proposed solution:** make offline-pack synchronization generation-aware and burst-coalesced. A newly scheduled sync must supersede older in-flight work, invalidate older cache-write eligibility without deleting the last confirmed pack, and only publish a fresh result when it is still the current generation and the client is online. Preserve the existing reconnect refresh and logout cache-clearing behavior.
+
+**Acceptance criteria:** burst lifecycle events do not create overlapping authoritative refreshes; a stale in-flight response cannot overwrite the cached pack or UI after a newer sync/offline transition; offline reload preserves `pack_version`, `server_sequence`, and `generated_at`; reconnect performs a fresh authoritative refresh; Phase 9 offline/degraded acceptance and the exact-head final matrix pass.
+
+**Remediation update — COMPLETE on `partgraph-mvp-consolidation`.**  
+Exact remediation proof head: `41ff18613a3c879a52e77b9a8454d04827a392eb`.
+
+Remediation performed:
+
+- added generation-aware sync scheduling in `OfflineContinuity.tsx`; a newer lifecycle request supersedes older work
+- coalesced burst event scheduling through one replaceable timer instead of launching an independent delayed sync for every event
+- added `invalidateOfflineRepairRefreshes()` in `offline-repair.ts`; a superseded refresh can still finish its network request but loses authority to overwrite `sessionStorage`
+- publish of a fresh pack now also requires the sync generation to remain current and the browser to still be online
+- cleanup invalidates outstanding refresh authority without deleting the last confirmed pack; logout still clears the private pack through the existing auth-clear path
+
+Proof on the exact remediation head:
+
+- the previously failing Phase 9 offline/degraded Chromium acceptance passed, including preserved `pack_version`, `server_sequence`, and `generated_at` across offline reload plus a fresh reconnect update
+- MVP Final Validation CI #247: all 18 jobs passed
+- Web CI/CD #972, API CI/CD #1109, Extraction Pipeline CI #448, Canonical Publication CI #385, Reference Repair Runtime CI #400, Database Reliability CI #235, Operational Observability CI #194, and Web Dependency Advisory Scan #236: passed
+- Vercel Preview `dpl_GRRZDdM1A8ZJS5UdcVvoPTd66X1p`: READY, Preview target only
+- no Production configuration, database schema, automotive data, PR merge, or Phase 10 action was performed
+
+---
+
+
 # D. Deployment, release and repository governance
 
 ## PG-AUD-DEP-001 — PR #84 must not be merged before an explicit production cutover sequence
@@ -463,6 +548,20 @@ Because PR #84 is the primary eventual cutover artifact, stale status text can c
 **Proposed solution:** update the PR body after this audit to point at `0a6918...` as bookkeeping-synchronized head, `7b1d7df...` as the final implementation/data proof, the correct green workflow runs, schema 0059, Phase 7 completion, and only real remaining cutover/Phase 1/Phase 6/Phase 9 gates. Do not merge the PR as part of that documentation update.
 
 **Acceptance criteria:** PR description and `ROADMAP_LIVE.md` agree on completed/pending work and cutover blockers.
+
+---
+
+## PG-AUD-DEP-005 — Documentation-only `main` commits trigger Production deployments
+
+**Priority:** P2  
+**Type:** deployment trigger scope / production governance  
+**Execution status:** BLOCKED
+
+**Problem:** the Phase 9 closeout update to `docs/ROADMAP_LIVE.md` on `main` changed no `api/`, `web/`, migration, or application file, yet the Vercel Git integration automatically started and completed Production deployment `dpl_CgyKourTBDycuEaBFiTu6UFqwaqR`. The deployment was application-content-equivalent because only documentation changed, but the production deployment trigger is broader than the intended release boundary and makes routine roadmap bookkeeping create unnecessary Production builds.
+
+**Proposed solution:** during the authorized deployment-governance/Phase 10 work, configure a path-aware Vercel ignore/build rule or equivalent project setting that skips Production builds when a commit changes only non-runtime documentation. The rule must still deploy when either the API project root or the sibling `web/` bundle changes, and it must not weaken explicit release deployment controls.
+
+**Acceptance criteria:** documentation-only `main` commits do not create Production deployments; runtime-affecting `api/` or `web/` changes still do; the rule is tested with both skip and deploy cases; no Production configuration change is made without explicit authorization.
 
 ---
 
@@ -614,6 +713,72 @@ Engineering accessibility target for future sign-off: **WCAG 2.2 Level AA**. At 
 ---
 
 # F. Codebase maintainability and dead/legacy paths
+
+## Phase 8–9 Category F remediation update — 2026-09-19
+
+**`PG-AUD-CODE-002`: CURRENT CONTROL COMPLETE / FUTURE BACKLOG.**  
+Exact current-control proof head: `41ff18613a3c879a52e77b9a8454d04827a392eb`.
+
+Current-control remediation performed:
+
+- audited the legacy vehicle-selector class family against every current TSX surface; exact class-token usage was zero for `vehicle-selector`, `year-field`, `selector-fields`, `vin-form`, `field-label-row`, `field-note`, the retired `combo*` family, `selector-action`, `result-card*`, and `vin-input`
+- removed 228 lines of proven-unused selector/combobox/VIN/result-card CSS from `web/src/app.css`
+- removed the two remaining dead patch-layer references (`.field-label-row` and `.combo__option`) from `web/src/accessibility-ui.css`
+- extended `web/scripts/validate-retired-frontend-assets.mjs` to scan all active TS/TSX/CSS/HTML source and fail if any exact retired class token returns
+- deliberately did **not** perform a broad token/theme/cascade rewrite; active stylesheet ownership and the later visual/multi-browser hardening remain tied to `PG-AUD-UI-008`/`PG-AUD-UI-009`
+
+Proof on the exact current-control head:
+
+- Web CI/CD #972 passed the strengthened retired-asset guard, TypeScript typecheck, production web build, container build, and running-container smoke
+- Phase 9 real Chromium browser E2E passed on the same head
+- MVP Final Validation CI #247 passed all 18 jobs after the independently discovered `PG-AUD-REL-009` offline race was remediated
+- all eight other exact-head regression workflows passed; Vercel Preview `dpl_GRRZDdM1A8ZJS5UdcVvoPTd66X1p` is READY
+- remaining CODE-002 scope is architectural stylesheet/token consolidation plus broader visual/multi-browser proof, so the finding is not falsely marked `COMPLETE`
+
+
+**`PG-AUD-CODE-001`: COMPLETE on `partgraph-mvp-consolidation`.**  
+Exact remediation proof head: `a1c868b39bc2ff6044093a172a761a2d5883df68`.
+
+Remediation performed:
+
+- removed the compatibility-only `api/partgraph/auth/`, `api/partgraph/user_vehicle/`, `api/partgraph/repair_definition/`, and `api/partgraph/repair_experience/repair_session/` namespaces after import-use proof
+- migrated remaining repair-experience consumers to canonical `partgraph.identity.*`, `partgraph.knowledge.*`, and direct `partgraph.repair_experience.*` modules
+- retained the current `repair_experience.auth` internal dependency seam; it is not the retired top-level `partgraph.auth` package
+- removed stale Reference Repair Runtime workflow paths that still linted the retired repair-definition directory
+- added `api/tests/test_retired_compatibility_bridges.py`, which resolves absolute and relative imports with Python AST and fails if a retired package or import path returns
+- wired the canonical-import guard into permanent API CI
+
+Proof on the exact remediation head:
+
+- API CI/CD #1103: passed, including canonical-import guard, migrations/baseline/RBAC checks, API container build, and running-container smoke
+- Reference Repair Runtime CI #394: passed the reference-fleet runtime gate
+- MVP Final Validation CI #235: passed all 18 Phase 9 jobs
+- Extraction Pipeline CI #442, Canonical Publication CI #379, Database Reliability CI #229, Operational Observability CI #188, Web CI/CD #966, and Web Dependency Advisory Scan #230: passed
+- Vercel Preview `dpl_cNHbTJs8zmq53EM9ijRypK8wMJSw`: READY, Preview target only
+- no API schema migration was added, no automotive data changed, no Production configuration changed, PR #84 remains unmerged, and Phase 10 was not started
+
+The original `PG-AUD-CODE-001` finding below is retained as the audit baseline.
+
+**`PG-AUD-CODE-004`: COMPLETE on `partgraph-mvp-consolidation`.**  
+Exact remediation proof head: `3bc78cf918cd9957beab0597b30c17da6f7b841f`.
+
+Remediation performed:
+
+- removed the permanently hidden `.memory-session-bar` subtree from `web/src/RepairMemory.tsx`
+- removed the dead Readiness-only session selector and hidden lease-acquire/takeover handlers
+- removed the corresponding stale `.memory-session-bar` / `.memory-session-state` CSS and obsolete comment
+- preserved active-session resolution through `active-repair.ts`; visible lease/edit authority remains available in Overview and Guided Repair
+- extended `web/scripts/validate-retired-frontend-assets.mjs` so the retired hidden markup, styles, and handlers cannot return silently
+
+Proof on the exact remediation head:
+
+- Web CI/CD #956: passed, including the retired-asset guard, TypeScript typecheck, production web build, container build, and HTTP/security-header smoke
+- MVP Final Validation CI #215: passed all 18 Phase 9 jobs, including real Chromium browser E2E
+- Vercel Preview `dpl_8M4y21QZAP5xJoQSjxquAQazQpdP`: READY, Preview target only
+- no API schema, database migration, automotive data, Production configuration, PR merge, or Phase 10 action was performed
+
+The original finding statement below is retained as the audit baseline.
+
 
 ## PG-AUD-CODE-001 — Compatibility bridge packages need an explicit retirement decision
 
@@ -804,8 +969,23 @@ This order is based on blast radius and production risk, not on the five audit p
 7. **Finish older roadmap gates**: hosted durable-photo proof and deployed NHTSA HTTP proof; continue Phase 6 knowledge breadth through data only.
 8. **Move generic equipment catalog data out of Python** — operational path completed through the versioned dataset; any remaining unused generator modules are a later code-cleanup concern.
 9. **Run forward legacy-data cleanup** — completed on consolidation preview through 0060/0061; production execution remains part of authorized cutover.
-10. **Remove proven dead/duplicate repo assets and compatibility bridges** — Category A duplicate/archive data cleanup completed; broader compatibility/dead-code cleanup remains under Category F.
+10. **Remove proven dead/duplicate repo assets and compatibility bridges** — Category A duplicate/archive data cleanup, the retired frontend assets, hidden Readiness controls, and the audited compatibility bridge packages are complete; remaining Category F work is the separately tagged CSS-maintainability backlog.
+
+## Phase 0–9 remediation closure snapshot — 2026-09-19
+
+The Phase 0–9 remediation audit has no remaining decision-free implementation item.
+
+Current unresolved count: **18**.
+
+- **5 BLOCKED** — require Production infrastructure, Phase 10/cutover authorization, or an explicit repository/deployment-governance decision.
+- **5 BACKLOG** — belong to unfinished Phase 6 work, final PR synchronization, or post-MVP browser/support-policy hardening.
+- **8 CURRENT CONTROL COMPLETE / FUTURE BACKLOG** — the present MVP control is implemented and proven; additional work is conditional on future provider scale, browser/accessibility scope, database scale, or broader stylesheet architecture.
+- **0 ELIGIBLE** — there is no remediation item that should be implemented now without violating the roadmap/dependency boundary.
+
+Therefore, the Phase 0–9 remediation execution pass is **closed at the current roadmap boundary**. A deferred item is reopened only when its recorded dependency becomes true or explicit authorization changes its execution status. This closure does not mark deferred future work complete and does not authorize Phase 10 or Production changes.
+
+---
 
 ## Definition of audit completion
 
-The audit is complete when this report exists on `main`. Audit completion does **not** mean PR #84 is approved for merge, production is ready for migration, or Phase 8 has started. Post-audit Category A remediation is complete on the consolidation branch, but production cutover remains separately gated and unauthorized.
+The register is re-audited through Phase 9 when the Phase 8–9 status reassessment and any newly observed findings are recorded here with an execution status. Audit completion does **not** mean PR #84 is approved for merge, production is ready for migration, blocked/backlog items are complete, or Phase 10 has started. Remediation continues one `ELIGIBLE` item at a time on `partgraph-mvp-consolidation`; production cutover remains separately gated and unauthorized.

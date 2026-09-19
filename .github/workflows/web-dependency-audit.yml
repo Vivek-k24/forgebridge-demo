@@ -1,0 +1,46 @@
+name: Web Dependency Advisory Scan
+
+on:
+  schedule:
+    - cron: '17 9 * * *'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'web/package.json'
+      - 'web/package-lock.json'
+      - '.github/workflows/web-dependency-audit.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-dependency-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: Strict Web dependency advisory scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install locked Web dependencies
+        working-directory: web
+        run: npm ci --no-audit --no-fund
+
+      - name: Audit Web dependencies fail closed
+        working-directory: web
+        env:
+          NPM_CONFIG_FETCH_TIMEOUT: '30000'
+          NPM_CONFIG_FETCH_RETRIES: '2'
+        run: npm audit --audit-level=high

@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "curated_at": "2026-08-31T19:20:00Z",
+  "reviewer": "partgraph-production-bootstrap-2026-08-31",
+  "source": {
+    "id": "76207964-7ee6-5ce3-83ce-cbeb1f8f57a0",
+    "source_key": "nhtsa-honda-tech-line-dp10004",
+    "display_name": "NHTSA-hosted Honda Tech Line investigation record",
+    "source_class": "government",
+    "license_status": "approved",
+    "automation_allowed": false,
+    "terms_url": "https://www.nhtsa.gov/nhtsa-datasets-and-apis",
+    "source_record_id": "INRD-DP10004-48962P:p390",
+    "source_url": "https://static.nhtsa.gov/odi/inv/2010/INRD-DP10004-48962P.pdf",
+    "raw_sha256": "9cb45d72f7558a14dc0bc821151fb1f69e32080cac614861d47c974bb45b6feb",
+    "dedupe_key": "68b1770a2825328282e688392573146d9b78d8de477a1514dedf453673d49e6e"
+  },
+  "historical_ids": {
+    "batch_id": "72254767-275d-5ea1-aef1-0ef027423814",
+    "staging_record_id": "c3c779c7-a574-5a96-854b-ff3109ac3f0c",
+    "evidence_id": "374a9c0b-058d-5782-8cf9-fd55a935b225",
+    "vehicle_id": "7feb13e9-bca0-5d8b-b701-f0260cce5da1",
+    "claim_id": "60db9bce-3edf-5e28-94b1-2b34995bc43c"
+  },
+  "identity": {
+    "base_identity_hash": "53086d5a08c45bc93113f4a190950290b8109627a1d5ec109239f5abce560e56",
+    "identity_hash": "31111f85a4f95ba85abbe452c132c20eddd02e0f7242c088e49f1a328bee45cb",
+    "normalized_key": "vehicle:US:2009:Honda:CIVIC:HYBRID",
+    "candidate_payload": {
+      "year": 2009,
+      "market": "US",
+      "make": "Honda",
+      "model": "CIVIC",
+      "generation": null,
+      "trim": "HYBRID",
+      "body_style": null,
+      "engine": "I4 HYBRID",
+      "transmission": "CVT",
+      "drivetrain": null
+    }
+  },
+  "raw_payload": {
+    "document_id": "INRD-DP10004-48962P",
+    "document_kind": "NHTSA-hosted Honda Tech Line investigation record",
+    "page": 390,
+    "vehicle_fields": {
+      "year": 2009,
+      "model": "CIVIC HYBRID",
+      "description": "CIVIC IMA 4DR HYBLNAV 4CYL 110.0",
+      "transmission": "CVT",
+      "engine_number_prefix": "LDA2",
+      "market_marker": "USA"
+    }
+  },
+  "provenance": {
+    "document": {
+      "id": "INRD-DP10004-48962P",
+      "page": 390,
+      "host": "NHTSA",
+      "origin": "Honda Tech Line"
+    },
+    "year": "Dealer / Vehicle Information: Year 2009",
+    "market": "Dealer / Vehicle Information: WhtBdy includes USA",
+    "make": "Honda Tech Line record and Honda dealer context",
+    "model": "ISIS search criteria: MODEL: CIVIC HYBRID",
+    "trim": "ISIS search criteria: MODEL: CIVIC HYBRID",
+    "engine": "Dealer / Vehicle Information description includes 4CYL; model is CIVIC HYBRID",
+    "transmission": "Dealer / Vehicle Information: Tran CVT",
+    "excluded_from_canonical_identity": {
+      "body_style": "4DR is recorded, but this bootstrap does not infer a body-style label",
+      "drivetrain": "not explicitly established by this evidence record",
+      "engine_displacement": "not explicitly established by this evidence record",
+      "generation": "not explicitly established by this evidence record"
+    }
+  }
+}

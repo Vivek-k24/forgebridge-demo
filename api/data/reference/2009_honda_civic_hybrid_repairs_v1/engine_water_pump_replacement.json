@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2009-honda-civic-hybrid-repairs-v1",
+  "vehicle_configuration_id": "7feb13e9-bca0-5d8b-b701-f0260cce5da1",
+  "repair_key": "engine-water-pump-replacement",
+  "title": "Engine water-pump replacement",
+  "capability_policy_key": "diy_supported",
+  "source_key": "charmli-2009-civic-hybrid-service-manual-mirror",
+  "operations": [
+    {"operation_key": "drain-coolant", "label": "Drain engine coolant", "position": 0},
+    {"operation_key": "remove-water-pump", "label": "Remove engine water pump", "position": 1},
+    {"operation_key": "install-water-pump", "label": "Install engine water pump", "position": 2}
+  ],
+  "requirements": [
+    {"use_key": "replacement-water-pump", "requirement_key": "part.honda.19200-rmx-003", "category": "part", "display_name": "Engine water-pump assembly", "default_unit": "each", "quantity": 1, "unit": "each", "necessity": "required", "fulfillment_mode": "replacement_required", "timing": "whole_repair"},
+    {"use_key": "new-water-pump-seal", "requirement_key": "hardware.honda.19222-pza-003", "category": "hardware", "display_name": "New water-pump sealing O-ring/gasket", "default_unit": "each", "quantity": 1, "unit": "each", "necessity": "required", "fulfillment_mode": "replacement_required", "timing": "operation", "operation_key": "install-water-pump"},
+    {"use_key": "safe-underbody-access", "requirement_key": "workspace.safe_underbody_access", "category": "workspace", "display_name": "Safe underbody access", "necessity": "required", "fulfillment_mode": "reusable", "timing": "operation", "operation_key": "remove-water-pump"},
+    {"use_key": "coolant-drain-container", "requirement_key": "equipment.coolant_drain_container", "category": "equipment", "display_name": "Coolant drain container", "default_unit": "each", "quantity": 1, "unit": "each", "necessity": "required", "fulfillment_mode": "reusable", "timing": "operation", "operation_key": "drain-coolant"}
+  ],
+  "actions": [
+    {"action_key": "drain-engine-coolant", "title": "Drain the engine coolant", "position": 0, "skippable": false, "instruction": "With the engine cool, drain the engine coolant before opening the water-pump area.", "requirement_use_keys": ["coolant-drain-container", "safe-underbody-access"], "prerequisite_action_keys": []},
+    {"action_key": "remove-access-and-drive-parts", "title": "Remove access and drive components", "position": 1, "skippable": false, "instruction": "Remove the front undercover and splash shield, then remove the drive belt, water-pump pulley fasteners, and auto-tensioner needed for pump access.", "requirement_use_keys": ["safe-underbody-access"], "prerequisite_action_keys": ["drain-engine-coolant"]},
+    {"action_key": "remove-water-pump", "title": "Remove the water pump", "position": 2, "skippable": false, "instruction": "Remove the water-pump mounting fasteners and take out the pump, then inspect and clean the sealing groove and engine-block mating surface.", "requirement_use_keys": [], "prerequisite_action_keys": ["remove-access-and-drive-parts"]},
+    {"action_key": "install-water-pump", "title": "Install the replacement water pump", "position": 3, "skippable": false, "instruction": "Install the replacement pump with a new sealing O-ring/gasket and restore the removed drive and access components in reverse order. Clean any spilled coolant.", "requirement_use_keys": ["replacement-water-pump", "new-water-pump-seal"], "prerequisite_action_keys": ["remove-water-pump"], "milestone_type": "physical_replacement", "downstream_requirement_key": "cooling.refill-air-bleed-after-water-pump", "downstream_title": "Refill coolant and bleed trapped air", "downstream_detail": "Water-pump replacement is not mechanically complete until the cooling system has been refilled and trapped air has been bled with the heater valve open.", "downstream_trigger_type": "action_completed", "downstream_trigger_action_key": "install-water-pump", "downstream_support_state": "supported", "downstream_target_repair_key": "cooling-system-refill-air-bleed"}
+  ]
+}
