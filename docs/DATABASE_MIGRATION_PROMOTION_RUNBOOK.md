@@ -74,6 +74,19 @@ The rehearsal sequence is:
 No synthetic persisted-history fixture is seeded into the production copy. The workflow does not receive a Production database URL, does not downgrade/reset/restore Production, and does not deploy the application or publish canonical automotive knowledge. The child expires automatically even if a job is cancelled after branch creation.
 
 The snapshot verifier intentionally requires the current Production baseline `0020_catalog_coverage`. If Production has advanced unexpectedly, the workflow fails before executing an upgrade. Changing that baseline is a reviewed repository change, not a runtime override.
+## Confirmed isolated-copy rehearsal evidence
+
+The production-copy migration requirement has a real Neon proof in addition to synthetic CI coverage:
+
+- Production branch: `production` (`br-shiny-silence-aexgk2zm`).
+- Isolated copy: `phase9-production-copy-validation-2026-09-17` (`br-shiny-sunset-aebi1qvo`).
+- The isolated branch records `parent_id=br-shiny-silence-aexgk2zm` and Production point-in-time `2026-09-17T23:19:04Z`.
+- On 2026-09-20, Production remained at `0020_catalog_coverage`; the isolated copy was at `0063_photo_storage_outbox`.
+- The Production schema at `0020` defined 18 owner/private tables for preservation checking. Selecting those exact baseline columns on the migrated copy succeeded for every table.
+- Read-only server-side comparison found identical row counts and deterministic row digests for all 18 tables, covering 35 persisted baseline rows.
+- Production remained at `0020_catalog_coverage` after the verification.
+
+This is carried-forward real-copy migration/preservation evidence. The new `production-copy-rehearsal.yml` workflow is the repeatable Phase 10 mechanism and still requires its own first successful manual dispatch. Do not conflate the two evidence statements.
 ## Production promotion gate
 
 Production schema promotion remains a Phase 10 action and must not be performed until all of the following are true:
