@@ -9,12 +9,15 @@ on:
       - 'api/partgraph/identity/auth/**'
       - 'api/partgraph/repair_experience/recovery.py'
       - 'api/migrations/**'
+      - 'api/scripts/verify_production_copy_upgrade.py'
       - 'api/tests/test_database_connection_strategy.py'
+      - 'api/tests/test_phase10_production_copy_rehearsal.py'
       - 'api/tests/test_database_write_recovery.py'
       - 'api/pyproject.toml'
       - 'web/src/repair-client.ts'
       - 'web/scripts/validate-repair-recovery.mjs'
       - '.github/workflows/database-reliability.yml'
+      - '.github/workflows/production-copy-rehearsal.yml'
   push:
     branches:
       - main
@@ -26,12 +29,15 @@ on:
       - 'api/partgraph/identity/auth/**'
       - 'api/partgraph/repair_experience/recovery.py'
       - 'api/migrations/**'
+      - 'api/scripts/verify_production_copy_upgrade.py'
       - 'api/tests/test_database_connection_strategy.py'
+      - 'api/tests/test_phase10_production_copy_rehearsal.py'
       - 'api/tests/test_database_write_recovery.py'
       - 'api/pyproject.toml'
       - 'web/src/repair-client.ts'
       - 'web/scripts/validate-repair-recovery.mjs'
       - '.github/workflows/database-reliability.yml'
+      - '.github/workflows/production-copy-rehearsal.yml'
   workflow_dispatch:
 
 permissions:
@@ -81,9 +87,15 @@ jobs:
           api/partgraph/database.py
           api/partgraph/errors.py
           api/partgraph/identity/auth/dependencies.py
+          api/scripts/verify_production_copy_upgrade.py
           api/tests/test_database_connection_strategy.py
           api/tests/test_database_write_recovery.py
+          api/tests/test_phase10_production_copy_rehearsal.py
 
+      - name: Validate Phase 10 production-copy rehearsal guardrails
+        run: >-
+          python -m unittest discover -s api/tests
+          -p 'test_phase10_production_copy_rehearsal.py' -v
       - name: Apply database migrations
         env:
           PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph

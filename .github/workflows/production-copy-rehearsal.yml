@@ -1,0 +1,134 @@
+name: Phase 10 Production-Copy Rehearsal
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase10-production-copy-rehearsal
+  cancel-in-progress: false
+
+jobs:
+  production-copy-rehearsal:
+    name: Rehearse migration on isolated Neon production copy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEON_PROJECT_ID: empty-mouse-99596302
+      NEON_PRODUCTION_BRANCH: production
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.14'
+
+      - name: Install API dependencies
+        run: python -m pip install -e './api[dev]'
+
+      - name: Require Neon rehearsal credential
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${NEON_API_KEY:-}" || {
+            echo 'NEON_API_KEY is required for the manual production-copy rehearsal.' >&2
+            exit 1
+          }
+
+      - name: Define isolated copy identity and expiry
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "COPY_BRANCH_NAME=phase10-rehearsal-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_ENV"
+          echo "EXPIRES_AT=$(date -u --date '+1 day' +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
+
+      - name: Create expiring Neon child of Production
+        id: create-production-copy
+        uses: neondatabase/create-branch-action@fb620d43d4c565abaf088b848a4e28e5c4ea4d9c # v6
+        with:
+          project_id: ${{ env.NEON_PROJECT_ID }}
+          parent_branch: ${{ env.NEON_PRODUCTION_BRANCH }}
+          branch_name: ${{ env.COPY_BRANCH_NAME }}
+          database: neondb
+          role: neondb_owner
+          api_key: ${{ secrets.NEON_API_KEY }}
+          expires_at: ${{ env.EXPIRES_AT }}
+
+      - name: Require a newly created isolated copy
+        env:
+          COPY_BRANCH_ID: ${{ steps.create-production-copy.outputs.branch_id }}
+          COPY_CREATED: ${{ steps.create-production-copy.outputs.created }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$COPY_BRANCH_ID"
+          test "$COPY_CREATED" = "true"
+
+      - name: Fingerprint copied Production owner state at baseline
+        env:
+          PARTGRAPH_DATABASE_URL: ${{ steps.create-production-copy.outputs.db_url }}
+        run: >-
+          python api/scripts/verify_production_copy_upgrade.py snapshot
+          --snapshot /tmp/phase10-production-copy.json
+
+      - name: Resolve intended migration head
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED_HEAD="$(alembic -c api/alembic.ini heads | awk 'NR == 1 {print $1}')"
+          test -n "$EXPECTED_HEAD"
+          echo "EXPECTED_HEAD=$EXPECTED_HEAD" >> "$GITHUB_ENV"
+
+      - name: Upgrade isolated production copy to repository head
+        env:
+          PARTGRAPH_DATABASE_URL: ${{ steps.create-production-copy.outputs.db_url }}
+        run: alembic -c api/alembic.ini upgrade head
+
+      - name: Verify copied owner state survived migration
+        env:
+          PARTGRAPH_DATABASE_URL: ${{ steps.create-production-copy.outputs.db_url }}
+        run: >-
+          python api/scripts/verify_production_copy_upgrade.py verify
+          --snapshot /tmp/phase10-production-copy.json
+          --expected-revision "$EXPECTED_HEAD"
+
+      - name: Run migrated-database schema contracts
+        env:
+          PARTGRAPH_DATABASE_URL: ${{ steps.create-production-copy.outputs.db_url }}
+        run: >-
+          python -m unittest discover -s api/tests
+          -p 'test_mvp_migrations.py' -v
+
+      - name: Record non-sensitive rehearsal evidence
+        if: success()
+        env:
+          COPY_BRANCH_ID: ${{ steps.create-production-copy.outputs.branch_id }}
+        shell: bash
+        run: |
+          {
+            echo '## Phase 10 production-copy migration rehearsal'
+            echo "- source commit: \`$GITHUB_SHA\`"
+            echo "- Neon project: \`$NEON_PROJECT_ID\`"
+            echo "- parent branch: \`$NEON_PRODUCTION_BRANCH\`"
+            echo "- isolated branch: \`$COPY_BRANCH_NAME\` (\`$COPY_BRANCH_ID\`)"
+            echo '- before revision: `0020_catalog_coverage`'
+            echo "- after revision: \`$EXPECTED_HEAD\`"
+            echo "- automatic branch expiry: \`$EXPIRES_AT\`"
+            echo '- Production mutated: **no**'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload owner-state fingerprint diagnostics
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: phase10-production-copy-fingerprint-${{ github.run_id }}-${{ github.run_attempt }}
+          path: /tmp/phase10-production-copy.json
+          if-no-files-found: ignore
+          retention-days: 7

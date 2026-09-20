@@ -55,6 +55,25 @@ After migration:
 
 A preview deployment does **not** automatically run this procedure.
 
+## Automated isolated production-copy rehearsal
+
+Phase 10 uses `.github/workflows/production-copy-rehearsal.yml` as the manual non-production rehearsal entry point. The workflow is intentionally `workflow_dispatch` only. It creates a new copy-on-write Neon child of the stable `production` branch in the verified PartGraph project (`empty-mouse-99596302`) and gives the child a unique GitHub Actions run name plus a one-day automatic expiry.
+
+The workflow requires the repository secret `NEON_API_KEY`. That credential is supplied only to Neon's branch-creation action, which is pinned to the immutable commit behind the stable `v6` release. Database migration commands receive only the newly created child branch connection string returned by that action.
+
+The rehearsal sequence is:
+
+1. create a fresh expiring Neon child of `production`;
+2. fail unless Neon reports that this run created a new child branch;
+3. fingerprint all baseline owner/private tables with `api/scripts/verify_production_copy_upgrade.py` while the copy is still at `0020_catalog_coverage`;
+4. resolve the repository's single Alembic head and run `alembic upgrade head` against the child only;
+5. verify the baseline columns, row counts, and SHA-256 row fingerprints are unchanged after migration;
+6. run `api/tests/test_mvp_migrations.py` against the migrated child;
+7. retain the non-sensitive fingerprint artifact and GitHub job summary as rehearsal evidence.
+
+No synthetic persisted-history fixture is seeded into the production copy. The workflow does not receive a Production database URL, does not downgrade/reset/restore Production, and does not deploy the application or publish canonical automotive knowledge. The child expires automatically even if a job is cancelled after branch creation.
+
+The snapshot verifier intentionally requires the current Production baseline `0020_catalog_coverage`. If Production has advanced unexpectedly, the workflow fails before executing an upgrade. Changing that baseline is a reviewed repository change, not a runtime override.
 ## Production promotion gate
 
 Production schema promotion remains a Phase 10 action and must not be performed until all of the following are true:
