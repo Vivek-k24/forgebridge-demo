@@ -74,6 +74,12 @@ The rehearsal sequence is:
 No synthetic persisted-history fixture is seeded into the production copy. The workflow does not receive a Production database URL, does not downgrade/reset/restore Production, and does not deploy the application or publish canonical automotive knowledge. The child expires automatically even if a job is cancelled after branch creation.
 
 The snapshot verifier intentionally requires the current Production baseline `0020_catalog_coverage`. If Production has advanced unexpectedly, the workflow fails before executing an upgrade. Changing that baseline is a reviewed repository change, not a runtime override.
+
+### Default-branch dispatch constraint
+
+GitHub only accepts `workflow_dispatch` events for a workflow file that exists on the repository's default branch. While PR #84 remains unmerged, `.github/workflows/production-copy-rehearsal.yml` exists only on `partgraph-mvp-consolidation`, so its manual-dispatch control cannot be executed yet.
+
+Do **not** merge PR #84, copy the workflow to `main`, or add an automatic Production-copy trigger merely to make this workflow runnable. The real isolated Production-copy migration/preservation evidence below already satisfies the pre-cutover rehearsal requirement. The workflow's first successful dispatch is a repeatability check after the workflow can safely exist on the default branch; it is not a prerequisite that overrides the Production cutover boundary.
 ## Confirmed isolated-copy rehearsal evidence
 
 The production-copy migration requirement has a real Neon proof in addition to synthetic CI coverage:

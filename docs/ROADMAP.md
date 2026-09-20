@@ -34,7 +34,7 @@ The active implementation line is `partgraph-mvp-consolidation`; PR #84 remains 
 | 7 — Primary deep vehicle | Complete | 2009 Honda Civic Hybrid deep workflow proof is data/evidence-driven. |
 | 8 — Five-model reference fleet | Complete | Civic, Camry, F-150, Forester, and Tucson execute through shared generic runtime paths. |
 | 9 — Final MVP validation | Complete | All 18 final validation layers passed, including hosted durable-photo persistence. |
-| 10 — Production cutover | Preparation in progress | Real Production-copy migration and restore mechanics are proven; rollback incompatibility is machine-checked. First workflow dispatch, approved Production backup freshness/protection, final exact-head preflight, and explicit Production authorization remain before cutover. |
+| 10 — Production cutover | Preparation in progress | Real Production-copy migration and restore mechanics are proven; rollback incompatibility is machine-checked. Approved Production backup freshness/protection, final exact-head preflight, and explicit Production authorization remain before cutover. The staged manual rehearsal workflow cannot dispatch until it safely exists on the default branch. |
 
 ## Phase 6 remaining work
 
@@ -75,7 +75,7 @@ The workflow deliberately does not seed synthetic owner state into the copy, doe
 
 Real production-copy migration evidence already exists independently of that automation. Neon branch `phase9-production-copy-validation-2026-09-17` (`br-shiny-sunset-aebi1qvo`) is a direct child of `production` (`br-shiny-silence-aexgk2zm`), created from the Production point-in-time `2026-09-17T23:19:04Z`. On 2026-09-20, Production was reverified at `0020_catalog_coverage` while the isolated copy was at `0063_photo_storage_outbox`. A read-only baseline-column comparison succeeded for all 18 owner/private tables: all 35 persisted baseline rows had matching row counts and deterministic row digests, with no missing baseline column encountered.
 
-This evidence satisfies the real isolated-copy preservation proof. It does **not** claim that the new GitHub workflow has been dispatched successfully yet; that repeatability proof remains a separate Phase 10 preparation item.
+This evidence satisfies the real isolated-copy preservation proof. The staged GitHub workflow has not been dispatched because GitHub requires a `workflow_dispatch` workflow to exist on the default branch, while PR #84 remains intentionally unmerged. Its first dispatch is therefore a later repeatability check, not a pre-merge cutover prerequisite.
 
 A 2026-09-20 isolated snapshot restore drill also passed with all 18 baseline owner/private tables and 35 persisted rows matching Production. Restore mechanics are therefore proven. Production backup freshness remains blocked because no automatic snapshot schedule is configured and current project history retention is 6 hours.
 
