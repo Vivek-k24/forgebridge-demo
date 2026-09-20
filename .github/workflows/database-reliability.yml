@@ -16,6 +16,9 @@ on:
       - 'api/tests/test_phase10_preflight_contract.py'
       - 'api/tests/test_phase10_cutover_choreography.py'
       - 'api/tests/test_phase10_backup_capability.py'
+      - 'api/tests/test_phase10_owner_decisions.py'
+      - 'ops/cutover/phase10_owner_decisions_v1.json'
+      - 'docs/OWNER_LAUNCH_DECISIONS.md'
       - 'ops/cutover/phase10_backup_capability_v1.json'
       - 'ops/cutover/phase10_cutover_choreography_v1.json'
       - 'docs/PRODUCTION_CUTOVER_CHOREOGRAPHY.md'
@@ -48,6 +51,9 @@ on:
       - 'api/tests/test_phase10_preflight_contract.py'
       - 'api/tests/test_phase10_cutover_choreography.py'
       - 'api/tests/test_phase10_backup_capability.py'
+      - 'api/tests/test_phase10_owner_decisions.py'
+      - 'ops/cutover/phase10_owner_decisions_v1.json'
+      - 'docs/OWNER_LAUNCH_DECISIONS.md'
       - 'ops/cutover/phase10_backup_capability_v1.json'
       - 'ops/cutover/phase10_cutover_choreography_v1.json'
       - 'docs/PRODUCTION_CUTOVER_CHOREOGRAPHY.md'
@@ -119,6 +125,7 @@ jobs:
           api/tests/test_phase10_preflight_contract.py
           api/tests/test_phase10_cutover_choreography.py
           api/tests/test_phase10_backup_capability.py
+          api/tests/test_phase10_owner_decisions.py
 
       - name: Validate Phase 10 production-copy rehearsal guardrails
         run: >-
@@ -144,6 +151,11 @@ jobs:
         run: >-
           python -m unittest discover -s api/tests
           -p 'test_phase10_backup_capability.py' -v
+
+      - name: Validate Phase 10 owner decision packet
+        run: >-
+          python -m unittest discover -s api/tests
+          -p 'test_phase10_owner_decisions.py' -v
       - name: Apply database migrations
         env:
           PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph

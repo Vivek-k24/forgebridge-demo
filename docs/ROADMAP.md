@@ -109,3 +109,5 @@ Items that are intentionally blocked, future-scale controls, or post-MVP hardeni
 Historical progress narratives and superseded audit working notes remain recoverable from Git history rather than being kept in the active tree.
 
 At the current boundary there are no decision-free remediation fixes left. The remaining MVP-launch work is either an explicit owner/infrastructure activation decision (Production backup/protection, alert delivery, GitHub branch protection, cutover traffic barrier, Production authorization) or the deployed NHTSA operator HTTP execution proof described above. Broad repair-knowledge expansion and the other deferred audit rows remain post-MVP/backlog work unless the project owner changes scope.
+
+Those remaining launch decisions are consolidated in `docs/OWNER_LAUNCH_DECISIONS.md` and `ops/cutover/phase10_owner_decisions_v1.json`. Treat that packet as the compact owner-facing queue; the detailed runbooks remain the execution authority for each item.

@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-09-20",
+  "status": "owner_decisions_pending",
+  "source_head": "a0c800e8a75bb26825ff15c688b983fcdcc52afe",
+  "production_mutation_authorized": false,
+  "launch_blockers": [
+    {
+      "id": "PG-AUD-REL-001",
+      "title": "Production database backup/protection",
+      "kind": "infrastructure_choice",
+      "required_before_cutover": true,
+      "current_state": "Restore mechanics are proven, but the current Neon project cannot enable automatic backup scheduling or branch protection and has six-hour history retention.",
+      "owner_decision": "Choose either an eligible Neon capability/plan or an explicitly approved equivalent durable backup/protection design.",
+      "options": [
+        {
+          "id": "neon_capability_upgrade",
+          "effect": "Keep backup/restore control inside Neon and configure the approved Production RPO/protection target."
+        },
+        {
+          "id": "equivalent_external_backup",
+          "effect": "Implement and verify an independent durable backup/protection design with equivalent recovery objectives."
+        }
+      ],
+      "completion_evidence": [
+        "approved option",
+        "configured Production protection",
+        "fresh backup/recovery-point evidence",
+        "re-verified restore path",
+        "updated Phase 10 preflight"
+      ]
+    },
+    {
+      "id": "PG-AUD-REL-007",
+      "title": "Human alert delivery",
+      "kind": "observability_choice",
+      "required_before_cutover": "explicit_disposition_required",
+      "current_state": "Telemetry, SLO rules, logs, and incident procedures are complete; no alert backend currently sends notifications to a person.",
+      "owner_decision": "Select/connect an alert-capable backend or explicitly defer alert delivery as a documented launch-risk acceptance.",
+      "options": [
+        {
+          "id": "native_or_vercel_eligible_alerting",
+          "effect": "Use an eligible Vercel observability capability and activate the existing PG-OBS rules."
+        },
+        {
+          "id": "external_alert_backend",
+          "effect": "Connect an external observability/alert service and map the existing PG-OBS rules."
+        },
+        {
+          "id": "explicit_launch_risk_acceptance",
+          "effect": "Launch without automated human alert delivery only if the project owner explicitly accepts the operational risk and records the temporary manual monitoring procedure."
+        }
+      ],
+      "completion_evidence": [
+        "selected disposition",
+        "backend/risk-acceptance record",
+        "rule or manual-monitoring evidence",
+        "updated Phase 10 preflight"
+      ]
+    },
+    {
+      "id": "PG-AUD-DEP-003",
+      "title": "Protect the main GitHub branch",
+      "kind": "repository_admin_action",
+      "required_before_cutover": "explicit_disposition_required",
+      "current_state": "Policy is prepared and the MVP merge gate has passed; main is still unprotected and no ruleset exists.",
+      "owner_decision": "Approve application of the prepared main-branch policy by a repository administrator.",
+      "prepared_policy": "ops/cutover/phase10_branch_governance_v1.json",
+      "completion_evidence": [
+        "main reports protected",
+        "MVP merge gate is required",
+        "pull request requirement is active",
+        "force-push/delete protections verified",
+        "rule/ruleset identifier recorded"
+      ]
+    },
+    {
+      "id": "PG-AUD-DEP-005",
+      "title": "Cutover traffic freeze",
+      "kind": "cutover_activation",
+      "required_before_cutover": true,
+      "current_state": "Vercel Authentication → All Deployments is selected and the choreography is prepared; it has intentionally not been activated on Production.",
+      "owner_decision": "Authorize activation only as part of the final cutover window.",
+      "prepared_policy": "ops/cutover/phase10_cutover_choreography_v1.json",
+      "completion_evidence": [
+        "pre-cutover protection state captured",
+        "anonymous Production access blocked",
+        "authorized health access proven",
+        "candidate staged without Production-domain traffic",
+        "prior protection state restorable"
+      ]
+    },
+    {
+      "id": "PG-AUD-DEP-001",
+      "title": "Final Production migration/cutover",
+      "kind": "production_authorization",
+      "required_before_cutover": true,
+      "current_state": "Production remains on main/d686061 and database revision 0020_catalog_coverage. No Production migration or PR #84 merge is authorized.",
+      "owner_decision": "Explicitly authorize one exact green candidate and one exact evidence package after every required hard gate is resolved/dispositioned.",
+      "completion_evidence": [
+        "exact candidate SHA",
+        "fresh GO preflight",
+        "explicit project-owner authorization",
+        "operator identity",
+        "cutover timestamp"
+      ]
+    }
+  ],
+  "remaining_non_owner_execution": [
+    {
+      "id": "PG-AUD-ROAD-002",
+      "title": "Live NHTSA operator HTTP proof",
+      "mvp_launch_requirement": false,
+      "current_state": "Preview is fully configured, but no real authenticated operator POST has been executed.",
+      "next_condition": "A stateful browser/HTTP execution surface with a legitimate PartGraph operator session and CSRF support is available.",
+      "prohibited_shortcuts": [
+        "no bypass endpoint",
+        "no hard-coded operator credential",
+        "no direct-database substitute",
+        "no weakened CSRF/authentication"
+      ]
+    }
+  ],
+  "post_mvp_scope": [
+    "PG-AUD-ROAD-003 broad canonical repair-knowledge expansion",
+    "PG-AUD-UI-008 broader accessibility scanning/browser evidence",
+    "PG-AUD-UI-009 supported-browser enforcement",
+    "all CURRENT CONTROL COMPLETE / FUTURE BACKLOG findings"
+  ],
+  "engineering_summary": "No decision-free remediation fix remains. The codebase is waiting on launch decisions/activations plus the optional deployed NHTSA proof.",
+  "go_rule": "Do not mark Production GO until the Phase 10 preflight itself is refreshed to GO and explicit Production authorization is recorded."
+}

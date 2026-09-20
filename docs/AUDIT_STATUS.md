@@ -81,6 +81,10 @@ Intentionally retained after dependency proof:
 - all web validation scripts currently invoked by CI;
 - current explicit Python and web dependencies; no third-party package was proven unused safely enough to remove.
 
+## Owner launch-decision packet
+
+The five BLOCKED items are now consolidated in `docs/OWNER_LAUNCH_DECISIONS.md` and `ops/cutover/phase10_owner_decisions_v1.json`. That packet does not change their status or authorize Production; it exists to keep the remaining owner/admin queue explicit and finite.
+
 ## Execution rule
 
 Do not implement BLOCKED, BACKLOG, or FUTURE BACKLOG items simply because they exist. Reclassify only when the documented dependency becomes true or the project owner explicitly changes the boundary.

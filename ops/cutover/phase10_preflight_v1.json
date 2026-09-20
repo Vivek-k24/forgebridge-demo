@@ -123,5 +123,6 @@
   "go_rule": "GO is permitted only after a freshly generated exact-head preflight proves every hard cutover gate resolved, all decision-required findings are explicitly dispositioned, and production_mutation_authorized is true.",
   "backup_capability_contract": "ops/cutover/phase10_backup_capability_v1.json",
   "alert_delivery_capability_contract": "ops/observability/alert_delivery_capability_v1.json",
-  "branch_governance_contract": "ops/cutover/phase10_branch_governance_v1.json"
+  "branch_governance_contract": "ops/cutover/phase10_branch_governance_v1.json",
+  "owner_decision_packet": "ops/cutover/phase10_owner_decisions_v1.json"
 }
