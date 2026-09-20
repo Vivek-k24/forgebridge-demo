@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-09-20",
+  "status": "blocked_backend_not_selected",
+  "production_mutation_authorized": false,
+  "hosting": {
+    "provider": "vercel",
+    "project": "partgraph-main",
+    "current_plan": "hobby"
+  },
+  "signals_proven": [
+    "http.server.request",
+    "error.unhandled",
+    "database.readiness",
+    "provider.ingestion",
+    "media.reconciliation.item",
+    "media.reconciliation.batch"
+  ],
+  "current_delivery": {
+    "vercel_runtime_logs": true,
+    "vercel_runtime_error_grouping": true,
+    "vercel_drains": false,
+    "external_alert_backend": false,
+    "alert_rules_active": false
+  },
+  "capability_boundary": {
+    "vercel_drains_plan_requirement": "pro_or_enterprise",
+    "repository_vercel_token_reference_present": false,
+    "repository_external_monitoring_backend_present": false,
+    "connected_alert_or_drain_management_action_present": false
+  },
+  "acceptable_resolution_paths": [
+    {
+      "id": "vercel_observability_plus_or_equivalent_native_alerting",
+      "description": "Use an eligible Vercel plan/capability and activate alert rules corresponding to the existing PartGraph SLO catalog."
+    },
+    {
+      "id": "external_observability_backend",
+      "description": "Connect an alert-capable backend such as Datadog, Sentry, Checkly, New Relic, Honeycomb, or equivalent and forward/query the required PartGraph/Vercel signals."
+    }
+  ],
+  "activation_proof_required": [
+    "backend name",
+    "rule ID for every non-manual PG-OBS alert",
+    "notification destination ownership",
+    "safe test alert or equivalent rule-validation proof for each signal class",
+    "validation timestamp and environment"
+  ],
+  "engineering_status": "Application telemetry, SLO definitions, runbooks, and signal wiring are complete. No decision-free repository change can make alert delivery active until a backend/plan is selected and connected."
+}

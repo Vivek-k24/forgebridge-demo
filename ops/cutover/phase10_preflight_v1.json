@@ -67,7 +67,8 @@
     "isolated_snapshot_restore": "satisfied",
     "coordinated_rollback_contract": "satisfied",
     "application_build_schema_read_only": "satisfied",
-    "backup_capability_probe": "satisfied_current_plan_insufficient"
+    "backup_capability_probe": "satisfied_current_plan_insufficient",
+    "alert_signal_instrumentation": "satisfied_delivery_backend_unresolved"
   },
   "hard_cutover_gates": [
     {
@@ -90,7 +91,7 @@
     {
       "finding_id": "PG-AUD-REL-007",
       "state": "blocked",
-      "requirement": "Resolve or explicitly address the missing active alert-delivery backend in the final Production readiness decision."
+      "requirement": "Application telemetry is complete, but alert delivery is inactive. Select/connect an eligible native Vercel alert capability or external observability backend, activate every required PG-OBS rule, and record notification/test evidence before final Production approval."
     },
     {
       "finding_id": "PG-AUD-DEP-003",
@@ -118,5 +119,6 @@
     "operator identity and explicit project-owner authorization"
   ],
   "go_rule": "GO is permitted only after a freshly generated exact-head preflight proves every hard cutover gate resolved, all decision-required findings are explicitly dispositioned, and production_mutation_authorized is true.",
-  "backup_capability_contract": "ops/cutover/phase10_backup_capability_v1.json"
+  "backup_capability_contract": "ops/cutover/phase10_backup_capability_v1.json",
+  "alert_delivery_capability_contract": "ops/observability/alert_delivery_capability_v1.json"
 }

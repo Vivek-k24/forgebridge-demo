@@ -36,6 +36,10 @@ Not available on the current plan as an active production control:
 
 Therefore the alert definitions in `ops/observability/slo_v1.json` are **defined but not yet active**. REL-007 must not be represented as fully production-remediated until an alert-capable backend is connected or the hosting plan supplies equivalent alert delivery and the rules are activated and tested.
 
+A fresh Phase 10 capability review on 2026-09-20 confirmed this is now an external integration/capability decision rather than missing application instrumentation. Vercel's current observability guidance states that Drains require Pro or Enterprise. The repository contains no `VERCEL_TOKEN`/drain automation and no configured external monitoring backend. The connected toolset exposes runtime-log inspection but no alert/drain-management action. The machine-readable boundary is `ops/observability/alert_delivery_capability_v1.json`.
+
+Do not add a repository-only "alert" that merely writes another log line or checks one health endpoint and claim REL-007 complete. The existing alert catalog covers request availability/latency, mutation errors, database readiness, provider ingestion, and media reconciliation; completion requires real notification delivery for those signal classes.
+
 This limitation is separate from `PG-AUD-REL-001`, where Neon production backup/branch-protection controls are also still plan-blocked.
 
 ## Structured telemetry contract
@@ -242,7 +246,7 @@ Actions:
 
 ## Alert activation gate
 
-Before REL-007 can be marked fully remediated, activate and test the alert catalog in one supported backend. Acceptable paths are:
+Before REL-007 can be marked fully remediated, activate and test the alert catalog in one supported backend. The current capability boundary is recorded in `ops/observability/alert_delivery_capability_v1.json`. Acceptable paths are:
 
 - Vercel Observability Plus/custom alerts with rules matching `ops/observability/slo_v1.json`; or
 - an external error/metrics/OTLP-capable backend receiving the PartGraph/Vercel telemetry with equivalent rules.

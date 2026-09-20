@@ -8,7 +8,8 @@
     "application_events": "partgraph.observability.v1 structured runtime logs",
     "current_plan": "hobby",
     "custom_alert_delivery": "blocked_on_current_vercel_plan",
-    "external_otlp_or_error_backend": "not_configured"
+    "external_otlp_or_error_backend": "not_configured",
+    "capability_contract": "ops/observability/alert_delivery_capability_v1.json"
   },
   "slos": [
     {

@@ -15,6 +15,7 @@ from partgraph.observability import (
 
 ROOT = Path(__file__).resolve().parents[2]
 SLO_PATH = ROOT / "ops" / "observability" / "slo_v1.json"
+ALERT_CAPABILITY_PATH = ROOT / "ops" / "observability" / "alert_delivery_capability_v1.json"
 RUNBOOK_PATH = ROOT / "docs" / "OPERATIONAL_OBSERVABILITY_RUNBOOK.md"
 MAIN_PATH = ROOT / "api" / "partgraph" / "main.py"
 DATABASE_PATH = ROOT / "api" / "partgraph" / "database.py"
@@ -127,6 +128,35 @@ class OperationalObservabilityTest(unittest.TestCase):
                     alert["activation"],
                     "defined_not_active_on_current_hobby_plan",
                 )
+
+    def test_alert_delivery_capability_fails_closed_until_backend_exists(self) -> None:
+        capability = json.loads(ALERT_CAPABILITY_PATH.read_text(encoding="utf-8"))
+        catalog = json.loads(SLO_PATH.read_text(encoding="utf-8"))
+
+        self.assertEqual(capability["status"], "blocked_backend_not_selected")
+        self.assertFalse(capability["production_mutation_authorized"])
+        self.assertEqual(capability["hosting"]["current_plan"], "hobby")
+        self.assertFalse(capability["current_delivery"]["vercel_drains"])
+        self.assertFalse(capability["current_delivery"]["external_alert_backend"])
+        self.assertFalse(capability["current_delivery"]["alert_rules_active"])
+        self.assertEqual(
+            capability["capability_boundary"]["vercel_drains_plan_requirement"],
+            "pro_or_enterprise",
+        )
+        self.assertEqual(
+            catalog["backend"]["capability_contract"],
+            "ops/observability/alert_delivery_capability_v1.json",
+        )
+
+        active = [
+            alert["id"]
+            for alert in catalog["alerts"]
+            if alert["activation"] not in {
+                "defined_not_active_on_current_hobby_plan",
+                "manual_cutover_gate_until_pg-aud-rel-001_plan_blocker_is_resolved",
+            }
+        ]
+        self.assertEqual(active, [])
 
     def test_required_runtime_signals_are_wired(self) -> None:
         main_source = MAIN_PATH.read_text(encoding="utf-8")
