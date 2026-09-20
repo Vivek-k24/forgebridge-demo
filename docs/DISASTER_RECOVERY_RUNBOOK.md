@@ -90,7 +90,16 @@ Current read-only evidence shows:
 - only six hours of project point-in-time history retention;
 - Production branch protection disabled.
 
-Earlier remediation attempts also recorded plan/API limitations when enabling branch protection and scheduled backups. Those historical failures should be re-tested only if the Neon plan/capabilities change or an equivalent durable backup design is approved.
+Fresh non-production capability probes on 2026-09-20 made the limitation explicit:
+
+- requesting a daily automatic snapshot schedule with seven-day retention on temporary child branch `br-muddy-butterfly-aebaici0` failed with Neon reporting that backup schedule creation is not enabled for this project;
+- requesting branch protection on non-production branch `br-shiny-sunset-aebi1qvo` failed because the current plan's protected-branch limit was reached;
+- an account-wide read confirmed there are currently zero protected branches, so that rejection is not caused by another branch consuming the quota;
+- both probes left Production unchanged.
+
+The machine-readable evidence is `ops/cutover/phase10_backup_capability_v1.json`.
+
+This means REL-001 is currently an infrastructure capability/policy blocker, not unfinished repository code. Re-test only after the Neon plan/capabilities change or an equivalent durable backup design is explicitly approved.
 
 Do not change Production snapshot schedules, retention, or branch protection merely to clear the finding. Those are Production infrastructure decisions and require separate authorization.
 

@@ -23,7 +23,7 @@ Completed-finding narratives, intermediate CI run IDs, and remediation work logs
 
 | Finding | Status | Reopen condition |
 | --- | --- | --- |
-| PG-AUD-REL-001 | BLOCKED | Restore mechanics are proven on an isolated Neon snapshot restore. Reopen for completion when an approved Production backup/freshness policy is configured and verified; Production currently has no automatic snapshot schedule and project point-in-time history retention is 6 hours. |
+| PG-AUD-REL-001 | BLOCKED | Restore mechanics are proven, but current Neon project capability cannot satisfy the approved Production protection target: a non-production daily-snapshot probe was rejected because backup scheduling is not enabled, and a non-production branch-protection probe was rejected by the current-plan protected-branch limit even though the account has zero protected branches. Reopen only after a provider-plan/capability change or an explicitly approved equivalent durable backup/protection design. |
 | PG-AUD-REL-007 | BLOCKED | An alert-capable production hosting/observability backend is selected so delivery can be activated and tested. |
 | PG-AUD-DEP-001 | BLOCKED | Phase 10 non-production preparation is authorized and the fail-closed preflight mechanism exists. Current preflight is NO-GO; Production cutover remains blocked pending the required hard gates/decision dispositions in `ops/cutover/phase10_preflight_v1.json` and separate explicit Production authorization. |
 | PG-AUD-DEP-003 | BLOCKED | Explicit repository-governance decision for branch protection that preserves the intended documentation workflow. |

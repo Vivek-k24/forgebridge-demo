@@ -66,13 +66,14 @@
     "real_production_copy_migration_preservation": "satisfied",
     "isolated_snapshot_restore": "satisfied",
     "coordinated_rollback_contract": "satisfied",
-    "application_build_schema_read_only": "satisfied"
+    "application_build_schema_read_only": "satisfied",
+    "backup_capability_probe": "satisfied_current_plan_insufficient"
   },
   "hard_cutover_gates": [
     {
       "finding_id": "PG-AUD-REL-001",
       "state": "blocked",
-      "requirement": "Approved Production backup freshness/protection must replace the current no-schedule, six-hour-retention, unprotected-branch state."
+      "requirement": "Current Neon project capability is insufficient: automatic backup scheduling and branch protection were both rejected in non-production probes. Resolve through an approved provider-plan/capability change or an explicitly approved equivalent durable backup/protection design, then verify Production controls."
     },
     {
       "finding_id": "PG-AUD-DEP-005",
@@ -116,5 +117,6 @@
     "rollback/forward-fix plan",
     "operator identity and explicit project-owner authorization"
   ],
-  "go_rule": "GO is permitted only after a freshly generated exact-head preflight proves every hard cutover gate resolved, all decision-required findings are explicitly dispositioned, and production_mutation_authorized is true."
+  "go_rule": "GO is permitted only after a freshly generated exact-head preflight proves every hard cutover gate resolved, all decision-required findings are explicitly dispositioned, and production_mutation_authorized is true.",
+  "backup_capability_contract": "ops/cutover/phase10_backup_capability_v1.json"
 }
