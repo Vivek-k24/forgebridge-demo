@@ -1,6 +1,6 @@
 # PartGraph MVP Roadmap
 
-Status: **Implementation through Phase 9 is validated; feature development is currently paused for repository hygiene.**  
+Status: **Implementation through Phase 9 is validated; repository hygiene/remediation is complete and Phase 10 non-production preparation is authorized.**  
 Architecture authority: `docs/BLUEPRINT.md`  
 Audit/deferred-work register: `docs/AUDIT_STATUS.md`
 
@@ -11,12 +11,12 @@ Audit/deferred-work register: `docs/AUDIT_STATUS.md`
 - External providers and AI may create candidate information only; they do not directly publish canonical truth.
 - Owner Garage, repair-session, inventory, observation, and media state remains private.
 - Unsupported computer/service-tool work cannot be represented as completed physical repair work.
-- Production changes, PR #84 merge, production migration, provider activation, and Phase 10 require explicit authorization.
+- Production changes, PR #84 merge, production migration, and provider activation require separate explicit authorization. Phase 10 non-production preparation/build work is authorized; that authorization does not permit Production mutation or PR #84 merge.
 - Historical migrations and the artifacts they import remain immutable/reconstructable even when their current data lineage has been retired.
 
 ## Current boundary
 
-Feature development and functional fixes are paused by project-owner direction. Current work is repository hygiene only.
+Repository hygiene, coding-agent hallucination review, and decision-free remediation are complete at the current branch boundary. Development may proceed with bounded Phase 10 non-production preparation while Production mutation and PR #84 merge remain separately gated.
 
 The active implementation line is `partgraph-mvp-consolidation`; PR #84 remains draft/unmerged. Production remains intentionally separate, including the production database at migration `0020_catalog_coverage`.
 
@@ -34,7 +34,7 @@ The active implementation line is `partgraph-mvp-consolidation`; PR #84 remains 
 | 7 — Primary deep vehicle | Complete | 2009 Honda Civic Hybrid deep workflow proof is data/evidence-driven. |
 | 8 — Five-model reference fleet | Complete | Civic, Camry, F-150, Forester, and Tucson execute through shared generic runtime paths. |
 | 9 — Final MVP validation | Complete | All 18 final validation layers passed, including hosted durable-photo persistence. |
-| 10 — Production cutover | Not started | Requires explicit authorization plus production DR/rollback/environment readiness. |
+| 10 — Production cutover | Preparation started | Non-production preparation is authorized. Production cutover still requires separate Production authorization plus DR/rollback/environment readiness. |
 
 ## Phase 6 remaining work
 
@@ -69,7 +69,7 @@ Phase 9 completion was proven on clean implementation head `5a95001b594e14437492
 
 ## Production safeguards
 
-Production cutover is not implied by completed MVP validation. Before Phase 10:
+Production cutover is not implied by completed MVP validation or by authorization to perform Phase 10 non-production preparation. Before any Production mutation:
 
 - select one exact green source commit;
 - verify production backup/restore and rollback readiness;
