@@ -9,13 +9,15 @@ Roadmap: `docs/ROADMAP.md`
 
 The remediation audit has **0 decision-free ELIGIBLE items**.
 
-There are **18 intentionally deferred items**:
+There are **17 intentionally deferred items**:
 
 - **5 BLOCKED**
-- **5 BACKLOG**
+- **4 BACKLOG**
 - **8 CURRENT CONTROL COMPLETE / FUTURE BACKLOG**
 
 Completed-finding narratives, intermediate CI run IDs, and remediation work logs were removed from the active documentation tree to reduce stale context. They remain available in Git history.
+
+`PG-AUD-DEP-004` closed on 2026-09-20: `main` was merged into `partgraph-mvp-consolidation` after verifying that the 22 intervening `main` commits changed only the superseded `docs/ROADMAP_LIVE.md`. The synchronization merge preserved that file's deliberate hygiene deletion, and the consolidation branch is now 0 commits behind `main`.
 
 ## Deferred register
 
@@ -26,7 +28,6 @@ Completed-finding narratives, intermediate CI run IDs, and remediation work logs
 | PG-AUD-DEP-001 | BLOCKED | Explicit Phase 10 authorization plus production DR/rollback/environment readiness. |
 | PG-AUD-DEP-003 | BLOCKED | Explicit repository-governance decision for branch protection that preserves the intended documentation workflow. |
 | PG-AUD-DEP-005 | BLOCKED | Explicit deployment-governance authorization to change Production deploy-trigger behavior for documentation-only commits. |
-| PG-AUD-DEP-004 | BACKLOG | Final PR #84 synchronization immediately before authorized Phase 10 review. |
 | PG-AUD-UI-008 | BACKLOG | Post-MVP axe-style accessibility scanning, broader browser coverage, and manual screen-reader evidence are scheduled. |
 | PG-AUD-UI-009 | BACKLOG | A supported-browser/version policy is defined and Firefox/WebKit enforcement is scheduled. |
 | PG-AUD-ROAD-002 | BACKLOG | An authorized deployed non-production operator execution path is available for the real NHTSA HTTP proof. |
