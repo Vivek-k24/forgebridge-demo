@@ -12,6 +12,9 @@ on:
       - 'api/scripts/verify_production_copy_upgrade.py'
       - 'api/tests/test_database_connection_strategy.py'
       - 'api/tests/test_phase10_production_copy_rehearsal.py'
+      - 'api/tests/test_phase10_rollback_contract.py'
+      - 'ops/cutover/phase10_rollback_v1.json'
+      - 'docs/DATABASE_MIGRATION_PROMOTION_RUNBOOK.md'
       - 'api/tests/test_database_write_recovery.py'
       - 'api/pyproject.toml'
       - 'web/src/repair-client.ts'
@@ -32,6 +35,9 @@ on:
       - 'api/scripts/verify_production_copy_upgrade.py'
       - 'api/tests/test_database_connection_strategy.py'
       - 'api/tests/test_phase10_production_copy_rehearsal.py'
+      - 'api/tests/test_phase10_rollback_contract.py'
+      - 'ops/cutover/phase10_rollback_v1.json'
+      - 'docs/DATABASE_MIGRATION_PROMOTION_RUNBOOK.md'
       - 'api/tests/test_database_write_recovery.py'
       - 'api/pyproject.toml'
       - 'web/src/repair-client.ts'
@@ -91,11 +97,17 @@ jobs:
           api/tests/test_database_connection_strategy.py
           api/tests/test_database_write_recovery.py
           api/tests/test_phase10_production_copy_rehearsal.py
+          api/tests/test_phase10_rollback_contract.py
 
       - name: Validate Phase 10 production-copy rehearsal guardrails
         run: >-
           python -m unittest discover -s api/tests
           -p 'test_phase10_production_copy_rehearsal.py' -v
+
+      - name: Validate Phase 10 rollback contract
+        run: >-
+          python -m unittest discover -s api/tests
+          -p 'test_phase10_rollback_contract.py' -v
       - name: Apply database migrations
         env:
           PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph

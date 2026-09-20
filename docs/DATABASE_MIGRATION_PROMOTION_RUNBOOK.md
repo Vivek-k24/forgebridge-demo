@@ -115,6 +115,27 @@ Production schema promotion remains a Phase 10 action and must not be performed 
 
 Only after those gates are satisfied may the same explicit Alembic promotion command be run against the authorized production target. Application deployment itself remains schema-read-only.
 
+## Verified rollback compatibility boundary
+
+The machine-readable rollback record is `ops/cutover/phase10_rollback_v1.json`. It captures the observed Production application/database boundary and is validated by `api/tests/test_phase10_rollback_contract.py`.
+
+Read-only comparison of Production `0020_catalog_coverage` with the real migrated Production copy at `0063_photo_storage_outbox` found:
+
+- all 36 baseline tables still exist;
+- all 320 baseline columns still exist with unchanged type/nullability/size characteristics;
+- no baseline column was removed or changed;
+- the old `partgraph_app` privilege narrowing on `users` does not remove the deployed application's required password-rehash update;
+- one application-write incompatibility is decisive: `repair_photo_evidence.storage_state` is required at `0063`, has no database server default, and the currently deployed Production photo-create code does not supply it.
+
+That incompatibility is intentional. Migration `0063` introduced the durable photo-storage outbox and requires an explicit state consistent with the durable payload/tombstone state. Adding a generic database default merely to preserve old-code photo inserts would bypass the outbox contract and is not an acceptable rollback strategy.
+
+Therefore **code-only rollback to the currently deployed Production application is not safe after the Production schema reaches `0063_photo_storage_outbox` or later**. After schema promotion, rollback must use one of these coordinated paths:
+
+1. keep the migrated schema and deploy a reviewed forward corrective application/schema change; or
+2. restore the approved pre-migration database snapshot/branch and reconnect the prior application deployment as one coordinated rollback.
+
+Do not automatically run Alembic downgrade, and do not point the old Production application at the migrated schema merely because health/read-only requests appear compatible.
+
 ## Rollback and failure handling
 
 Do not automatically issue `alembic downgrade` after a failed or partially completed production migration.

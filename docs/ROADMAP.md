@@ -34,7 +34,7 @@ The active implementation line is `partgraph-mvp-consolidation`; PR #84 remains 
 | 7 — Primary deep vehicle | Complete | 2009 Honda Civic Hybrid deep workflow proof is data/evidence-driven. |
 | 8 — Five-model reference fleet | Complete | Civic, Camry, F-150, Forester, and Tucson execute through shared generic runtime paths. |
 | 9 — Final MVP validation | Complete | All 18 final validation layers passed, including hosted durable-photo persistence. |
-| 10 — Production cutover | Preparation in progress | Real isolated Production-copy migration evidence is confirmed and the repeatable rehearsal workflow is implemented. First workflow dispatch, DR/rollback/environment readiness, and explicit Production authorization remain before cutover. |
+| 10 — Production cutover | Preparation in progress | Real Production-copy migration and restore mechanics are proven; rollback incompatibility is machine-checked. First workflow dispatch, approved Production backup freshness/protection, final exact-head preflight, and explicit Production authorization remain before cutover. |
 
 ## Phase 6 remaining work
 
@@ -78,6 +78,8 @@ Real production-copy migration evidence already exists independently of that aut
 This evidence satisfies the real isolated-copy preservation proof. It does **not** claim that the new GitHub workflow has been dispatched successfully yet; that repeatability proof remains a separate Phase 10 preparation item.
 
 A 2026-09-20 isolated snapshot restore drill also passed with all 18 baseline owner/private tables and 35 persisted rows matching Production. Restore mechanics are therefore proven. Production backup freshness remains blocked because no automatic snapshot schedule is configured and current project history retention is 6 hours.
+
+Rollback compatibility is now explicit and machine-checked. The migrated schema preserves all 36 Production baseline tables and all 320 baseline columns, but `0063_photo_storage_outbox` makes `repair_photo_evidence.storage_state` required without a server default. The currently deployed Production photo-write path does not supply that field, so application-only rollback after schema promotion is prohibited. Rollback must be a forward correction or coordinated database restore plus prior application deployment.
 ## Production safeguards
 
 Production cutover is not implied by completed MVP validation or by authorization to perform Phase 10 non-production preparation. Before any Production mutation:
