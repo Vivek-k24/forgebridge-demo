@@ -76,12 +76,14 @@ The workflow deliberately does not seed synthetic owner state into the copy, doe
 Real production-copy migration evidence already exists independently of that automation. Neon branch `phase9-production-copy-validation-2026-09-17` (`br-shiny-sunset-aebi1qvo`) is a direct child of `production` (`br-shiny-silence-aexgk2zm`), created from the Production point-in-time `2026-09-17T23:19:04Z`. On 2026-09-20, Production was reverified at `0020_catalog_coverage` while the isolated copy was at `0063_photo_storage_outbox`. A read-only baseline-column comparison succeeded for all 18 owner/private tables: all 35 persisted baseline rows had matching row counts and deterministic row digests, with no missing baseline column encountered.
 
 This evidence satisfies the real isolated-copy preservation proof. It does **not** claim that the new GitHub workflow has been dispatched successfully yet; that repeatability proof remains a separate Phase 10 preparation item.
+
+A 2026-09-20 isolated snapshot restore drill also passed with all 18 baseline owner/private tables and 35 persisted rows matching Production. Restore mechanics are therefore proven. Production backup freshness remains blocked because no automatic snapshot schedule is configured and current project history retention is 6 hours.
 ## Production safeguards
 
 Production cutover is not implied by completed MVP validation or by authorization to perform Phase 10 non-production preparation. Before any Production mutation:
 
 - select one exact green source commit;
-- verify production backup/restore and rollback readiness;
+- retain the proven snapshot-restore path, and separately approve/configure Production backup freshness/retention before cutover;
 - deploy frontend/backend from the same source;
 - apply only explicitly approved, rehearsed migrations;
 - verify health/readiness and real owner state;

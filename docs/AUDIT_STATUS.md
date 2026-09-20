@@ -21,7 +21,7 @@ Completed-finding narratives, intermediate CI run IDs, and remediation work logs
 
 | Finding | Status | Reopen condition |
 | --- | --- | --- |
-| PG-AUD-REL-001 | BLOCKED | Production-grade database protection/backup capability exists and a restore drill can be run against representative owner/repair data. |
+| PG-AUD-REL-001 | BLOCKED | Restore mechanics are proven on an isolated Neon snapshot restore. Reopen for completion when an approved Production backup/freshness policy is configured and verified; Production currently has no automatic snapshot schedule and project point-in-time history retention is 6 hours. |
 | PG-AUD-REL-007 | BLOCKED | An alert-capable production hosting/observability backend is selected so delivery can be activated and tested. |
 | PG-AUD-DEP-001 | BLOCKED | Explicit Phase 10 authorization plus production DR/rollback/environment readiness. |
 | PG-AUD-DEP-003 | BLOCKED | Explicit repository-governance decision for branch protection that preserves the intended documentation workflow. |

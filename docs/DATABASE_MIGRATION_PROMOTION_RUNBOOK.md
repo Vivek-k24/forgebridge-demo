@@ -87,6 +87,19 @@ The production-copy migration requirement has a real Neon proof in addition to s
 - Production remained at `0020_catalog_coverage` after the verification.
 
 This is carried-forward real-copy migration/preservation evidence. The new `production-copy-rehearsal.yml` workflow is the repeatable Phase 10 mechanism and still requires its own first successful manual dispatch. Do not conflate the two evidence statements.
+## Database restore drill evidence
+
+On 2026-09-20, the existing manual snapshot `partgraph-production-dr-audit-2026-09-16` (`snap-solitary-snow-aegiq03s`) was restored to a new non-production Neon branch and finalized without changing the primary/default Production branch.
+
+- Restored branch: `phase10-dr-restore-drill-2026-09-20` (`br-icy-leaf-ae522322`).
+- Automatic expiry: `2026-09-21T14:00:00Z`.
+- Restored Alembic revision: `0020_catalog_coverage`.
+- Restored public-table count: 36, matching Production.
+- Representative counts matched Production: 4 users, 4 Garage vehicles, 2 repair sessions, and 9 repair-session events.
+- Full baseline owner/private comparison matched across all 18 tables and all 35 persisted rows using the exact Production baseline columns; no row-count or deterministic row-digest difference was found.
+- Production remained the primary/default branch at `0020_catalog_coverage` throughout the drill.
+
+This proves the Neon restore mechanism and representative owner-state recovery path. It does **not** close the Production backup-policy gate. At the time of the drill, the Production branch had no automatic snapshot schedule and the Neon project history-retention setting was 21,600 seconds (6 hours). Changing Production backup scheduling/retention remains a separately authorized Production infrastructure decision.
 ## Production promotion gate
 
 Production schema promotion remains a Phase 10 action and must not be performed until all of the following are true:
