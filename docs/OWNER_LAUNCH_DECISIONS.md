@@ -43,11 +43,9 @@ Vercel native anomaly alerts remain useful as an optional secondary layer, but t
 
 An external backend remains valid later if the product needs deeper application-performance monitoring or cross-provider incident management.
 
-### GitHub main protection: recommend approve
+### GitHub main protection: completed
 
-Apply the already-tested `ops/cutover/phase10_branch_governance_v1.json` policy to `main`.
-
-The policy deliberately keeps required approvals at zero for the current solo-maintainer workflow while requiring the stable `MVP merge gate`.
+The project owner applied the prepared policy on 2026-09-20. GitHub now reports `main` as protected. This is no longer an owner decision.
 
 ### Cutover traffic freeze: recommend approve for cutover only
 
@@ -96,25 +94,15 @@ Choose one disposition:
 
 Do not add fake "alerting" that only creates another log message.
 
-## Decision 3 — Protect GitHub main
+## Completed control — Protect GitHub main
 
-**Audit:** `PG-AUD-DEP-003`  
-**Required before Production cutover:** explicit disposition required.
+**Audit:** `PG-AUD-DEP-003` — **closed 2026-09-20**.
 
-The prepared policy is `ops/cutover/phase10_branch_governance_v1.json`.
+The project owner applied the prepared classic branch-protection policy. GitHub now reports `main.protected=true`; repository rulesets remain empty, which is consistent with classic branch protection.
 
-It requires:
+The connected GitHub App cannot read the detailed protection endpoint, so the exact toggle-level evidence is the owner-applied prepared policy rather than API readback. No destructive direct-push test was attempted.
 
-- pull requests for `main`;
-- zero mandatory human approvals for the current solo-maintainer workflow;
-- `MVP merge gate` required;
-- branch up to date;
-- review conversations resolved;
-- force pushes/deletions blocked.
-
-The policy has been tested in CI, but `main` is still unprotected because the connected GitHub App lacks repository Administration permission.
-
-## Decision 4 — Activate the cutover traffic barrier
+## Decision 3 — Activate the cutover traffic barrier
 
 **Audit:** `PG-AUD-DEP-005`  
 **Required before Production cutover:** yes, during the approved cutover window.
@@ -132,7 +120,7 @@ Do not enable it early. During cutover:
 7. promote/verify the exact candidate;
 8. restore the exact prior protection configuration.
 
-## Decision 5 — Authorize Production
+## Decision 4 — Authorize Production
 
 **Audit:** `PG-AUD-DEP-001`  
 **Required before Production cutover:** yes.

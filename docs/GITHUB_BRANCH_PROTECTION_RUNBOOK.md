@@ -1,6 +1,6 @@
 # PartGraph GitHub Branch Protection Runbook
 
-Status: prepared governance control for `PG-AUD-DEP-003`. This document does not authorize PR #84 merge or any Production deployment/database change.
+Status: **active governance control; `PG-AUD-DEP-003` closed on 2026-09-20.** This document does not authorize PR #84 merge or any Production deployment/database change.
 
 Machine-readable policy: `ops/cutover/phase10_branch_governance_v1.json`
 
@@ -11,11 +11,12 @@ As of 2026-09-20:
 - repository: `Vivek-k24/forgebridge-demo`;
 - visibility: public;
 - default branch: `main`;
-- `main` reports `protected=false`;
-- repository rulesets: none;
-- the connected GitHub App cannot read/write the classic branch-protection endpoint because it lacks repository Administration permission.
+- `main` reports `protected=true`;
+- repository rulesets: none, consistent with the owner-applied classic branch-protection rule;
+- the project owner reports applying the prepared policy in this runbook;
+- the connected GitHub App still cannot read the detailed classic branch-protection endpoint because it lacks repository Administration permission.
 
-GitHub documents protected branches as available for public repositories on GitHub Free. The remaining limitation here is repository administration/owner approval, not application code.
+The observable GitHub branch state plus the owner's application of the prepared policy closes the governance finding without attempting a destructive direct-push test.
 
 ## Prepared policy
 
@@ -63,7 +64,9 @@ This gives branch protection one stable required check and avoids requiring path
 
 ## Activation verification
 
-After an authorized repository administrator applies the rule:
+The project owner applied the rule on 2026-09-20. The integration verified `main.protected=true` and zero repository rulesets. Because detailed classic branch-protection settings are not readable by the connected GitHub App, the remaining per-toggle evidence is the owner-applied prepared policy rather than API readback.
+
+For future revalidation:
 
 1. read `main` and confirm it reports protected;
 2. confirm the rule/ruleset targets only `main`;
