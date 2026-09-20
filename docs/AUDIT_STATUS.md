@@ -25,7 +25,7 @@ Completed-finding narratives, intermediate CI run IDs, and remediation work logs
 | --- | --- | --- |
 | PG-AUD-REL-001 | BLOCKED | Restore mechanics are proven on an isolated Neon snapshot restore. Reopen for completion when an approved Production backup/freshness policy is configured and verified; Production currently has no automatic snapshot schedule and project point-in-time history retention is 6 hours. |
 | PG-AUD-REL-007 | BLOCKED | An alert-capable production hosting/observability backend is selected so delivery can be activated and tested. |
-| PG-AUD-DEP-001 | BLOCKED | Phase 10 non-production preparation is authorized; Production cutover remains blocked pending approved backup freshness/protection, the coordinated rollback policy for the known post-0063 photo-write incompatibility, final exact-head preflight, and separate explicit Production cutover authorization. |
+| PG-AUD-DEP-001 | BLOCKED | Phase 10 non-production preparation is authorized and the fail-closed preflight mechanism exists. Current preflight is NO-GO; Production cutover remains blocked pending the required hard gates/decision dispositions in `ops/cutover/phase10_preflight_v1.json` and separate explicit Production authorization. |
 | PG-AUD-DEP-003 | BLOCKED | Explicit repository-governance decision for branch protection that preserves the intended documentation workflow. |
 | PG-AUD-DEP-005 | BLOCKED | Explicit deployment-governance authorization to change Production deploy-trigger behavior for documentation-only commits. |
 | PG-AUD-UI-008 | BACKLOG | Post-MVP axe-style accessibility scanning, broader browser coverage, and manual screen-reader evidence are scheduled. |

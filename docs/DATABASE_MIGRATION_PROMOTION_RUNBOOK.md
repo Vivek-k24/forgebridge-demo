@@ -92,7 +92,7 @@ The production-copy migration requirement has a real Neon proof in addition to s
 - Read-only server-side comparison found identical row counts and deterministic row digests for all 18 tables, covering 35 persisted baseline rows.
 - Production remained at `0020_catalog_coverage` after the verification.
 
-This is carried-forward real-copy migration/preservation evidence. The new `production-copy-rehearsal.yml` workflow is the repeatable Phase 10 mechanism and still requires its own first successful manual dispatch. Do not conflate the two evidence statements.
+This is carried-forward real-copy migration/preservation evidence. The new `production-copy-rehearsal.yml` workflow is the repeatable Phase 10 mechanism, but its first manual dispatch is deferred until the workflow safely exists on the default branch. That later repeatability check is not a pre-merge Production-cutover prerequisite and must not be used as a reason to merge PR #84 early.
 ## Database restore drill evidence
 
 On 2026-09-20, the existing manual snapshot `partgraph-production-dr-audit-2026-09-16` (`snap-solitary-snow-aegiq03s`) was restored to a new non-production Neon branch and finalized without changing the primary/default Production branch.
@@ -116,6 +116,8 @@ Production schema promotion remains a Phase 10 action and must not be performed 
 - persisted owner-state preservation checks pass on that copy;
 - database protection/restore capability required by the production cutover is available and verified;
 - code/schema compatibility and application rollback behavior are documented for the selected commit;
+- `docs/PRODUCTION_CUTOVER_PREFLIGHT.md` has been refreshed against the exact candidate and reports GO rather than NO-GO;
+- the Production deployment-order/maintenance control is explicitly approved so schema and application cannot advance in an unsafe order;
 - an operator has recorded the before/after revisions and verification plan;
 - the project owner has explicitly authorized production migration/cutover.
 

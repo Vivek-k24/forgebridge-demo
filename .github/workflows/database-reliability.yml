@@ -13,8 +13,12 @@ on:
       - 'api/tests/test_database_connection_strategy.py'
       - 'api/tests/test_phase10_production_copy_rehearsal.py'
       - 'api/tests/test_phase10_rollback_contract.py'
+      - 'api/tests/test_phase10_preflight_contract.py'
       - 'ops/cutover/phase10_rollback_v1.json'
+      - 'ops/cutover/phase10_preflight_v1.json'
       - 'docs/DATABASE_MIGRATION_PROMOTION_RUNBOOK.md'
+      - 'docs/PRODUCTION_CUTOVER_PREFLIGHT.md'
+      - 'docs/AUDIT_STATUS.md'
       - 'api/tests/test_database_write_recovery.py'
       - 'api/pyproject.toml'
       - 'web/src/repair-client.ts'
@@ -36,8 +40,12 @@ on:
       - 'api/tests/test_database_connection_strategy.py'
       - 'api/tests/test_phase10_production_copy_rehearsal.py'
       - 'api/tests/test_phase10_rollback_contract.py'
+      - 'api/tests/test_phase10_preflight_contract.py'
       - 'ops/cutover/phase10_rollback_v1.json'
+      - 'ops/cutover/phase10_preflight_v1.json'
       - 'docs/DATABASE_MIGRATION_PROMOTION_RUNBOOK.md'
+      - 'docs/PRODUCTION_CUTOVER_PREFLIGHT.md'
+      - 'docs/AUDIT_STATUS.md'
       - 'api/tests/test_database_write_recovery.py'
       - 'api/pyproject.toml'
       - 'web/src/repair-client.ts'
@@ -98,6 +106,7 @@ jobs:
           api/tests/test_database_write_recovery.py
           api/tests/test_phase10_production_copy_rehearsal.py
           api/tests/test_phase10_rollback_contract.py
+          api/tests/test_phase10_preflight_contract.py
 
       - name: Validate Phase 10 production-copy rehearsal guardrails
         run: >-
@@ -108,6 +117,11 @@ jobs:
         run: >-
           python -m unittest discover -s api/tests
           -p 'test_phase10_rollback_contract.py' -v
+
+      - name: Validate Phase 10 cutover preflight contract
+        run: >-
+          python -m unittest discover -s api/tests
+          -p 'test_phase10_preflight_contract.py' -v
       - name: Apply database migrations
         env:
           PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
