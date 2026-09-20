@@ -4,7 +4,7 @@ Status: active remediation control for `PG-AUD-REL-001`.
 
 ## Scope
 
-This runbook covers the production PostgreSQL database in the PartGraph Neon project. It does not authorize production schema migration, PR #84 merge, provider activation, branch deletion, or canonical-data publication.
+This runbook covers the production PostgreSQL database in the PartGraph Neon project. It does not authorize production schema migration, PR #84 merge, provider activation, branch deletion, canonical-data publication, or a change to Production backup policy.
 
 ## Recovery objectives
 
@@ -21,51 +21,87 @@ These are operational targets, not a claim that the current Neon plan already sa
 2. Automatic production snapshots/backups must run at least daily with at least seven days of retention.
 3. Neon point-in-time/history retention should be at least seven days when the project plan supports it.
 4. A restore drill must be performed after material database/storage changes and at least before production cutover.
-5. Recovery is always restored to a disposable recovery branch first. Never overwrite production as the first recovery action.
+5. Recovery is always restored to a disposable recovery branch first. Never overwrite Production as the first recovery action.
 6. Verify schema revision and owner/repair state on the recovery branch before any traffic or connection-string change.
 7. Recovery branches/snapshots are not deleted automatically by this runbook; cleanup requires the normal explicit authorization for destructive infrastructure actions.
 
-## 2026-09-16 restore drill
+## Current verified Neon topology — 2026-09-20
 
-Source branch: `production` (`br-wild-silence-aet2bzfe`).
+Read-only inspection of the connected PartGraph Neon project (`empty-mouse-99596302`) established:
 
-A manual snapshot was created:
+- current Production: `production` (`br-shiny-silence-aexgk2zm`);
+- Production is both the primary and default branch;
+- Production Alembic revision: `0020_catalog_coverage`;
+- Production branch protection: disabled;
+- automatic Production snapshot schedule: none;
+- project point-in-time history retention: `21600` seconds (6 hours);
+- connected project subscription reports `free_v3`;
+- current manual DR snapshot: `partgraph-production-dr-audit-2026-09-16` (`snap-solitary-snow-aegiq03s`), expiring 2026-09-23.
 
-- snapshot: `snap-solitary-snow-aegiq03s`
-- name: `partgraph-production-dr-audit-2026-09-16`
-- expiry: 2026-09-23
+These values are observations, not authorization to change Production settings.
 
-The snapshot was restored to a separate recovery branch:
+## Historical 2026-09-16 restore event
 
-- recovery branch: `recovery-drill-2026-09-16`
-- branch id: `br-shiny-silence-aexgk2zm`
+The September 16 snapshot/restore occurred while the branch identities were transitioning. Git/Neon IDs, not mutable branch names, are the durable audit reference.
 
-Read-only verification on both production and the restored recovery branch returned the same critical baseline:
+The manual snapshot was created from branch object `br-wild-silence-aet2bzfe`:
 
-- Alembic revision: `0020_catalog_coverage`
-- `user_vehicles`: 4
-- `repair_sessions`: 2
+- snapshot: `snap-solitary-snow-aegiq03s`;
+- name: `partgraph-production-dr-audit-2026-09-16`;
+- expiry: 2026-09-23.
 
-This proves that a production snapshot can currently be restored to an isolated branch and that the sampled owner/repair state survives the restore.
+The restore produced branch object `br-shiny-silence-aexgk2zm`. That branch object is now the current primary/default `production` branch. The former source object `br-wild-silence-aet2bzfe` remains non-production and is currently named `recovery-drill-2026-09-16`.
 
-## Current plan limitations discovered during remediation
+The earlier runbook wording treated those names as stable identities. That was misleading after restore finalization renamed/reassigned branch labels. This section preserves the historical object IDs while the current topology section above is authoritative for present operations.
 
-The PartGraph Neon project currently reports `history_retention_seconds = 21600` (six hours).
+## 2026-09-20 isolated restore drill
 
-Attempting to protect the production branch failed because the current Neon plan has no remaining protected-branch capacity. The API returned: `You have reached the maximum number of protected branches for your current plan.` The project currently shows no protected branch, so the effective free-plan allowance appears insufficient for this control.
+The existing manual snapshot `snap-solitary-snow-aegiq03s` was restored again to a new isolated branch without changing the Production primary/default assignment.
 
-Attempting to configure a daily seven-day snapshot schedule also failed because backup-schedule creation is not enabled for this project.
+Recovery target:
 
-Therefore `PG-AUD-REL-001` is not complete. The restore-drill portion is proven, but production branch protection, automatic backup scheduling, and longer point-in-time retention remain blocked by current Neon plan capabilities.
+- branch: `phase10-dr-restore-drill-2026-09-20`;
+- branch id: `br-icy-leaf-ae522322`;
+- restore status: finalized;
+- automatic expiry: `2026-09-21T14:00:00Z`;
+- Alembic revision: `0020_catalog_coverage`;
+- public tables: 36.
+
+Read-only recovery verification matched current Production on:
+
+- users: 4;
+- Garage vehicles: 4;
+- repair sessions: 2;
+- repair-session events: 9.
+
+The complete baseline owner/private preservation check selected the exact Production-`0020` columns for all 18 owner/private tables. All 18 tables matched Production on row count and deterministic row digest, covering 35 persisted rows with zero differences.
+
+Production remained `br-shiny-silence-aexgk2zm`, primary/default, and at `0020_catalog_coverage` throughout the drill.
+
+This proves the current snapshot restore mechanism and representative owner/repair recovery path. It does not prove that backup freshness or retention meets the target RPO.
+
+## Current backup-policy limitation
+
+`PG-AUD-REL-001` remains blocked on Production backup policy, not restore mechanics.
+
+Current read-only evidence shows:
+
+- no automatic snapshot schedule on Production;
+- only six hours of project point-in-time history retention;
+- Production branch protection disabled.
+
+Earlier remediation attempts also recorded plan/API limitations when enabling branch protection and scheduled backups. Those historical failures should be re-tested only if the Neon plan/capabilities change or an equivalent durable backup design is approved.
+
+Do not change Production snapshot schedules, retention, or branch protection merely to clear the finding. Those are Production infrastructure decisions and require separate authorization.
 
 ## Cutover gate
 
-Before PR #84 can be considered production-safe, re-check the Neon plan and require all of the following:
+Before PR #84 can be considered production-safe, require all of the following:
 
-- production branch protection enabled;
-- automatic daily snapshot/backup protection enabled with at least seven-day retention;
-- point-in-time/history retention increased from six hours to at least seven days, or an explicitly approved equivalent backup strategy is in place;
-- a recent recovery drill exists and its verification matches production owner/repair state;
-- backup/retention status is included in the production cutover checklist.
+- Production branch protection enabled, or an explicitly approved equivalent destructive-operation control;
+- automatic daily snapshot/backup protection with at least seven-day retention, or an explicitly approved equivalent durable backup strategy;
+- point-in-time/history retention increased from six hours to at least seven days, or covered by that approved equivalent strategy;
+- a recent recovery drill with verified owner/repair state;
+- backup/retention status recorded in the production cutover checklist.
 
-If the selected Neon plan cannot provide these controls, production cutover remains blocked until an equivalent durable backup and recovery mechanism is explicitly designed and approved.
+The restore-drill condition is currently proven. Backup freshness/protection remains unresolved, so Production cutover remains blocked on this gate.
