@@ -68,7 +68,8 @@
     "coordinated_rollback_contract": "satisfied",
     "application_build_schema_read_only": "satisfied",
     "backup_capability_probe": "satisfied_current_plan_insufficient",
-    "alert_signal_instrumentation": "satisfied_delivery_backend_unresolved"
+    "alert_signal_instrumentation": "satisfied_delivery_backend_unresolved",
+    "branch_governance_design": "satisfied_activation_unresolved"
   },
   "hard_cutover_gates": [
     {
@@ -96,7 +97,7 @@
     {
       "finding_id": "PG-AUD-DEP-003",
       "state": "blocked",
-      "requirement": "Resolve or explicitly address repository branch-protection governance before final Production approval."
+      "requirement": "Approve and apply the prepared main-branch protection policy in ops/cutover/phase10_branch_governance_v1.json using an authorized repository administrator, then test the MVP merge gate and record the protection/ruleset identifier."
     }
   ],
   "production_mutation_authorized": false,
@@ -120,5 +121,6 @@
   ],
   "go_rule": "GO is permitted only after a freshly generated exact-head preflight proves every hard cutover gate resolved, all decision-required findings are explicitly dispositioned, and production_mutation_authorized is true.",
   "backup_capability_contract": "ops/cutover/phase10_backup_capability_v1.json",
-  "alert_delivery_capability_contract": "ops/observability/alert_delivery_capability_v1.json"
+  "alert_delivery_capability_contract": "ops/observability/alert_delivery_capability_v1.json",
+  "branch_governance_contract": "ops/cutover/phase10_branch_governance_v1.json"
 }

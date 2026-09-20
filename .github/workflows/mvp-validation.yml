@@ -1305,3 +1305,58 @@ jobs:
           python -m unittest discover -s api/tests -p 'test_provenance_database_privileges.py' -v
           python -m unittest discover -s api/tests -p 'test_capability_database_privileges.py' -v
 
+  mvp-merge-gate:
+    name: MVP merge gate
+    if: always()
+    needs:
+      - unit-domain
+      - api-contracts
+      - auth-security
+      - owner-isolation
+      - migrations
+      - production-copy-migration
+      - full-stack
+      - verified-guidance
+      - browser-e2e
+      - randomized-acceptance
+      - reference-fleet-acceptance
+      - offline-degraded
+      - timeout-ambiguous-write
+      - downstream-operation-semantics
+      - unsupported-computer-boundary
+      - durable-photo-persistence
+      - data-free-source-code
+      - rbac-authorization
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Require every Phase 9 validation job
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+
+          needs = json.loads(os.environ["NEEDS_JSON"])
+          failures = {
+              name: result.get("result")
+              for name, result in needs.items()
+              if result.get("result") != "success"
+          }
+          if failures:
+              print("MVP merge gate blocked by non-success validation jobs:")
+              for name, result in sorted(failures.items()):
+                  print(f"  {name}: {result}")
+              sys.exit(1)
+          print(f"All {len(needs)} Phase 9 validation jobs succeeded.")
+          PY
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Validate Phase 10 branch-governance contract
+        run: python3 api/tests/test_phase10_branch_governance.py

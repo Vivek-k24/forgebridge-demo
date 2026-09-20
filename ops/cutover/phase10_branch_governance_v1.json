@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-09-20",
+  "status": "prepared_not_applied",
+  "repository": "Vivek-k24/forgebridge-demo",
+  "repository_visibility": "public",
+  "default_branch": "main",
+  "current_state": {
+    "main_protected": false,
+    "repository_rulesets": 0,
+    "administration_permission_available_to_connected_github_app": false
+  },
+  "target_policy": {
+    "protected_branch": "main",
+    "require_pull_request_before_merging": true,
+    "required_approving_review_count": 0,
+    "require_conversation_resolution": true,
+    "require_status_checks": true,
+    "require_branch_up_to_date_before_merging": true,
+    "required_status_checks": [
+      "MVP merge gate"
+    ],
+    "block_force_pushes": true,
+    "block_deletions": true,
+    "enforce_for_administrators": true,
+    "require_signed_commits": false,
+    "require_linear_history": false,
+    "lock_branch": false
+  },
+  "rationale": {
+    "zero_approvals": "PartGraph is currently maintained as a solo-owner repository; requiring one approval would prevent the author from merging their own PR.",
+    "one_stable_check": "MVP Final Validation CI runs on every pull request with no path filter. The aggregate MVP merge gate depends on all 18 validation jobs, avoiding brittle branch rules that depend on path-filtered checks.",
+    "main_only": "Feature and consolidation branches remain writable; protection applies only to the release branch."
+  },
+  "activation_boundary": {
+    "production_mutation": false,
+    "repository_admin_change": true,
+    "connected_github_app_can_apply": false,
+    "owner_action_required": "Create a branch protection rule or equivalent ruleset for main using the target policy after explicit governance approval."
+  }
+}
