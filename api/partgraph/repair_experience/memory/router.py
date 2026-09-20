@@ -14,9 +14,9 @@ from fastapi import (
 )
 from starlette.responses import FileResponse
 
-from ...identity.actors import AuthSessionDep, CurrentUserDep, require_csrf
 from ...config import settings
 from ...errors import ErrorCode, ErrorEnvelope, PartGraphError
+from ...identity.actors import AuthSessionDep, CurrentUserDep, require_csrf
 from ..router import (
     DEVICE_HEADER,
     IDEMPOTENCY_HEADER,

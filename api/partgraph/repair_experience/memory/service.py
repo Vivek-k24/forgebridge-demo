@@ -11,8 +11,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...errors import ErrorCode, PartGraphError
-from ..models import RepairSession, RepairSessionEvent
-from ..service import append_domain_event, prepare_domain_mutation
 from ..memory_models import (
     RepairFastener,
     RepairInventoryItem,
@@ -20,6 +18,8 @@ from ..memory_models import (
     RepairPhotoEvidence,
     RepairStorageLocation,
 )
+from ..models import RepairSession, RepairSessionEvent
+from ..service import append_domain_event, prepare_domain_mutation
 from .schemas import (
     FastenerCreate,
     FastenerRead,

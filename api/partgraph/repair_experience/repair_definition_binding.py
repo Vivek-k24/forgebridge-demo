@@ -8,10 +8,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..errors import ErrorCode, ErrorEnvelope, PartGraphError
+from ..identity.actors import AuthSessionDep, CurrentUserDep, require_csrf
 from ..identity.user_vehicle.models import UserVehicle
 from ..knowledge.models import RepairDefinition
 from ..knowledge.repair_service import verified_requirement_manifest
-from ..identity.actors import AuthSessionDep, CurrentUserDep, require_csrf
 from .models import RepairSession, RepairSessionProjection
 from .service import lease_view, rebuild_projection
 
