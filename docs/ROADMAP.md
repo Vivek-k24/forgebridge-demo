@@ -40,10 +40,10 @@ The active implementation line is `partgraph-mvp-consolidation`; PR #84 remains 
 
 Only two substantive non-production roadmap items remain open:
 
-1. **Live NHTSA HTTP ingestion proof.** The existing operator endpoint and governance path must be exercised against a deployed non-production environment using an authorized operator session. Configuration or fixture-based tests alone do not count.
+1. **Live NHTSA HTTP ingestion proof.** The deployed Preview is already configured for the proof at schema `0063_photo_storage_outbox`: one active operator admin, one enabled NHTSA vehicle-data provider, one approved `nhtsa-recalls` government source, and one enabled binding. The remaining proof is strictly the real authenticated HTTP execution of `POST /api/v1/operator/nhtsa/recalls/stage` with the application's operator-session and CSRF rules intact. Read-only inspection found no prior live NHTSA staging record and no recent Preview `provider.ingestion` runtime event. The current connected execution surface can perform authenticated Vercel GETs but cannot issue that stateful application POST, so the proof remains open without implying missing application/configuration work.
 2. **Broad canonical repair knowledge.** The reviewed reference corpus proves the architecture but is not broad automotive coverage.
 
-The previously added credential-dependent hosted-NHTSA proof scaffold was removed during repository hygiene because it could not execute in the current environment and duplicated existing operator/NHTSA contract coverage. Reintroduce a hosted proof only when the required authorized non-production operator execution path actually exists.
+The previously added credential-dependent hosted-NHTSA proof scaffold was removed during repository hygiene because it could not execute in the current environment and duplicated existing operator/NHTSA contract coverage. Do not reintroduce a bypass endpoint, hard-coded operator credential, direct-database shortcut, or weakened CSRF/authentication path merely to close the proof. Reopen an automated hosted proof only when an authorized stateful browser/HTTP operator execution path actually exists.
 
 ## Phase 9 validation contract
 
@@ -107,3 +107,5 @@ Production cutover is not implied by completed MVP validation or by authorizatio
 Items that are intentionally blocked, future-scale controls, or post-MVP hardening are tracked in `docs/AUDIT_STATUS.md`. Do not convert them into implementation work merely to reduce the count.
 
 Historical progress narratives and superseded audit working notes remain recoverable from Git history rather than being kept in the active tree.
+
+At the current boundary there are no decision-free remediation fixes left. The remaining MVP-launch work is either an explicit owner/infrastructure activation decision (Production backup/protection, alert delivery, GitHub branch protection, cutover traffic barrier, Production authorization) or the deployed NHTSA operator HTTP execution proof described above. Broad repair-knowledge expansion and the other deferred audit rows remain post-MVP/backlog work unless the project owner changes scope.
