@@ -2,7 +2,7 @@
   "schema_version": 1,
   "observed_on": "2026-09-20",
   "status": "owner_decisions_pending",
-  "source_head": "1cb2c7e446d0416b6d40e82f3d447970b4dd9da0",
+  "source_head": "ba87cb917e34121aab099e4415eb6b77bc0cb53d",
   "production_mutation_authorized": false,
   "launch_blockers": [
     {
@@ -56,22 +56,6 @@
         "backend/risk-acceptance record",
         "rule or manual-monitoring evidence",
         "updated Phase 10 preflight"
-      ]
-    },
-    {
-      "id": "PG-AUD-DEP-003",
-      "title": "Protect the main GitHub branch",
-      "kind": "repository_admin_action",
-      "required_before_cutover": "explicit_disposition_required",
-      "current_state": "Policy is prepared and the MVP merge gate has passed; main is still unprotected and no ruleset exists.",
-      "owner_decision": "Approve application of the prepared main-branch policy by a repository administrator.",
-      "prepared_policy": "ops/cutover/phase10_branch_governance_v1.json",
-      "completion_evidence": [
-        "main reports protected",
-        "MVP merge gate is required",
-        "pull request requirement is active",
-        "force-push/delete protections verified",
-        "rule/ruleset identifier recorded"
       ]
     },
     {
@@ -156,15 +140,6 @@
         "owner_action_required": true
       },
       {
-        "finding_id": "PG-AUD-DEP-003",
-        "recommendation": "approve_prepared_main_protection_policy",
-        "details": {
-          "policy": "ops/cutover/phase10_branch_governance_v1.json",
-          "reason": "The policy and MVP merge gate are already tested and preserve the solo-maintainer workflow."
-        },
-        "owner_action_required": true
-      },
-      {
         "finding_id": "PG-AUD-DEP-005",
         "recommendation": "use_selected_vercel_authentication_barrier_at_cutover",
         "details": {
@@ -187,5 +162,21 @@
       "recommendation": "defer_from_mvp_launch",
       "reason": "The feature/configuration is ready; only the stateful operator HTTP execution proof is missing, and it is not required to launch the validated MVP safely."
     }
-  }
+  },
+  "completed_owner_controls": [
+    {
+      "id": "PG-AUD-DEP-003",
+      "title": "Protect the main GitHub branch",
+      "completed_on": "2026-09-20",
+      "status": "closed",
+      "evidence": {
+        "owner_reported_prepared_policy_applied": true,
+        "github_branch_api_main_protected": true,
+        "repository_rulesets_observed": 0,
+        "protection_surface": "classic_branch_protection",
+        "detailed_rule_readback": "unavailable_to_connected_github_app_403"
+      },
+      "policy": "ops/cutover/phase10_branch_governance_v1.json"
+    }
+  ]
 }

@@ -59,6 +59,14 @@
         "docs/ROADMAP_LIVE.md"
       ],
       "meaning": "A documentation-only main commit received a Production Vercel deployment. Production deployment ordering must therefore be explicitly controlled or an equivalent maintenance strategy approved before merge/schema cutover."
+    },
+    "repository_governance": {
+      "observed_on": "2026-09-20",
+      "main_protected": true,
+      "repository_rulesets": 0,
+      "protection_surface": "classic_branch_protection",
+      "owner_reported_prepared_policy_applied": true,
+      "detailed_rule_readback": "unavailable_to_connected_github_app_403"
     }
   },
   "proven_controls": {
@@ -69,7 +77,7 @@
     "application_build_schema_read_only": "satisfied",
     "backup_capability_probe": "satisfied_current_plan_insufficient",
     "alert_signal_instrumentation": "satisfied_delivery_backend_unresolved",
-    "branch_governance_design": "satisfied_activation_unresolved",
+    "branch_governance_design": "satisfied_active",
     "traffic_barrier_selection": "satisfied_activation_unresolved"
   },
   "hard_cutover_gates": [
@@ -94,11 +102,6 @@
       "finding_id": "PG-AUD-REL-007",
       "state": "blocked",
       "requirement": "Application telemetry is complete, but alert delivery is inactive. Select/connect an eligible native Vercel alert capability or external observability backend, activate every required PG-OBS rule, and record notification/test evidence before final Production approval."
-    },
-    {
-      "finding_id": "PG-AUD-DEP-003",
-      "state": "blocked",
-      "requirement": "Approve and apply the prepared main-branch protection policy in ops/cutover/phase10_branch_governance_v1.json using an authorized repository administrator, then test the MVP merge gate and record the protection/ruleset identifier."
     }
   ],
   "production_mutation_authorized": false,

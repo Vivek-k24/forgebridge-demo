@@ -1,7 +1,7 @@
 # PartGraph Audit Status
 
 Status: **Phase 0–9 remediation closed at the current roadmap boundary.**  
-Date: **2026-09-19**  
+Date: **2026-09-20**  
 Canonical architecture: `docs/BLUEPRINT.md`  
 Roadmap: `docs/ROADMAP.md`
 
@@ -9,15 +9,17 @@ Roadmap: `docs/ROADMAP.md`
 
 The remediation audit has **0 decision-free ELIGIBLE items**.
 
-There are **17 intentionally deferred items**:
+There are **16 intentionally deferred items**:
 
-- **5 BLOCKED**
+- **4 BLOCKED**
 - **4 BACKLOG**
 - **8 CURRENT CONTROL COMPLETE / FUTURE BACKLOG**
 
 Completed-finding narratives, intermediate CI run IDs, and remediation work logs were removed from the active documentation tree to reduce stale context. They remain available in Git history.
 
 `PG-AUD-DEP-004` closed on 2026-09-20: `main` was merged into `partgraph-mvp-consolidation` after verifying that the 22 intervening `main` commits changed only the superseded `docs/ROADMAP_LIVE.md`. The synchronization merge preserved that file's deliberate hygiene deletion, and the consolidation branch is now 0 commits behind `main`.
+
+`PG-AUD-DEP-003` closed on 2026-09-20: the project owner applied the prepared classic branch-protection policy to `main`. GitHub now reports `main.protected=true`; repository rulesets remain empty, consistent with classic branch protection. The connected GitHub App still cannot read the detailed protection endpoint (403 Administration permission boundary), so the exact per-toggle configuration is recorded from the owner-applied prepared policy rather than re-read through the integration.
 
 ## Deferred register
 
@@ -26,7 +28,6 @@ Completed-finding narratives, intermediate CI run IDs, and remediation work logs
 | PG-AUD-REL-001 | BLOCKED | Restore mechanics are proven, but current Neon project capability cannot satisfy the approved Production protection target: a non-production daily-snapshot probe was rejected because backup scheduling is not enabled, and a non-production branch-protection probe was rejected by the current-plan protected-branch limit even though the account has zero protected branches. Reopen only after a provider-plan/capability change or an explicitly approved equivalent durable backup/protection design. |
 | PG-AUD-REL-007 | BLOCKED | Application telemetry/SLO wiring is complete, but no alert-delivery backend is active. Current Vercel Hobby operation has runtime logs but Vercel Drains require Pro/Enterprise, no external monitoring backend is configured, and no alert/drain management action is connected. Reopen only after an alert-capable backend/plan is selected and connected so the existing PG-OBS rules can be activated and tested. |
 | PG-AUD-DEP-001 | BLOCKED | Phase 10 non-production preparation is authorized and the fail-closed preflight mechanism exists. Current preflight is NO-GO; Production cutover remains blocked pending the required hard gates/decision dispositions in `ops/cutover/phase10_preflight_v1.json` and separate explicit Production authorization. |
-| PG-AUD-DEP-003 | BLOCKED | The exact `main` branch-protection policy and stable `MVP merge gate` are prepared and CI-checkable. GitHub Free supports protection for this public repository, but the connected GitHub App lacks Administration permission and no rule/ruleset is currently applied. Reopen for completion when the project owner explicitly approves and an authorized repository administrator applies/tests `ops/cutover/phase10_branch_governance_v1.json`. |
 | PG-AUD-DEP-005 | BLOCKED | The traffic barrier is now selected: Vercel Authentication → All Deployments, documented by Vercel as available on every plan. Activation is intentionally not performed. Reopen for completion at the authorized cutover when the existing protection state is captured, Production blocking and authenticated health access are proven, and the exact prior protection state can be restored. |
 | PG-AUD-UI-008 | BACKLOG | Post-MVP axe-style accessibility scanning, broader browser coverage, and manual screen-reader evidence are scheduled. |
 | PG-AUD-UI-009 | BACKLOG | A supported-browser/version policy is defined and Firefox/WebKit enforcement is scheduled. |
@@ -83,7 +84,7 @@ Intentionally retained after dependency proof:
 
 ## Owner launch-decision packet
 
-The five BLOCKED items are now consolidated in `docs/OWNER_LAUNCH_DECISIONS.md` and `ops/cutover/phase10_owner_decisions_v1.json`. That packet does not change their status or authorize Production; it exists to keep the remaining owner/admin queue explicit and finite.
+The four remaining BLOCKED items are consolidated in `docs/OWNER_LAUNCH_DECISIONS.md` and `ops/cutover/phase10_owner_decisions_v1.json`. That packet does not change their status or authorize Production; it exists to keep the remaining owner/admin queue explicit and finite.
 
 ## Execution rule
 

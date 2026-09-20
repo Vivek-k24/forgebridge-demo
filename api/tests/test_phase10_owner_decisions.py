@@ -29,6 +29,20 @@ class Phase10OwnerDecisionPacketTests(unittest.TestCase):
         packet_ids = {item["id"] for item in self.packet["launch_blockers"]}
         self.assertEqual(blocked, packet_ids)
 
+    def test_completed_branch_governance_is_not_a_remaining_blocker(self) -> None:
+        blocker_ids = {item["id"] for item in self.packet["launch_blockers"]}
+        self.assertNotIn("PG-AUD-DEP-003", blocker_ids)
+        completed = {
+            item["id"]: item
+            for item in self.packet["completed_owner_controls"]
+        }
+        self.assertEqual(completed["PG-AUD-DEP-003"]["status"], "closed")
+        self.assertTrue(
+            completed["PG-AUD-DEP-003"]["evidence"][
+                "github_branch_api_main_protected"
+            ]
+        )
+
     def test_recommended_defaults_do_not_equal_owner_approval(self) -> None:
         recommendations = self.packet["recommended_defaults"]
         self.assertEqual(
@@ -55,6 +69,7 @@ class Phase10OwnerDecisionPacketTests(unittest.TestCase):
             recommendations["nhtsa_launch_disposition"]["recommendation"],
             "defer_from_mvp_launch",
         )
+        self.assertNotIn("PG-AUD-DEP-003", choices)
         self.assertTrue(
             all(item["owner_action_required"] for item in choices.values())
         )

@@ -37,15 +37,24 @@ class Phase10BranchGovernanceTests(unittest.TestCase):
         cls.workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
         cls.runbook = RUNBOOK_PATH.read_text(encoding="utf-8")
 
-    def test_policy_is_prepared_not_silently_applied(self) -> None:
-        self.assertEqual(self.contract["status"], "prepared_not_applied")
-        self.assertFalse(self.contract["current_state"]["main_protected"])
+    def test_policy_is_active_with_owner_and_api_evidence(self) -> None:
+        self.assertEqual(
+            self.contract["status"],
+            "active_owner_applied_api_verified",
+        )
+        self.assertTrue(self.contract["current_state"]["main_protected"])
         self.assertEqual(self.contract["current_state"]["repository_rulesets"], 0)
         self.assertFalse(
             self.contract["current_state"][
                 "administration_permission_available_to_connected_github_app"
             ]
         )
+        evidence = self.contract["activation_evidence"]
+        self.assertTrue(evidence["owner_reported_prepared_policy_applied"])
+        self.assertTrue(evidence["github_branch_api_main_protected"])
+        self.assertEqual(evidence["github_rulesets_observed"], 0)
+        self.assertEqual(evidence["inferred_surface"], "classic_branch_protection")
+        self.assertFalse(evidence["destructive_verification_attempted"])
 
     def test_solo_owner_policy_does_not_require_impossible_self_review(self) -> None:
         policy = self.contract["target_policy"]
