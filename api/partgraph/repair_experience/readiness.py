@@ -10,10 +10,10 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 
 from ..errors import ErrorCode, ErrorEnvelope, PartGraphError
+from ..identity.actors import AuthSessionDep, CurrentUserDep, require_csrf
 from ..identity.user_vehicle.models import UserVehicle
 from ..knowledge.repair_service import bound_requirement_manifest
 from ..knowledge.schemas import RepairDefinitionManifestRead, RequirementManifestItemRead
-from ..identity.actors import AuthSessionDep, CurrentUserDep, require_csrf
 from .models import RepairSession, RepairSessionEvent
 from .readiness_models import RepairRequirementState, UserGarageInventoryItem
 from .service import append_domain_event, prepare_domain_mutation

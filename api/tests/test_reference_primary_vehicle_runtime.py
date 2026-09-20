@@ -26,7 +26,7 @@ from partgraph.knowledge.vehicle_domain_materialization import (
     materialize_vehicle_domain_claim_service,
 )
 from partgraph.knowledge.vehicle_structure import VehicleStructureNode
-from partgraph.repair_experience.memory.models import RepairPhotoEvidence
+from partgraph.repair_experience.memory_models import RepairPhotoEvidence
 from partgraph.repair_experience.memory.schemas import ObservationCreate
 from partgraph.repair_experience.memory.service import (
     create_observation,

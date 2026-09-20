@@ -3,8 +3,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
 
-from ..auth.dependencies import AuthSessionDep, CurrentUserDep, require_csrf
 from ...errors import ErrorCode, ErrorEnvelope, PartGraphError
+from ..auth.dependencies import AuthSessionDep, CurrentUserDep, require_csrf
 from .schemas import (
     ManualUserVehicleCreate,
     UserVehicleRead,

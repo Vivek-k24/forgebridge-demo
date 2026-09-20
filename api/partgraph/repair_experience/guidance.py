@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 
 from ..errors import ErrorCode, ErrorEnvelope, PartGraphError
+from ..identity.actors import AuthSessionDep, CurrentUserDep, require_csrf
 from ..identity.user_vehicle.models import UserVehicle
 from ..knowledge.models import ProcedureAction, RepairDefinition, RequirementUse
 from ..knowledge.procedure_service import (
@@ -18,7 +19,6 @@ from ..knowledge.support_boundaries import (
     COMPUTER_SERVICE_BOUNDARY_MESSAGE,
     is_computer_service_boundary,
 )
-from ..identity.actors import AuthSessionDep, CurrentUserDep, require_csrf
 from .models import RepairProcedureActionState, RepairSession
 from .readiness import (
     DEVICE_HEADER,
