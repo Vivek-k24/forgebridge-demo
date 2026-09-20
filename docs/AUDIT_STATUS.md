@@ -62,13 +62,15 @@ Additional full-tree cleanup completed in the same hygiene pass:
 - scanned all 124 runtime Python modules, 59 tests, 65 migrations, 13 API scripts, 12 frontend validators, 35 JSON assets, 10 workflows, Markdown documentation, and remaining root/config templates for stale paths, TODO/FIXME/stub scaffolding, placeholder/mock data, duplicate blobs, backup files, and generated caches;
 - verified all declared Python and web dependencies still have active consumers.
 
-Tracked-tree reduction from the pre-hygiene head `f93b813767246ced3c66c2310e22a6d915bfe71e`:
+Measured cleanup reduction at commit `d1354df578fcad7e41ffe67fb9fb7de0f4f77933`, relative to the pre-hygiene head `f93b813767246ced3c66c2310e22a6d915bfe71e`:
 
 - files: **413 → 398**;
 - tracked bytes: **2,795,700 → 2,624,599** (**171,101 bytes removed**);
 - documentation bytes: **218,973 → 68,619** (**150,354 bytes removed**);
 - API bytes: **2,040,490 → 2,020,203** (**20,287 bytes removed**);
 - web source/package footprint: unchanged because every tracked frontend module, stylesheet, validator, and dependency remained live.
+
+These figures are a fixed measurement checkpoint, not a claim about the byte count of later commits. Subsequent commits added this audit-status detail and corrected import ordering/canonical import paths without restoring the removed scaffolding or documentation.
 
 Intentionally retained after dependency proof:
 
