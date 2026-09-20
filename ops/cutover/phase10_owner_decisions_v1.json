@@ -146,10 +146,12 @@
       },
       {
         "finding_id": "PG-AUD-REL-007",
-        "recommendation": "vercel_pro_plus_observability_plus_native_alerts",
+        "recommendation": "vercel_pro_datadog_log_drain",
         "details": {
-          "plan": "Pro + Observability Plus",
-          "reason": "Vercel Alerts are currently available on Pro/Enterprise with Observability Plus. Using the existing hosting provider avoids another alert/log vendor during MVP launch."
+          "plan": "Vercel Pro",
+          "backend": "Datadog",
+          "transport": "Vercel Log Drain / Datadog integration",
+          "reason": "PartGraph already emits structured custom operational events. Vercel Pro enables Drains, and Datadog can turn those drained logs into custom metrics/monitors, covering database readiness, provider ingestion, media reconciliation, and request/error events without new application instrumentation."
         },
         "owner_action_required": true
       },
