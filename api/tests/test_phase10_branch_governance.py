@@ -81,7 +81,8 @@ class Phase10BranchGovernanceTests(unittest.TestCase):
         for job_id in EXPECTED_PHASE9_JOB_IDS:
             self.assertIn(f"      - {job_id}\n", body)
         self.assertIn("if: always()", body)
-        self.assertIn("needs.*.result", body)
+        self.assertIn("NEEDS_JSON:", body)
+        self.assertIn('if result.get("result") != "success"', body)
 
     def test_destructive_branch_operations_are_blocked_by_target_policy(self) -> None:
         policy = self.contract["target_policy"]
