@@ -14,12 +14,12 @@
     "phase10_preflight_v1 reports all hard gates resolved except the final explicit authorization action",
     "exact candidate is green and zero commits behind main",
     "Production backup/protection control is approved and current recovery evidence is fresh",
-    "one traffic barrier below is explicitly selected, available on the current Vercel plan, and tested",
+    "Vercel Authentication All Deployments is the selected barrier; availability is documented for the current plan, and Production activation/block/bypass/restore proof remains required",
     "operator has credentials for Vercel, GitHub, and Neon/Alembic actions without placing credentials in logs or source"
   ],
   "traffic_barrier": {
-    "selected": null,
-    "state": "unresolved",
+    "selected": "vercel_authentication_all",
+    "state": "selected_pending_production_activation_and_test",
     "acceptable_methods": [
       {
         "id": "vercel_authentication_all",
@@ -29,7 +29,8 @@
           "unauthenticated Production request is blocked before migration",
           "authorized operator health request still works",
           "the exact method to disable protection after cutover is recorded"
-        ]
+        ],
+        "status": "selected"
       },
       {
         "id": "dedicated_maintenance_deployment",
@@ -39,7 +40,8 @@
           "Production domain resolves only to maintenance response before migration",
           "candidate deployment remains separate until post-migration verification",
           "rollback can return traffic to the old Production deployment after database restore"
-        ]
+        ],
+        "status": "fallback_only"
       }
     ],
     "rejected_shortcuts": [
@@ -47,7 +49,31 @@
       "Do not revoke ad-hoc PostgreSQL privileges and attempt to reconstruct them during the cutover.",
       "Do not use the old application against schema 0063 merely because health/read-only probes pass.",
       "Do not merge PR #84 first and allow normal Vercel Git deployment to decide the ordering."
-    ]
+    ],
+    "capability_evidence": {
+      "provider": "Vercel",
+      "effective_date": "2026-09-09",
+      "availability": "Vercel Authentication can protect all deployments, including Production, on every plan.",
+      "current_project_plan": "hobby",
+      "current_preview_protection_observed": true,
+      "source": "https://vercel.com/changelog/protect-production-deployments-for-free-on-every-plan"
+    },
+    "activation_contract": {
+      "project_id": "prj_hDThLALewtC4I4nvGNVyFeY0iEPf",
+      "team_id": "team_Ur6AwuUGgeBixSwdnTTrTECE",
+      "team_slug": "vivekkallakuri-8617",
+      "snapshot_current_settings": "vercel project protection partgraph-main --format json",
+      "enable_endpoint": "PATCH /v9/projects/prj_hDThLALewtC4I4nvGNVyFeY0iEPf",
+      "enable_body": {
+        "ssoProtection": {
+          "deploymentType": "all"
+        }
+      },
+      "authorized_health_check": "vercel curl /api/v1/health/ready --deployment <production-deployment-url>",
+      "unauthenticated_check": "An anonymous request to the Production domain must be blocked by Vercel Authentication before database migration starts.",
+      "restore_previous_settings": "Restore the exact protection configuration captured before activation; do not blindly set ssoProtection=null because Preview protection is already in use.",
+      "production_change_authorized": false
+    }
   },
   "candidate_artifact": {
     "strategy": "production_target_without_domain",

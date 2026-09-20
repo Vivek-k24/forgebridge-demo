@@ -29,25 +29,64 @@ The cutover uses a staged candidate plus a temporary traffic barrier:
 
 This keeps the old Production deployment available until the database and candidate have both been verified.
 
-## Allowed traffic barriers
+## Selected traffic barrier
 
-No barrier is selected yet. Selection is a Production-governance decision.
+The selected barrier is **Vercel Authentication with scope = All Deployments**.
 
-### Option A: Vercel Authentication for all traffic
+Vercel announced on 2026-09-09 that Vercel Authentication can protect all project deployments, including the Production domain, at no additional cost on every plan. This removes the earlier plan uncertainty for the current PartGraph Hobby project.
 
-Vercel documents a project protection mode that can require Vercel Authentication for all deployments/Production traffic. Before using it, the operator must prove that this control is available on the current PartGraph plan and record an authorized bypass method for health checks.
+Selection does **not** authorize activation. Production must remain public until the explicit cutover authorization.
 
-Required proof:
+Before activation, capture the exact existing protection state:
 
-- an unauthenticated Production request is blocked before migration;
-- an authorized operator health request still succeeds;
-- disabling the protection after cutover is understood and recorded.
+```bash
+vercel project protection partgraph-main --format json
+```
 
-### Option B: dedicated maintenance deployment
+Store that output in the operator evidence record without credentials.
 
-A separately verified maintenance deployment can temporarily own the Production domain while the real candidate remains unaliased.
+At the approved freeze step, use Vercel's Update Project API so the intended scope is explicit:
 
-The maintenance deployment must have no PartGraph database mutation path. It is not the candidate application with a hopeful configuration toggle.
+```http
+PATCH /v9/projects/prj_hDThLALewtC4I4nvGNVyFeY0iEPf
+Content-Type: application/json
+
+{
+  "ssoProtection": {
+    "deploymentType": "all"
+  }
+}
+```
+
+The equivalent authenticated Vercel CLI/API invocation may be used, but the resulting project setting must be verified rather than assumed.
+
+The barrier is considered active only when both checks pass:
+
+1. an anonymous request to the Production domain is blocked by Vercel Authentication;
+2. an authenticated operator request still reaches PartGraph, for example:
+
+```bash
+vercel curl /api/v1/health/ready --deployment <production-deployment-url>
+```
+
+Do not begin the Production database migration before both checks pass.
+
+### Restoring normal access
+
+After the candidate is promoted and verified while protection is still active, restore the **exact protection configuration captured before cutover**.
+
+Do not blindly set `ssoProtection=null`. PartGraph already uses protected Preview deployments, so blindly disabling protection could weaken the existing Preview security posture.
+
+After restoration, verify:
+
+- the Production domain is public again;
+- Preview protection still behaves as it did before cutover;
+- the Production `/api/v1/health/ready` endpoint is healthy;
+- no unexpected runtime errors appeared during reopening.
+
+### Fallback: dedicated maintenance deployment
+
+A dedicated maintenance deployment remains the fallback only if the selected Vercel Authentication control cannot be activated or verified at the cutover. It must be separately approved before use and must have no PartGraph database mutation path.
 
 ## Rejected shortcuts
 

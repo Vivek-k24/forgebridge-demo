@@ -25,14 +25,31 @@ class Phase10CutoverChoreographyTests(unittest.TestCase):
         self.assertEqual(self.preflight["status"], "no_go")
         self.assertFalse(self.preflight["production_mutation_authorized"])
 
-    def test_traffic_barrier_must_be_selected_and_proven(self) -> None:
+    def test_traffic_barrier_is_selected_but_not_production_activated(self) -> None:
         barrier = self.contract["traffic_barrier"]
-        self.assertIsNone(barrier["selected"])
-        self.assertEqual(barrier["state"], "unresolved")
+        self.assertEqual(barrier["selected"], "vercel_authentication_all")
+        self.assertEqual(
+            barrier["state"],
+            "selected_pending_production_activation_and_test",
+        )
         ids = {item["id"] for item in barrier["acceptable_methods"]}
         self.assertEqual(
             ids,
             {"vercel_authentication_all", "dedicated_maintenance_deployment"},
+        )
+        self.assertEqual(
+            barrier["capability_evidence"]["availability"],
+            "Vercel Authentication can protect all deployments, including Production, on every plan.",
+        )
+        activation = barrier["activation_contract"]
+        self.assertEqual(
+            activation["enable_body"]["ssoProtection"]["deploymentType"],
+            "all",
+        )
+        self.assertFalse(activation["production_change_authorized"])
+        self.assertIn(
+            "restore the exact protection configuration",
+            activation["restore_previous_settings"].lower(),
         )
 
     def test_candidate_is_staged_before_database_migration(self) -> None:
@@ -90,6 +107,8 @@ class Phase10CutoverChoreographyTests(unittest.TestCase):
             self.doc,
         )
         self.assertIn("traffic barrier", self.doc)
+        self.assertIn("Vercel Authentication with scope = All Deployments", self.doc)
+        self.assertIn("vercel project protection partgraph-main --format json", self.doc)
         self.assertIn("--skip-domain", self.doc)
 
 

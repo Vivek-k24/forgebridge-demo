@@ -69,7 +69,8 @@
     "application_build_schema_read_only": "satisfied",
     "backup_capability_probe": "satisfied_current_plan_insufficient",
     "alert_signal_instrumentation": "satisfied_delivery_backend_unresolved",
-    "branch_governance_design": "satisfied_activation_unresolved"
+    "branch_governance_design": "satisfied_activation_unresolved",
+    "traffic_barrier_selection": "satisfied_activation_unresolved"
   },
   "hard_cutover_gates": [
     {
@@ -80,7 +81,7 @@
     {
       "finding_id": "PG-AUD-DEP-005",
       "state": "blocked",
-      "requirement": "Approve and prove the traffic-barrier/candidate-staging choreography in ops/cutover/phase10_cutover_choreography_v1.json. A traffic barrier is not selected yet, so deployment ordering remains blocked."
+      "requirement": "Vercel Authentication with deploymentType=all is selected and supported on the current plan. At the authorized cutover, capture the current protection settings, activate All Deployments, prove anonymous Production blocking plus authenticated health access, and preserve the ability to restore the exact prior protection state."
     },
     {
       "finding_id": "PG-AUD-DEP-001",
@@ -113,7 +114,7 @@
     "Production health/readiness result",
     "Production database before revision",
     "approved backup/protection status and recovery proof",
-    "selected and proven traffic barrier plus staged candidate deployment from phase10_cutover_choreography_v1",
+    "Vercel Authentication All Deployments activation/block/bypass/restore proof plus staged candidate deployment from phase10_cutover_choreography_v1",
     "migration range and intended after revision",
     "owner-state preservation reference",
     "rollback/forward-fix plan",
