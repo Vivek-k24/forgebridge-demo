@@ -74,6 +74,8 @@ The currently deployed Production application was built from a documentation-onl
 
 The final plan must explicitly control the interval in which schema and application are promoted. Do not merge PR #84 merely to discover what Vercel does.
 
+The prepared sequence is now defined in `docs/PRODUCTION_CUTOVER_CHOREOGRAPHY.md` and `ops/cutover/phase10_cutover_choreography_v1.json`. It stages an exact Production-target candidate with no domain, requires a proven traffic barrier, migrates/verifies while traffic is blocked, then promotes and verifies the candidate before reopening traffic. The barrier itself remains intentionally unselected until the required Production-governance authorization and capability proof exist.
+
 ## Evidence record
 
 The eventual cutover record must retain, without credentials:

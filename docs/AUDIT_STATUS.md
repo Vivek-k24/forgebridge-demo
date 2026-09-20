@@ -27,7 +27,7 @@ Completed-finding narratives, intermediate CI run IDs, and remediation work logs
 | PG-AUD-REL-007 | BLOCKED | An alert-capable production hosting/observability backend is selected so delivery can be activated and tested. |
 | PG-AUD-DEP-001 | BLOCKED | Phase 10 non-production preparation is authorized and the fail-closed preflight mechanism exists. Current preflight is NO-GO; Production cutover remains blocked pending the required hard gates/decision dispositions in `ops/cutover/phase10_preflight_v1.json` and separate explicit Production authorization. |
 | PG-AUD-DEP-003 | BLOCKED | Explicit repository-governance decision for branch protection that preserves the intended documentation workflow. |
-| PG-AUD-DEP-005 | BLOCKED | Explicit deployment-governance authorization to change Production deploy-trigger behavior for documentation-only commits. |
+| PG-AUD-DEP-005 | BLOCKED | Safe cutover choreography is prepared and CI-checked, but no Production traffic barrier/deploy-trigger change is authorized. Reopen for completion when one documented barrier is explicitly approved, proven available, and tested before Production migration. |
 | PG-AUD-UI-008 | BACKLOG | Post-MVP axe-style accessibility scanning, broader browser coverage, and manual screen-reader evidence are scheduled. |
 | PG-AUD-UI-009 | BACKLOG | A supported-browser/version policy is defined and Firefox/WebKit enforcement is scheduled. |
 | PG-AUD-ROAD-002 | BACKLOG | An authorized deployed non-production operator execution path is available for the real NHTSA HTTP proof. |

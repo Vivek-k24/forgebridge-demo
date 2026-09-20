@@ -77,7 +77,7 @@
     {
       "finding_id": "PG-AUD-DEP-005",
       "state": "blocked",
-      "requirement": "Authorize and prove a Production deployment-order control or equivalent maintenance/write-freeze strategy so schema and application cannot be promoted in an unsafe order."
+      "requirement": "Approve and prove the traffic-barrier/candidate-staging choreography in ops/cutover/phase10_cutover_choreography_v1.json. A traffic barrier is not selected yet, so deployment ordering remains blocked."
     },
     {
       "finding_id": "PG-AUD-DEP-001",
@@ -110,7 +110,7 @@
     "Production health/readiness result",
     "Production database before revision",
     "approved backup/protection status and recovery proof",
-    "deployment-order control or maintenance/write-freeze plan",
+    "selected and proven traffic barrier plus staged candidate deployment from phase10_cutover_choreography_v1",
     "migration range and intended after revision",
     "owner-state preservation reference",
     "rollback/forward-fix plan",

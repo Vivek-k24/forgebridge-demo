@@ -34,7 +34,7 @@ The active implementation line is `partgraph-mvp-consolidation`; PR #84 remains 
 | 7 — Primary deep vehicle | Complete | 2009 Honda Civic Hybrid deep workflow proof is data/evidence-driven. |
 | 8 — Five-model reference fleet | Complete | Civic, Camry, F-150, Forester, and Tucson execute through shared generic runtime paths. |
 | 9 — Final MVP validation | Complete | All 18 final validation layers passed, including hosted durable-photo persistence. |
-| 10 — Production cutover | Preparation in progress | Real Production-copy migration and restore mechanics are proven; rollback incompatibility and a fail-closed operator preflight are machine-checked. Current preflight is NO-GO because Production backup/protection, deployment ordering, and explicit Production authorization remain unresolved; other BLOCKED governance/observability findings are surfaced for final disposition. |
+| 10 — Production cutover | Preparation in progress | Real Production-copy migration/restore, rollback behavior, fail-closed preflight, and safe cutover choreography are machine-checked. Current preflight remains NO-GO because Production backup/protection, selection/proof of the traffic barrier, and explicit Production authorization remain unresolved; other BLOCKED governance/observability findings are surfaced for final disposition. |
 
 ## Phase 6 remaining work
 
@@ -82,6 +82,8 @@ A 2026-09-20 isolated snapshot restore drill also passed with all 18 baseline ow
 Rollback compatibility is now explicit and machine-checked. The migrated schema preserves all 36 Production baseline tables and all 320 baseline columns, but `0063_photo_storage_outbox` makes `repair_photo_evidence.storage_state` required without a server default. The currently deployed Production photo-write path does not supply that field, so application-only rollback after schema promotion is prohibited. Rollback must be a forward correction or coordinated database restore plus prior application deployment.
 
 The Phase 10 operator preflight is now versioned in `ops/cutover/phase10_preflight_v1.json` and `docs/PRODUCTION_CUTOVER_PREFLIGHT.md`, with a permanent CI contract test. The current assessment is intentionally **NO-GO**. In addition to PG-AUD-REL-001 and explicit Production authorization, the preflight treats PG-AUD-DEP-005 as a hard cutover-order gate because the current Production Vercel deployment was produced from documentation-only `main` commit `d68606162c725348779e2d4f93e8819eb8469f21`. REL-007 and DEP-003 remain visible as blocked findings that require explicit final disposition rather than being silently ignored.
+
+The DEP-005 sequence is now prepared in `ops/cutover/phase10_cutover_choreography_v1.json`. The candidate is staged as a Production-target Vercel deployment without domain assignment, public traffic is blocked by an explicitly approved/proven barrier, the database is migrated and verified, the candidate is tested directly, and only then is Production traffic promoted/reopened. No traffic barrier is selected yet and normal Git deployment behavior has not been changed, so DEP-005 remains BLOCKED rather than being marked complete prematurely.
 ## Production safeguards
 
 Production cutover is not implied by completed MVP validation or by authorization to perform Phase 10 non-production preparation. Before any Production mutation:

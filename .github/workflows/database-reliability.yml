@@ -14,6 +14,9 @@ on:
       - 'api/tests/test_phase10_production_copy_rehearsal.py'
       - 'api/tests/test_phase10_rollback_contract.py'
       - 'api/tests/test_phase10_preflight_contract.py'
+      - 'api/tests/test_phase10_cutover_choreography.py'
+      - 'ops/cutover/phase10_cutover_choreography_v1.json'
+      - 'docs/PRODUCTION_CUTOVER_CHOREOGRAPHY.md'
       - 'ops/cutover/phase10_rollback_v1.json'
       - 'ops/cutover/phase10_preflight_v1.json'
       - 'docs/DATABASE_MIGRATION_PROMOTION_RUNBOOK.md'
@@ -41,6 +44,9 @@ on:
       - 'api/tests/test_phase10_production_copy_rehearsal.py'
       - 'api/tests/test_phase10_rollback_contract.py'
       - 'api/tests/test_phase10_preflight_contract.py'
+      - 'api/tests/test_phase10_cutover_choreography.py'
+      - 'ops/cutover/phase10_cutover_choreography_v1.json'
+      - 'docs/PRODUCTION_CUTOVER_CHOREOGRAPHY.md'
       - 'ops/cutover/phase10_rollback_v1.json'
       - 'ops/cutover/phase10_preflight_v1.json'
       - 'docs/DATABASE_MIGRATION_PROMOTION_RUNBOOK.md'
@@ -107,6 +113,7 @@ jobs:
           api/tests/test_phase10_production_copy_rehearsal.py
           api/tests/test_phase10_rollback_contract.py
           api/tests/test_phase10_preflight_contract.py
+          api/tests/test_phase10_cutover_choreography.py
 
       - name: Validate Phase 10 production-copy rehearsal guardrails
         run: >-
@@ -122,6 +129,11 @@ jobs:
         run: >-
           python -m unittest discover -s api/tests
           -p 'test_phase10_preflight_contract.py' -v
+
+      - name: Validate Phase 10 cutover choreography
+        run: >-
+          python -m unittest discover -s api/tests
+          -p 'test_phase10_cutover_choreography.py' -v
       - name: Apply database migrations
         env:
           PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
