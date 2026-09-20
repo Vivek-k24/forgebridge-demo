@@ -1,5 +1,4 @@
 import json
-import re
 import unittest
 from pathlib import Path
 
@@ -53,15 +52,15 @@ class Phase10RollbackContractTests(unittest.TestCase):
 
     def test_0063_requires_explicit_storage_state_without_server_default(self) -> None:
         self.assertIn('revision: str = "0063_photo_storage_outbox"', self.migration)
-        add_column = re.search(
-            r'op\.add_column\(\s*"repair_photo_evidence",\s*'
-            r'sa\.Column\("storage_state".*?nullable=True\s*\)\s*\)',
-            self.migration,
-            flags=re.DOTALL,
+        storage_state_start = self.migration.index(
+            'sa.Column("storage_state", sa.String(length=16), nullable=True)'
         )
-        self.assertIsNotNone(add_column)
-        assert add_column is not None
-        self.assertNotIn("server_default", add_column.group(0))
+        next_column = self.migration.index(
+            "    op.add_column(",
+            storage_state_start,
+        )
+        storage_state_block = self.migration[storage_state_start:next_column]
+        self.assertNotIn("server_default", storage_state_block)
         self.assertIn(
             'op.alter_column("repair_photo_evidence", "storage_state", nullable=False)',
             self.migration,
