@@ -10,6 +10,55 @@ The MVP engineering work and decision-free remediation are complete at the curre
 
 Use this document instead of reopening completed Phase 0–9 remediation work.
 
+## Recommended default decisions
+
+These are **recommendations, not approvals**. No subscription, repository setting, Vercel protection setting, database configuration, PR state, or Production resource changes because this section exists.
+
+### Database protection: recommend Neon Scale
+
+Use Neon **Scale** for the Production project, enable protection on the Production branch, and start with a **7-day restore window**.
+
+Why this is the default recommendation:
+
+- the current Free project cannot create the required automatic backup schedule;
+- protected branches are a Scale capability;
+- Scale supports longer point-in-time restore history;
+- keeping backup/protection inside Neon avoids introducing and operating a second backup system;
+- seven days meets the current MVP recovery target without retaining more history than required initially.
+
+This is preferable to upgrading only far enough to gain longer restore history while still lacking the prepared branch-protection objective.
+
+### Human alert delivery: recommend Vercel Pro/native alerts
+
+Use the existing Vercel hosting stack's eligible native alerting first.
+
+Why:
+
+- PartGraph already emits the required runtime signals;
+- the PG-OBS catalog is already written;
+- using the hosting provider avoids another alert/log vendor during MVP launch;
+- Vercel Pro supplies alerting/observability capabilities not present on the current Hobby plan.
+
+An external backend remains valid later if the product needs deeper application-performance monitoring or cross-provider incident management.
+
+### GitHub main protection: recommend approve
+
+Apply the already-tested `ops/cutover/phase10_branch_governance_v1.json` policy to `main`.
+
+The policy deliberately keeps required approvals at zero for the current solo-maintainer workflow while requiring the stable `MVP merge gate`.
+
+### Cutover traffic freeze: recommend approve for cutover only
+
+Use the already-selected **Vercel Authentication → All Deployments** barrier during the authorized cutover window. Do not enable it now.
+
+### Final Production authorization: recommend only after GO
+
+Do not issue standing authorization. Approve one exact candidate only after the refreshed Phase 10 preflight reports **GO**.
+
+### NHTSA proof: recommend defer from launch
+
+Do not hold the MVP launch for the remaining stateful NHTSA operator POST proof. The provider/configuration path is complete and the proof can be collected later when a legitimate browser/HTTP operator execution surface is available.
+
 ## Decision 1 — Production database protection
 
 **Audit:** `PG-AUD-REL-001`  

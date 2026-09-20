@@ -29,6 +29,36 @@ class Phase10OwnerDecisionPacketTests(unittest.TestCase):
         packet_ids = {item["id"] for item in self.packet["launch_blockers"]}
         self.assertEqual(blocked, packet_ids)
 
+    def test_recommended_defaults_do_not_equal_owner_approval(self) -> None:
+        recommendations = self.packet["recommended_defaults"]
+        self.assertEqual(
+            recommendations["status"],
+            "recommendations_only_not_approval",
+        )
+        choices = {
+            item["finding_id"]: item
+            for item in recommendations["choices"]
+        }
+        self.assertEqual(
+            choices["PG-AUD-REL-001"]["recommendation"],
+            "neon_scale_native_controls",
+        )
+        self.assertEqual(
+            choices["PG-AUD-REL-001"]["details"]["initial_restore_window_days"],
+            7,
+        )
+        self.assertEqual(
+            choices["PG-AUD-REL-007"]["recommendation"],
+            "vercel_pro_native_alerting",
+        )
+        self.assertEqual(
+            recommendations["nhtsa_launch_disposition"]["recommendation"],
+            "defer_from_mvp_launch",
+        )
+        self.assertTrue(
+            all(item["owner_action_required"] for item in choices.values())
+        )
+
     def test_packet_does_not_authorize_production(self) -> None:
         self.assertEqual(self.packet["status"], "owner_decisions_pending")
         self.assertFalse(self.packet["production_mutation_authorized"])
@@ -54,6 +84,9 @@ class Phase10OwnerDecisionPacketTests(unittest.TestCase):
         self.assertIn("Only authorize after a fresh Phase 10 preflight reports **GO**", self.runbook)
         self.assertIn("exact candidate commit", self.runbook)
         self.assertIn("There are **no decision-free remediation fixes left**", self.runbook)
+        self.assertIn("## Recommended default decisions", self.runbook)
+        self.assertIn("recommend Neon Scale", self.runbook)
+        self.assertIn("recommend Vercel Pro/native alerts", self.runbook)
 
 
 if __name__ == "__main__":

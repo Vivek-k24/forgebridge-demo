@@ -2,7 +2,7 @@
   "schema_version": 1,
   "observed_on": "2026-09-20",
   "status": "owner_decisions_pending",
-  "source_head": "a0c800e8a75bb26825ff15c688b983fcdcc52afe",
+  "source_head": "1cb2c7e446d0416b6d40e82f3d447970b4dd9da0",
   "production_mutation_authorized": false,
   "launch_blockers": [
     {
@@ -128,5 +128,62 @@
     "all CURRENT CONTROL COMPLETE / FUTURE BACKLOG findings"
   ],
   "engineering_summary": "No decision-free remediation fix remains. The codebase is waiting on launch decisions/activations plus the optional deployed NHTSA proof.",
-  "go_rule": "Do not mark Production GO until the Phase 10 preflight itself is refreshed to GO and explicit Production authorization is recorded."
+  "go_rule": "Do not mark Production GO until the Phase 10 preflight itself is refreshed to GO and explicit Production authorization is recorded.",
+  "recommended_defaults": {
+    "status": "recommendations_only_not_approval",
+    "rationale": "Minimize new vendors and operational complexity while meeting the already-defined MVP launch controls.",
+    "choices": [
+      {
+        "finding_id": "PG-AUD-REL-001",
+        "recommendation": "neon_scale_native_controls",
+        "details": {
+          "plan": "Scale",
+          "production_branch_protection": true,
+          "initial_restore_window_days": 7,
+          "reason": "Protected branches are a Scale capability and Scale supports longer point-in-time restore windows. A seven-day window meets the current MVP recovery target without retaining more history than required initially."
+        },
+        "owner_action_required": true
+      },
+      {
+        "finding_id": "PG-AUD-REL-007",
+        "recommendation": "vercel_pro_native_alerting",
+        "details": {
+          "plan": "Pro",
+          "reason": "Use the existing hosting provider's native alerts first rather than introducing a second observability vendor. The existing PG-OBS catalog remains the source of truth for what must alert."
+        },
+        "owner_action_required": true
+      },
+      {
+        "finding_id": "PG-AUD-DEP-003",
+        "recommendation": "approve_prepared_main_protection_policy",
+        "details": {
+          "policy": "ops/cutover/phase10_branch_governance_v1.json",
+          "reason": "The policy and MVP merge gate are already tested and preserve the solo-maintainer workflow."
+        },
+        "owner_action_required": true
+      },
+      {
+        "finding_id": "PG-AUD-DEP-005",
+        "recommendation": "use_selected_vercel_authentication_barrier_at_cutover",
+        "details": {
+          "barrier": "Vercel Authentication → All Deployments",
+          "reason": "Already selected, plan-compatible, and integrated into the tested cutover choreography."
+        },
+        "owner_action_required": true
+      },
+      {
+        "finding_id": "PG-AUD-DEP-001",
+        "recommendation": "authorize_only_after_fresh_go_preflight",
+        "details": {
+          "reason": "Production authorization must bind to one exact green candidate and one refreshed evidence package."
+        },
+        "owner_action_required": true
+      }
+    ],
+    "nhtsa_launch_disposition": {
+      "finding_id": "PG-AUD-ROAD-002",
+      "recommendation": "defer_from_mvp_launch",
+      "reason": "The feature/configuration is ready; only the stateful operator HTTP execution proof is missing, and it is not required to launch the validated MVP safely."
+    }
+  }
 }
