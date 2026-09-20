@@ -68,6 +68,13 @@ class Phase10BranchGovernanceTests(unittest.TestCase):
         )[0]
         self.assertNotIn("paths:", pull_request_section)
 
+    def test_pr_head_does_not_create_duplicate_push_merge_gate(self) -> None:
+        push_section = self.workflow.split("  push:", 1)[1].split(
+            "  workflow_dispatch:", 1
+        )[0]
+        self.assertIn("- main", push_section)
+        self.assertNotIn("partgraph-mvp-consolidation", push_section)
+
     def test_merge_gate_depends_on_every_phase9_job(self) -> None:
         job_match = re.search(
             r"^  mvp-merge-gate:\n(?P<body>.*)\Z",
