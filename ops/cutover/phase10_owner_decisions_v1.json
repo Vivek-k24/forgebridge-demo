@@ -146,10 +146,10 @@
       },
       {
         "finding_id": "PG-AUD-REL-007",
-        "recommendation": "vercel_pro_native_alerting",
+        "recommendation": "vercel_pro_plus_observability_plus_native_alerts",
         "details": {
-          "plan": "Pro",
-          "reason": "Use the existing hosting provider's native alerts first rather than introducing a second observability vendor. The existing PG-OBS catalog remains the source of truth for what must alert."
+          "plan": "Pro + Observability Plus",
+          "reason": "Vercel Alerts are currently available on Pro/Enterprise with Observability Plus. Using the existing hosting provider avoids another alert/log vendor during MVP launch."
         },
         "owner_action_required": true
       },

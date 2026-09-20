@@ -28,16 +28,16 @@ Why this is the default recommendation:
 
 This is preferable to upgrading only far enough to gain longer restore history while still lacking the prepared branch-protection objective.
 
-### Human alert delivery: recommend Vercel Pro/native alerts
+### Human alert delivery: recommend Vercel Pro + Observability Plus/native alerts
 
-Use the existing Vercel hosting stack's eligible native alerting first.
+Use the existing Vercel hosting stack's native Alerts through **Pro + Observability Plus** first.
 
 Why:
 
 - PartGraph already emits the required runtime signals;
 - the PG-OBS catalog is already written;
 - using the hosting provider avoids another alert/log vendor during MVP launch;
-- Vercel Pro supplies alerting/observability capabilities not present on the current Hobby plan.
+- Vercel Alerts are currently available on Pro/Enterprise with Observability Plus; the current Hobby plan does not provide that alert-delivery capability.
 
 An external backend remains valid later if the product needs deeper application-performance monitoring or cross-provider incident management.
 

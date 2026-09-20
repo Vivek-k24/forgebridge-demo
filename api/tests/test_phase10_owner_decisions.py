@@ -49,7 +49,7 @@ class Phase10OwnerDecisionPacketTests(unittest.TestCase):
         )
         self.assertEqual(
             choices["PG-AUD-REL-007"]["recommendation"],
-            "vercel_pro_native_alerting",
+            "vercel_pro_plus_observability_plus_native_alerts",
         )
         self.assertEqual(
             recommendations["nhtsa_launch_disposition"]["recommendation"],
@@ -86,7 +86,7 @@ class Phase10OwnerDecisionPacketTests(unittest.TestCase):
         self.assertIn("There are **no decision-free remediation fixes left**", self.runbook)
         self.assertIn("## Recommended default decisions", self.runbook)
         self.assertIn("recommend Neon Scale", self.runbook)
-        self.assertIn("recommend Vercel Pro/native alerts", self.runbook)
+        self.assertIn("recommend Vercel Pro + Observability Plus/native alerts", self.runbook)
 
 
 if __name__ == "__main__":
