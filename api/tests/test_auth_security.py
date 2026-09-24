@@ -151,6 +151,8 @@ def test_duplicate_username_or_email_returns_stable_conflict_without_race_guessi
         assert duplicate_username.status_code == duplicate_email.status_code == 409
         assert _error(duplicate_username)["code"] == "AUTH_IDENTITY_CONFLICT"
         assert _error(duplicate_email)["code"] == "AUTH_IDENTITY_CONFLICT"
+        assert _error(duplicate_username)["message"] == "Username or email is already in use."
+        assert _error(duplicate_email)["message"] == "Username or email is already in use."
 
 
 def test_password_and_session_secrets_are_not_stored_in_reversible_form() -> None:

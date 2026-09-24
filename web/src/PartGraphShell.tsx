@@ -5,10 +5,12 @@ import { RepairLogWorkspace } from './RepairLog'
 import { RepairMemoryWorkspace } from './RepairMemory'
 import { ResumeRepairWorkspace } from './ResumeRepair'
 import { StartRepairWorkspace } from './StartRepair'
+import { AccountSettingsWorkspace } from './AccountSettings'
+import { SiteFooter } from './SiteFooter'
 import './partgraph-shell.css'
 
-type PageKey = 'garage' | 'start' | 'resume' | 'readiness' | 'guidance' | 'log'
-type NavGroup = 'vehicle' | 'repair'
+type PageKey = 'garage' | 'start' | 'resume' | 'readiness' | 'guidance' | 'log' | 'settings'
+type NavGroup = 'vehicle' | 'repair' | 'account'
 
 type NavItem = {
   key: PageKey
@@ -23,11 +25,13 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'readiness', label: 'Readiness & inventory', group: 'repair' },
   { key: 'guidance', label: 'Guided repair', group: 'repair' },
   { key: 'log', label: 'Repair log', group: 'repair' },
+  { key: 'settings', label: 'Settings', group: 'account' },
 ]
 
 const GROUP_LABELS: Record<NavGroup, string> = {
   vehicle: 'Vehicle',
   repair: 'Repair',
+  account: 'Account',
 }
 
 const PAGE_KEYS = new Set<PageKey>(NAV_ITEMS.map((item) => item.key))
@@ -101,6 +105,8 @@ export default function PartGraphShell() {
     content = <GuidedRepairWorkspace onOpenReadiness={() => navigate('readiness')} onStartRepair={() => navigate('start')} />
   } else if (page === 'log') {
     content = <RepairLogWorkspace />
+  } else if (page === 'settings') {
+    content = <AccountSettingsWorkspace />
   } else {
     content = (
       <ResumeRepairWorkspace
@@ -129,13 +135,17 @@ export default function PartGraphShell() {
         <nav className="partgraph-nav">
           {navigation('vehicle')}
           {navigation('repair')}
+          {navigation('account')}
         </nav>
         <div className="partgraph-runtime-note" aria-label="Production truth policy">
           <span><i aria-hidden="true" /> live workspace</span>
           <p>Verified guidance stays explicit. Private repair memory remains owner-scoped.</p>
         </div>
       </aside>
-      <div className="partgraph-main">{content}</div>
+      <div className="partgraph-main">
+        {content}
+        <SiteFooter />
+      </div>
     </div>
   )
 }
