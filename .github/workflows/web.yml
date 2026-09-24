@@ -102,9 +102,13 @@ jobs:
         working-directory: web
         run: node scripts/validate-garage-mode-semantics.mjs
 
-      - name: Validate Settings radio semantics
+      - name: Validate Settings control semantics
         working-directory: web
         run: node scripts/validate-settings-radio-semantics.mjs
+
+      - name: Validate global product chrome
+        working-directory: web
+        run: node scripts/validate-product-chrome.mjs
 
       - name: Validate SPA navigation accessibility
         working-directory: web

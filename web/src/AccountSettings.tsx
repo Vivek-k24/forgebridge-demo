@@ -136,31 +136,29 @@ export function AccountSettingsWorkspace() {
             </fieldset>
           </section>
 
-          <section className="panel settings-panel settings-span-all">
-            <p className="eyebrow">ACCESSIBILITY</p>
-            <h2>Text size</h2>
-            <p className="muted">Choose a comfortable reading size. This display preference is saved in this browser on this device and does not replace your browser's zoom controls.</p>
-            <fieldset className="settings-radio-fieldset">
-              <legend>Text size</legend>
-              <div className="settings-text-scale-grid">
-                {TEXT_SCALE_OPTIONS.map((option) => (
-                  <label
-                    key={option.value}
-                    className={textScale === option.value ? 'settings-text-scale settings-text-scale--active' : 'settings-text-scale'}
-                  >
-                    <input
-                      type="radio"
-                      name="text-size"
-                      value={option.value}
-                      checked={textScale === option.value}
-                      onChange={() => changeTextScale(option.value)}
-                    />
-                    <span>{option.label}</span>
-                    <small>{option.description}</small>
-                  </label>
-                ))}
+          <section className="panel settings-panel settings-span-all settings-accessibility">
+            <div className="settings-accessibility-row">
+              <div>
+                <p className="eyebrow">ACCESSIBILITY</p>
+                <strong>Text size</strong>
+                <span>Browser-local display preference.</span>
               </div>
-            </fieldset>
+              <label className="settings-select-control">
+                <span>Text size</span>
+                <select
+                  aria-label="Text size"
+                  value={textScale}
+                  onChange={(event) => changeTextScale(Number(event.target.value) as TextScalePercent)}
+                >
+                  {TEXT_SCALE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label} · {option.value}%
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <p className="settings-browser-note">You can also use browser zoom: Ctrl/Cmd + or −.</p>
           </section>
 
           <section className="panel settings-panel settings-span-all">

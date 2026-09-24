@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { ApiFailure, CSRF_HEADERS, apiRequest } from './api'
+import { SiteFooter } from './SiteFooter'
 import './auth.css'
 
 const USERNAME_PATTERN = /^[A-Za-z0-9_]{3,32}$/
+const PASSWORD_MIN_LENGTH = 12
+const PASSWORD_MAX_LENGTH = 128
 const SESSION_FAILURE_CODES = ['AUTH_REQUIRED', 'AUTH_SESSION_EXPIRED', 'AUTH_SESSION_REVOKED']
 
 type User = {
@@ -137,6 +140,17 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       return
     }
 
+    if (
+      mode === 'register'
+      && (password.length < PASSWORD_MIN_LENGTH || password.length > PASSWORD_MAX_LENGTH)
+    ) {
+      setFailure(new ApiFailure(
+        `Password must be ${PASSWORD_MIN_LENGTH}–${PASSWORD_MAX_LENGTH} characters.`,
+        { code: 'CLIENT_PASSWORD_LENGTH_INVALID' },
+      ))
+      return
+    }
+
     setSubmitting(true)
     try {
       const result = mode === 'register'
@@ -228,6 +242,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
           <h1>Restoring your workspace…</h1>
           <p>Private data stays locked until the server confirms your session.</p>
         </section>
+        <SiteFooter variant="dark" />
       </main>
     )
   }
@@ -242,6 +257,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
           <button type="button" onClick={() => void loadSession()}>Try again</button>
           <p className="auth-note">PartGraph does not guess that you are signed out when the network or API is unavailable.</p>
         </section>
+        <SiteFooter variant="dark" />
       </main>
     )
   }
@@ -310,11 +326,18 @@ export default function AuthGate({ children }: { children: ReactNode }) {
                 type="password"
                 value={password}
                 autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                minLength={12}
-                maxLength={128}
+                minLength={PASSWORD_MIN_LENGTH}
+                maxLength={PASSWORD_MAX_LENGTH}
+                aria-describedby={mode === 'register' ? 'password-requirements' : undefined}
                 onChange={(event) => setPassword(event.target.value)}
               />
-              {mode === 'register' && <small>Minimum 12 characters.</small>}
+              {mode === 'register' && (
+                <div id="password-requirements" className="auth-password-rules">
+                  <strong>Password requirements</strong>
+                  <span>12–128 characters. A long, unique passphrase is recommended.</span>
+                  <span>No uppercase, number, or symbol pattern is required.</span>
+                </div>
+              )}
             </label>
 
             {failure && <FailureNotice failure={failure} />}
@@ -329,6 +352,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
             <span>POSTGRESQL RLS</span>
           </div>
         </section>
+        <SiteFooter variant="dark" />
       </main>
     )
   }

@@ -1,7 +1,10 @@
 .auth-shell {
   min-height: 100vh;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 22px;
   padding: 28px 18px;
   background:
     radial-gradient(circle at 18% 12%, rgba(21, 87, 62, 0.14), transparent 34%),
@@ -114,6 +117,24 @@
 .auth-form input:focus {
   border-color: #4a7f69;
   box-shadow: 0 0 0 3px rgba(48, 105, 78, 0.16);
+}
+
+.auth-password-rules {
+  display: grid;
+  gap: 3px;
+  margin-top: 1px;
+  padding: 9px 11px;
+  border-left: 2px solid rgba(104, 201, 151, 0.5);
+  border-radius: 0 8px 8px 0;
+  color: #8fa4aa;
+  background: rgba(25, 51, 43, 0.22);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.auth-password-rules strong {
+  color: #c7d7d2;
+  font-size: 0.76rem;
 }
 
 .auth-submit {
@@ -288,12 +309,14 @@
 
 @media (max-width: 560px) {
   .auth-shell {
-    place-items: stretch;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 0;
     padding: 0;
   }
 
   .auth-card {
-    min-height: 100vh;
+    min-height: auto;
     width: auto;
     border: 0;
     border-radius: 0;

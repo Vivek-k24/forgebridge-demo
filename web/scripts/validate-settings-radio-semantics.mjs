@@ -8,26 +8,33 @@ function requireText(text, label) {
 
 for (const obsolete of ['role="radiogroup"', 'role="radio"', 'aria-checked=']) {
   if (source.includes(obsolete)) {
-    throw new Error(`Settings must use native radio semantics instead of ${obsolete}`)
+    throw new Error(`Settings must use native form semantics instead of ${obsolete}`)
   }
 }
 
-requireText('<fieldset className="settings-radio-fieldset">', 'native radio fieldsets')
+requireText('<fieldset className="settings-radio-fieldset">', 'native measurement radio fieldset')
 requireText('<legend>Measurement units</legend>', 'measurement group label')
-requireText('<legend>Text size</legend>', 'text-size group label')
-requireText('type="radio"', 'native radio inputs')
+requireText('type="radio"', 'native measurement radio inputs')
 requireText('name="measurement-units"', 'shared measurement radio name')
-requireText('name="text-size"', 'shared text-size radio name')
 requireText("checked={units === 'us_customary'}", 'US checked state')
 requireText("checked={units === 'metric'}", 'metric checked state')
-requireText('checked={textScale === option.value}', 'text-size checked state')
 requireText("onChange={() => void changeUnits('us_customary')}", 'US radio change handler')
 requireText("onChange={() => void changeUnits('metric')}", 'metric radio change handler')
-requireText('onChange={() => changeTextScale(option.value)}', 'text-size radio change handler')
 
-const nativeRadioCount = (source.match(/type="radio"/g) ?? []).length
-if (nativeRadioCount < 3) {
-  throw new Error(`Expected native radio inputs for both groups; found ${nativeRadioCount}.`)
+requireText('className="panel settings-panel settings-span-all settings-accessibility"', 'compact accessibility panel')
+requireText('className="settings-accessibility-row"', 'compact accessibility row')
+requireText('aria-label="Text size"', 'text-size select accessible name')
+requireText('value={textScale}', 'text-size selected value')
+requireText('TEXT_SCALE_OPTIONS.map((option)', 'text-size option source')
+requireText('changeTextScale(Number(event.target.value) as TextScalePercent)', 'text-size select change handler')
+
+if (source.includes('name="text-size"') || source.includes('settings-text-scale-grid')) {
+  throw new Error('Text-size accessibility control must remain compact instead of returning to the card/radio grid.')
 }
 
-console.log('Settings native-radio semantic contract passed.')
+const nativeRadioCount = (source.match(/type="radio"/g) ?? []).length
+if (nativeRadioCount !== 2) {
+  throw new Error(`Expected exactly two measurement-unit radio inputs; found ${nativeRadioCount}.`)
+}
+
+console.log('Settings compact-accessibility and native measurement semantics passed.')

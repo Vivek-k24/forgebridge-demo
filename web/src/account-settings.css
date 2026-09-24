@@ -93,8 +93,7 @@
   cursor: pointer;
 }
 
-.settings-choice input[type='radio'],
-.settings-text-scale input[type='radio'] {
+.settings-choice input[type='radio'] {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -103,8 +102,7 @@
   pointer-events: none;
 }
 
-.settings-choice:focus-within,
-.settings-text-scale:focus-within {
+.settings-choice:focus-within {
   outline: 3px solid var(--pg-accent, #68c997);
   outline-offset: 2px;
 }
@@ -125,6 +123,59 @@
   background: rgba(95, 157, 124, 0.08);
 }
 
+.settings-accessibility {
+  padding-block: 0.9rem;
+}
+
+.settings-accessibility-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.settings-accessibility-row > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.settings-accessibility-row > div > strong {
+  font-size: 0.92rem;
+}
+
+.settings-accessibility-row > div > span,
+.settings-select-control > span,
+.settings-browser-note {
+  color: #6f7e83;
+  font-size: 0.75rem;
+}
+
+.settings-select-control {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 0 0 auto;
+}
+
+.settings-select-control select {
+  min-height: 36px;
+  border: 1px solid var(--line, #d8dde6);
+  border-radius: 9px;
+  padding: 0 32px 0 10px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+}
+
+.settings-select-control select:focus {
+  outline: 3px solid var(--pg-accent, #68c997);
+  outline-offset: 2px;
+}
+
+.settings-browser-note {
+  margin: 0.55rem 0 0;
+}
+
 @media (max-width: 720px) {
   .settings-shell {
     width: min(100% - 1rem, 1080px);
@@ -143,5 +194,19 @@
   .settings-identity > div {
     grid-template-columns: 1fr;
     gap: 0.25rem;
+  }
+
+  .settings-accessibility-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .settings-select-control {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .settings-select-control select {
+    min-width: 190px;
   }
 }

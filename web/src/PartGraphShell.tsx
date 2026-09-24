@@ -12,6 +12,7 @@ import { RepairLogWorkspace } from './RepairLog'
 import { RepairMemoryWorkspace } from './RepairMemory'
 import { ResumeRepairWorkspace } from './ResumeRepair'
 import { StartRepairWorkspace } from './StartRepair'
+import { SiteFooter } from './SiteFooter'
 import './partgraph-shell.css'
 
 type PageKey = 'home' | 'settings' | 'admin' | 'garage' | 'inventory' | 'start' | 'resume' | 'readiness' | 'guidance' | 'completion' | 'log'
@@ -322,6 +323,7 @@ export default function PartGraphShell() {
         <div id="partgraph-main-content" ref={mainContentRef} tabIndex={-1} className="partgraph-main-content">
           {content}
         </div>
+        <SiteFooter />
       </div>
     </div>
   )
