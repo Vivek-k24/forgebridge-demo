@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Uuid, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, LargeBinary, String, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..database import Base
@@ -33,6 +33,11 @@ class RepairFastener(Base):
     )
     session_id: Mapped[UUID] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("repair_sessions.id", ondelete="CASCADE"), nullable=False
+    )
+    hardware_definition_id: Mapped[UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("hardware_definitions.id", ondelete="RESTRICT"),
+        index=True,
     )
     kind: Mapped[str] = mapped_column(String(16), nullable=False)
     label: Mapped[str] = mapped_column(String(120), nullable=False)
@@ -99,6 +104,23 @@ class RepairObservation(Base):
 
 class RepairPhotoEvidence(Base):
     __tablename__ = "repair_photo_evidence"
+    __table_args__ = (
+        CheckConstraint(
+            "storage_state IN ('pending_upload', 'ready', 'delete_pending', 'deleted')",
+            name="ck_repair_photo_storage_state",
+        ),
+        CheckConstraint(
+            "storage_attempts >= 0",
+            name="ck_repair_photo_storage_attempts",
+        ),
+        CheckConstraint(
+            "((storage_state = 'pending_upload' AND deleted_at IS NULL AND pending_content IS NOT NULL) "
+            "OR (storage_state = 'ready' AND deleted_at IS NULL AND pending_content IS NULL) "
+            "OR (storage_state IN ('delete_pending', 'deleted') "
+            "AND deleted_at IS NOT NULL AND pending_content IS NULL))",
+            name="ck_repair_photo_storage_payload_state",
+        ),
+    )
 
     id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(
@@ -119,6 +141,15 @@ class RepairPhotoEvidence(Base):
     media_type: Mapped[str] = mapped_column(String(32), nullable=False)
     byte_size: Mapped[int] = mapped_column(Integer, nullable=False)
     sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    storage_state: Mapped[str] = mapped_column(String(16), nullable=False)
+    pending_content: Mapped[bytes | None] = mapped_column(LargeBinary())
+    storage_attempts: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    storage_error: Mapped[str | None] = mapped_column(String(128))
+    storage_updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()

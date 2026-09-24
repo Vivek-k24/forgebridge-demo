@@ -2,13 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { activeRepairSessionId, preferredRepairSessionId, setActiveRepairSessionId } from './active-repair'
 import { AssistanceExplanation } from './AssistanceExplanation'
 import { ApiFailure, apiRequest, CSRF_HEADERS, formatApiFailure } from './api'
-import { newIdempotencyKey, partGraphDeviceId } from './device'
+import { partGraphDeviceId } from './device'
+import { recoverableRepairMutation } from './repair-client'
 import './guided-repair.css'
 
 type SessionStatus = 'active' | 'paused' | 'archived'
 type LeaseStatus = 'available' | 'owned' | 'held_by_other'
 type ProgressState = 'pending' | 'completed' | 'skipped' | 'blocked'
-type GuidanceStatus = 'action_available' | 'action_blocked' | 'inventory_blocked' | 'procedure_complete'
+type GuidanceStatus = 'action_available' | 'action_blocked' | 'inventory_blocked' | 'unsupported_boundary' | 'procedure_complete'
 
 type RepairSession = {
   id: string
@@ -57,6 +58,8 @@ type GuidanceAction = {
   dependency_action_keys: string[]
   inventory_blockers: InventoryBlocker[]
   supporting_claim_ids: string[]
+  completion_allowed: boolean
+  boundary_code: string | null
 }
 
 type GuidanceSummary = {
@@ -107,16 +110,30 @@ const EXPECTED_BOUNDARIES: Record<string, Omit<Boundary, 'code' | 'detail'>> = {
   },
 }
 
-function requestHeaders(deviceId: string, idempotencyKey?: string): Record<string, string> {
+function requestHeaders(deviceId: string): Record<string, string> {
   return {
     ...CSRF_HEADERS,
     'X-PartGraph-Device-ID': deviceId,
-    ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
   }
 }
 
 function human(value: string): string {
   return value.replaceAll('_', ' ').replaceAll('-', ' ')
+}
+
+function guidanceStatusLabel(status: GuidanceStatus): string {
+  if (status === 'action_available') return 'Ready for the next step'
+  if (status === 'action_blocked') return 'Stopped at the current step'
+  if (status === 'inventory_blocked') return 'An item is needed first'
+  if (status === 'unsupported_boundary') return 'Outside PartGraph support'
+  return 'Supported steps complete'
+}
+
+function progressStateLabel(state: ProgressState): string {
+  if (state === 'completed') return 'Complete'
+  if (state === 'skipped') return 'Skipped'
+  if (state === 'blocked') return 'Blocked'
+  return 'Not started'
 }
 
 function quantityLabel(blocker: InventoryBlocker): string {
@@ -252,7 +269,7 @@ export function GuidedRepairWorkspace({
 
   async function updateProgress(progressState: 'completed' | 'skipped' | 'blocked') {
     const action = guidance?.current_action
-    if (!selectedId || !action) return
+    if (!selectedId || !action || !action.completion_allowed) return
     try {
       setBusy(true)
       setError(null)
@@ -260,23 +277,21 @@ export function GuidedRepairWorkspace({
       const payload = progressState === 'blocked'
         ? { progress_state: progressState, blocker_code: 'owner_reported_problem' }
         : { progress_state: progressState }
-      await apiRequest<Guidance>(
+      await recoverableRepairMutation<Guidance>(
+        selectedId,
         `/api/v1/repair-sessions/${selectedId}/guidance/actions/${action.action_id}`,
         {
           method: 'PUT',
-          headers: {
-            ...requestHeaders(deviceId, newIdempotencyKey(`guided_${progressState}`)),
-            'Content-Type': 'application/json',
-          },
           body: JSON.stringify(payload),
         },
+        { json: true, prefix: `guided_${progressState}` },
       )
       setMessage(
         progressState === 'completed'
-          ? 'Action completed. PartGraph recalculated the next verified action.'
+          ? 'Step complete. PartGraph recalculated what comes next.'
           : progressState === 'skipped'
-            ? 'Verified skippable action recorded as skipped.'
-            : 'Problem recorded. PartGraph will not advance past this action.',
+            ? 'Optional step recorded as skipped.'
+            : 'Problem recorded. PartGraph will not move past this step.',
       )
       await loadSession(selectedId)
     } catch (failure) {
@@ -314,15 +329,20 @@ export function GuidedRepairWorkspace({
     return <section className="guided-workspace panel"><p>Loading verified repair guidance…</p></section>
   }
 
+  const resolvedSteps = guidance ? guidance.summary.completed + guidance.summary.skipped : 0
+  const progressPercent = guidance && guidance.summary.total > 0
+    ? Math.round((resolvedSteps / guidance.summary.total) * 100)
+    : 0
+
   return (
     <section className="guided-workspace panel" aria-label="Verified guided repair">
       <header className="guided-heading">
         <div>
-          <p className="eyebrow">PARTGRAPH · VERIFIED GUIDANCE</p>
-          <h1>Do the next verified action, not a guessed one.</h1>
+          <p className="eyebrow">PARTGRAPH · GUIDED REPAIR</p>
+          <h1>Focus on what you need to do next.</h1>
           <p className="lede">
-            PartGraph combines the exact repair definition, verified procedure evidence, dependencies,
-            readiness, and your saved progress before it shows an action.
+            PartGraph checks the repair plan, what must happen first, what you already have, and what
+            you have completed before showing the next supported step.
           </p>
         </div>
         {sessions.length > 0 && (
@@ -346,19 +366,18 @@ export function GuidedRepairWorkspace({
 
       {sessions.length === 0 ? (
         <div className="guided-boundary guided-boundary--neutral">
-          <strong>No active repair session.</strong>
-          <p>Start a repair first. PartGraph will not create procedure context without one.</p>
+          <strong>No repair session is open.</strong>
+          <p>Start a repair first so PartGraph knows which vehicle and repair state it is working with.</p>
           <button type="button" onClick={onStartRepair}>Start repair</button>
         </div>
       ) : boundary ? (
         <div className={`guided-boundary guided-boundary--${boundary.severity}`}>
-          <span>{human(boundary.code)}</span>
           <strong>{boundary.title}</strong>
           <p>{boundary.detail}</p>
           {boundary.code === 'REPAIR_PROCEDURE_NOT_AVAILABLE' && (
             <div className="guided-controls">
               <button type="button" onClick={onOpenReadiness}>Open readiness</button>
-              <small>New sessions offer verified repair binding during Start Repair. Existing unbound sessions can still be connected in Readiness.</small>
+              <small>This session can still track repair state even when verified step-by-step guidance is not available.</small>
             </div>
           )}
         </div>
@@ -366,19 +385,21 @@ export function GuidedRepairWorkspace({
         <>
           <div className="guided-meta">
             <div>
-              <span>Verified repair</span>
+              <span>Repair</span>
               <strong>{guidance.repair_title}</strong>
-              <small>v{guidance.version} · {human(guidance.definition_status)}</small>
+              <small>Verified repair data · version {guidance.version}</small>
             </div>
             <div>
               <span>Progress</span>
-              <strong>{guidance.summary.completed + guidance.summary.skipped} / {guidance.summary.total}</strong>
-              <small>{guidance.summary.blocked > 0 ? `${guidance.summary.blocked} blocked` : 'dependency-aware'}</small>
+              <strong>{resolvedSteps} of {guidance.summary.total} steps resolved</strong>
+              <div className="guided-progress-track" aria-label={`${progressPercent}% of supported steps resolved`}>
+                <i style={{ width: `${progressPercent}%` }} />
+              </div>
             </div>
             <div>
-              <span>Guidance state</span>
-              <strong>{human(guidance.status)}</strong>
-              <small>{human(guidance.capability_policy_key)}</small>
+              <span>Current status</span>
+              <strong>{guidanceStatusLabel(guidance.status)}</strong>
+              <small>{guidance.summary.blocked > 0 ? `${guidance.summary.blocked} step blocked` : 'PartGraph checks before advancing'}</small>
             </div>
           </div>
 
@@ -386,8 +407,8 @@ export function GuidedRepairWorkspace({
             <div className="guided-complete">
               <span aria-hidden="true">✓</span>
               <div>
-                <strong>Verified procedure complete.</strong>
-                <p>All canonical actions in this version-pinned repair plan are completed or explicitly skippable-and-skipped.</p>
+                <strong>PartGraph-supported steps are complete.</strong>
+                <p>The verified steps represented in this repair plan are resolved. PartGraph does not use this state to hide a known unsupported required step.</p>
               </div>
             </div>
           ) : guidance.current_action ? (
@@ -417,9 +438,9 @@ export function GuidedRepairWorkspace({
               </button>
             )}
             <button type="button" className="secondary" disabled={busy} onClick={() => void togglePlan()}>
-              {showPlan ? 'Hide full plan' : 'View full verified plan'}
+              {showPlan ? 'Hide repair plan' : 'View repair plan'}
             </button>
-            <span>{lease?.can_edit ? 'Editing on this device.' : `View only · ${human(lease?.status ?? 'available')}`}</span>
+            <span>{lease?.can_edit ? 'Progress can be recorded on this device.' : 'View only until editing control is available.'}</span>
           </div>
 
           {showPlan && plan && <VerifiedPlan plan={plan} />}
@@ -450,27 +471,35 @@ function CurrentAction({
 }) {
   const inventoryBlocked = guidanceStatus === 'inventory_blocked'
   const actionBlocked = guidanceStatus === 'action_blocked'
+  const unsupportedBoundary = guidanceStatus === 'unsupported_boundary' || !action.completion_allowed
 
   return (
     <article className={`guided-action guided-action--${guidanceStatus}`}>
       <div className="guided-action-head">
         <div>
-          <span>Current verified action · step {action.position + 1}</span>
+          <span>{unsupportedBoundary ? 'Required work outside PartGraph support' : `Step ${action.position + 1} · what to do now`}</span>
           <h2>{action.title}</h2>
         </div>
-        <b>{human(action.progress_state)}</b>
+        <b>{unsupportedBoundary ? 'Outside support' : progressStateLabel(action.progress_state)}</b>
       </div>
 
       <p className="guided-instruction">{action.instruction}</p>
 
       {action.warning_text && <div className="guided-warning"><strong>Warning</strong><p>{action.warning_text}</p></div>}
-      {action.workspace_note && <div className="guided-workspace-note"><strong>Before this action</strong><p>{action.workspace_note}</p></div>}
-      {action.dependency_action_keys.length > 0 && <p className="guided-dependencies">Prerequisites complete: {action.dependency_action_keys.map(human).join(', ')}</p>}
+      {action.workspace_note && <div className="guided-workspace-note"><strong>Before this step</strong><p>{action.workspace_note}</p></div>}
+      {action.dependency_action_keys.length > 0 && <p className="guided-dependencies">The required earlier step{action.dependency_action_keys.length === 1 ? '' : 's'} for this action are already resolved.</p>}
 
-      {action.inventory_blockers.length > 0 && (
+      {unsupportedBoundary && (
+        <div className="guided-boundary guided-boundary--professional">
+          <strong>PartGraph stops step-by-step guidance here.</strong>
+          <p>This required work remains part of the repair, but PartGraph does not support performing or marking it complete inside the guided workflow.</p>
+        </div>
+      )}
+
+      {!unsupportedBoundary && action.inventory_blockers.length > 0 && (
         <div className="guided-blockers">
           <div>
-            <strong>Readiness must be resolved before this action can complete.</strong>
+            <strong>You need to resolve these items before completing this step.</strong>
             <button type="button" className="secondary" onClick={onOpenReadiness}>Open readiness</button>
           </div>
           <ul>
@@ -484,22 +513,24 @@ function CurrentAction({
         </div>
       )}
 
-      {actionBlocked && (
+      {!unsupportedBoundary && actionBlocked && (
         <div className="guided-problem">
           <strong>Work stopped here.</strong>
-          <p>{action.notes ?? human(action.blocker_code ?? 'owner reported problem')}</p>
-          <small>PartGraph will not advance until this current action is resolved.</small>
+          <p>{action.notes ?? 'A problem was recorded at this step.'}</p>
+          <small>PartGraph will not move to the next step until this one is resolved.</small>
         </div>
       )}
 
-      <div className="guided-action-buttons">
-        <button type="button" disabled={busy || !canEdit || inventoryBlocked} onClick={onComplete}>
-          {actionBlocked ? 'Problem resolved · complete action' : 'Complete action'}
-        </button>
-        {!actionBlocked && <button type="button" className="secondary" disabled={busy || !canEdit} onClick={onBlocked}>Problem / blocked</button>}
-        {action.skippable && !actionBlocked && <button type="button" className="secondary" disabled={busy || !canEdit} onClick={onSkip}>Skip verified optional action</button>}
-      </div>
-      {!canEdit && <small className="guided-edit-note">Take editing control to record physical progress.</small>}
+      {!unsupportedBoundary && (
+        <div className="guided-action-buttons">
+          <button type="button" disabled={busy || !canEdit || inventoryBlocked} onClick={onComplete}>
+            {actionBlocked ? 'Problem resolved · complete step' : 'Complete step'}
+          </button>
+          {!actionBlocked && <button type="button" className="secondary" disabled={busy || !canEdit} onClick={onBlocked}>I hit a problem</button>}
+          {action.skippable && !actionBlocked && <button type="button" className="secondary" disabled={busy || !canEdit} onClick={onSkip}>Skip optional step</button>}
+        </div>
+      )}
+      {!unsupportedBoundary && !canEdit && <small className="guided-edit-note">Take editing control to record progress.</small>}
     </article>
   )
 }
@@ -508,8 +539,8 @@ function VerifiedPlan({ plan }: { plan: GuidancePlan }) {
   return (
     <section className="guided-plan">
       <div className="guided-plan-head">
-        <div><p className="eyebrow">FULL VERIFIED PLAN</p><h3>{plan.repair_title}</h3></div>
-        <span>{plan.actions.length} actions</span>
+        <div><p className="eyebrow">REPAIR PLAN</p><h3>{plan.repair_title}</h3></div>
+        <span>{plan.actions.length} steps</span>
       </div>
       <ol>
         {plan.actions.map((action) => (
@@ -518,9 +549,9 @@ function VerifiedPlan({ plan }: { plan: GuidancePlan }) {
             <div>
               <strong>{action.title}</strong>
               <small>
-                {human(action.progress_state)}
-                {action.inventory_blockers.length > 0 ? ` · ${action.inventory_blockers.length} readiness blocker(s)` : ''}
-                {action.dependency_action_keys.length > 0 ? ` · after ${action.dependency_action_keys.map(human).join(', ')}` : ''}
+                {action.completion_allowed ? progressStateLabel(action.progress_state) : 'Outside PartGraph support'}
+                {action.inventory_blockers.length > 0 ? ` · ${action.inventory_blockers.length} item blocker${action.inventory_blockers.length === 1 ? '' : 's'}` : ''}
+                {action.dependency_action_keys.length > 0 ? ` · ${action.dependency_action_keys.length} earlier required step${action.dependency_action_keys.length === 1 ? '' : 's'}` : ''}
               </small>
             </div>
           </li>

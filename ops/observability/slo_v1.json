@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "service": "partgraph-api",
+  "owner": "PartGraph operator",
+  "backend": {
+    "request_metrics": "vercel_native_observability",
+    "runtime_errors": "vercel_native_runtime_errors",
+    "application_events": "partgraph.observability.v1 structured runtime logs",
+    "current_plan": "hobby",
+    "custom_alert_delivery": "blocked_on_current_vercel_plan",
+    "external_otlp_or_error_backend": "not_configured",
+    "capability_contract": "ops/observability/alert_delivery_capability_v1.json"
+  },
+  "slos": [
+    {
+      "id": "api_availability",
+      "objective": ">=99.5% non-5xx API requests over a rolling 30-day window",
+      "signal": "Vercel incoming request status codes for /api/**",
+      "alert": "PG-OBS-API-AVAILABILITY"
+    },
+    {
+      "id": "api_p95_latency",
+      "objective": "p95 server duration <=2500 ms over a rolling 7-day window",
+      "signal": "Vercel request duration plus http.server.request events",
+      "alert": "PG-OBS-API-LATENCY"
+    },
+    {
+      "id": "mutation_server_error_rate",
+      "objective": "<=1.0% 5xx responses for POST/PUT/PATCH/DELETE API requests over a rolling 30-day window",
+      "signal": "http.server.request events where partgraph.request.is_mutation=true",
+      "alert": "PG-OBS-MUTATION-ERROR-RATE"
+    },
+    {
+      "id": "database_readiness",
+      "objective": ">=99.9% successful database readiness checks over a rolling 30-day window",
+      "signal": "database.readiness events and /api/v1/health/ready status",
+      "alert": "PG-OBS-DATABASE-READINESS"
+    },
+    {
+      "id": "provider_ingestion",
+      "objective": "no uninvestigated operator_sync provider ingestion failure",
+      "signal": "provider.ingestion events where outcome=failure",
+      "alert": "PG-OBS-PROVIDER-INGESTION"
+    },
+    {
+      "id": "media_reconciliation",
+      "objective": ">=99% of durable photo-storage work finalizes without a failed reconciliation attempt; no failed batch remains uninvestigated",
+      "signal": "media.reconciliation.item and media.reconciliation.batch events",
+      "alert": "PG-OBS-MEDIA-RECONCILIATION"
+    }
+  ],
+  "alerts": [
+    {
+      "id": "PG-OBS-API-AVAILABILITY",
+      "severity": "critical",
+      "owner": "PartGraph operator",
+      "condition": ">2% 5xx responses in 15 minutes with at least 20 API requests, or two consecutive readiness failures",
+      "runbook_anchor": "pg-obs-api-availability",
+      "activation": "defined_not_active_on_current_hobby_plan"
+    },
+    {
+      "id": "PG-OBS-API-LATENCY",
+      "severity": "warning",
+      "owner": "PartGraph operator",
+      "condition": "p95 API server duration >3000 ms for 15 minutes with at least 20 requests",
+      "runbook_anchor": "pg-obs-api-latency",
+      "activation": "defined_not_active_on_current_hobby_plan"
+    },
+    {
+      "id": "PG-OBS-MUTATION-ERROR-RATE",
+      "severity": "critical",
+      "owner": "PartGraph operator",
+      "condition": ">2% mutation 5xx responses in 15 minutes with at least 10 mutations",
+      "runbook_anchor": "pg-obs-mutation-error-rate",
+      "activation": "defined_not_active_on_current_hobby_plan"
+    },
+    {
+      "id": "PG-OBS-DATABASE-READINESS",
+      "severity": "critical",
+      "owner": "PartGraph operator",
+      "condition": "two consecutive /api/v1/health/ready failures or any database.readiness outcome=failure event",
+      "runbook_anchor": "pg-obs-database-readiness",
+      "activation": "defined_not_active_on_current_hobby_plan"
+    },
+    {
+      "id": "PG-OBS-PROVIDER-INGESTION",
+      "severity": "warning",
+      "owner": "PartGraph operator",
+      "condition": "any provider.ingestion outcome=failure event",
+      "runbook_anchor": "pg-obs-provider-ingestion",
+      "activation": "defined_not_active_on_current_hobby_plan"
+    },
+    {
+      "id": "PG-OBS-MEDIA-RECONCILIATION",
+      "severity": "critical",
+      "owner": "PartGraph operator",
+      "condition": "any media.reconciliation.batch failed_count>0, or repeated media.reconciliation.item outcome=failure for the same durable item",
+      "runbook_anchor": "pg-obs-media-reconciliation",
+      "activation": "defined_not_active_on_current_hobby_plan"
+    },
+    {
+      "id": "PG-OBS-BACKUP-PROTECTION",
+      "severity": "critical",
+      "owner": "PartGraph operator",
+      "condition": "production branch protection, automatic daily backups, or required retention is absent",
+      "runbook_anchor": "pg-obs-backup-protection",
+      "activation": "manual_cutover_gate_until_pg-aud-rel-001_plan_blocker_is_resolved"
+    }
+  ]
+}

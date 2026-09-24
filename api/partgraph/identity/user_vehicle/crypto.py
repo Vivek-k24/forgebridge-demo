@@ -9,7 +9,7 @@ from uuid import UUID
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-from ..config import settings
+from ...config import settings
 
 NONCE_BYTES = 12
 KEY_BYTES = 32

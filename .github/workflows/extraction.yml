@@ -1,0 +1,193 @@
+name: Extraction Pipeline CI
+
+on:
+  pull_request:
+    paths:
+      - 'api/partgraph/config.py'
+      - 'api/partgraph/knowledge/extraction.py'
+      - 'api/partgraph/knowledge/staging.py'
+      - 'api/partgraph/knowledge/nhtsa.py'
+      - 'api/partgraph/knowledge/reference_parts.py'
+      - 'api/partgraph/knowledge/provider_network.py'
+      - 'api/partgraph/identity/vehicle/model_catalog.py'
+      - 'api/data/reference/**'
+      - 'api/data/reference_candidates/**'
+      - 'api/partgraph/operator/**'
+      - 'api/partgraph/identity/auth/roles.py'
+      - 'api/tests/test_extraction_pipeline.py'
+      - 'api/tests/test_nhtsa_collector.py'
+      - 'api/tests/test_provider_timeout_hierarchy.py'
+      - 'api/tests/test_provider_ingestion_scale_gate.py'
+      - 'api/tests/test_operator_nhtsa_ingestion.py'
+      - 'api/tests/test_reference_parts_dataset.py'
+      - 'api/tests/test_reference_repair_candidates.py'
+      - 'api/tests/test_operator_reference_parts_staging.py'
+      - 'api/tests/test_provider_source_binding.py'
+      - 'api/tests/test_operator_source_binding_controls.py'
+      - 'api/tests/test_provider_network_policy.py'
+      - 'api/vercel.json'
+      - 'docs/PROVIDER_INGESTION_SCALE_GATE.md'
+      - 'web/src/api.ts'
+      - 'api/migrations/**'
+      - 'api/pyproject.toml'
+      - '.github/workflows/extraction.yml'
+  push:
+    branches:
+      - main
+      - partgraph-mvp-consolidation
+    paths:
+      - 'api/partgraph/config.py'
+      - 'api/partgraph/knowledge/extraction.py'
+      - 'api/partgraph/knowledge/staging.py'
+      - 'api/partgraph/knowledge/nhtsa.py'
+      - 'api/partgraph/knowledge/reference_parts.py'
+      - 'api/partgraph/knowledge/provider_network.py'
+      - 'api/partgraph/identity/vehicle/model_catalog.py'
+      - 'api/data/reference/**'
+      - 'api/data/reference_candidates/**'
+      - 'api/partgraph/operator/**'
+      - 'api/partgraph/identity/auth/roles.py'
+      - 'api/tests/test_extraction_pipeline.py'
+      - 'api/tests/test_nhtsa_collector.py'
+      - 'api/tests/test_provider_timeout_hierarchy.py'
+      - 'api/tests/test_provider_ingestion_scale_gate.py'
+      - 'api/tests/test_operator_nhtsa_ingestion.py'
+      - 'api/tests/test_reference_parts_dataset.py'
+      - 'api/tests/test_reference_repair_candidates.py'
+      - 'api/tests/test_operator_reference_parts_staging.py'
+      - 'api/tests/test_provider_source_binding.py'
+      - 'api/tests/test_operator_source_binding_controls.py'
+      - 'api/tests/test_provider_network_policy.py'
+      - 'api/vercel.json'
+      - 'docs/PROVIDER_INGESTION_SCALE_GATE.md'
+      - 'web/src/api.ts'
+      - 'api/migrations/**'
+      - 'api/pyproject.toml'
+      - '.github/workflows/extraction.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: extraction-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  extraction:
+    name: Extraction + staging safety gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:18.6-alpine
+        env:
+          POSTGRES_DB: partgraph
+          POSTGRES_USER: partgraph
+          POSTGRES_PASSWORD: partgraph
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U partgraph -d partgraph"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.14'
+
+      - name: Install API dependencies
+        run: python -m pip install -e './api[dev]'
+
+      - name: Lint extraction and operator source boundary
+        run: >-
+          ruff check
+          api/partgraph/config.py
+          api/partgraph/knowledge/extraction.py
+          api/partgraph/knowledge/staging.py
+          api/partgraph/knowledge/nhtsa.py
+          api/partgraph/knowledge/reference_parts.py
+          api/partgraph/knowledge/provider_network.py
+          api/partgraph/identity/vehicle/model_catalog.py
+          api/partgraph/operator
+          api/partgraph/identity/auth/roles.py
+          api/migrations/versions/0051_provider_source_binding.py
+          api/migrations/versions/0052_operator_source_binding_controls.py
+          api/migrations/versions/0056_reference_parts_audit.py
+          api/migrations/versions/0057_nhtsa_ingest_audit.py
+          api/tests/test_extraction_pipeline.py
+          api/tests/test_nhtsa_collector.py
+          api/tests/test_provider_timeout_hierarchy.py
+          api/tests/test_provider_ingestion_scale_gate.py
+          api/tests/test_operator_nhtsa_ingestion.py
+          api/tests/test_reference_parts_dataset.py
+          api/tests/test_reference_repair_candidates.py
+          api/tests/test_operator_reference_parts_staging.py
+          api/tests/test_provider_source_binding.py
+          api/tests/test_operator_source_binding_controls.py
+          api/tests/test_provider_network_policy.py
+
+      - name: Apply database migrations
+        env:
+          PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
+        run: alembic -c api/alembic.ini upgrade head
+
+      - name: Test generic extraction and candidate staging
+        env:
+          PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
+        run: python -m unittest discover -s api/tests -p 'test_extraction_pipeline.py'
+
+      - name: Test trusted provider source binding
+        env:
+          PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
+        run: python -m unittest discover -s api/tests -p 'test_provider_source_binding.py'
+
+      - name: Test operator source and binding controls
+        env:
+          PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
+        run: python -m unittest discover -s api/tests -p 'test_operator_source_binding_controls.py'
+
+      - name: Test provider outbound network policy
+        run: python -m unittest discover -s api/tests -p 'test_provider_network_policy.py'
+
+      - name: Test provider API browser timeout hierarchy
+        run: python -m unittest discover -s api/tests -p 'test_provider_timeout_hierarchy.py'
+
+      - name: Test provider ingestion scale gate
+        run: python -m unittest discover -s api/tests -p 'test_provider_ingestion_scale_gate.py'
+
+      - name: Test NHTSA recall collector boundary
+        env:
+          PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
+        run: python -m unittest discover -s api/tests -p 'test_nhtsa_collector.py'
+
+      - name: Test operator-triggered NHTSA ingestion
+        env:
+          PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
+        run: >-
+          python -m unittest discover -s api/tests
+          -p 'test_operator_nhtsa_ingestion.py'
+
+      - name: Test reviewed reference-parts adapter boundary
+        run: >-
+          python -m unittest discover -s api/tests
+          -p 'test_reference_parts_dataset.py'
+
+      - name: Test pending reference-repair candidate boundary
+        run: >-
+          python -m unittest discover -s api/tests
+          -p 'test_reference_repair_candidates.py'
+
+      - name: Test operator-triggered reference-parts staging
+        env:
+          PARTGRAPH_DATABASE_URL: postgresql+psycopg://partgraph:partgraph@127.0.0.1:5432/partgraph
+        run: >-
+          python -m unittest discover -s api/tests
+          -p 'test_operator_reference_parts_staging.py'

@@ -1,8 +1,12 @@
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '')
 const HARD_TIMEOUT_MS = 10_000
 const EXPECTED_API_VERSION = 'v1'
+const SERVER_DEADLINE_CODE = 'REQUEST_DEADLINE_EXCEEDED'
+const SESSION_FAILURE_CODES = new Set(['AUTH_REQUIRED', 'AUTH_SESSION_EXPIRED', 'AUTH_SESSION_REVOKED'])
 
 export const CSRF_HEADERS = { 'X-PartGraph-CSRF': '1' }
+export const AUTH_STATE_CLEARED_EVENT = 'partgraph:auth-state-cleared'
+export const REPAIR_API_MUTATION_EVENT = 'partgraph:repair-api-mutation'
 
 type ErrorEnvelope = {
   error?: {
@@ -32,8 +36,34 @@ export class ApiFailure extends Error {
   }
 }
 
+export type ApiAvailabilityState = 'ready' | 'degraded' | 'unavailable'
+
+export type ApiAvailability = {
+  state: ApiAvailabilityState
+  code: string | null
+  message: string
+  checkedAt: string
+}
+
+type ReadyHealth = {
+  service: string
+  status: string
+  database: string
+  database_ms: number
+}
+
 function clientRequestId(): string {
   return crypto.randomUUID().replaceAll('-', '')
+}
+
+function signalAuthStateCleared(reason: string): void {
+  window.dispatchEvent(new CustomEvent(AUTH_STATE_CLEARED_EVENT, { detail: { reason } }))
+}
+
+function signalRepairMutation(path: string, method: string): void {
+  if (path.startsWith('/api/v1/repair-sessions/') && method !== 'GET') {
+    window.dispatchEvent(new CustomEvent(REPAIR_API_MUTATION_EVENT, { detail: { path, method } }))
+  }
 }
 
 async function sleep(milliseconds: number) {
@@ -52,7 +82,7 @@ export async function apiRequest<T>(
   options: { retryIdempotent?: boolean } = {},
 ): Promise<T> {
   const method = (init.method ?? 'GET').toUpperCase()
-  const retryIdempotent = options.retryIdempotent ?? method === 'GET'
+  const retryIdempotent = options.retryIdempotent ?? (method === 'GET' || method === 'PUT')
   const attempts = retryIdempotent ? 2 : 1
   let lastFailure: ApiFailure | null = null
 
@@ -100,14 +130,19 @@ export async function apiRequest<T>(
             status: response.status,
           })
         }
+        const serverCode = envelope.error?.code ?? `HTTP_${response.status}`
+        if (SESSION_FAILURE_CODES.has(serverCode)) signalAuthStateCleared(serverCode)
+        const clientCode = serverCode === SERVER_DEADLINE_CODE ? 'CLIENT_REQUEST_TIMEOUT' : serverCode
         throw new ApiFailure(envelope.error?.message ?? `API returned HTTP ${response.status}.`, {
-          code: envelope.error?.code ?? `HTTP_${response.status}`,
+          code: clientCode,
           requestId: envelope.error?.request_id ?? responseRequestId,
           retryable: envelope.error?.retryable ?? response.status >= 500,
           status: response.status,
         })
       }
 
+      if (path === '/api/v1/auth/logout' && method === 'POST') signalAuthStateCleared('AUTH_LOGOUT_CONFIRMED')
+      signalRepairMutation(path, method)
       if (response.status === 204) return undefined as T
       return (await response.json()) as T
     } catch (error) {
@@ -135,4 +170,59 @@ export async function apiRequest<T>(
   }
 
   throw lastFailure ?? new ApiFailure('Unknown client failure.', { code: 'CLIENT_UNKNOWN_FAILURE' })
+}
+
+export async function probeApiAvailability(): Promise<ApiAvailability> {
+  const checkedAt = new Date().toISOString()
+  try {
+    const health = await apiRequest<ReadyHealth>('/api/v1/health/ready')
+    if (health.status === 'ready' && health.database === 'ready') {
+      return { state: 'ready', code: null, message: 'PartGraph is ready.', checkedAt }
+    }
+    return {
+      state: 'degraded',
+      code: 'CLIENT_READINESS_DEGRADED',
+      message: 'PartGraph is online, but one or more required services are not ready.',
+      checkedAt,
+    }
+  } catch (error) {
+    if (!(error instanceof ApiFailure)) {
+      return {
+        state: 'unavailable',
+        code: 'CLIENT_UNKNOWN_FAILURE',
+        message: 'PartGraph cannot confirm service availability right now.',
+        checkedAt,
+      }
+    }
+    if (error.code === 'CLIENT_NETWORK_FAILURE') {
+      return {
+        state: 'unavailable',
+        code: error.code,
+        message: 'PartGraph cannot reach the API. Keep this screen open while connectivity recovers.',
+        checkedAt,
+      }
+    }
+    if (error.code === 'CLIENT_REQUEST_TIMEOUT') {
+      return {
+        state: 'degraded',
+        code: error.code,
+        message: 'PartGraph is responding too slowly. Server-backed actions may be temporarily unavailable.',
+        checkedAt,
+      }
+    }
+    if (error.code === 'DATABASE_UNAVAILABLE') {
+      return {
+        state: 'degraded',
+        code: error.code,
+        message: 'PartGraph is online, but saved vehicle and repair data are temporarily unavailable.',
+        checkedAt,
+      }
+    }
+    return {
+      state: 'degraded',
+      code: error.code,
+      message: 'PartGraph is temporarily degraded. Existing local screen state is preserved.',
+      checkedAt,
+    }
+  }
 }

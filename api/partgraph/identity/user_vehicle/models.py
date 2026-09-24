@@ -5,7 +5,7 @@ from sqlalchemy import DateTime, ForeignKey, LargeBinary, SmallInteger, String, 
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from ..database import Base
+from ...database import Base
 
 
 class UserVehicle(Base):

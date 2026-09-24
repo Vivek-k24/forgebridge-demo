@@ -1,0 +1,372 @@
+from datetime import datetime
+from typing import Literal
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr, field_validator, model_validator
+
+from ..identity.auth.schemas import UserRole
+from ..knowledge.provider_network import normalize_provider_base_url
+
+ProviderKind = Literal["internal_data", "vehicle_data", "ai", "manufacturer"]
+ProviderCredentialStorage = Literal["encrypted_database", "external_reference"]
+SourceClass = Literal[
+    "government",
+    "oem_service",
+    "licensed_oem_derived",
+    "oem_parts",
+    "industry_standard",
+    "retailer",
+    "community",
+]
+SourceLicenseStatus = Literal["unreviewed", "approved", "prohibited"]
+OperatorAuditAction = Literal[
+    "provider_created",
+    "provider_updated",
+    "provider_enabled",
+    "provider_disabled",
+    "provider_credential_saved",
+    "provider_credential_removed",
+    "source_created",
+    "source_updated",
+    "provider_source_binding_created",
+    "provider_source_binding_enabled",
+    "provider_source_binding_disabled",
+    "reference_parts_dataset_staged",
+    "nhtsa_recall_query_staged",
+    "preview_operator_bootstrap",
+    "user_role_changed",
+]
+PROVIDER_KEY_PATTERN = r"^[a-z0-9][a-z0-9_-]{1,95}$"
+SOURCE_KEY_PATTERN = r"^[a-z0-9][a-z0-9_.-]{0,127}$"
+DATASET_KEY_PATTERN = r"^[a-z0-9][a-z0-9_.-]{0,159}$"
+
+
+def _clean_optional(value: str | None) -> str | None:
+    if value is None:
+        return None
+    cleaned = value.strip()
+    return cleaned or None
+
+
+def _normalize_optional_provider_base_url(value: str | None) -> str | None:
+    cleaned = _clean_optional(value)
+    return normalize_provider_base_url(cleaned) if cleaned is not None else None
+
+
+class ProviderCreate(BaseModel):
+    provider_key: str = Field(min_length=2, max_length=96, pattern=PROVIDER_KEY_PATTERN)
+    display_name: str = Field(min_length=1, max_length=160)
+    provider_kind: ProviderKind
+    base_url: str | None = Field(default=None, max_length=1024)
+    enabled: bool = False
+    capabilities: list[str] = Field(default_factory=list, max_length=32)
+    credential: SecretStr | None = Field(default=None)
+    secret_ref: str | None = Field(default=None, max_length=255)
+    notes: str | None = Field(default=None, max_length=500)
+
+    @field_validator("provider_key")
+    @classmethod
+    def normalize_key(cls, value: str) -> str:
+        return value.strip().casefold()
+
+    @field_validator("display_name")
+    @classmethod
+    def clean_name(cls, value: str) -> str:
+        return " ".join(value.split())
+
+    @field_validator("base_url")
+    @classmethod
+    def validate_base_url(cls, value: str | None) -> str | None:
+        return _normalize_optional_provider_base_url(value)
+
+    @field_validator("secret_ref", "notes")
+    @classmethod
+    def clean_optional_text(cls, value: str | None) -> str | None:
+        return _clean_optional(value)
+
+    @field_validator("credential")
+    @classmethod
+    def validate_credential(cls, value: SecretStr | None) -> SecretStr | None:
+        if value is None:
+            return None
+        raw = value.get_secret_value()
+        if not 4 <= len(raw) <= 8192:
+            raise ValueError("credential must be 4-8192 characters")
+        return value
+
+    @field_validator("capabilities")
+    @classmethod
+    def clean_capabilities(cls, values: list[str]) -> list[str]:
+        cleaned: list[str] = []
+        for value in values:
+            item = value.strip().casefold().replace(" ", "_")
+            if not item or len(item) > 64:
+                raise ValueError("capability names must be 1-64 characters")
+            if item not in cleaned:
+                cleaned.append(item)
+        return cleaned
+
+    @model_validator(mode="after")
+    def one_credential_source(self):
+        if self.credential is not None and self.secret_ref is not None:
+            raise ValueError("credential and secret_ref cannot both be supplied")
+        return self
+
+
+class ProviderUpdate(BaseModel):
+    display_name: str | None = Field(default=None, min_length=1, max_length=160)
+    base_url: str | None = Field(default=None, max_length=1024)
+    enabled: bool | None = None
+    capabilities: list[str] | None = Field(default=None, max_length=32)
+    credential: SecretStr | None = None
+    clear_credential: bool = False
+    secret_ref: str | None = Field(default=None, max_length=255)
+    notes: str | None = Field(default=None, max_length=500)
+
+    @field_validator("display_name")
+    @classmethod
+    def clean_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return " ".join(value.split())
+
+    @field_validator("base_url")
+    @classmethod
+    def validate_base_url(cls, value: str | None) -> str | None:
+        return _normalize_optional_provider_base_url(value)
+
+    @field_validator("secret_ref", "notes")
+    @classmethod
+    def clean_optional_text(cls, value: str | None) -> str | None:
+        return _clean_optional(value)
+
+    @field_validator("credential")
+    @classmethod
+    def validate_credential(cls, value: SecretStr | None) -> SecretStr | None:
+        if value is None:
+            return None
+        raw = value.get_secret_value()
+        if not 4 <= len(raw) <= 8192:
+            raise ValueError("credential must be 4-8192 characters")
+        return value
+
+    @field_validator("capabilities")
+    @classmethod
+    def clean_capabilities(cls, values: list[str] | None) -> list[str] | None:
+        if values is None:
+            return None
+        cleaned: list[str] = []
+        for value in values:
+            item = value.strip().casefold().replace(" ", "_")
+            if not item or len(item) > 64:
+                raise ValueError("capability names must be 1-64 characters")
+            if item not in cleaned:
+                cleaned.append(item)
+        return cleaned
+
+    @model_validator(mode="after")
+    def valid_credential_change(self):
+        if self.credential is not None and self.clear_credential:
+            raise ValueError("credential and clear_credential cannot both be supplied")
+        if self.credential is not None and self.secret_ref is not None:
+            raise ValueError("credential and secret_ref cannot both be supplied")
+        return self
+
+
+class ProviderRead(BaseModel):
+    id: UUID
+    provider_key: str
+    display_name: str
+    provider_kind: ProviderKind
+    base_url: str | None
+    enabled: bool
+    capabilities: list[str]
+    secret_configured: bool
+    secret_storage: ProviderCredentialStorage | None
+    secret_hint: str | None
+    notes: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class CatalogSourceCreate(BaseModel):
+    source_key: str = Field(min_length=1, max_length=128, pattern=SOURCE_KEY_PATTERN)
+    display_name: str = Field(min_length=1, max_length=180)
+    source_class: SourceClass
+    license_status: SourceLicenseStatus = "unreviewed"
+    automation_allowed: bool = False
+    terms_url: str | None = Field(default=None, max_length=1024)
+    notes: str | None = Field(default=None, max_length=1000)
+
+    @field_validator("source_key")
+    @classmethod
+    def normalize_key(cls, value: str) -> str:
+        return value.strip().casefold()
+
+    @field_validator("display_name")
+    @classmethod
+    def clean_name(cls, value: str) -> str:
+        return " ".join(value.split())
+
+    @field_validator("terms_url")
+    @classmethod
+    def validate_terms_url(cls, value: str | None) -> str | None:
+        cleaned = _clean_optional(value)
+        if cleaned is not None and not cleaned.startswith(("https://", "http://")):
+            raise ValueError("terms_url must use http or https")
+        return cleaned
+
+    @field_validator("notes")
+    @classmethod
+    def clean_notes(cls, value: str | None) -> str | None:
+        return _clean_optional(value)
+
+    @model_validator(mode="after")
+    def automation_requires_approved_license(self):
+        if self.automation_allowed and self.license_status != "approved":
+            raise ValueError("automation_allowed requires an approved source license")
+        return self
+
+
+class CatalogSourceUpdate(BaseModel):
+    display_name: str | None = Field(default=None, min_length=1, max_length=180)
+    license_status: SourceLicenseStatus | None = None
+    automation_allowed: bool | None = None
+    terms_url: str | None = Field(default=None, max_length=1024)
+    notes: str | None = Field(default=None, max_length=1000)
+
+    @field_validator("display_name")
+    @classmethod
+    def clean_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return " ".join(value.split())
+
+    @field_validator("terms_url")
+    @classmethod
+    def validate_terms_url(cls, value: str | None) -> str | None:
+        cleaned = _clean_optional(value)
+        if cleaned is not None and not cleaned.startswith(("https://", "http://")):
+            raise ValueError("terms_url must use http or https")
+        return cleaned
+
+    @field_validator("notes")
+    @classmethod
+    def clean_notes(cls, value: str | None) -> str | None:
+        return _clean_optional(value)
+
+
+class CatalogSourceRead(BaseModel):
+    id: UUID
+    source_key: str
+    display_name: str
+    source_class: SourceClass
+    license_status: SourceLicenseStatus
+    automation_allowed: bool
+    terms_url: str | None
+    notes: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class ProviderSourceBindingCreate(BaseModel):
+    provider_connection_id: UUID
+    source_id: UUID
+    enabled: bool = False
+
+
+class ProviderSourceBindingUpdate(BaseModel):
+    enabled: bool
+
+
+class ProviderSourceBindingRead(BaseModel):
+    id: UUID
+    provider_connection_id: UUID
+    provider_key: str
+    provider_enabled: bool
+    source_id: UUID
+    source_key: str
+    source_license_status: SourceLicenseStatus
+    source_automation_allowed: bool
+    enabled: bool
+    ready_for_ingestion: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class ReferencePartsStageRequest(BaseModel):
+    dataset_key: str = Field(
+        min_length=1,
+        max_length=160,
+        pattern=DATASET_KEY_PATTERN,
+    )
+    binding_ids: dict[SourceClass, UUID] = Field(min_length=1, max_length=7)
+
+    @field_validator("dataset_key")
+    @classmethod
+    def normalize_dataset_key(cls, value: str) -> str:
+        return value.strip().casefold()
+
+
+class ReferencePartsStageRead(BaseModel):
+    dataset_key: str
+    source_record_count: int
+    candidate_count: int
+    inserted_count: int
+    ingestion_batch_ids: list[UUID]
+    staging_record_ids: list[UUID]
+
+
+class NhtsaRecallStageRequest(BaseModel):
+    binding_id: UUID
+    year: int = Field(ge=1996, le=2100)
+    make: str = Field(min_length=1, max_length=80)
+    model: str = Field(min_length=1, max_length=120)
+
+    @field_validator("make", "model")
+    @classmethod
+    def normalize_vehicle_text(cls, value: str) -> str:
+        cleaned = " ".join(value.split())
+        if not cleaned:
+            raise ValueError("vehicle text cannot be blank")
+        return cleaned
+
+
+class NhtsaRecallStageRead(BaseModel):
+    binding_id: UUID
+    year: int
+    make: str
+    model: str
+    candidate_count: int
+    inserted_count: int
+    ingestion_batch_id: UUID
+    staging_record_ids: list[UUID]
+
+
+class OperatorAuditRead(BaseModel):
+    id: UUID
+    actor_user_id: UUID
+    action: OperatorAuditAction
+    target_type: str
+    target_id: UUID
+    event_data: dict[str, object]
+    created_at: datetime
+
+
+class OperatorUserRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    email: EmailStr
+    username: str
+    role: UserRole
+    is_active: bool
+    created_at: datetime
+
+
+class UserRoleUpdate(BaseModel):
+    role: UserRole
+
+
+class PreviewOperatorBootstrapStatus(BaseModel):
+    available: bool

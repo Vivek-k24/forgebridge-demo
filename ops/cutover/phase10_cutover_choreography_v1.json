@@ -1,0 +1,185 @@
+{
+  "schema_version": 1,
+  "status": "prepared_not_authorized",
+  "purpose": "Prevent public writes while Production moves from the 0020 application/schema boundary to the 0063 candidate boundary.",
+  "production_mutation_authorized": false,
+  "invariants": [
+    "No public request may reach the old Production application after the Production database migration begins.",
+    "The candidate Production-target deployment must exist without receiving Production-domain traffic before the database migration starts.",
+    "The old Production deployment must remain available as a traffic target until cutover verification completes.",
+    "No application-only rollback to the old Production deployment is allowed after the database reaches 0063 or later.",
+    "Public traffic reopens only after candidate readiness, owner-state preservation, schema verification, and runtime smoke checks pass."
+  ],
+  "required_preconditions": [
+    "phase10_preflight_v1 reports all hard gates resolved except the final explicit authorization action",
+    "exact candidate is green and zero commits behind main",
+    "Production backup/protection control is approved and current recovery evidence is fresh",
+    "Vercel Authentication All Deployments is the selected barrier; availability is documented for the current plan, and Production activation/block/bypass/restore proof remains required",
+    "operator has credentials for Vercel, GitHub, and Neon/Alembic actions without placing credentials in logs or source"
+  ],
+  "traffic_barrier": {
+    "selected": "vercel_authentication_all",
+    "state": "selected_pending_production_activation_and_test",
+    "acceptable_methods": [
+      {
+        "id": "vercel_authentication_all",
+        "description": "Temporarily require Vercel Authentication for all deployments/Production traffic, with an authorized automation/operator bypass retained for health checks.",
+        "proof_required": [
+          "control is available on the connected PartGraph Vercel plan",
+          "unauthenticated Production request is blocked before migration",
+          "authorized operator health request still works",
+          "the exact method to disable protection after cutover is recorded"
+        ],
+        "status": "selected"
+      },
+      {
+        "id": "dedicated_maintenance_deployment",
+        "description": "Point Production traffic to a separately verified maintenance deployment that cannot write to PartGraph data while the real candidate remains unaliased.",
+        "proof_required": [
+          "maintenance deployment has no database mutation path",
+          "Production domain resolves only to maintenance response before migration",
+          "candidate deployment remains separate until post-migration verification",
+          "rollback can return traffic to the old Production deployment after database restore"
+        ],
+        "status": "fallback_only"
+      }
+    ],
+    "rejected_shortcuts": [
+      "Do not rely only on an environment variable that is absent from the currently deployed old application.",
+      "Do not revoke ad-hoc PostgreSQL privileges and attempt to reconstruct them during the cutover.",
+      "Do not use the old application against schema 0063 merely because health/read-only probes pass.",
+      "Do not merge PR #84 first and allow normal Vercel Git deployment to decide the ordering."
+    ],
+    "capability_evidence": {
+      "provider": "Vercel",
+      "effective_date": "2026-09-09",
+      "availability": "Vercel Authentication can protect all deployments, including Production, on every plan.",
+      "current_project_plan": "hobby",
+      "current_preview_protection_observed": true,
+      "source": "https://vercel.com/changelog/protect-production-deployments-for-free-on-every-plan"
+    },
+    "activation_contract": {
+      "project_id": "prj_hDThLALewtC4I4nvGNVyFeY0iEPf",
+      "team_id": "team_Ur6AwuUGgeBixSwdnTTrTECE",
+      "team_slug": "vivekkallakuri-8617",
+      "snapshot_current_settings": "vercel project protection partgraph-main --format json",
+      "enable_endpoint": "PATCH /v9/projects/prj_hDThLALewtC4I4nvGNVyFeY0iEPf",
+      "enable_body": {
+        "ssoProtection": {
+          "deploymentType": "all"
+        }
+      },
+      "authorized_health_check": "vercel curl /api/v1/health/ready --deployment <production-deployment-url>",
+      "unauthenticated_check": "An anonymous request to the Production domain must be blocked by Vercel Authentication before database migration starts.",
+      "restore_previous_settings": "Restore the exact protection configuration captured before activation; do not blindly set ssoProtection=null because Preview protection is already in use.",
+      "production_change_authorized": false
+    }
+  },
+  "candidate_artifact": {
+    "strategy": "production_target_without_domain",
+    "vercel_command_contract": "vercel deploy --prod --skip-domain",
+    "requirements": [
+      "checkout/build is the exact approved candidate commit",
+      "Production environment variables are used",
+      "deployment ID and commit metadata are recorded",
+      "no Production domain/traffic is assigned yet",
+      "deployment is not treated as healthy against Production until the database has been migrated"
+    ]
+  },
+  "ordered_steps": [
+    {
+      "number": 1,
+      "phase": "stage",
+      "action": "Create the exact candidate as a Production-target Vercel deployment with domain assignment skipped.",
+      "public_traffic": "old_production",
+      "database_revision": "0020_catalog_coverage",
+      "failure_action": "Delete nothing; old Production continues normally."
+    },
+    {
+      "number": 2,
+      "phase": "freeze",
+      "action": "Activate and verify the approved traffic barrier. Stop all public PartGraph traffic/writes before touching the database.",
+      "public_traffic": "blocked_or_maintenance_only",
+      "database_revision": "0020_catalog_coverage",
+      "failure_action": "Remove the unproven barrier and stop; do not migrate."
+    },
+    {
+      "number": 3,
+      "phase": "backup",
+      "action": "Capture/verify the approved immediate pre-migration recovery point and record the Production branch/revision.",
+      "public_traffic": "blocked_or_maintenance_only",
+      "database_revision": "0020_catalog_coverage",
+      "failure_action": "Stop and reopen old Production only after confirming no database change occurred."
+    },
+    {
+      "number": 4,
+      "phase": "migrate",
+      "action": "Run the rehearsed Alembic upgrade from 0020 to the exact repository head against Production.",
+      "public_traffic": "blocked_or_maintenance_only",
+      "database_revision": "0020_to_head",
+      "failure_action": "Keep traffic blocked. Diagnose transactional state; use the approved recovery path rather than an automatic downgrade."
+    },
+    {
+      "number": 5,
+      "phase": "verify_database",
+      "action": "Verify Alembic head, baseline owner/private preservation, schema contracts, and required post-migration database checks.",
+      "public_traffic": "blocked_or_maintenance_only",
+      "database_revision": "repository_head",
+      "failure_action": "Keep traffic blocked and restore the approved pre-migration database state if forward correction is not proven safe."
+    },
+    {
+      "number": 6,
+      "phase": "verify_candidate",
+      "action": "Run authorized readiness and read-only smoke checks directly against the unaliased Production-target candidate deployment.",
+      "public_traffic": "blocked_or_maintenance_only",
+      "database_revision": "repository_head",
+      "failure_action": "Do not promote candidate. Restore database before returning to the old application unless a reviewed forward fix is used."
+    },
+    {
+      "number": 7,
+      "phase": "promote",
+      "action": "Point Production traffic to the already-built verified candidate deployment while the traffic barrier is still active.",
+      "public_traffic": "blocked_or_maintenance_only",
+      "database_revision": "repository_head",
+      "failure_action": "Keep barrier active and execute the coordinated rollback/forward-fix decision."
+    },
+    {
+      "number": 8,
+      "phase": "verify_live",
+      "action": "Through the authorized barrier bypass, verify Production live/ready endpoints, critical read-only smoke paths, deployment identity, database revision, and clean runtime errors.",
+      "public_traffic": "blocked_or_maintenance_only",
+      "database_revision": "repository_head",
+      "failure_action": "Keep barrier active and execute the coordinated rollback/forward-fix decision."
+    },
+    {
+      "number": 9,
+      "phase": "open",
+      "action": "Disable the traffic barrier only after all verification passes, then confirm public readiness and watch runtime errors.",
+      "public_traffic": "candidate_production",
+      "database_revision": "repository_head",
+      "failure_action": "Prefer forward correction. Any database restore must be coordinated with application traffic because post-open writes may exist."
+    },
+    {
+      "number": 10,
+      "phase": "repository_finalize",
+      "action": "Complete PR/main reconciliation without allowing an unverified artifact to replace the verified Production deployment; record any subsequent Vercel deployment identity.",
+      "public_traffic": "candidate_production",
+      "database_revision": "repository_head",
+      "failure_action": "Do not change the Production alias until the replacement artifact is proven equivalent."
+    }
+  ],
+  "proof_to_retain": [
+    "candidate Git SHA",
+    "staged Production-target deployment ID",
+    "traffic barrier type and activation/deactivation evidence",
+    "pre-migration recovery point",
+    "before and after Alembic revisions",
+    "owner/private preservation result",
+    "candidate direct readiness and smoke result",
+    "promoted Production deployment ID",
+    "post-promotion readiness/error scan",
+    "traffic reopen timestamp",
+    "rollback/forward-fix decision if any step deviated"
+  ],
+  "rollback_reference": "ops/cutover/phase10_rollback_v1.json"
+}
