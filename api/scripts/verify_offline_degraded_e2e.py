@@ -213,7 +213,7 @@ def main() -> None:
         page.get_by_role("button", name="Create account").click()
         page.get_by_label("Email").fill(EMAIL)
         page.get_by_label("Username").fill(USERNAME)
-        page.get_by_label("Password").fill(PASSWORD)
+        page.get_by_label("Password", exact=True).fill(PASSWORD)
         page.get_by_role("button", name="Create private workspace").click()
         expect(page.get_by_text(f"@{USERNAME} · {EMAIL}")).to_be_visible()
 
