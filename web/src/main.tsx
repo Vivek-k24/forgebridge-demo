@@ -3,8 +3,11 @@ import { createRoot } from 'react-dom/client'
 import AuthGate from './AuthGate'
 import PartGraphShell from './PartGraphShell'
 import ProductionLaunch from './ProductionLaunch'
+import { initializeUiPreferences } from './ui-preferences'
 import './app.css'
 import './light-panel-contrast.css'
+
+initializeUiPreferences()
 
 const app = <PartGraphShell />
 const directPagesPreview = import.meta.env.MODE === 'pages'
