@@ -57,7 +57,14 @@ def main() -> None:
 
         page.get_by_label("Email").fill(EMAIL)
         page.get_by_label("Username").fill(USERNAME)
-        page.get_by_label("Password").fill(PASSWORD)
+        password_field = page.get_by_label("Password", exact=True)
+        expect(password_field).to_have_attribute("type", "password")
+        password_field.fill(PASSWORD)
+        page.get_by_role("button", name="Show password").click()
+        expect(password_field).to_have_attribute("type", "text")
+        expect(page.get_by_role("button", name="Hide password")).to_be_visible()
+        page.get_by_role("button", name="Hide password").click()
+        expect(password_field).to_have_attribute("type", "password")
         page.get_by_role("button", name="Create private workspace").click()
 
         expect(page.get_by_text(f"@{USERNAME} · {EMAIL}")).to_be_visible()
@@ -105,7 +112,9 @@ def main() -> None:
         expect(page.get_by_role("heading", name="Sign in.")).to_be_visible()
 
         page.get_by_label("Username or email").fill(USERNAME)
-        page.get_by_label("Password").fill(PASSWORD)
+        sign_in_password = page.get_by_label("Password", exact=True)
+        expect(sign_in_password).to_have_attribute("type", "password")
+        sign_in_password.fill(PASSWORD)
         page.get_by_role("button", name="Enter PartGraph").click()
 
         expect(page.get_by_text(f"@{USERNAME} · {EMAIL}")).to_be_visible()
@@ -126,8 +135,9 @@ def main() -> None:
         browser.close()
 
     print(
-        "Browser E2E passed: real Chromium registration, SPA navigation/focus, "
-        "settings persistence, Garage rendering, logout, and cookie-backed re-login."
+        "Browser E2E passed: real Chromium registration, password visibility toggle, "
+        "SPA navigation/focus, settings persistence, Garage rendering, logout, and "
+        "cookie-backed re-login."
     )
 
 
