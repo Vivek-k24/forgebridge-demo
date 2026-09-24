@@ -124,6 +124,30 @@ class FinalMvpAuthenticationSecurityTests(unittest.TestCase):
         self.assertNotEqual(token_hash, token)
         self.assertEqual(token_hash, hashlib.sha256(token.encode("utf-8")).hexdigest())
 
+    def test_duplicate_username_is_rejected_with_clear_conflict(self) -> None:
+        username, _, _ = self._register("phase9duplicate")
+        _, second_email = self._identity("phase9duplicateemail")
+
+        duplicate = self.client.post(
+            "/api/v1/auth/register",
+            json={
+                "email": second_email,
+                "username": username.upper(),
+                "password": PASSWORD,
+            },
+            headers=self._csrf_headers(origin=settings.web_origin),
+        )
+
+        self.assertEqual(duplicate.status_code, 409)
+        self.assertEqual(
+            duplicate.json()["error"]["code"],
+            "AUTH_IDENTITY_CONFLICT",
+        )
+        self.assertEqual(
+            duplicate.json()["error"]["message"],
+            "Username or email is already in use.",
+        )
+
     def test_logout_requires_csrf_then_revokes_the_active_session(self) -> None:
         username, _, _ = self._register("phase9logout")
 

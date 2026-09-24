@@ -89,7 +89,8 @@
   margin-top: 24px;
 }
 
-.auth-form label {
+.auth-form label,
+.auth-field {
   display: grid;
   gap: 8px;
   color: #b9c7cc;
@@ -117,6 +118,51 @@
 .auth-form input:focus {
   border-color: #4a7f69;
   box-shadow: 0 0 0 3px rgba(48, 105, 78, 0.16);
+}
+
+.auth-password-input {
+  position: relative;
+}
+
+.auth-password-input input {
+  padding-right: 52px;
+}
+
+.auth-password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 7px;
+  width: 38px;
+  height: 38px;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  padding: 0;
+  color: #91a5ab;
+  background: transparent;
+  cursor: pointer;
+}
+
+.auth-password-toggle:hover {
+  color: #d6e2df;
+  background: rgba(86, 132, 111, 0.12);
+}
+
+.auth-password-toggle:focus-visible {
+  outline: 3px solid #68c997;
+  outline-offset: 1px;
+}
+
+.auth-password-toggle svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .auth-password-rules {

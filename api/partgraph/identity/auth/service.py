@@ -159,7 +159,7 @@ async def register_user(
     if created_id is None:
         raise AuthenticationError(
             ErrorCode.AUTH_IDENTITY_CONFLICT,
-            "Username or email is unavailable.",
+            "Username or email is already in use.",
         )
 
     user = await session.get(User, created_id)
