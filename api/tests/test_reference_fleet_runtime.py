@@ -85,20 +85,29 @@ class ReferenceFleetRuntimeTests(unittest.IsolatedAsyncioTestCase):
         self.assertGreaterEqual(len(datasets), 1)
         self.assertEqual(len({item["path"] for item in datasets}), len(datasets))\n        for item in datasets:\n            self.assertGreaterEqual(len(item["repairs"]), 1)\n            self.assertEqual(len(set(item["repairs"])), len(item["repairs"]))
 
-    async def _run_reference_case(self, case: dict[str, object]) -> None:
+    async def _run_reference_case(
+        self,
+        case: dict[str, object],
+        repair_path: str,
+    ) -> None:
         case_path = str(case["path"])
         case_root = REFERENCE_ROOT / case_path
-        manifest = json.loads((case_root / str(case["manifest"])).read_text(encoding="utf-8"))
-        reference = json.loads((case_root / str(case["repair"])).read_text(encoding="utf-8"))
+        manifest = json.loads(
+            (case_root / str(case["manifest"])).read_text(encoding="utf-8")
+        )
+        reference = json.loads(
+            (case_root / repair_path).read_text(encoding="utf-8")
+        )
 
         self.assertEqual(manifest["schema_version"], 1)
         self.assertEqual(reference["schema_version"], 1)
         self.assertEqual(manifest["dataset_key"], reference["dataset_key"])
         self.assertEqual(len(manifest["sources"]), 1)
-        self.assertEqual(len(manifest["repairs"]), 1)
-        repair_manifest = manifest["repairs"][0]
+        repair_manifest = next(
+            item for item in manifest["repairs"] if item["path"] == repair_path
+        )
         self.assertEqual(repair_manifest["repair_key"], reference["repair_key"])
-        self.assertEqual(repair_manifest["path"], str(case["repair"]))
+        self.assertEqual(repair_manifest["path"], repair_path)
         self.assertEqual(repair_manifest["requirement_count"], len(reference["requirements"]))
         self.assertEqual(repair_manifest["action_count"], len(reference["actions"]))
         self.assertEqual(repair_manifest["capability_policy_key"], reference["capability_policy_key"])
@@ -121,7 +130,7 @@ class ReferenceFleetRuntimeTests(unittest.IsolatedAsyncioTestCase):
                 db,
                 VehicleConfigurationInput.model_validate(manifest["vehicle"]),
             )
-            self.assertEqual(resolution, "created")
+            self.assertIn(resolution, {"created", "matched"})
             self.assertEqual(configuration.verification_status, "unverified")
             original_identity = (
                 configuration.year,
@@ -508,8 +517,9 @@ class ReferenceFleetRuntimeTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_phase8_reference_fleet_uses_one_generic_runtime_path(self) -> None:
         for case in self.fleet_index["datasets"]:
-            with self.subTest(dataset=case["path"]):
-                await self._run_reference_case(case)
+            for repair_path in case["repairs"]:
+                with self.subTest(dataset=case["path"], repair=repair_path):
+                    await self._run_reference_case(case, str(repair_path))
 
 
 if __name__ == "__main__":
