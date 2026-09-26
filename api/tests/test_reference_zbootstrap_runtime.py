@@ -14,7 +14,7 @@ from partgraph.knowledge.reference_fleet_bootstrap import (
 )
 
 DATABASE_URL_ENV = "PARTGRAPH_DATABASE_URL"
-EXPECTED_REFERENCE_REPAIRS = 20
+EXPECTED_REFERENCE_REPAIRS = 28
 
 
 class ReferenceFleetBootstrapRuntimeTests(unittest.IsolatedAsyncioTestCase):

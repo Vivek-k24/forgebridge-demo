@@ -1,0 +1,149 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2009-honda-civic-hybrid-repairs-v1",
+  "vehicle_configuration_id": "7feb13e9-bca0-5d8b-b701-f0260cce5da1",
+  "repair_key": "rear-brake-disc-replacement",
+  "title": "Rear brake disc replacement",
+  "capability_policy_key": "diy_supported",
+  "source_key": "charmli-2009-civic-hybrid-service-manual-mirror",
+  "operations": [],
+  "requirements": [
+    {
+      "use_key": "rear-discs",
+      "requirement_key": "part.honda.42510-sne-a00",
+      "category": "part",
+      "display_name": "Rear brake rotor/disc",
+      "default_unit": "each",
+      "quantity": 2,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "replacement_required",
+      "timing": "before_start"
+    },
+    {
+      "use_key": "rear-pads",
+      "requirement_key": "part.honda.43022-s5a-j02",
+      "category": "part",
+      "display_name": "Rear brake pad set",
+      "default_unit": "set",
+      "quantity": 1,
+      "unit": "set",
+      "necessity": "recommended",
+      "fulfillment_mode": "replace_if_damaged",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "vehicle-jack",
+      "requirement_key": "equipment.vehicle_jack",
+      "category": "equipment",
+      "display_name": "Vehicle jack",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "wheel-chock",
+      "requirement_key": "equipment.wheel_chock",
+      "category": "equipment",
+      "display_name": "Wheel chock",
+      "default_unit": "each",
+      "quantity": 2,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "torque-wrench",
+      "requirement_key": "tool.torque_wrench",
+      "category": "tool",
+      "display_name": "Torque wrench",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair"
+    }
+  ],
+  "actions": [
+    {
+      "action_key": "secure-rear-of-vehicle",
+      "title": "Raise and support the rear of the vehicle",
+      "instruction": "Raise the rear of the vehicle, support it with safety stands in the proper locations, and remove the rear wheel.",
+      "position": 0,
+      "skippable": false,
+      "prerequisite_action_keys": [],
+      "requirement_use_keys": [
+        "vehicle-jack",
+        "wheel-chock"
+      ]
+    },
+    {
+      "action_key": "release-parking-brake",
+      "title": "Release the parking brake",
+      "instruction": "Release the parking brake lever fully before attempting to remove the rear disc.",
+      "position": 1,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "secure-rear-of-vehicle"
+      ],
+      "requirement_use_keys": []
+    },
+    {
+      "action_key": "remove-rear-caliper-assembly",
+      "title": "Remove and support the rear caliper assembly",
+      "instruction": "Remove the brake-hose mounting bolt and caliper-bracket mounting bolts as required, then hang the caliper assembly from the undercarriage so the brake hose and parking-brake cable are not twisted or loaded.",
+      "position": 2,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "release-parking-brake"
+      ],
+      "requirement_use_keys": []
+    },
+    {
+      "action_key": "remove-rear-brake-disc",
+      "title": "Remove the rear brake disc",
+      "instruction": "Remove the disc retaining screws and take the disc off the hub. If the disc is stuck, use the specified M8 x 1.25 service holes evenly so the disc does not bind.",
+      "position": 3,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "remove-rear-caliper-assembly"
+      ],
+      "requirement_use_keys": [
+        "rear-discs"
+      ]
+    },
+    {
+      "action_key": "install-rear-brake-disc",
+      "title": "Install the rear brake disc",
+      "instruction": "Clean the hub-to-disc mating surfaces, install the replacement disc, restore the caliper assembly, and adjust the parking brake as required by the service procedure.",
+      "position": 4,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "remove-rear-brake-disc"
+      ],
+      "requirement_use_keys": [
+        "rear-discs",
+        "rear-pads",
+        "torque-wrench"
+      ]
+    },
+    {
+      "action_key": "inspect-runout-reinstall-wheel",
+      "title": "Inspect disc runout and reinstall the wheel",
+      "instruction": "Inspect rear disc runout, clean the disc-to-wheel mating surfaces, reinstall the wheel, and complete the final brake-pedal and parking-brake checks before driving.",
+      "position": 5,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "install-rear-brake-disc"
+      ],
+      "requirement_use_keys": [
+        "torque-wrench"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,136 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2009-honda-civic-hybrid-repairs-v1",
+  "vehicle_configuration_id": "7feb13e9-bca0-5d8b-b701-f0260cce5da1",
+  "repair_key": "cvt-fluid-drain-refill",
+  "title": "CVT fluid drain and refill",
+  "capability_policy_key": "diy_supported",
+  "source_key": "charmli-2009-civic-hybrid-service-manual-mirror",
+  "operations": [],
+  "requirements": [
+    {
+      "use_key": "honda-cvt-fluid",
+      "requirement_key": "fluid.honda.cvt-fluid.08200-9006",
+      "category": "fluid",
+      "display_name": "Honda CVT Fluid",
+      "default_unit": "US qt",
+      "quantity": 3,
+      "unit": "US qt",
+      "necessity": "required",
+      "fulfillment_mode": "consumed",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "cvt-drain-washer",
+      "requirement_key": "hardware.cvt-drain-plug-sealing-washer",
+      "category": "hardware",
+      "display_name": "CVT drain-plug sealing washer",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "replacement_required",
+      "timing": "before_start"
+    },
+    {
+      "use_key": "drain-container",
+      "requirement_key": "equipment.used_fluid_drain_container",
+      "category": "equipment",
+      "display_name": "Used-fluid drain container",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "torque-wrench",
+      "requirement_key": "tool.torque_wrench",
+      "category": "tool",
+      "display_name": "Torque wrench",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair"
+    }
+  ],
+  "actions": [
+    {
+      "action_key": "confirm-cvt",
+      "title": "Confirm the Hybrid CVT",
+      "instruction": "Confirm the vehicle is the 2009 Civic Hybrid with continuously variable transmission before using this fluid and procedure. Do not apply this workflow to a conventional automatic or manual transmission.",
+      "position": 0,
+      "skippable": false,
+      "prerequisite_action_keys": [],
+      "requirement_use_keys": [
+        "honda-cvt-fluid"
+      ]
+    },
+    {
+      "action_key": "warm-park-level",
+      "title": "Warm the drivetrain and park level",
+      "instruction": "Warm the transmission through normal operation, then park the vehicle on level ground, apply the parking brake, and shut the engine off.",
+      "position": 1,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "confirm-cvt"
+      ],
+      "requirement_use_keys": []
+    },
+    {
+      "action_key": "drain-cvt-fluid",
+      "title": "Drain the CVT fluid",
+      "instruction": "Remove the drain plug, capture the used fluid, inspect for abnormal contamination, and discard the old sealing washer.",
+      "position": 2,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "warm-park-level"
+      ],
+      "requirement_use_keys": [
+        "drain-container",
+        "cvt-drain-washer"
+      ]
+    },
+    {
+      "action_key": "install-cvt-drain-plug",
+      "title": "Install the CVT drain plug",
+      "instruction": "Install the drain plug with the new sealing washer and tighten it to 49 N·m (36 lbf·ft).",
+      "position": 3,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "drain-cvt-fluid"
+      ],
+      "requirement_use_keys": [
+        "cvt-drain-washer",
+        "torque-wrench"
+      ]
+    },
+    {
+      "action_key": "refill-cvt-fluid",
+      "title": "Refill the CVT",
+      "instruction": "Add Honda CVT Fluid through the specified fill/dipstick path. The reference change quantity is approximately 2.8 L (3.0 US qt).",
+      "position": 4,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "install-cvt-drain-plug"
+      ],
+      "requirement_use_keys": [
+        "honda-cvt-fluid"
+      ]
+    },
+    {
+      "action_key": "verify-cvt-level",
+      "title": "Verify the CVT fluid level",
+      "instruction": "Complete the service-manual final level check. Do not assume that the measured drain volume alone establishes the correct finished level.",
+      "position": 5,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "refill-cvt-fluid"
+      ],
+      "requirement_use_keys": []
+    }
+  ]
+}

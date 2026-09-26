@@ -8,7 +8,15 @@
       "repairs": [
         "engine_oil_filter_change.json",
         "engine_water_pump_replacement.json",
-        "cooling_system_refill_air_bleed.json"
+        "cooling_system_refill_air_bleed.json",
+        "wheel_tire_service.json",
+        "front_brake_service.json",
+        "rear_brake_disc_replacement.json",
+        "radiator_cooling_module_replacement.json",
+        "coolant_replacement.json",
+        "cvt_fluid_drain_refill.json",
+        "ac_condenser_replacement.json",
+        "spark_plug_replacement.json"
       ]
     },
     {

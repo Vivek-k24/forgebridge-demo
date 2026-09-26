@@ -1,0 +1,246 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2009-honda-civic-hybrid-repairs-v1",
+  "vehicle_configuration_id": "7feb13e9-bca0-5d8b-b701-f0260cce5da1",
+  "repair_key": "radiator-cooling-module-replacement",
+  "title": "Radiator and cooling-fan module replacement",
+  "capability_policy_key": "diy_supported",
+  "source_key": "charmli-2009-civic-hybrid-service-manual-mirror",
+  "operations": [],
+  "requirements": [
+    {
+      "use_key": "radiator",
+      "requirement_key": "part.honda.19010-rrh-901",
+      "category": "part",
+      "display_name": "Radiator assembly (Denso)",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "replacement_required",
+      "timing": "before_start"
+    },
+    {
+      "use_key": "radiator-shroud",
+      "requirement_key": "part.honda.19015-rmx-a51",
+      "category": "part",
+      "display_name": "Radiator fan shroud",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "recommended",
+      "fulfillment_mode": "replace_if_damaged",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "cooling-fan",
+      "requirement_key": "part.honda.19020-rsh-e01",
+      "category": "part",
+      "display_name": "Radiator cooling fan",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "recommended",
+      "fulfillment_mode": "replace_if_damaged",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "condenser-fan",
+      "requirement_key": "part.honda.38611-rmx-a51",
+      "category": "part",
+      "display_name": "A/C condenser cooling fan",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "recommended",
+      "fulfillment_mode": "replace_if_damaged",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "upper-hose",
+      "requirement_key": "part.honda.19501-rmx-000",
+      "category": "part",
+      "display_name": "Upper radiator hose",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "recommended",
+      "fulfillment_mode": "replace_if_damaged",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "lower-hose-a",
+      "requirement_key": "part.honda.19502-rmx-000",
+      "category": "part",
+      "display_name": "Lower radiator hose A",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "recommended",
+      "fulfillment_mode": "replace_if_damaged",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "lower-hose-b",
+      "requirement_key": "part.honda.19504-rmx-000",
+      "category": "part",
+      "display_name": "Lower radiator hose B",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "recommended",
+      "fulfillment_mode": "replace_if_damaged",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "coolant-drain-container",
+      "requirement_key": "equipment.coolant_drain_container",
+      "category": "equipment",
+      "display_name": "Coolant drain container",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "safe-underbody-access",
+      "requirement_key": "workspace.safe_underbody_access",
+      "category": "workspace",
+      "display_name": "Safe raised-vehicle access from underneath",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "socket-ratchet",
+      "requirement_key": "tool.socket_ratchet_set",
+      "category": "tool",
+      "display_name": "Metric socket and ratchet set",
+      "default_unit": "set",
+      "quantity": 1,
+      "unit": "set",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "hose-clamp-pliers",
+      "requirement_key": "tool.hose_clamp_pliers",
+      "category": "tool",
+      "display_name": "Hose-clamp pliers",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "recommended",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair"
+    }
+  ],
+  "actions": [
+    {
+      "action_key": "cool-drain-cooling-system",
+      "title": "Cool and drain the cooling system",
+      "instruction": "Allow the engine to cool fully, remove the required lower access panels, and drain the engine coolant into a suitable container before disconnecting cooling-system components.",
+      "warning_text": "Hot coolant and a pressurized cooling system can cause severe burns.",
+      "position": 0,
+      "skippable": false,
+      "prerequisite_action_keys": [],
+      "requirement_use_keys": [
+        "coolant-drain-container",
+        "safe-underbody-access"
+      ]
+    },
+    {
+      "action_key": "remove-front-access-components",
+      "title": "Remove front access components",
+      "instruction": "Remove the front wheels and required undercover/splash shield, engine cover, resonator, intake duct, air-cleaner assembly, and front grille cover needed by the service sequence.",
+      "position": 1,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "cool-drain-cooling-system"
+      ],
+      "requirement_use_keys": [
+        "safe-underbody-access",
+        "socket-ratchet"
+      ]
+    },
+    {
+      "action_key": "disconnect-upper-support-and-wiring",
+      "title": "Disconnect upper supports and fan wiring",
+      "instruction": "Remove the radiator upper bracket/cushion and related clips, disconnect the hood-latch switch as required, release harness clamps, and disconnect the radiator-fan and condenser-fan motor connectors.",
+      "position": 2,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "remove-front-access-components"
+      ],
+      "requirement_use_keys": [
+        "radiator-shroud",
+        "cooling-fan",
+        "condenser-fan"
+      ]
+    },
+    {
+      "action_key": "disconnect-hoses-and-cvt-cooler",
+      "title": "Disconnect radiator hoses and CVT cooler connections",
+      "instruction": "Disconnect the upper and lower radiator hoses and the continuously variable transmission cooler hoses as required by the Hybrid radiator procedure. Capture any fluid loss and protect open connections.",
+      "position": 3,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "disconnect-upper-support-and-wiring"
+      ],
+      "requirement_use_keys": [
+        "upper-hose",
+        "lower-hose-a",
+        "lower-hose-b",
+        "hose-clamp-pliers",
+        "safe-underbody-access"
+      ]
+    },
+    {
+      "action_key": "remove-radiator-fan-assemblies",
+      "title": "Remove the fan assemblies and radiator",
+      "instruction": "Remove the cooling-fan shroud assemblies and lift the radiator out without damaging the adjacent A/C condenser or surrounding fins.",
+      "position": 4,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "disconnect-hoses-and-cvt-cooler"
+      ],
+      "requirement_use_keys": [
+        "radiator",
+        "radiator-shroud",
+        "cooling-fan",
+        "condenser-fan"
+      ]
+    },
+    {
+      "action_key": "install-radiator-cooling-module",
+      "title": "Install the radiator and restore the cooling module",
+      "instruction": "Seat the replacement radiator in its mounts, reinstall reusable or replacement fan/shroud components, reconnect the hoses, cooler connections, wiring, upper supports, and removed access components in the service-manual reverse sequence.",
+      "position": 5,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "remove-radiator-fan-assemblies"
+      ],
+      "requirement_use_keys": [
+        "radiator",
+        "radiator-shroud",
+        "cooling-fan",
+        "condenser-fan",
+        "upper-hose",
+        "lower-hose-a",
+        "lower-hose-b",
+        "socket-ratchet"
+      ],
+      "milestone_type": "physical_replacement",
+      "downstream_requirement_key": "cooling.refill-air-bleed-after-radiator",
+      "downstream_title": "Refill coolant and bleed trapped air",
+      "downstream_detail": "Radiator replacement is not mechanically complete until the cooling system is refilled, trapped air is bled, fluid levels are restored, and disturbed joints are checked for leaks.",
+      "downstream_trigger_type": "action_completed",
+      "downstream_trigger_action_key": "install-radiator-cooling-module",
+      "downstream_support_state": "supported",
+      "downstream_target_repair_key": "cooling-system-refill-air-bleed"
+    }
+  ]
+}
