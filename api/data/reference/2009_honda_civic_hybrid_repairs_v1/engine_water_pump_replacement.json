@@ -14,7 +14,7 @@
   "requirements": [
     {"use_key": "replacement-water-pump", "requirement_key": "part.honda.19200-rmx-003", "category": "part", "display_name": "Engine water-pump assembly", "default_unit": "each", "quantity": 1, "unit": "each", "necessity": "required", "fulfillment_mode": "replacement_required", "timing": "whole_repair"},
     {"use_key": "new-water-pump-seal", "requirement_key": "hardware.honda.19222-pza-003", "category": "hardware", "display_name": "New water-pump sealing O-ring/gasket", "default_unit": "each", "quantity": 1, "unit": "each", "necessity": "required", "fulfillment_mode": "replacement_required", "timing": "operation", "operation_key": "install-water-pump"},
-    {"use_key": "safe-underbody-access", "requirement_key": "workspace.safe_underbody_access", "category": "workspace", "display_name": "Safe underbody access", "necessity": "required", "fulfillment_mode": "reusable", "timing": "operation", "operation_key": "remove-water-pump"},
+    {"use_key": "safe-underbody-access", "requirement_key": "workspace.safe_underbody_access", "category": "workspace", "display_name": "Safe raised-vehicle access from underneath", "necessity": "required", "fulfillment_mode": "reusable", "timing": "operation", "operation_key": "remove-water-pump"},
     {"use_key": "coolant-drain-container", "requirement_key": "equipment.coolant_drain_container", "category": "equipment", "display_name": "Coolant drain container", "default_unit": "each", "quantity": 1, "unit": "each", "necessity": "required", "fulfillment_mode": "reusable", "timing": "operation", "operation_key": "drain-coolant"}
   ],
   "actions": [
