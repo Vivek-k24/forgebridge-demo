@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 from uuid import NAMESPACE_URL, UUID, uuid5
 
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 
 from ..database import session_factory
 from ..identity.vehicle.models import VehicleConfiguration
@@ -466,7 +466,7 @@ async def _publish_downstream(
         for repair in dataset.repairs:
             source_key = str(repair["repair_key"])
             source_definition = definition_by_scope[(dataset_key, source_key)]
-            for position, action in enumerate(repair["actions"]):
+            for action in repair["actions"]:
                 requirement_key = action.get("downstream_requirement_key")
                 if not requirement_key:
                     continue
@@ -592,7 +592,7 @@ async def publish_reference_fleet() -> ReferenceFleetPublication:
 
         repair_count = sum(len(dataset.repairs) for dataset in datasets)
         downstream_count = int(
-            await db.scalar(select(text("count(*)")).select_from(RepairDownstreamRequirement))
+            await db.scalar(select(func.count()).select_from(RepairDownstreamRequirement))
             or 0
         )
         return ReferenceFleetPublication(
