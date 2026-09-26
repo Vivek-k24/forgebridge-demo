@@ -1,0 +1,222 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2015-toyota-camry-repairs-v1",
+  "repair_key": "flat-tire-spare-installation",
+  "title": "Flat tire removal and compact-spare installation",
+  "capability_policy_key": "diy_supported",
+  "source_pages": [
+    472,
+    473,
+    474,
+    475,
+    476,
+    477,
+    478,
+    479,
+    480,
+    481
+  ],
+  "operations": [],
+  "requirements": [
+    {
+      "use_key": "hard-level-surface",
+      "requirement_key": "safety_prerequisite.hard_level_surface",
+      "category": "safety_prerequisite",
+      "display_name": "Hard, level and stable work surface",
+      "necessity": "required",
+      "fulfillment_mode": "reuse_existing",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "parking-brake-use",
+      "requirement_key": "safety_prerequisite.parking_brake",
+      "category": "safety_prerequisite",
+      "display_name": "Parking brake applied",
+      "necessity": "required",
+      "fulfillment_mode": "reuse_existing",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "wheel-chock-use",
+      "requirement_key": "equipment.wheel_chock",
+      "category": "equipment",
+      "display_name": "Wheel chock",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each"
+    },
+    {
+      "use_key": "vehicle-jack-use",
+      "requirement_key": "equipment.vehicle_jack",
+      "category": "equipment",
+      "display_name": "Vehicle jack",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each"
+    },
+    {
+      "use_key": "lug-wrench-use",
+      "requirement_key": "tool.lug_wrench",
+      "category": "tool",
+      "display_name": "Lug wrench",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each"
+    },
+    {
+      "use_key": "torque-wrench-use",
+      "requirement_key": "tool.torque_wrench",
+      "category": "tool",
+      "display_name": "Torque wrench",
+      "necessity": "recommended",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each"
+    },
+    {
+      "use_key": "spare-wheel-use",
+      "requirement_key": "part.temporary_spare_wheel",
+      "category": "part",
+      "display_name": "Vehicle spare wheel / temporary spare",
+      "necessity": "required",
+      "fulfillment_mode": "reuse_existing",
+      "timing": "before_start",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each"
+    }
+  ],
+  "actions": [
+    {
+      "action_key": "secure-vehicle",
+      "title": "Secure the vehicle before lifting",
+      "position": 0,
+      "skippable": false,
+      "instruction": "Park on a hard, flat surface, apply the parking brake, select P, switch the engine off, turn on the hazard flashers, and keep occupants out of the vehicle.",
+      "warning_text": "Do not lift the vehicle on a soft, sloped, or unstable surface.",
+      "requirement_use_keys": [
+        "hard-level-surface",
+        "parking-brake-use"
+      ],
+      "prerequisite_action_keys": []
+    },
+    {
+      "action_key": "chock-wheel",
+      "title": "Chock the wheel diagonally opposite the flat tire",
+      "position": 1,
+      "skippable": false,
+      "instruction": "Place a wheel chock at the appropriate side of the tire diagonally opposite the flat tire so the vehicle cannot roll.",
+      "requirement_use_keys": [
+        "wheel-chock-use"
+      ],
+      "prerequisite_action_keys": [
+        "secure-vehicle"
+      ]
+    },
+    {
+      "action_key": "prepare-spare-tools",
+      "title": "Remove the spare tire, jack and wheel-nut wrench",
+      "position": 2,
+      "skippable": false,
+      "instruction": "Retrieve the compact spare, jack and wheel-nut wrench from the trunk and place them where they can be reached safely.",
+      "requirement_use_keys": [
+        "spare-wheel-use",
+        "vehicle-jack-use",
+        "lug-wrench-use"
+      ],
+      "prerequisite_action_keys": [
+        "chock-wheel"
+      ]
+    },
+    {
+      "action_key": "loosen-wheel-nuts",
+      "title": "Loosen the wheel nuts one turn",
+      "position": 3,
+      "skippable": false,
+      "instruction": "Before lifting the vehicle, loosen each wheel nut approximately one turn without removing the nuts.",
+      "requirement_use_keys": [
+        "lug-wrench-use"
+      ],
+      "prerequisite_action_keys": [
+        "prepare-spare-tools"
+      ]
+    },
+    {
+      "action_key": "position-jack-and-lift",
+      "title": "Position the jack and lift the vehicle",
+      "position": 4,
+      "skippable": false,
+      "instruction": "Place the jack at the rocker-panel jack point nearest the flat tire, confirm the jack is engaged correctly, and raise the vehicle only high enough to remove and install the tire.",
+      "warning_text": "Use only the designated jack point and never place any part of your body under a vehicle supported only by the supplied jack.",
+      "requirement_use_keys": [
+        "vehicle-jack-use"
+      ],
+      "prerequisite_action_keys": [
+        "loosen-wheel-nuts"
+      ]
+    },
+    {
+      "action_key": "remove-flat-wheel",
+      "title": "Remove the flat wheel",
+      "position": 5,
+      "skippable": false,
+      "instruction": "Remove the wheel nuts and flat wheel. Keep the wheel nuts together where they will not be lost.",
+      "requirement_use_keys": [
+        "lug-wrench-use"
+      ],
+      "prerequisite_action_keys": [
+        "position-jack-and-lift"
+      ]
+    },
+    {
+      "action_key": "install-compact-spare",
+      "title": "Install the compact spare and hand-tighten the nuts",
+      "position": 6,
+      "skippable": false,
+      "instruction": "Clean obvious dirt from the wheel-to-hub contact surfaces, install the compact spare, and thread each wheel nut by hand with the tapered side toward the wheel.",
+      "requirement_use_keys": [
+        "spare-wheel-use"
+      ],
+      "prerequisite_action_keys": [
+        "remove-flat-wheel"
+      ]
+    },
+    {
+      "action_key": "lower-and-torque",
+      "title": "Lower the vehicle and tighten the wheel nuts",
+      "position": 7,
+      "skippable": false,
+      "instruction": "Lower the vehicle, then tighten the wheel nuts securely in the sequence shown by Toyota. Final wheel-nut torque is 76 lbf·ft (103 N·m).",
+      "requirement_use_keys": [
+        "lug-wrench-use",
+        "torque-wrench-use"
+      ],
+      "prerequisite_action_keys": [
+        "install-compact-spare"
+      ]
+    },
+    {
+      "action_key": "stow-and-check-spare",
+      "title": "Stow the flat tire and verify the temporary spare",
+      "position": 8,
+      "skippable": false,
+      "instruction": "Secure the flat tire, jack and tools. Confirm the compact-spare pressure and observe Toyota's temporary-spare speed and usage restrictions.",
+      "warning_text": "A compact spare is for temporary use only; replace or repair the normal tire as soon as possible.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "lower-and-torque"
+      ]
+    }
+  ]
+}
