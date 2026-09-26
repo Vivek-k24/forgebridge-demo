@@ -371,12 +371,19 @@ class ReferenceFleetRuntimeTests(unittest.IsolatedAsyncioTestCase):
                 user_id=user.id,
                 repair_session=bundle.repair_session,
             )
-            required_count = sum(
-                item["necessity"] == "required" for item in reference["requirements"]
+            initially_available_modes = {"reuse_existing", "replace_if_damaged"}
+            expected_missing = sum(
+                item["fulfillment_mode"] not in initially_available_modes
+                for item in reference["requirements"]
+            )
+            expected_blocked = sum(
+                item["necessity"] == "required"
+                and item["fulfillment_mode"] not in initially_available_modes
+                for item in reference["requirements"]
             )
             self.assertEqual(readiness.summary.total, len(reference["requirements"]))
-            self.assertEqual(readiness.summary.missing, len(reference["requirements"]))
-            self.assertEqual(readiness.summary.blocked, required_count)
+            self.assertEqual(readiness.summary.missing, expected_missing)
+            self.assertEqual(readiness.summary.blocked, expected_blocked)
 
             ordered_actions = sorted(reference["actions"], key=lambda item: item["position"])
             first_action = ordered_actions[0]
