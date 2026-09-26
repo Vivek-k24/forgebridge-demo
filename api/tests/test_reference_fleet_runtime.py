@@ -394,6 +394,8 @@ class ReferenceFleetRuntimeTests(unittest.IsolatedAsyncioTestCase):
                 requirements_by_use[use_key]["requirement_key"]
                 for use_key in first_action.get("requirement_use_keys", [])
                 if requirements_by_use[use_key]["necessity"] == "required"
+                and requirements_by_use[use_key]["fulfillment_mode"]
+                not in initially_available_modes
             }
             blocked_guidance = await _guidance_view(
                 db,
