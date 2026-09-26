@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2022-hyundai-tucson-repairs-v1",
+  "repair_key": "engine-air-filter-replacement",
+  "title": "Engine air cleaner filter replacement",
+  "capability_policy_key": "diy_supported",
+  "source_pages": [
+    565,
+    566
+  ],
+  "operations": [],
+  "requirements": [
+    {
+      "use_key": "engine-air-filter-use",
+      "requirement_key": "part.engine_air_filter.vehicle_specific",
+      "category": "part",
+      "display_name": "Vehicle-specific replacement engine air cleaner filter",
+      "necessity": "required",
+      "fulfillment_mode": "replacement_required",
+      "timing": "before_start",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each"
+    }
+  ],
+  "actions": [
+    {
+      "action_key": "switch-off-engine",
+      "title": "Switch the engine off",
+      "position": 0,
+      "skippable": false,
+      "instruction": "Switch the engine off and allow the engine compartment to become safe to work around before opening the air-cleaner housing.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": []
+    },
+    {
+      "action_key": "open-air-cleaner",
+      "title": "Unlock and open the air-cleaner cover",
+      "position": 1,
+      "skippable": false,
+      "instruction": "Operate the air-cleaner cover locking lever to the UNLOCK position and open the housing.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "switch-off-engine"
+      ]
+    },
+    {
+      "action_key": "remove-old-filter",
+      "title": "Remove the old air cleaner filter",
+      "position": 2,
+      "skippable": false,
+      "instruction": "Lift out the used filter without allowing loose dirt to fall into the clean side of the intake.",
+      "warning_text": "Do not operate the vehicle with the air-cleaner filter removed.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "open-air-cleaner"
+      ]
+    },
+    {
+      "action_key": "clean-housing",
+      "title": "Wipe dirt from the inside of the air-cleaner housing",
+      "position": 3,
+      "skippable": false,
+      "instruction": "Wipe loose dirt from the housing while keeping debris out of the intake path.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "remove-old-filter"
+      ]
+    },
+    {
+      "action_key": "install-new-filter",
+      "title": "Install the replacement air cleaner filter",
+      "position": 4,
+      "skippable": false,
+      "instruction": "Seat the correct replacement filter fully in the housing.",
+      "requirement_use_keys": [
+        "engine-air-filter-use"
+      ],
+      "prerequisite_action_keys": [
+        "clean-housing"
+      ]
+    },
+    {
+      "action_key": "lock-cover",
+      "title": "Close and lock the air-cleaner cover",
+      "position": 5,
+      "skippable": false,
+      "instruction": "Close the air-cleaner housing and return its locking lever to the LOCK position. Check that the cover is fully secured.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "install-new-filter"
+      ]
+    }
+  ]
+}
