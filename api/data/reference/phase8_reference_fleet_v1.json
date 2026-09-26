@@ -1,26 +1,47 @@
 {
-  "schema_version": 1,
-  "dataset_key": "phase8-reference-fleet-v1",
+  "schema_version": 2,
+  "dataset_key": "phase8-reference-fleet-v2",
   "datasets": [
     {
       "path": "2015_toyota_camry_repairs_v1",
       "manifest": "manifest.json",
-      "repair": "license_plate_light_bulb_replacement.json"
+      "repairs": [
+        "license_plate_light_bulb_replacement.json",
+        "cabin_air_filter_replacement.json",
+        "fuse_replacement.json",
+        "flat_tire_spare_installation.json"
+      ]
     },
     {
       "path": "2018_ford_f150_repairs_v1",
       "manifest": "manifest.json",
-      "repair": "license_plate_light_bulb_replacement.json"
+      "repairs": [
+        "license_plate_light_bulb_replacement.json",
+        "fuse_replacement.json",
+        "front_wiper_blade_replacement.json",
+        "flat_tire_spare_installation.json"
+      ]
     },
     {
       "path": "2020_subaru_forester_repairs_v1",
       "manifest": "manifest.json",
-      "repair": "backup_light_bulb_replacement.json"
+      "repairs": [
+        "backup_light_bulb_replacement.json",
+        "cabin_air_filter_replacement.json",
+        "fuse_replacement.json",
+        "flat_tire_spare_installation.json"
+      ]
     },
     {
       "path": "2022_hyundai_tucson_repairs_v1",
       "manifest": "manifest.json",
-      "repair": "cabin_air_filter_replacement.json"
+      "repairs": [
+        "cabin_air_filter_replacement.json",
+        "engine_air_filter_replacement.json",
+        "fuse_replacement.json",
+        "front_wiper_blade_replacement.json",
+        "flat_tire_spare_installation.json"
+      ]
     }
   ]
 }
