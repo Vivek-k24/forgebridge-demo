@@ -48,8 +48,35 @@ def _payload_hash(payload: dict[str, object]) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
-def _dedupe_key(source_name: str, source_record_id: str, raw_sha256: str) -> str:
-    identity = "\x1f".join((source_name.casefold(), source_record_id.casefold(), raw_sha256))
+def _dedupe_key(
+    source_name: str,
+    source_record_id: str,
+    raw_sha256: str,
+    candidate_type: str,
+    candidate_payload: dict[str, object],
+    vehicle_identity: dict[str, object] | None,
+) -> str:
+    """Identify one normalized candidate derived from immutable raw evidence.
+
+    A single raw provider record may establish several candidate facts. Candidate
+    identity therefore includes its type, normalized payload, and applicability
+    snapshot while deliberately excluding extraction version, confidence, and
+    provenance. Re-running a newer deterministic extractor over the same raw
+    evidence and producing the same fact remains idempotent.
+    """
+
+    candidate_sha256 = _payload_hash(candidate_payload)
+    vehicle_sha256 = _payload_hash(vehicle_identity) if vehicle_identity is not None else ""
+    identity = "\x1f".join(
+        (
+            source_name.casefold(),
+            source_record_id.casefold(),
+            raw_sha256,
+            candidate_type.casefold(),
+            candidate_sha256,
+            vehicle_sha256,
+        )
+    )
     return hashlib.sha256(identity.encode("utf-8")).hexdigest()
 
 
@@ -91,7 +118,14 @@ async def stage_source_record(
         raise CatalogStagingError("confidence must be between 0 and 1")
 
     raw_sha256 = _payload_hash(record.raw_payload)
-    dedupe_key = _dedupe_key(batch.source_name, source_record_id, raw_sha256)
+    dedupe_key = _dedupe_key(
+        batch.source_name,
+        source_record_id,
+        raw_sha256,
+        candidate_type,
+        record.candidate_payload,
+        record.vehicle_identity,
+    )
     new_id = uuid4()
     statement = (
         insert(CatalogSourceRecord)

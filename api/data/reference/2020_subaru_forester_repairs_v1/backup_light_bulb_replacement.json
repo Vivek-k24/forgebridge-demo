@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2020-subaru-forester-repairs-v1",
+  "repair_key": "backup-light-bulb-replacement",
+  "title": "Backup light bulb replacement",
+  "capability_policy_key": "diy_supported",
+  "source_pages": [482, 487, 505, 506],
+  "operations": [],
+  "requirements": [
+    {
+      "use_key": "backup-light-bulb-use",
+      "requirement_key": "part.backup_light_bulb.w16w_16w",
+      "category": "part",
+      "display_name": "W16W 12 V 16 W backup light bulb",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "replacement_required",
+      "timing": "before_start",
+      "source_pages": [506]
+    },
+    {
+      "use_key": "flat-screwdriver-use",
+      "requirement_key": "tool.flat_head_screwdriver",
+      "category": "tool",
+      "display_name": "Flat-head screwdriver",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair",
+      "source_pages": [487]
+    }
+  ],
+  "actions": [
+    {
+      "action_key": "cool-and-prepare-backup-light",
+      "title": "Turn the lights off and let the bulb cool",
+      "position": 0,
+      "skippable": false,
+      "instruction": "Turn the lights off and wait until the backup-light bulb is cool before beginning replacement. Confirm the replacement bulb is W16W, 12 V 16 W.",
+      "warning_text": "Illuminated bulbs can become hot enough to cause burns. Use only the specified wattage.",
+      "requirement_use_keys": ["backup-light-bulb-use", "flat-screwdriver-use"],
+      "prerequisite_action_keys": [],
+      "source_pages": [482, 505, 506]
+    },
+    {
+      "action_key": "remove-rear-gate-light-cover",
+      "title": "Remove the rear-gate light cover",
+      "position": 1,
+      "skippable": false,
+      "instruction": "Apply the flat-head screwdriver to the light cover as shown in the owner manual and carefully pry the cover off the rear-gate trim.",
+      "requirement_use_keys": ["flat-screwdriver-use"],
+      "prerequisite_action_keys": ["cool-and-prepare-backup-light"],
+      "source_pages": [487]
+    },
+    {
+      "action_key": "remove-backup-light-socket",
+      "title": "Remove the backup-light socket",
+      "position": 2,
+      "skippable": false,
+      "instruction": "Turn the bulb socket counterclockwise and remove it from the lamp opening.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": ["remove-rear-gate-light-cover"],
+      "source_pages": [487]
+    },
+    {
+      "action_key": "replace-backup-light-bulb",
+      "title": "Replace the backup-light bulb",
+      "position": 3,
+      "skippable": false,
+      "instruction": "Pull the old bulb straight out of the socket and install the new W16W 12 V 16 W bulb. Avoid touching the glass with bare hands.",
+      "warning_text": "Do not touch the glass portion of the replacement bulb with bare hands.",
+      "requirement_use_keys": ["backup-light-bulb-use"],
+      "prerequisite_action_keys": ["remove-backup-light-socket"],
+      "source_pages": [482, 487, 506]
+    },
+    {
+      "action_key": "install-backup-light-socket",
+      "title": "Install the backup-light socket",
+      "position": 4,
+      "skippable": false,
+      "instruction": "Install the bulb socket by turning it clockwise, then route the wire as shown in the owner manual.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": ["replace-backup-light-bulb"],
+      "source_pages": [487]
+    },
+    {
+      "action_key": "restore-rear-gate-light-cover",
+      "title": "Restore the rear-gate light cover",
+      "position": 5,
+      "skippable": false,
+      "instruction": "Install the light cover back onto the rear-gate trim and make sure it is seated in place.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": ["install-backup-light-socket"],
+      "source_pages": [487]
+    }
+  ]
+}

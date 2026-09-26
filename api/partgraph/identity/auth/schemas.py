@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 USERNAME_PATTERN = r"^[A-Za-z0-9_]+$"
+UserRole = Literal["owner", "contributor", "reviewer", "curator", "operator_admin"]
 
 
 class RegistrationInput(BaseModel):
@@ -34,11 +35,17 @@ class UserRead(BaseModel):
     id: UUID
     email: EmailStr
     username: str
+    role: UserRole
     created_at: datetime
 
 
 class AuthResult(BaseModel):
     user: UserRead
+
+
+class AdminAccessRead(BaseModel):
+    access: Literal["granted"] = "granted"
+    role: Literal["operator_admin"] = "operator_admin"
 
 
 class PreferenceRead(BaseModel):

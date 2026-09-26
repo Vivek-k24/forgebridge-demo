@@ -4,8 +4,9 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, Query, status
 
-from ..auth.dependencies import AuthSessionDep, CurrentUserDep, require_csrf
 from ..errors import ErrorCode, ErrorEnvelope, PartGraphError
+from ..identity.actors import AuthSessionDep, CurrentUserDep, require_csrf
+from .offline import RepairOfflinePackRead, build_offline_repair_pack
 from .reorientation import build_reorientation
 from .schemas import (
     RepairSessionCreate,
@@ -158,6 +159,19 @@ async def resume_snapshot(
         device_id=device_id,
     )
     return await _complete_resume_snapshot(snapshot, user_id=user.id, db=db)
+
+
+@router.get("/{session_id}/offline-pack", response_model=RepairOfflinePackRead)
+async def offline_pack(
+    session_id: UUID,
+    user: CurrentUserDep,
+    db: AuthSessionDep,
+) -> RepairOfflinePackRead:
+    return await build_offline_repair_pack(
+        db,
+        user_id=user.id,
+        session_id=session_id,
+    )
 
 
 @router.get("/{session_id}/events", response_model=RepairSessionEventPage)

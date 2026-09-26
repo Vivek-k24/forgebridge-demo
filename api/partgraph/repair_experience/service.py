@@ -12,9 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
 from ..errors import ErrorCode, PartGraphError
-from ..user_vehicle.models import UserVehicle
-from ..user_vehicle.schemas import UserVehicleRead
-from ..user_vehicle.service import serialize_user_vehicle
+from ..identity.user_vehicle.models import UserVehicle
+from ..identity.user_vehicle.schemas import UserVehicleRead
+from ..identity.user_vehicle.service import serialize_user_vehicle
 from .models import RepairSession, RepairSessionEvent, RepairSessionProjection
 from .schemas import (
     RepairSessionEventPage,

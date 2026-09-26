@@ -1,359 +1,115 @@
 # PartGraph MVP Roadmap
 
-Status: Canonical implementation plan  
-Architecture authority: `docs/BLUEPRINT.md`
+Status: **Implementation through Phase 9 is validated; repository hygiene/remediation is complete and Phase 10 non-production preparation is in progress.**  
+Architecture authority: `docs/BLUEPRINT.md`  
+Audit/deferred-work register: `docs/AUDIT_STATUS.md`
 
-## 1. Definition of done
+## Working rules
 
-PartGraph MVP is complete when the same application code can take the selected reference fleet through trustworthy repair workflows using database/data-file knowledge rather than vehicle-specific application logic.
+- Application code stays generic. Real vehicle identity and mechanical facts belong in approved data/evidence, not make/model/year/trim branches.
+- Missing or conflicting automotive truth remains missing/conflicting until reviewed.
+- External providers and AI may create candidate information only; they do not directly publish canonical truth.
+- Owner Garage, repair-session, inventory, observation, and media state remains private.
+- Unsupported computer/service-tool work cannot be represented as completed physical repair work.
+- Production changes, PR #84 merge, production migration, and provider activation require separate explicit authorization. Phase 10 non-production preparation/build work is authorized; that authorization does not permit Production mutation or PR #84 merge.
+- Historical migrations and the artifacts they import remain immutable/reconstructable even when their current data lineage has been retired.
 
-MVP reference fleet:
-- 2009 Honda Civic
-- 2015 Toyota Camry
-- 2018 Ford F-150
-- 2020 Subaru Forester
-- 2022 Hyundai Tucson
+## Current boundary
 
-Primary deep test configuration:
-- 2009 Honda Civic Hybrid
+Repository hygiene, coding-agent hallucination review, and decision-free remediation are complete at the current branch boundary. Development may proceed with bounded Phase 10 non-production preparation while Production mutation and PR #84 merge remain separately gated.
 
-The names above are validation data. They must not become hard-coded behavior in Python, TypeScript, SQL application logic, CI logic, or UI components.
+The active implementation line is `partgraph-mvp-consolidation`; PR #84 remains draft/unmerged. Production remains intentionally separate, including the production database at migration `0020_catalog_coverage`.
 
-## 2. Current completion baseline
+## Phase status
 
-These percentages are strict MVP completion estimates, not code-volume estimates.
+| Phase | Status | Remaining boundary |
+| --- | --- | --- |
+| 0 — Repository consolidation | Functionally complete | Final merge to `main` remains part of the production-safe cutover sequence. |
+| 1 — Behavioral correctness | Complete for MVP | Hosted durable private-photo persistence was proven in Vercel Preview. |
+| 2 — Resilience | Complete for current read-only offline MVP | Offline writes/journaling/reconciliation remain out of current scope. |
+| 3 — Security and RBAC | Complete for current operations | Production infrastructure/governance items remain separately gated. |
+| 4 — Canonical schema | Complete | The MVP can represent all planned canonical/private domains without vehicle-specific application logic. |
+| 5 — Migration baseline | Complete | Fixed adopted baseline remains `0046_pipeline_actor_roles`; production is not reset or auto-advanced. |
+| 6 — Canonical data/provider pipeline | In progress | Live deployed NHTSA operator HTTP proof and broad repair-knowledge population remain unfinished. |
+| 7 — Primary deep vehicle | Complete | 2009 Honda Civic Hybrid deep workflow proof is data/evidence-driven. |
+| 8 — Five-model reference fleet | Complete | Civic, Camry, F-150, Forester, and Tucson execute through shared generic runtime paths. |
+| 9 — Final MVP validation | Complete | All 18 final validation layers passed, including hosted durable-photo persistence. |
+| 10 — Production cutover | Preparation in progress | Real Production-copy migration/restore, rollback behavior, fail-closed preflight, and safe cutover choreography are machine-checked. Vercel Authentication → All Deployments is selected as the traffic barrier; Production activation/testing remains gated. Current preflight remains NO-GO because Production backup/protection and explicit Production authorization remain unresolved, with observability disposition still surfaced. GitHub `main` protection is now active. |
 
-| Area | Completion |
-|---|---:|
-| Core software/platform architecture | 78% |
-| Security, ownership and data isolation | 86% |
-| Error/timeout/degraded resilience | 58% |
-| Human RBAC | 42% |
-| Canonical automotive data pipeline | 30% |
-| Broad canonical automotive knowledge | 8-10% |
-| Five-model consumer MVP | 46% |
+## Phase 6 remaining work
 
-Major existing strengths:
-- authentication and server-side sessions
-- private owner state with PostgreSQL row-level security
-- Garage and VIN/manual identity foundation
-- immutable repair-session event stream and projections
-- pause/resume and device edit leases
-- repair memory
-- requirement/readiness structure
-- deterministic procedure engine
-- structured error envelope and request IDs
-- staging/canonical privilege separation
+Only two substantive non-production roadmap items remain open:
 
-Major gaps:
-- no broad canonical repair library
-- generalized cross-repair/downstream dependency model missing
-- computer/service-tool boundary can currently be falsely completed
-- frontend resume/repair-log device identity bugs
-- inventory/readiness dual truth
-- event-history pagination
-- durable private photo storage
-- browser E2E
-- true offline repair packs/reconnect flow
-- human reviewer/curator/admin RBAC
-- canonical evidence-to-repair materialization
-- source-code vehicle-data invariant not yet enforced
+1. **Live NHTSA HTTP ingestion proof.** The deployed Preview is already configured for the proof at schema `0063_photo_storage_outbox`: one active operator admin, one enabled NHTSA vehicle-data provider, one approved `nhtsa-recalls` government source, and one enabled binding. The remaining proof is strictly the real authenticated HTTP execution of `POST /api/v1/operator/nhtsa/recalls/stage` with the application's operator-session and CSRF rules intact. Read-only inspection found no prior live NHTSA staging record and no recent Preview `provider.ingestion` runtime event. The current connected execution surface can perform authenticated Vercel GETs but cannot issue that stateful application POST, so the proof remains open without implying missing application/configuration work.
+2. **Broad canonical repair knowledge.** The reviewed reference corpus proves the architecture but is not broad automotive coverage.
 
-## 3. Fixed implementation order
+The previously added credential-dependent hosted-NHTSA proof scaffold was removed during repository hygiene because it could not execute in the current environment and duplicated existing operator/NHTSA contract coverage. Do not reintroduce a bypass endpoint, hard-coded operator credential, direct-database shortcut, or weakened CSRF/authentication path merely to close the proof. Reopen an automated hosted proof only when an authorized stateful browser/HTTP operator execution path actually exists.
 
-### Phase 0 — Consolidate the repository
+## Phase 9 validation contract
 
-Goal: one coherent implementation line before new automotive data work.
+The permanent final suite covers:
 
-1. Work from a single consolidation line.
-2. Replace stale documentation with `ROADMAP.md` and `BLUEPRINT.md`.
-3. Preserve all spreadsheets/JSON/CSV/database data assets.
-4. Remove obsolete narrative docs, old architectural instructions and obsolete prototypes.
-5. Inventory every Git branch.
-6. Selectively port useful code; do not wholesale merge historical experiment branches.
-7. Remove code paths that no longer belong to the target architecture.
-8. Externalize hard-coded vehicle facts from source/CI into data fixtures.
-9. Make supported vehicle selection data-driven.
-10. Retire obsolete historical test/acceptance suites while keeping build, lint, dependency-audit and container-smoke CI operational.
-
-Exit gate:
-- no useful code remains stranded on an old branch
-- no stale documentation competes with the Blueprint
-- data assets are preserved
-- build/lint/smoke quality gates remain operational
-- main can receive one coherent consolidation result
-
-### Phase 1 — Correct existing behavioral defects
-
-1. Make unsupported computer/service-tool boundaries non-completable.
-2. Add first-class downstream/cross-repair required-operation relationships.
-3. Make completion semantics mechanically honest.
-4. Fix Resume Repair device-ID handling.
-5. Fix Repair Log device-ID handling.
-6. Consume event-history pagination.
-7. Correct Garage exact-configuration resolution and verification wording.
-8. Reconcile manual session inventory with canonical readiness.
-9. Finalize durable private photo storage.
-10. Align upload limits with actual hosting limits.
-11. Record behaviors that require final regression coverage; do not rebuild the automated test suite until the functional MVP build is complete.
-
-Exit gate:
-PartGraph can no longer report a mechanically incomplete or unsupported repair as complete.
-
-### Phase 2 — Restore the resilience contract
-
-1. Preserve the central machine-readable error registry.
-2. Formalize error-code ownership by module.
-3. Keep request IDs end-to-end.
-4. Preserve bounded GET retry behavior.
-5. Add authoritative recovery for timed-out writes.
-6. Define server-side request/deadline behavior.
-7. Standardize degraded/unavailable UI behavior.
-8. Implement versioned offline repair packs.
-9. Implement offline read-only repair continuity first.
-10. If offline writes are enabled, add local event journaling, idempotency, base sequence, conflict detection and reconnect reconciliation.
-11. Keep the server authoritative.
-
-Exit gate:
-Network loss cannot make PartGraph guess, lose the user's place, or falsely report a mutation.
-
-### Phase 3 — Complete security and RBAC boundaries
-
-1. Preserve `partgraph_app` least-privilege access.
-2. Preserve collector staging-only privilege.
-3. Preserve transaction-local owner context.
-4. Extend FORCE RLS to every new private table.
-5. Define human roles:
-   - owner/user
-   - contributor
-   - reviewer
-   - curator
-   - operator/admin
-6. Enforce roles in API services.
-7. Enforce database privileges where practical.
-8. Do not expose operator workbench functionality before RBAC is present.
-9. Keep canonical knowledge shared/read-only to ordinary users.
-10. Keep owner state private.
-11. Keep candidate acquisition isolated from canonical truth.
-
-Exit gate:
-Every read/write/promotion operation has an explicit actor and authorization boundary.
-
-### Phase 4 — Complete the 18-domain canonical schema
-
-Implement the Blueprint domains without vehicle-specific application code:
-1. exact vehicle identity
-2. systems/assemblies
-3. parts/components
-4. fitment/applicability
-5. interchange/supersession
-6. physical relationship graph
-7. hardware/fasteners
-8. tools/equipment/workspace
-9. fluids/materials/consumables
-10. specifications/limits
-11. repair definitions/operations
-12. procedure actions/dependencies
-13. triggered downstream operations
-14. diagnostics/inspections
-15. electrical/sensor/connectors
-16. safety/capability boundaries
-17. evidence/provenance/conflicts/versioning
-18. owner Garage/session/memory/readiness/progress
-
-Exit gate:
-An empty database can represent the whole MVP without hard-coded reference-vehicle facts.
-
-### Phase 5 — Clean migration baseline
-
-1. Keep production owner data intact.
-2. Build a schema-only future baseline.
-3. Move reference/seed vehicle facts to external data fixtures.
-4. Test fresh database creation.
-5. Test migration against a current production copy.
-6. Compare schema and owner-state invariants.
-7. Adopt the clean baseline only after proof.
-8. Never reset production to simplify migration work.
-
-Exit gate:
-Fresh installs and production upgrades follow a generic schema path.
-
-### Phase 6 — Canonical data and provider pipeline
-
-1. source registry
-2. source authority policy
-3. provider/connector registry
-4. immutable raw capture
-5. extraction/normalization
-6. candidate fact generation
-7. exact applicability assignment
-8. conflict detection
-9. reviewer decision
-10. verified evidence promotion
-11. mechanical claim creation
-12. repair-definition materialization
-13. versioning/supersession
-14. audit trail
-
-MVP provider strategy:
-- canonical vehicle and repair data may come from PartGraph database tables and approved backend data files through the same provider/connector boundary
-- external URLs or public services may be used only through backend adapters
-- the frontend must not contain provider secrets or vehicle-specific source logic
-
-Production provider strategy:
-- commercial vehicle-data providers, AI providers and manufacturer integrations are registered/configured through an authenticated admin/operator UI
-- provider base URLs, capabilities, status and non-secret metadata may be stored in PartGraph configuration tables
-- credentials/API keys must be referenced from protected server-side secret storage rather than embedded in application source, frontend bundles or ordinary vehicle-data rows
-- each provider adapter writes raw/candidate evidence into the staging plane; external providers never receive direct canonical-publish authority
-- AI-provider output remains candidate/explanation input and cannot directly publish canonical automotive truth
-
-Rules:
-- missing remains missing
-- conflicts remain explicit until resolved
-- extraction confidence is not source authority
-- retailer data is not sufficient mechanical truth by itself
-- old collector thresholds are not inherited automatically
-- AI cannot directly publish canonical knowledge
-
-### Phase 7 — Primary end-to-end vehicle
-
-Use the 2009 Honda Civic Hybrid as the deepest first validation configuration.
-
-Build enough canonical coverage to exercise:
-- identity
-- systems/assemblies
-- parts and hardware
-- tools
-- fluids/materials
-- specifications
-- repair requirements
-- procedures
-- readiness
-- blockers
-- downstream operations
-- observations/photos
-- pause/resume
-- capability boundaries
-- completion
-
-Exit gate:
-Representative repairs work start-to-finish without vehicle-specific code changes.
-
-### Phase 8 — Five-model reference fleet
-
-Populate the remaining reference fleet through data only.
-
-Rule:
-Adding another vehicle may require more data, but must not require a make/model/year/trim `if` statement or a make-specific application service.
-
-Exit gate:
-The same source code executes workflows for all five model families.
-
-### Phase 9 — Build the fresh MVP validation suite
-
-Do not revive the historical tests removed during consolidation. Build a new validation suite against the completed Blueprint and the final MVP behavior.
-
-Required gates:
-- unit/domain tests
-- API tests
-- authentication/security tests
-- RLS/owner-isolation tests
-- migration tests
-- production-copy migration
-- full-stack integration
-- verified-guidance integration
-- browser E2E
-- randomized acceptance
-- reference-fleet acceptance
+- unit/domain contracts
+- API contracts
+- authentication/security
+- RLS and owner isolation
+- migrations and production-copy migration
+- full-stack and verified-guidance integration
+- real browser E2E
+- randomized and reference-fleet acceptance
 - offline/degraded behavior
 - timeout/ambiguous-write recovery
 - downstream-operation semantics
-- unsupported computer boundary
+- unsupported computer/service-tool boundaries
 - durable photo persistence
-- data-free-source-code check
-- RBAC authorization tests
+- data-free executable source
+- RBAC authorization
 
-### Phase 10 — Production MVP cutover
+Phase 9 completion was proven on clean implementation head `5a95001b594e14437492dd131d41f519619a0eff` with MVP Final Validation CI #205 at 18/18 and a READY Vercel Preview. Subsequent audit/remediation heads also retained the permanent validation gates.
 
-1. merge only an exact green commit
-2. deploy frontend/backend from the same source commit
-3. apply only validated schema changes
-4. verify health/readiness
-5. verify real owner state
-6. run production-safe smoke checks
-7. do not seed unverified repair data as canonical truth
+## Phase 10 preparation
 
-## 4. Branch consolidation policy
+The first Phase 10 implementation slice is `.github/workflows/production-copy-rehearsal.yml`. It is manual-only and creates a fresh expiring Neon child of the stable `production` branch. The job fingerprints copied owner/private state at the current Production baseline `0020_catalog_coverage`, migrates only that child to repository head, verifies the copied baseline rows and columns remain unchanged, and runs the migrated-database schema contracts.
 
-Do not merge historical branches wholesale. The following ledger was re-verified against the live repository on 2026-09-11.
+The workflow deliberately does not seed synthetic owner state into the copy, does not accept a Production database URL, and does not deploy application code or publish canonical automotive data. It requires the repository `NEON_API_KEY` secret when dispatched.
 
-### Keep
+Real production-copy migration evidence already exists independently of that automation. Neon branch `phase9-production-copy-validation-2026-09-17` (`br-shiny-sunset-aebi1qvo`) is a direct child of `production` (`br-shiny-silence-aexgk2zm`), created from the Production point-in-time `2026-09-17T23:19:04Z`. On 2026-09-20, Production was reverified at `0020_catalog_coverage` while the isolated copy was at `0063_photo_storage_outbox`. A read-only baseline-column comparison succeeded for all 18 owner/private tables: all 35 persisted baseline rows had matching row counts and deterministic row digests, with no missing baseline column encountered.
 
-- `main` — production/default line
-- `partgraph-mvp-consolidation` — active consolidation implementation line
+This evidence satisfies the real isolated-copy preservation proof. The staged GitHub workflow has not been dispatched because GitHub requires a `workflow_dispatch` workflow to exist on the default branch, while PR #84 remains intentionally unmerged. Its first dispatch is therefore a later repeatability check, not a pre-merge cutover prerequisite.
 
-### Keep temporarily for selective salvage
+A 2026-09-20 isolated snapshot restore drill also passed with all 18 baseline owner/private tables and 35 persisted rows matching Production. Restore mechanics are therefore proven. Production backup freshness remains blocked because no automatic snapshot schedule is configured and current project history retention is 6 hours.
 
-- `partgraph-hosted-parity-hardening` — durable private photo-storage implementation still to port
-- `partgraph-local-catalog-workbench` — newest surviving workbench/identity-catalog line; useful generic acquisition/schema ideas must be reviewed selectively
-- `partgraph-raw-catalog-collectors` — generic staging/collector ideas must be reviewed selectively; old source-policy assumptions are not automatically inherited
-- `partgraph-reference-fleet-mvp` — 16 commits on top of the local-catalog-workbench line; preserve external reference-fleet data and generic support-boundary ideas before retirement
+Fresh non-production capability probes show that the current `free_v3` project cannot close that gate by configuration alone: automatic snapshot scheduling is disabled for the project, and branch protection is rejected by the current-plan limit despite zero protected branches being present. This state is versioned in `ops/cutover/phase10_backup_capability_v1.json`. REL-001 is therefore waiting on a provider-plan/capability decision or an explicitly approved equivalent backup/protection design, not more decision-free application development.
 
-### Ready to retire
+Rollback compatibility is now explicit and machine-checked. The migrated schema preserves all 36 Production baseline tables and all 320 baseline columns, but `0063_photo_storage_outbox` makes `repair_photo_evidence.storage_state` required without a server default. The currently deployed Production photo-write path does not supply that field, so application-only rollback after schema promotion is prohibited. Rollback must be a forward correction or coordinated database restore plus prior application deployment.
 
-These branches are either already fully represented in newer history, are duplicate temporary refs, or contain experiments explicitly rejected/superseded by the current architecture:
+The Phase 10 operator preflight is now versioned in `ops/cutover/phase10_preflight_v1.json` and `docs/PRODUCTION_CUTOVER_PREFLIGHT.md`, with a permanent CI contract test. The current assessment is intentionally **NO-GO**. In addition to PG-AUD-REL-001 and explicit Production authorization, the preflight treats PG-AUD-DEP-005 as a hard cutover-order gate because the current Production Vercel deployment was produced from documentation-only `main` commit `d68606162c725348779e2d4f93e8819eb8469f21`. REL-007 and DEP-003 remain visible as blocked findings that require explicit final disposition rather than being silently ignored.
 
-- `noop-ignore`
-- `partgraph-canada-model-supplement`
-- `partgraph-catalog-coverage-dashboard-backend`
-- `partgraph-fix-garage-selects-vin-fallback`
-- `partgraph-fix-light-card-contrast`
-- `partgraph-github-pages-preview`
-- `partgraph-local-acceptance-harness`
-- `partgraph-local-acceptance-harness-v2`
-- `partgraph-platform-ci-cd`
-- `partgraph-production-acceptance-run`
-- `partgraph-reference-civic-hybrid-profile`
-- `partgraph-repair-session-foundation`
-- `partgraph-restore-garage-theme-fix-vin`
-- `partgraph-review-gemini-workbook`
-- `partgraph-trim-catalog-probe`
-- `partgraph-trim-catalog-provider`
-- `partgraph-ui-blueprint`
-- `partgraph-verify-workbook-exact-selection`
-- `tmp-test-ignore2`
-- `tmp-test-ignore3`
-- `tmp-test-ignore4`
-- `tmp-test-ignore5`
-- `tmp-test-ignore6`
-- `tmp-test-ignore7`
+The DEP-005 sequence is prepared in `ops/cutover/phase10_cutover_choreography_v1.json`. Vercel Authentication with `deploymentType=all` is now the selected barrier because Vercel made Production protection available on every plan on 2026-09-09. The candidate is staged as a Production-target deployment without domain assignment, the existing protection configuration is captured, all public traffic is blocked, the database is migrated and verified, the candidate is tested directly, and only then is Production traffic promoted/reopened. DEP-005 remains BLOCKED only because activating/testing that barrier is itself a Production configuration action and has not been authorized.
 
-Verification notes:
-- `partgraph-local-acceptance-harness`, `partgraph-local-acceptance-harness-v2`, `partgraph-fix-light-card-contrast`, `partgraph-github-pages-preview`, `partgraph-platform-ci-cd`, `partgraph-reference-civic-hybrid-profile`, `partgraph-repair-session-foundation`, and `partgraph-verify-workbook-exact-selection` are zero commits ahead of current `main`.
-- `noop-ignore` and all `tmp-test-ignore2` through `tmp-test-ignore7` resolve to the same old workbench commit; that commit is fully contained in `partgraph-local-catalog-workbench`, which is retained.
-- `partgraph-catalog-coverage-dashboard-backend` contains catalog-coverage files already present byte-for-byte on `main`.
-- `partgraph-production-acceptance-run` is obsolete acceptance-test infrastructure and is retired under the decision to rebuild tests after the functional MVP.
-- `partgraph-review-gemini-workbook` contains only an obsolete review workflow; the workbook/data asset is already preserved independently.
-- `partgraph-trim-catalog-provider` and its probe line are retired with the CarsXE path.
-- the Garage/VIN fallback branch has been selectively accounted for: verified canonical matching and decode-only fallback are retained in consolidation; the path that would save VIN-derived identity without protected VIN storage is intentionally not adopted because protected persistence must fail closed without crypto keys.
+REL-007 has also been reduced to an external capability decision. PartGraph's telemetry, SLO catalog, structured events, correlation IDs, and incident procedures are implemented. The current Vercel Hobby setup has runtime-log visibility but no active alert-delivery backend; Drains require an eligible paid Vercel plan and no external backend is configured. The boundary is versioned in `ops/observability/alert_delivery_capability_v1.json`. No additional decision-free application instrumentation is required to close the engineering portion of this finding.
 
-No branch in the temporary-salvage set is retired until its useful generic code/data is explicitly accounted for.
+DEP-003 is closed. On 2026-09-20 the project owner applied the prepared classic branch-protection policy to `main`; GitHub now reports `main.protected=true` and repository rulesets remain empty. The connected GitHub App cannot read the detailed classic-rule endpoint, so the exact toggle-level evidence remains the owner-applied `ops/cutover/phase10_branch_governance_v1.json` policy rather than API readback.
+## Production safeguards
 
-## 5. No-deviation rule
+Production cutover is not implied by completed MVP validation or by authorization to perform Phase 10 non-production preparation. Before any Production mutation:
 
-`docs/BLUEPRINT.md` defines the architecture.  
-This file defines implementation sequence.
+- select one exact green source commit;
+- retain the proven snapshot-restore path, and separately approve/configure Production backup freshness/retention before cutover;
+- deploy frontend/backend from the same source;
+- apply only explicitly approved, rehearsed migrations;
+- verify health/readiness and real owner state;
+- run production-safe smoke checks;
+- do not seed unreviewed automotive data as canonical truth.
 
-A bug may change task detail. It does not automatically change architecture.
+## Deferred work
 
-Any change to:
-- ownership model
-- canonical-vs-private data boundary
-- source authority
-- offline authority
-- repair completion semantics
-- safety/capability boundary
-- RBAC model
-- deterministic repair execution
+Items that are intentionally blocked, future-scale controls, or post-MVP hardening are tracked in `docs/AUDIT_STATUS.md`. Do not convert them into implementation work merely to reduce the count.
 
-requires an explicit architecture decision before implementation.
+Historical progress narratives and superseded audit working notes remain recoverable from Git history rather than being kept in the active tree.
+
+At the current boundary there are no decision-free remediation fixes left. The remaining MVP-launch work is either an explicit owner/infrastructure activation decision (Production backup/protection, alert delivery, cutover traffic barrier, Production authorization) or the deployed NHTSA operator HTTP execution proof described above. Broad repair-knowledge expansion and the other deferred audit rows remain post-MVP/backlog work unless the project owner changes scope.
+
+Those remaining launch decisions are consolidated in `docs/OWNER_LAUNCH_DECISIONS.md` and `ops/cutover/phase10_owner_decisions_v1.json`. Treat that packet as the compact owner-facing queue; the detailed runbooks remain the execution authority for each item.
+
+The packet also records non-binding default recommendations to minimize launch complexity: Neon Scale with protected Production branch and an initial seven-day restore window, Vercel Pro + Datadog Log Drain alerting, the already-selected Vercel Authentication cutover barrier, and deferral of the live NHTSA operator HTTP proof from the Production-launch gate. These recommendations are not authorization to change subscriptions or Production resources.

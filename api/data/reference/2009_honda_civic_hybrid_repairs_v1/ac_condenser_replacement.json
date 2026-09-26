@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2009-honda-civic-hybrid-repairs-v1",
+  "vehicle_configuration_id": "7feb13e9-bca0-5d8b-b701-f0260cce5da1",
+  "repair_key": "ac-condenser-replacement",
+  "title": "A/C condenser replacement",
+  "capability_policy_key": "professional_required",
+  "source_key": "charmli-2009-civic-hybrid-service-manual-mirror",
+  "operations": [],
+  "requirements": [
+    {
+      "use_key": "ac-condenser",
+      "requirement_key": "part.honda.80110-sna-a42",
+      "category": "part",
+      "display_name": "A/C condenser",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "replacement_required",
+      "timing": "before_start"
+    },
+    {
+      "use_key": "ac-joint-o-rings",
+      "requirement_key": "hardware.ac-joint-o-rings.vehicle-specific",
+      "category": "hardware",
+      "display_name": "Vehicle-specific A/C joint O-rings for opened connections",
+      "default_unit": "set",
+      "quantity": 1,
+      "unit": "set",
+      "necessity": "required",
+      "fulfillment_mode": "replacement_required",
+      "timing": "before_start"
+    },
+    {
+      "use_key": "refrigerant-equipment",
+      "requirement_key": "equipment.mv-refrigerant-recovery-evacuation-recharge",
+      "category": "equipment",
+      "display_name": "Certified motor-vehicle refrigerant recovery, evacuation, and recharge equipment",
+      "default_unit": "set",
+      "quantity": 1,
+      "unit": "set",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "hybrid-ac-poe-oil",
+      "requirement_key": "fluid.sanden-se-10y-poe",
+      "category": "fluid",
+      "display_name": "SANDEN SE-10Y POE refrigerant oil for Civic Hybrid electric compressor",
+      "default_unit": "container",
+      "quantity": 1,
+      "unit": "container",
+      "necessity": "required",
+      "fulfillment_mode": "consumed",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "eye-protection",
+      "requirement_key": "equipment.eye_protection",
+      "category": "equipment",
+      "display_name": "Eye protection",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair"
+    }
+  ],
+  "actions": [],
+  "boundary_note": "A/C condenser replacement requires proper refrigerant recovery before opening the circuit and evacuation, leak testing, oil accounting, and R-134a recharge after installation. The 2009 Civic Hybrid electric compressor requires SANDEN SE-10Y POE oil; this repair is intentionally professional-required and does not publish DIY procedural actions."
+}

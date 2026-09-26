@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "purpose": "Inventory historical migrations that mix schema evolution with reference-data bootstrap behavior. These revisions remain immutable for production upgrade compatibility but are excluded from the future schema-only fresh-install baseline.",
+  "legacy_revisions": [
+    {
+      "migration": "0016_curated_vehicle_identity_bootstrap.py",
+      "classification": "embedded_reference_data",
+      "externalized_paths": [
+        "api/data/reference/2009_honda_civic_hybrid_profile_v1/identity_evidence.json"
+      ]
+    },
+    {
+      "migration": "0017_selected_asian_workbook.py",
+      "classification": "external_artifact_import",
+      "externalized_paths": [
+        "api/data/Selected_Asian_Brands_1996_2000.xlsx"
+      ]
+    },
+    {
+      "migration": "0018_reference_civic_hybrid_profile.py",
+      "classification": "schema_plus_embedded_reference_data",
+      "externalized_paths": [
+        "api/data/reference/2009_honda_civic_hybrid_profile_v1/profile.json"
+      ]
+    },
+    {
+      "migration": "0019_civic_observations.py",
+      "classification": "embedded_reference_data",
+      "externalized_paths": [
+        "api/data/reference/2009_honda_civic_hybrid_profile_v1/observations.json"
+      ]
+    },
+    {
+      "migration": "0020_catalog_coverage.py",
+      "classification": "schema_plus_reference_coverage_data",
+      "externalized_paths": [
+        "api/data/reference/selected_asian_coverage_v1.json",
+        "api/data/Selected_Asian_Brands_1996_2000.xlsx"
+      ]
+    }
+  ],
+  "baseline_rule": "Future fresh-install schema baselines must not execute these reference-data bootstrap operations. Existing deployed databases keep the historical Alembic lineage; fresh baseline installs load reference data explicitly after schema creation."
+}

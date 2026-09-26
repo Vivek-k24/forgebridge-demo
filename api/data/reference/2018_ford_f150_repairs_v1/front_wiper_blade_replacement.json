@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2018-ford-f150-repairs-v1",
+  "repair_key": "front-wiper-blade-replacement",
+  "title": "Front windshield wiper blade replacement",
+  "capability_policy_key": "diy_supported",
+  "source_pages": [
+    360,
+    361
+  ],
+  "operations": [],
+  "requirements": [
+    {
+      "use_key": "front-wiper-blade-use",
+      "requirement_key": "part.front_wiper_blade.vehicle_specific",
+      "category": "part",
+      "display_name": "Vehicle-specific front windshield wiper blade",
+      "necessity": "required",
+      "fulfillment_mode": "replacement_required",
+      "timing": "before_start",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each"
+    }
+  ],
+  "actions": [
+    {
+      "action_key": "raise-wiper-arm",
+      "title": "Raise the wiper arm away from the windshield",
+      "position": 0,
+      "skippable": false,
+      "instruction": "Lift the wiper arm away from the windshield far enough to work on the blade.",
+      "warning_text": "Do not allow the spring-loaded wiper arm to snap back against the windshield.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": []
+    },
+    {
+      "action_key": "release-primary-clip",
+      "title": "Lift the blade's primary locking clip",
+      "position": 1,
+      "skippable": false,
+      "instruction": "Lift the primary locking clip on the wiper-blade connector.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "raise-wiper-arm"
+      ]
+    },
+    {
+      "action_key": "release-secondary-clip",
+      "title": "Press the secondary locking clip",
+      "position": 2,
+      "skippable": false,
+      "instruction": "Press the secondary locking clip to release the blade from the arm.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "release-primary-clip"
+      ]
+    },
+    {
+      "action_key": "remove-old-blade",
+      "title": "Remove the old wiper blade",
+      "position": 3,
+      "skippable": false,
+      "instruction": "Slide the released blade from the wiper arm.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "release-secondary-clip"
+      ]
+    },
+    {
+      "action_key": "install-new-blade",
+      "title": "Install and lock the replacement blade",
+      "position": 4,
+      "skippable": false,
+      "instruction": "Install the replacement blade in the reverse order and confirm both locking features are fully engaged.",
+      "requirement_use_keys": [
+        "front-wiper-blade-use"
+      ],
+      "prerequisite_action_keys": [
+        "remove-old-blade"
+      ]
+    },
+    {
+      "action_key": "lower-arm",
+      "title": "Lower the wiper arm carefully",
+      "position": 5,
+      "skippable": false,
+      "instruction": "Lower the wiper arm gently to the windshield and verify the blade is secure before operating the wipers.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "install-new-blade"
+      ]
+    }
+  ]
+}

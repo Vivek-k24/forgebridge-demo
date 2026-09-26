@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2009-honda-civic-hybrid-repairs-v1",
+  "vehicle_configuration_id": "7feb13e9-bca0-5d8b-b701-f0260cce5da1",
+  "repair_key": "cooling-system-refill-air-bleed",
+  "title": "Cooling-system refill and air bleed",
+  "capability_policy_key": "diy_supported",
+  "source_key": "charmli-2009-civic-hybrid-service-manual-mirror",
+  "operations": [
+    {"operation_key": "refill-and-bleed", "label": "Refill coolant and bleed trapped air", "position": 0}
+  ],
+  "requirements": [
+    {"use_key": "honda-coolant-type-2", "requirement_key": "fluid.honda-long-life-coolant-type-2", "category": "fluid", "display_name": "Honda Long Life Antifreeze/Coolant Type 2", "necessity": "required", "fulfillment_mode": "consumed", "timing": "operation", "operation_key": "refill-and-bleed"}
+  ],
+  "actions": [
+    {"action_key": "open-bleed-and-refill", "title": "Open the bleed path and refill", "position": 0, "skippable": false, "instruction": "Open the cooling-system air-bleed path and add the specified coolant. Close the bleed path once coolant flows steadily without trapped air at that point.", "requirement_use_keys": ["honda-coolant-type-2"], "prerequisite_action_keys": []},
+    {"action_key": "fill-radiator-and-reservoir", "title": "Fill the radiator and reservoir", "position": 1, "skippable": false, "instruction": "Fill the radiator and coolant reservoir to the service-manual levels using the specified premixed coolant.", "requirement_use_keys": ["honda-coolant-type-2"], "prerequisite_action_keys": ["open-bleed-and-refill"]},
+    {"action_key": "warm-and-purge-air", "title": "Warm the engine and purge remaining air", "position": 2, "skippable": false, "instruction": "With the heater valve open, run the engine as specified by the service procedure so remaining trapped air can leave the cooling system.", "requirement_use_keys": [], "prerequisite_action_keys": ["fill-radiator-and-reservoir"]},
+    {"action_key": "recheck-level-and-leaks", "title": "Recheck coolant level and leaks", "position": 3, "skippable": false, "instruction": "After the engine is shut off as directed, recheck the coolant level, top up if needed, secure the radiator cap, and check the system for leaks.", "requirement_use_keys": ["honda-coolant-type-2"], "prerequisite_action_keys": ["warm-and-purge-air"]}
+  ],
+  "boundary_note": "Do not include Honda Diagnostic System service-reminder reset steps in this repair. This is the physical refill/air-bleed operation required after water-pump replacement, not a scheduled Maintenance Minder coolant-replacement reset workflow."
+}

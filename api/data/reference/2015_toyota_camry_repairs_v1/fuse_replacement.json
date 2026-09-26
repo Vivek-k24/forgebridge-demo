@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2015-toyota-camry-repairs-v1",
+  "repair_key": "fuse-replacement",
+  "title": "Accessible blade-fuse inspection and replacement",
+  "capability_policy_key": "diy_supported",
+  "source_pages": [
+    424,
+    425,
+    426
+  ],
+  "operations": [],
+  "requirements": [
+    {
+      "use_key": "same-rating-fuse-use",
+      "requirement_key": "part.automotive_fuse.same_rating",
+      "category": "part",
+      "display_name": "Replacement automotive fuse of the specified amperage",
+      "necessity": "required",
+      "fulfillment_mode": "replacement_required",
+      "timing": "before_start",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each"
+    },
+    {
+      "use_key": "fuse-puller-use",
+      "requirement_key": "tool.fuse_puller",
+      "category": "tool",
+      "display_name": "Fuse puller",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each"
+    }
+  ],
+  "actions": [
+    {
+      "action_key": "power-off",
+      "title": "Switch the vehicle and electrical equipment off",
+      "position": 0,
+      "skippable": false,
+      "instruction": "Switch the engine switch off and turn off the electrical component associated with the suspected fuse.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": []
+    },
+    {
+      "action_key": "locate-fuse-box",
+      "title": "Locate the correct fuse box and circuit",
+      "position": 1,
+      "skippable": false,
+      "instruction": "Use the fuse-box cover diagrams and the owner manual to identify the fuse for the affected circuit.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "power-off"
+      ]
+    },
+    {
+      "action_key": "remove-type-a-or-b-fuse",
+      "title": "Remove the accessible Type A or Type B fuse",
+      "position": 2,
+      "skippable": false,
+      "instruction": "Use the fuse puller to remove the suspected Type A or Type B fuse and inspect the element.",
+      "warning_text": "Type C cartridge-style fuse replacement is not included in this guided workflow; Toyota directs that service to a dealer.",
+      "requirement_use_keys": [
+        "fuse-puller-use"
+      ],
+      "prerequisite_action_keys": [
+        "locate-fuse-box"
+      ]
+    },
+    {
+      "action_key": "install-same-rating-fuse",
+      "title": "Install a fuse of the specified amperage",
+      "position": 3,
+      "skippable": false,
+      "instruction": "If the fuse is blown, install a replacement of the same specified amperage rating.",
+      "warning_text": "Never install a fuse with a higher amperage rating or substitute another material for a fuse.",
+      "requirement_use_keys": [
+        "same-rating-fuse-use"
+      ],
+      "prerequisite_action_keys": [
+        "remove-type-a-or-b-fuse"
+      ]
+    },
+    {
+      "action_key": "verify-circuit",
+      "title": "Verify operation and stop if the fuse blows again",
+      "position": 4,
+      "skippable": false,
+      "instruction": "Switch the vehicle as needed and verify the circuit operates. If the replacement fuse blows again, stop and have the electrical system inspected.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "install-same-rating-fuse"
+      ]
+    }
+  ]
+}

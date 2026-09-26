@@ -7,8 +7,8 @@ from urllib.request import Request, urlopen
 
 from fastapi import status
 
-from ..config import settings
-from ..errors import ErrorCode, PartGraphError
+from ...config import settings
+from ...errors import ErrorCode, PartGraphError
 
 VIN_TRANSLITERATION = {
     **{str(number): number for number in range(10)},

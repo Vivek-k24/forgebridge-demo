@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2018-ford-f150-repairs-v1",
+  "vehicle": {
+    "market": "US",
+    "year": 2018,
+    "make": "Ford",
+    "model": "F-150",
+    "trim": "XLT",
+    "body_style": "SuperCrew",
+    "engine": "3.5L EcoBoost V6",
+    "transmission": "10-speed automatic",
+    "drivetrain": "4x4"
+  },
+  "review": {
+    "status": "source_reviewed_reference_fixture",
+    "reviewed_through": "2026-09-26",
+    "reviewed_by": "partgraph_reference_manual_review",
+    "note": "The MVP reference truck is now pinned to a concrete U.S. 2018 F-150 XLT SuperCrew 4x4 with the 3.5L EcoBoost V6 and 10-speed automatic. The currently published owner-service workflows are still restricted to procedures supported by the owner's manual."
+  },
+  "sources": [
+    {
+      "source_key": "ford-2018-f150-owner-manual-second-printing",
+      "source_class": "oem_service",
+      "license_status": "approved",
+      "automation_allowed": false,
+      "document": "2018 F-150 Owner's Manual, Second Printing",
+      "url": "https://www.fordservicecontent.com/Ford_Content/Catalog/owner_information/2018-Ford-F-150-Owners-Manual-version-2_om-EN-US_10_2017_V3.pdf",
+      "supports": [
+        "license_plate_light_bulb_replacement",
+        "fuse_replacement",
+        "front_wiper_blade_replacement",
+        "flat_tire_spare_installation"
+      ]
+    },
+    {
+      "source_key": "ford-2018-f150-product-specifications",
+      "source_class": "oem_service",
+      "license_status": "approved",
+      "automation_allowed": false,
+      "document": "Ford 2018 F-150 product brochure and technical specifications",
+      "url": "https://media.ford.com/content/dam/fordmedia/North%20America/US/product/2018/f-150/18_F150.pdf",
+      "supports": [
+        "vehicle_identity"
+      ]
+    }
+  ],
+  "repairs": [
+    {
+      "repair_key": "license-plate-light-bulb-replacement",
+      "path": "license_plate_light_bulb_replacement.json",
+      "source_key": "ford-2018-f150-owner-manual-second-printing",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 1,
+      "action_count": 4
+    },
+    {
+      "repair_key": "fuse-replacement",
+      "path": "fuse_replacement.json",
+      "source_key": "ford-2018-f150-owner-manual-second-printing",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 2,
+      "action_count": 5
+    },
+    {
+      "repair_key": "front-wiper-blade-replacement",
+      "path": "front_wiper_blade_replacement.json",
+      "source_key": "ford-2018-f150-owner-manual-second-printing",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 1,
+      "action_count": 6
+    },
+    {
+      "repair_key": "flat-tire-spare-installation",
+      "path": "flat_tire_spare_installation.json",
+      "source_key": "ford-2018-f150-owner-manual-second-printing",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 7,
+      "action_count": 9
+    }
+  ],
+  "vehicle_identity_source_key": "ford-2018-f150-product-specifications"
+}

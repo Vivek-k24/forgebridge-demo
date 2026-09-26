@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Request, Response, status
 
-from ..config import settings
-from ..errors import ErrorCode, ErrorEnvelope, PartGraphError
+from ...config import settings
+from ...errors import ErrorCode, ErrorEnvelope, PartGraphError
 from .dependencies import AuthSessionDep, CurrentUserDep, require_csrf
 from .schemas import (
     AuthResult,

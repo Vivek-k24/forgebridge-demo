@@ -10,9 +10,9 @@ from sqlalchemy import case, delete, or_, select, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..config import settings
-from ..database import session_factory
-from ..errors import ErrorCode
+from ...config import settings
+from ...database import session_factory
+from ...errors import ErrorCode
 from .models import AuthRateLimit, AuthSession, User, UserPreference
 
 SESSION_COOKIE = "partgraph_session"
@@ -159,7 +159,7 @@ async def register_user(
     if created_id is None:
         raise AuthenticationError(
             ErrorCode.AUTH_IDENTITY_CONFLICT,
-            "Username or email is unavailable.",
+            "Username or email is already in use.",
         )
 
     user = await session.get(User, created_id)

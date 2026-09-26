@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-repair-fleet-v1",
+  "datasets": [
+    {
+      "path": "2009_honda_civic_hybrid_repairs_v1",
+      "manifest": "manifest.json",
+      "repairs": [
+        "engine_oil_filter_change.json",
+        "engine_water_pump_replacement.json",
+        "cooling_system_refill_air_bleed.json",
+        "wheel_tire_service.json",
+        "front_brake_service.json",
+        "rear_brake_disc_replacement.json",
+        "radiator_cooling_module_replacement.json",
+        "coolant_replacement.json",
+        "cvt_fluid_drain_refill.json",
+        "ac_condenser_replacement.json",
+        "spark_plug_replacement.json"
+      ]
+    },
+    {
+      "path": "2015_toyota_camry_repairs_v1",
+      "manifest": "manifest.json",
+      "repairs": [
+        "license_plate_light_bulb_replacement.json",
+        "cabin_air_filter_replacement.json",
+        "fuse_replacement.json",
+        "flat_tire_spare_installation.json"
+      ]
+    },
+    {
+      "path": "2018_ford_f150_repairs_v1",
+      "manifest": "manifest.json",
+      "repairs": [
+        "license_plate_light_bulb_replacement.json",
+        "fuse_replacement.json",
+        "front_wiper_blade_replacement.json",
+        "flat_tire_spare_installation.json"
+      ]
+    },
+    {
+      "path": "2020_subaru_forester_repairs_v1",
+      "manifest": "manifest.json",
+      "repairs": [
+        "backup_light_bulb_replacement.json",
+        "cabin_air_filter_replacement.json",
+        "fuse_replacement.json",
+        "flat_tire_spare_installation.json"
+      ]
+    },
+    {
+      "path": "2022_hyundai_tucson_repairs_v1",
+      "manifest": "manifest.json",
+      "repairs": [
+        "cabin_air_filter_replacement.json",
+        "engine_air_filter_replacement.json",
+        "fuse_replacement.json",
+        "front_wiper_blade_replacement.json",
+        "flat_tire_spare_installation.json"
+      ]
+    }
+  ]
+}

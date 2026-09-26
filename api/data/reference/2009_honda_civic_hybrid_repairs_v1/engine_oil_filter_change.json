@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2009-honda-civic-hybrid-repairs-v1",
+  "vehicle_configuration_id": "7feb13e9-bca0-5d8b-b701-f0260cce5da1",
+  "repair_key": "engine-oil-filter-change",
+  "title": "Engine oil and filter change",
+  "capability_policy_key": "diy_supported",
+  "source_pages": [292, 293, 297, 298, 299, 300],
+  "operations": [
+    {"operation_key": "remove-under-cover", "label": "Remove under-cover", "position": 0},
+    {"operation_key": "drain-engine-oil", "label": "Drain engine oil", "position": 1},
+    {"operation_key": "remove-oil-filter", "label": "Remove oil filter", "position": 2}
+  ],
+  "requirements": [
+    {"use_key": "drain-container-use", "requirement_key": "equipment.used_oil_drain_container", "category": "equipment", "display_name": "Used-oil drain container", "default_unit": "each", "quantity": 1, "unit": "each", "necessity": "required", "fulfillment_mode": "reusable", "timing": "operation", "operation_key": "drain-engine-oil", "source_pages": [299]},
+    {"use_key": "drain-washer-use", "requirement_key": "hardware.engine_oil_drain_washer", "category": "hardware", "display_name": "Engine oil drain-bolt washer", "default_unit": "each", "quantity": 1, "unit": "each", "necessity": "required", "fulfillment_mode": "replacement_required", "timing": "before_start", "source_pages": [299]},
+    {"use_key": "engine-oil-use", "requirement_key": "fluid.engine_oil.0w20", "category": "fluid", "display_name": "0W-20 engine oil", "default_unit": "US qt", "quantity": 3.4, "unit": "US qt", "necessity": "required", "fulfillment_mode": "consumed", "timing": "whole_repair", "source_pages": [297, 299]},
+    {"use_key": "flat-screwdriver-use", "requirement_key": "tool.flat_tip_screwdriver", "category": "tool", "display_name": "Flat-tipped screwdriver", "default_unit": "each", "quantity": 1, "unit": "each", "necessity": "required", "fulfillment_mode": "reusable", "timing": "operation", "operation_key": "remove-under-cover", "source_pages": [298]},
+    {"use_key": "oil-filter-use", "requirement_key": "part.engine_oil_filter", "category": "part", "display_name": "Engine oil filter", "default_unit": "each", "quantity": 1, "unit": "each", "necessity": "required", "fulfillment_mode": "replacement_required", "timing": "before_start", "source_pages": [298, 299]},
+    {"use_key": "oil-filter-wrench-use", "requirement_key": "tool.engine_oil_filter_wrench", "category": "tool", "display_name": "Oil-filter wrench", "default_unit": "each", "quantity": 1, "unit": "each", "necessity": "required", "fulfillment_mode": "reusable", "timing": "operation", "operation_key": "remove-oil-filter", "source_pages": [299]},
+    {"use_key": "underbody-access-use", "requirement_key": "workspace.safe_underbody_access", "category": "workspace", "display_name": "Safe raised-vehicle access from underneath", "necessity": "required", "fulfillment_mode": "reusable", "timing": "whole_repair", "source_pages": [298]},
+    {"use_key": "waste-container-use", "requirement_key": "equipment.sealed_used_oil_container", "category": "equipment", "display_name": "Sealed container for used engine oil", "default_unit": "each", "quantity": 1, "unit": "each", "necessity": "recommended", "fulfillment_mode": "reusable", "timing": "whole_repair", "source_pages": [300]}
+  ],
+  "actions": [
+    {"action_key": "prepare-access", "title": "Prepare the vehicle and access the drain area", "position": 0, "skippable": false, "instruction": "Run the engine until it reaches normal operating temperature, then shut it off. Open the hood and remove the engine oil fill cap. On the U.S. model, remove the nine holding clips and two bolts, then lower the under-cover.", "requirement_use_keys": ["flat-screwdriver-use", "underbody-access-use"], "prerequisite_action_keys": [], "source_pages": [298]},
+    {"action_key": "drain-engine-oil", "title": "Drain the engine oil", "position": 1, "skippable": false, "instruction": "Remove the oil drain bolt and washer from the bottom of the engine and drain the oil into an appropriate container.", "requirement_use_keys": ["drain-container-use", "underbody-access-use"], "prerequisite_action_keys": ["prepare-access"], "source_pages": [299]},
+    {"action_key": "replace-oil-filter", "title": "Replace the oil filter", "position": 2, "skippable": false, "instruction": "Remove the oil filter and let the remaining oil drain. Make sure the old filter gasket is not stuck to the engine block, then install a new oil filter according to the filter instructions.", "requirement_use_keys": ["oil-filter-wrench-use", "oil-filter-use", "underbody-access-use"], "prerequisite_action_keys": ["drain-engine-oil"], "source_pages": [299]},
+    {"action_key": "close-and-refill", "title": "Close the drain and refill the engine", "position": 3, "skippable": false, "instruction": "Put a new washer on the drain bolt, reinstall the drain bolt, and tighten it to 29 lbf·ft (39 N·m). Refill with recommended 0W-20 oil; capacity including the filter is 3.4 US qt (3.2 L). Reinstall the oil fill cap.", "requirement_use_keys": ["drain-washer-use", "engine-oil-use"], "prerequisite_action_keys": ["drain-engine-oil", "replace-oil-filter"], "source_pages": [297, 299]},
+    {"action_key": "verify-finish", "title": "Verify the repair and finish", "position": 4, "skippable": false, "instruction": "Start the engine and confirm the oil pressure indicator goes out within 5 seconds; if it does not, shut the engine off and check the work. Run the engine for several minutes and check the drain bolt and filter for leaks. Shut it off, wait several minutes, check the dipstick and add oil if needed. Reinstall the U.S.-model under-cover and clips, and dispose of used oil in a sealed container through an appropriate recycling location.", "requirement_use_keys": ["engine-oil-use", "waste-container-use"], "prerequisite_action_keys": ["close-and-refill"], "source_pages": [299, 300]},
+    {"action_key": "reset-oil-life", "title": "Reset the engine oil life display", "position": 5, "skippable": false, "instruction": "With the ignition switch in ON (II), press SEL/RESET repeatedly until engine oil life is displayed. Hold SEL/RESET for about 10 seconds until the oil life and maintenance item code(s) blink. Then press SEL/RESET for more than 5 seconds until the maintenance code(s) disappear and the engine oil life resets to 100%. Confirm the display shows 100% before turning the ignition off.", "requirement_use_keys": [], "prerequisite_action_keys": ["verify-finish"], "source_pages": [292, 293]}
+  ]
+}

@@ -1,0 +1,183 @@
+.offline-repair-workspace {
+  display: grid;
+  gap: 1.2rem;
+}
+
+.offline-repair-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.2rem;
+  border: 1px solid rgba(157, 112, 39, 0.28);
+  border-radius: 14px;
+  background: rgba(194, 145, 54, 0.08);
+}
+
+.offline-repair-header p,
+.offline-repair-header h1,
+.offline-repair-header strong,
+.offline-repair-header span {
+  margin: 0;
+}
+
+.offline-repair-header p {
+  margin-bottom: 0.45rem;
+  font: 760 0.68rem/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: 0.1em;
+}
+
+.offline-repair-header h1 {
+  margin-bottom: 0.6rem;
+}
+
+.offline-repair-header > div:first-child > strong,
+.offline-repair-header > div:first-child > span {
+  display: block;
+}
+
+.offline-repair-header > div:first-child > span {
+  margin-top: 0.2rem;
+  color: #60736c;
+}
+
+.offline-repair-meta {
+  display: grid;
+  gap: 0.35rem;
+  max-width: 360px;
+  text-align: right;
+  color: #6a756f;
+  font-size: 0.75rem;
+}
+
+.offline-repair-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.offline-repair-grid article,
+.offline-repair-list article,
+.offline-repair-action,
+.offline-repair-completion {
+  border: 1px solid rgba(100, 140, 127, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.offline-repair-grid article {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.9rem;
+}
+
+.offline-repair-grid span,
+.offline-repair-grid small {
+  color: #687873;
+}
+
+.offline-repair-grid strong {
+  font-size: 1.05rem;
+}
+
+.offline-repair-list,
+.offline-repair-actions {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.offline-repair-list article,
+.offline-repair-action {
+  padding: 0.85rem 0.95rem;
+}
+
+.offline-repair-list article > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.offline-repair-list article p,
+.offline-repair-list article small,
+.offline-repair-action p,
+.offline-repair-action small {
+  margin: 0.35rem 0 0;
+  color: #64736e;
+}
+
+.offline-repair-action--current {
+  border-color: rgba(95, 157, 124, 0.42);
+  box-shadow: inset 4px 0 0 rgba(95, 157, 124, 0.75);
+}
+
+.offline-repair-action header {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.offline-repair-action header > span {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(95, 157, 124, 0.12);
+  font-weight: 760;
+}
+
+.offline-repair-action header div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.offline-repair-warning,
+.offline-repair-boundary {
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+}
+
+.offline-repair-warning {
+  background: rgba(194, 145, 54, 0.1);
+}
+
+.offline-repair-boundary {
+  background: rgba(133, 78, 72, 0.09);
+}
+
+.offline-repair-completion {
+  padding: 1rem;
+}
+
+.offline-repair-completion p,
+.offline-repair-note,
+.offline-repair-empty {
+  color: #64736e;
+  line-height: 1.55;
+}
+
+.offline-repair-note {
+  margin: 0.3rem 0 0;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 840px) {
+  .offline-repair-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .offline-repair-header {
+    display: grid;
+  }
+
+  .offline-repair-meta {
+    text-align: left;
+  }
+}
+
+@media (max-width: 520px) {
+  .offline-repair-grid {
+    grid-template-columns: 1fr;
+  }
+}

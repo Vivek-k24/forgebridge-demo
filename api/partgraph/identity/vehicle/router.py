@@ -1,10 +1,10 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, HTTPException, Query, status
 
-from ..database import get_session
+from ..auth.dependencies import AuthSessionDep, CurrentUserDep
+from ..auth.roles import ReviewerUserDep, assume_reviewer_database_role
 from .policy import validate_supported_year
 from .reconciliation import reconcile_vehicle_specification_profile
 from .schemas import (
@@ -20,14 +20,14 @@ from .service import (
     get_specification_profile,
     list_configurations,
     list_generation_options,
+    list_make_options,
     list_model_options,
     list_trim_options,
     resolve_selection,
 )
-from .taxonomy import VehicleIdentityError, supported_brand_records
+from .taxonomy import VehicleIdentityError
 
 router = APIRouter(prefix="/api/v1", tags=["Vehicle Identity"])
-SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 
 def _vehicle_error(exc: VehicleIdentityError) -> HTTPException:
@@ -48,18 +48,27 @@ def _validated_year(year: int) -> int:
 
 
 @router.get("/vehicle-brands", response_model=list[VehicleBrandRead])
-async def vehicle_brands() -> list[VehicleBrandRead]:
-    return [VehicleBrandRead.model_validate(item) for item in supported_brand_records()]
+async def vehicle_brands(
+    user: CurrentUserDep,
+    session: AuthSessionDep,
+    q: Annotated[str | None, Query(max_length=96)] = None,
+    limit: Annotated[int, Query(ge=1, le=500)] = 200,
+) -> list[VehicleBrandRead]:
+    del user
+    names = await list_make_options(session, query=q, limit=limit)
+    return [VehicleBrandRead(name=name, status="active") for name in names]
 
 
 @router.get("/vehicle-options/models", response_model=list[str])
 async def vehicle_models(
-    session: SessionDep,
+    user: CurrentUserDep,
+    session: AuthSessionDep,
     year: int,
     market: Annotated[str, Query(min_length=1, max_length=64)],
     make: Annotated[str, Query(min_length=1, max_length=64)],
     q: Annotated[str | None, Query(max_length=96)] = None,
 ) -> list[str]:
+    del user
     try:
         return await list_model_options(
             session,
@@ -74,7 +83,8 @@ async def vehicle_models(
 
 @router.get("/vehicle-options/trims", response_model=list[str])
 async def vehicle_trims(
-    session: SessionDep,
+    user: CurrentUserDep,
+    session: AuthSessionDep,
     year: int,
     market: Annotated[str, Query(min_length=1, max_length=64)],
     make: Annotated[str, Query(min_length=1, max_length=64)],
@@ -82,6 +92,7 @@ async def vehicle_trims(
     q: Annotated[str | None, Query(max_length=128)] = None,
     limit: Annotated[int, Query(ge=1, le=50)] = 20,
 ) -> list[str]:
+    del user
     try:
         return await list_trim_options(
             session,
@@ -98,7 +109,8 @@ async def vehicle_trims(
 
 @router.get("/vehicle-options/generations", response_model=list[str])
 async def vehicle_generations(
-    session: SessionDep,
+    user: CurrentUserDep,
+    session: AuthSessionDep,
     year: int,
     market: Annotated[str, Query(min_length=1, max_length=64)],
     make: Annotated[str, Query(min_length=1, max_length=64)],
@@ -107,6 +119,7 @@ async def vehicle_generations(
     q: Annotated[str | None, Query(max_length=96)] = None,
     limit: Annotated[int, Query(ge=1, le=50)] = 20,
 ) -> list[str]:
+    del user
     try:
         return await list_generation_options(
             session,
@@ -125,8 +138,10 @@ async def vehicle_generations(
 @router.post("/vehicle-selection/resolve", response_model=VehicleSelectionResult)
 async def selection_resolution(
     payload: VehicleSelectionInput,
-    session: SessionDep,
+    user: CurrentUserDep,
+    session: AuthSessionDep,
 ) -> VehicleSelectionResult:
+    del user
     try:
         resolution, normalized, matches = await resolve_selection(session, payload)
     except VehicleIdentityError as exc:
@@ -144,9 +159,11 @@ async def selection_resolution(
     response_model=list[VehicleConfigurationRead],
 )
 async def configurations(
-    session: SessionDep,
+    user: CurrentUserDep,
+    session: AuthSessionDep,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> list[VehicleConfigurationRead]:
+    del user
     items = await list_configurations(session, limit)
     return [VehicleConfigurationRead.model_validate(item) for item in items]
 
@@ -157,8 +174,11 @@ async def configurations(
 )
 async def configuration_profile_reconciliation(
     configuration_id: UUID,
-    session: SessionDep,
+    user: ReviewerUserDep,
+    session: AuthSessionDep,
 ) -> dict[str, object]:
+    del user
+    await assume_reviewer_database_role(session)
     item = await get_configuration(session, configuration_id)
     if item is None:
         raise HTTPException(
@@ -174,8 +194,10 @@ async def configuration_profile_reconciliation(
 )
 async def configuration_profile(
     configuration_id: UUID,
-    session: SessionDep,
+    user: CurrentUserDep,
+    session: AuthSessionDep,
 ) -> VehicleSpecificationProfileRead:
+    del user
     item = await get_specification_profile(session, configuration_id)
     if item is None:
         raise HTTPException(
@@ -191,8 +213,10 @@ async def configuration_profile(
 )
 async def configuration(
     configuration_id: UUID,
-    session: SessionDep,
+    user: CurrentUserDep,
+    session: AuthSessionDep,
 ) -> VehicleConfigurationRead:
+    del user
     item = await get_configuration(session, configuration_id)
     if item is None:
         raise HTTPException(

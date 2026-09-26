@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2022-hyundai-tucson-repairs-v1",
+  "vehicle": {
+    "market": "US",
+    "year": 2022,
+    "make": "Hyundai",
+    "model": "TUCSON",
+    "trim": "SEL",
+    "body_style": "SUV",
+    "engine": "Smartstream G 2.5 GDI",
+    "transmission": "8-speed automatic",
+    "drivetrain": "FWD"
+  },
+  "review": {
+    "status": "source_reviewed_reference_fixture",
+    "reviewed_through": "2026-09-26",
+    "reviewed_by": "partgraph_reference_manual_review",
+    "note": "The MVP reference vehicle is now pinned to a concrete U.S. 2022 Tucson SEL SUV with the Smartstream G 2.5 GDI gasoline engine, eight-speed automatic, and front-wheel drive. Hybrid and plug-in-hybrid coverage remains explicitly excluded."
+  },
+  "sources": [
+    {
+      "source_key": "hyundai-usa-2022-tucson-owner-manual",
+      "source_class": "oem_service",
+      "license_status": "approved",
+      "automation_allowed": false,
+      "document": "2022 Tucson Owner's Manual",
+      "url": "https://owners.hyundaiusa.com/content/dam/hyundai/us/myhyundai/manuals/glovebox-manual/2022/tucson/2022-Tucson-Owners-Manual1.pdf",
+      "supports": [
+        "cabin_air_filter_replacement",
+        "engine_air_filter_replacement",
+        "fuse_replacement",
+        "front_wiper_blade_replacement",
+        "flat_tire_spare_installation"
+      ]
+    },
+    {
+      "source_key": "hyundai-2022-tucson-sel-pricing-specifications",
+      "source_class": "licensed_oem_derived",
+      "license_status": "approved",
+      "automation_allowed": false,
+      "document": "Hyundai Motor America 2022 Tucson pricing release",
+      "url": "https://www.prnewswire.com/news-releases/hyundai-releases-all-new-2022-tucson-pricing-301242151.html",
+      "supports": [
+        "vehicle_identity"
+      ]
+    }
+  ],
+  "repairs": [
+    {
+      "repair_key": "cabin-air-filter-replacement",
+      "path": "cabin_air_filter_replacement.json",
+      "source_key": "hyundai-usa-2022-tucson-owner-manual",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 1,
+      "action_count": 6
+    },
+    {
+      "repair_key": "engine-air-filter-replacement",
+      "path": "engine_air_filter_replacement.json",
+      "source_key": "hyundai-usa-2022-tucson-owner-manual",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 1,
+      "action_count": 6
+    },
+    {
+      "repair_key": "fuse-replacement",
+      "path": "fuse_replacement.json",
+      "source_key": "hyundai-usa-2022-tucson-owner-manual",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 2,
+      "action_count": 6
+    },
+    {
+      "repair_key": "front-wiper-blade-replacement",
+      "path": "front_wiper_blade_replacement.json",
+      "source_key": "hyundai-usa-2022-tucson-owner-manual",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 1,
+      "action_count": 6
+    },
+    {
+      "repair_key": "flat-tire-spare-installation",
+      "path": "flat_tire_spare_installation.json",
+      "source_key": "hyundai-usa-2022-tucson-owner-manual",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 7,
+      "action_count": 9
+    }
+  ],
+  "vehicle_identity_source_key": "hyundai-2022-tucson-sel-pricing-specifications"
+}

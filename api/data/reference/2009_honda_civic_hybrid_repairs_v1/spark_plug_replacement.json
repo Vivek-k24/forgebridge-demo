@@ -1,0 +1,160 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2009-honda-civic-hybrid-repairs-v1",
+  "vehicle_configuration_id": "7feb13e9-bca0-5d8b-b701-f0260cce5da1",
+  "repair_key": "spark-plug-replacement",
+  "title": "Spark plug replacement",
+  "capability_policy_key": "diy_supported",
+  "source_key": "charmli-2009-civic-hybrid-service-manual-mirror",
+  "operations": [],
+  "requirements": [
+    {
+      "use_key": "spark-plugs",
+      "requirement_key": "part.honda.12290-rmx-013",
+      "category": "part",
+      "display_name": "NGK ILFR6J-11K spark plug",
+      "default_unit": "each",
+      "quantity": 8,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "replacement_required",
+      "timing": "before_start"
+    },
+    {
+      "use_key": "spark-plug-socket",
+      "requirement_key": "tool.spark_plug_socket_5_8",
+      "category": "tool",
+      "display_name": "5/8 inch spark-plug socket",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "ratchet-extensions",
+      "requirement_key": "tool.ratchet_extensions",
+      "category": "tool",
+      "display_name": "Ratchet and extensions",
+      "default_unit": "set",
+      "quantity": 1,
+      "unit": "set",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "torque-wrench",
+      "requirement_key": "tool.torque_wrench",
+      "category": "tool",
+      "display_name": "Torque wrench",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "debris-removal",
+      "requirement_key": "tool.spark_plug_well_debris_removal",
+      "category": "tool",
+      "display_name": "Spark-plug-well debris removal method",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "recommended",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair"
+    }
+  ],
+  "actions": [
+    {
+      "action_key": "confirm-hybrid-plug-spec",
+      "title": "Confirm the Hybrid spark-plug specification",
+      "instruction": "Confirm the exact 1.3L Civic Hybrid engine before beginning. This configuration uses eight spark plugs; do not apply that plug count to the 1.8L or Si engines.",
+      "position": 0,
+      "skippable": false,
+      "prerequisite_action_keys": [],
+      "requirement_use_keys": [
+        "spark-plugs"
+      ]
+    },
+    {
+      "action_key": "cool-engine-prepare-plug-access",
+      "title": "Cool the engine and prepare access",
+      "instruction": "Work on a cool engine and remove only the covers or ducting required to reach the ignition coils and spark-plug wells.",
+      "position": 1,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "confirm-hybrid-plug-spec"
+      ],
+      "requirement_use_keys": [
+        "ratchet-extensions"
+      ]
+    },
+    {
+      "action_key": "disconnect-remove-coils",
+      "title": "Disconnect and remove the ignition coils",
+      "instruction": "Track the coil connectors as needed, disconnect them, remove the coils, and inspect the boots for oil contamination, carbon tracking, or damage.",
+      "position": 2,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "cool-engine-prepare-plug-access"
+      ],
+      "requirement_use_keys": []
+    },
+    {
+      "action_key": "clean-remove-old-plugs",
+      "title": "Clean the plug wells and remove the old plugs",
+      "instruction": "Remove loose debris before extracting the plugs, then remove the old plugs with the spark-plug socket and compare wear or deposits across cylinders.",
+      "position": 3,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "disconnect-remove-coils"
+      ],
+      "requirement_use_keys": [
+        "spark-plug-socket",
+        "debris-removal"
+      ]
+    },
+    {
+      "action_key": "hand-start-new-plugs",
+      "title": "Hand-start the new spark plugs",
+      "instruction": "Use the correct pre-gapped plugs, reference gap 1.1 mm (0.043 in.), and start each plug by hand so the cylinder-head threads are not cross-threaded.",
+      "position": 4,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "clean-remove-old-plugs"
+      ],
+      "requirement_use_keys": [
+        "spark-plugs"
+      ]
+    },
+    {
+      "action_key": "torque-spark-plugs",
+      "title": "Torque the spark plugs",
+      "instruction": "Tighten the spark plugs to the service reference of 18 N·m (13 lbf·ft) unless an exact service condition for the installed plug specifies otherwise.",
+      "position": 5,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "hand-start-new-plugs"
+      ],
+      "requirement_use_keys": [
+        "torque-wrench"
+      ]
+    },
+    {
+      "action_key": "reinstall-coils-verify-engine",
+      "title": "Reinstall the coils and verify engine operation",
+      "instruction": "Reinstall the ignition coils, connectors, and removed access components, then start the engine and confirm normal operation without a new misfire or warning indication.",
+      "position": 6,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "torque-spark-plugs"
+      ],
+      "requirement_use_keys": []
+    }
+  ]
+}

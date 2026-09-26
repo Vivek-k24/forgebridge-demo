@@ -1,0 +1,93 @@
+# PartGraph Audit Status
+
+Status: **Phase 0–9 remediation closed at the current roadmap boundary.**  
+Date: **2026-09-20**  
+Canonical architecture: `docs/BLUEPRINT.md`  
+Roadmap: `docs/ROADMAP.md`
+
+## Current result
+
+The remediation audit has **0 decision-free ELIGIBLE items**.
+
+There are **16 intentionally deferred items**:
+
+- **4 BLOCKED**
+- **4 BACKLOG**
+- **8 CURRENT CONTROL COMPLETE / FUTURE BACKLOG**
+
+Completed-finding narratives, intermediate CI run IDs, and remediation work logs were removed from the active documentation tree to reduce stale context. They remain available in Git history.
+
+`PG-AUD-DEP-004` closed on 2026-09-20: `main` was merged into `partgraph-mvp-consolidation` after verifying that the 22 intervening `main` commits changed only the superseded `docs/ROADMAP_LIVE.md`. The synchronization merge preserved that file's deliberate hygiene deletion, and the consolidation branch is now 0 commits behind `main`.
+
+`PG-AUD-DEP-003` closed on 2026-09-20: the project owner applied the prepared classic branch-protection policy to `main`. GitHub now reports `main.protected=true`; repository rulesets remain empty, consistent with classic branch protection. The connected GitHub App still cannot read the detailed protection endpoint (403 Administration permission boundary), so the exact per-toggle configuration is recorded from the owner-applied prepared policy rather than re-read through the integration.
+
+## Deferred register
+
+| Finding | Status | Reopen condition |
+| --- | --- | --- |
+| PG-AUD-REL-001 | BLOCKED | Restore mechanics are proven, but current Neon project capability cannot satisfy the approved Production protection target: a non-production daily-snapshot probe was rejected because backup scheduling is not enabled, and a non-production branch-protection probe was rejected by the current-plan protected-branch limit even though the account has zero protected branches. Reopen only after a provider-plan/capability change or an explicitly approved equivalent durable backup/protection design. |
+| PG-AUD-REL-007 | BLOCKED | Application telemetry/SLO wiring is complete, but no alert-delivery backend is active. Current Vercel Hobby operation has runtime logs but Vercel Drains require Pro/Enterprise, no external monitoring backend is configured, and no alert/drain management action is connected. Reopen only after an alert-capable backend/plan is selected and connected so the existing PG-OBS rules can be activated and tested. |
+| PG-AUD-DEP-001 | BLOCKED | Phase 10 non-production preparation is authorized and the fail-closed preflight mechanism exists. Current preflight is NO-GO; Production cutover remains blocked pending the required hard gates/decision dispositions in `ops/cutover/phase10_preflight_v1.json` and separate explicit Production authorization. |
+| PG-AUD-DEP-005 | BLOCKED | The traffic barrier is now selected: Vercel Authentication → All Deployments, documented by Vercel as available on every plan. Activation is intentionally not performed. Reopen for completion at the authorized cutover when the existing protection state is captured, Production blocking and authenticated health access are proven, and the exact prior protection state can be restored. |
+| PG-AUD-UI-008 | BACKLOG | Post-MVP axe-style accessibility scanning, broader browser coverage, and manual screen-reader evidence are scheduled. |
+| PG-AUD-UI-009 | BACKLOG | A supported-browser/version policy is defined and Firefox/WebKit enforcement is scheduled. |
+| PG-AUD-ROAD-002 | BACKLOG | Preview is already ready for the real proof: schema `0063_photo_storage_outbox`, one active `operator_admin`, one enabled NHTSA vehicle-data provider, one approved `nhtsa-recalls` government source, and one enabled provider/source binding. No live NHTSA staging record or recent `provider.ingestion` runtime event exists. Reopen only when an execution surface can perform the authenticated `POST /api/v1/operator/nhtsa/recalls/stage` with the real operator session + CSRF contract; do not create bypass credentials or weaken the route merely to satisfy the proof. |
+| PG-AUD-ROAD-003 | BACKLOG | Broad canonical repair-knowledge population resumes. |
+| PG-AUD-SEC-004 | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | A stored provider URL becomes executable by a future adapter; revalidate outbound-network protections then. |
+| PG-AUD-REL-003 | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | Serverless concurrency materially increases or an external transaction pooler is introduced. |
+| PG-AUD-REL-006 | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | Continuous/high-volume ingestion is scheduled; then add durable queue/backpressure behavior. |
+| PG-AUD-UI-002 | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | Broader 320px/zoom/text-scale/multi-browser stress becomes release scope. |
+| PG-AUD-UI-003 | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | Manual real-screen-reader announcement evidence becomes release scope. |
+| PG-AUD-UI-007 | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | Broader live accessibility/photo-surface review becomes release scope. |
+| PG-AUD-UI-010 | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | Exhaustive state/contrast/touch-target multi-browser review becomes release scope. |
+| PG-AUD-CODE-002 | CURRENT CONTROL COMPLETE / FUTURE BACKLOG | Broad design-token/active-cascade consolidation is paired with later visual/multi-browser hardening. |
+
+## Repository-hygiene review
+
+The 2026-09-19 full-tree hygiene pass reviewed all tracked files for stale coding-agent artifacts, duplicated documentation, dead compatibility/future abstractions, orphan assets, dependency bloat, and generated/legacy data.
+
+Removed from the active tree:
+
+- abandoned hosted-NHTSA proof harness/test that could not execute without an authorized Preview operator session;
+- `api/partgraph/assistance/models.py`, a temporary “Block 12A / five-PR restructuring” compatibility shim with no current consumer;
+- `api/partgraph/intelligence/contracts.py`, an unused future model-gateway abstraction whose consumers had already been removed;
+- unreferenced `docs/partgraph_vehicle_test_1996_2000.xlsx`;
+- duplicated `ROADMAP_LIVE.md`;
+- the former large Phase 0–9 audit report and execution-gate working documents, replaced by this compact register.
+
+Additional full-tree cleanup completed in the same hygiene pass:
+
+- collapsed import-only identity infrastructure bridges (`identity/config.py`, `identity/database.py`, `identity/errors.py`) into direct root-module imports;
+- collapsed repair-experience auth/config/error/model compatibility shims into canonical imports;
+- extended the compatibility regression guard so those shim paths cannot return silently;
+- removed stale Database Reliability workflow references to the deleted identity database bridge;
+- scanned all 124 runtime Python modules, 59 tests, 65 migrations, 13 API scripts, 12 frontend validators, 35 JSON assets, 10 workflows, Markdown documentation, and remaining root/config templates for stale paths, TODO/FIXME/stub scaffolding, placeholder/mock data, duplicate blobs, backup files, and generated caches;
+- verified all declared Python and web dependencies still have active consumers.
+
+Measured cleanup reduction at commit `d1354df578fcad7e41ffe67fb9fb7de0f4f77933`, relative to the pre-hygiene head `f93b813767246ced3c66c2310e22a6d915bfe71e`:
+
+- files: **413 → 398**;
+- tracked bytes: **2,795,700 → 2,624,599** (**171,101 bytes removed**);
+- documentation bytes: **218,973 → 68,619** (**150,354 bytes removed**);
+- API bytes: **2,040,490 → 2,020,203** (**20,287 bytes removed**);
+- web source/package footprint: unchanged because every tracked frontend module, stylesheet, validator, and dependency remained live.
+
+These figures are a fixed measurement checkpoint, not a claim about the byte count of later commits. Subsequent commits added this audit-status detail and corrected import ordering/canonical import paths without restoring the removed scaffolding or documentation.
+
+Intentionally retained after dependency proof:
+
+- `api/data/Selected_Asian_Brands_1996_2000.xlsx`, because immutable migrations reconstruct the historical lineage from that exact path;
+- legacy equipment generator modules used by immutable migrations 0027–0029 and parity tests;
+- migration baseline chunks and all Alembic history;
+- all web validation scripts currently invoked by CI;
+- current explicit Python and web dependencies; no third-party package was proven unused safely enough to remove.
+
+## Owner launch-decision packet
+
+The four remaining BLOCKED items are consolidated in `docs/OWNER_LAUNCH_DECISIONS.md` and `ops/cutover/phase10_owner_decisions_v1.json`. That packet does not change their status or authorize Production; it exists to keep the remaining owner/admin queue explicit and finite.
+
+## Execution rule
+
+Do not implement BLOCKED, BACKLOG, or FUTURE BACKLOG items simply because they exist. Reclassify only when the documented dependency becomes true or the project owner explicitly changes the boundary.
+
+Repository hygiene does not authorize Production mutation, Phase 10, PR #84 merge, branch deletion, provider activation, or canonical-data publication.

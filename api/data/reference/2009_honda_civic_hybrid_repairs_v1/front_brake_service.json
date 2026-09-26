@@ -1,0 +1,215 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2009-honda-civic-hybrid-repairs-v1",
+  "vehicle_configuration_id": "7feb13e9-bca0-5d8b-b701-f0260cce5da1",
+  "repair_key": "front-brake-service",
+  "title": "Front brake pad, disc, and caliper service",
+  "capability_policy_key": "diy_supported",
+  "source_key": "charmli-2009-civic-hybrid-service-manual-mirror",
+  "operations": [],
+  "requirements": [
+    {
+      "use_key": "front-pad-set",
+      "requirement_key": "part.honda.45022-s5b-j02",
+      "category": "part",
+      "display_name": "Front brake pad set",
+      "default_unit": "set",
+      "quantity": 1,
+      "unit": "set",
+      "necessity": "required",
+      "fulfillment_mode": "replacement_required",
+      "timing": "before_start"
+    },
+    {
+      "use_key": "front-rotors",
+      "requirement_key": "part.honda.45251-sna-010",
+      "category": "part",
+      "display_name": "Front brake rotor/disc",
+      "default_unit": "each",
+      "quantity": 2,
+      "unit": "each",
+      "necessity": "recommended",
+      "fulfillment_mode": "replace_if_damaged",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "front-calipers",
+      "requirement_key": "part.honda.front-caliper-hybrid",
+      "category": "part",
+      "display_name": "Front brake caliper assembly for Civic Hybrid",
+      "default_unit": "each",
+      "quantity": 2,
+      "unit": "each",
+      "necessity": "recommended",
+      "fulfillment_mode": "replace_if_damaged",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "vehicle-jack",
+      "requirement_key": "equipment.vehicle_jack",
+      "category": "equipment",
+      "display_name": "Vehicle jack",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "wheel-chock",
+      "requirement_key": "equipment.wheel_chock",
+      "category": "equipment",
+      "display_name": "Wheel chock",
+      "default_unit": "each",
+      "quantity": 2,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "torque-wrench",
+      "requirement_key": "tool.torque_wrench",
+      "category": "tool",
+      "display_name": "Torque wrench",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "piston-compressor",
+      "requirement_key": "tool.brake_piston_compressor",
+      "category": "tool",
+      "display_name": "Brake piston compressor",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "dot3-fluid",
+      "requirement_key": "fluid.honda-heavy-duty-dot3",
+      "category": "fluid",
+      "display_name": "Honda Heavy Duty DOT 3 brake fluid",
+      "default_unit": "container",
+      "quantity": 1,
+      "unit": "container",
+      "necessity": "recommended",
+      "fulfillment_mode": "consumed",
+      "timing": "whole_repair"
+    }
+  ],
+  "actions": [
+    {
+      "action_key": "confirm-front-brake-variant",
+      "title": "Confirm the front brake variant",
+      "instruction": "Confirm the exact 2009 Civic Hybrid front-brake configuration before opening the assembly. The Hybrid pad, disc, and caliper references are not treated as interchangeable with 1.8L or Si hardware.",
+      "position": 0,
+      "skippable": false,
+      "prerequisite_action_keys": [],
+      "requirement_use_keys": [
+        "front-pad-set"
+      ]
+    },
+    {
+      "action_key": "secure-lift-remove-front-wheel",
+      "title": "Secure, lift, and remove the front wheel",
+      "instruction": "Park level, chock the wheels, loosen the wheel nuts, lift at the proper point, support the vehicle safely, and remove the front wheel.",
+      "warning_text": "Do not rely on the hydraulic jack alone while working around the brake assembly.",
+      "position": 1,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "confirm-front-brake-variant"
+      ],
+      "requirement_use_keys": [
+        "vehicle-jack",
+        "wheel-chock"
+      ]
+    },
+    {
+      "action_key": "inspect-front-brakes",
+      "title": "Inspect the front brake assembly",
+      "instruction": "Inspect pad thickness, disc surface, caliper boots, hose condition, guide-pin condition, and any evidence of brake-fluid leakage before removing service parts.",
+      "position": 2,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "secure-lift-remove-front-wheel"
+      ],
+      "requirement_use_keys": [
+        "front-rotors",
+        "front-calipers"
+      ]
+    },
+    {
+      "action_key": "remove-caliper-and-pads",
+      "title": "Open the caliper and remove the pads",
+      "instruction": "Remove the caliper as required by the exact procedure, support it so the brake hose carries no weight, and remove the pads and associated hardware.",
+      "warning_text": "Avoid breathing brake dust and do not clean the brake assembly with an air hose.",
+      "position": 3,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "inspect-front-brakes"
+      ],
+      "requirement_use_keys": []
+    },
+    {
+      "action_key": "service-contact-points",
+      "title": "Service pad contact points and caliper movement",
+      "instruction": "Clean the appropriate bracket and retainer contact points, verify correct guide-pin movement, and keep grease and other contamination off the pad friction material and disc faces.",
+      "position": 4,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "remove-caliper-and-pads"
+      ],
+      "requirement_use_keys": []
+    },
+    {
+      "action_key": "retract-piston-install-pads",
+      "title": "Retract the piston and install the pads",
+      "instruction": "Monitor the brake-fluid reservoir while retracting the piston, then install the correct Hybrid pads, shims, and hardware. Stop if the piston does not retract normally.",
+      "position": 5,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "service-contact-points"
+      ],
+      "requirement_use_keys": [
+        "piston-compressor",
+        "front-pad-set",
+        "dot3-fluid"
+      ]
+    },
+    {
+      "action_key": "reassemble-front-brakes",
+      "title": "Reassemble the front brakes and wheel",
+      "instruction": "Reinstall the caliper and any serviced disc components using the applicable service fastener torques, then reinstall the wheel and tighten the wheel nuts to 108 N·m (80 lbf·ft).",
+      "position": 6,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "retract-piston-install-pads"
+      ],
+      "requirement_use_keys": [
+        "torque-wrench"
+      ]
+    },
+    {
+      "action_key": "restore-firm-brake-pedal",
+      "title": "Restore and verify a firm brake pedal",
+      "instruction": "Pump the brake pedal until it is firm, verify the fluid level, inspect for leaks or interference, and perform a cautious stationary brake check before moving the vehicle.",
+      "warning_text": "Do not move the vehicle until a firm brake pedal is restored.",
+      "position": 7,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "reassemble-front-brakes"
+      ],
+      "requirement_use_keys": [
+        "dot3-fluid"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,136 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2009-honda-civic-hybrid-repairs-v1",
+  "vehicle_configuration_id": "7feb13e9-bca0-5d8b-b701-f0260cce5da1",
+  "repair_key": "coolant-replacement",
+  "title": "Engine coolant drain, refill, and bleed",
+  "capability_policy_key": "diy_supported",
+  "source_key": "charmli-2009-civic-hybrid-service-manual-mirror",
+  "operations": [],
+  "requirements": [
+    {
+      "use_key": "honda-coolant-type-2",
+      "requirement_key": "fluid.honda-long-life-coolant-type-2",
+      "category": "fluid",
+      "display_name": "Honda Long Life Antifreeze/Coolant Type 2",
+      "quantity": 4.75,
+      "unit": "L",
+      "necessity": "required",
+      "fulfillment_mode": "consumed",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "coolant-drain-container",
+      "requirement_key": "equipment.coolant_drain_container",
+      "category": "equipment",
+      "display_name": "Coolant drain container",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "safe-underbody-access",
+      "requirement_key": "workspace.safe_underbody_access",
+      "category": "workspace",
+      "display_name": "Safe raised-vehicle access from underneath",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "block-drain-washer",
+      "requirement_key": "hardware.engine-coolant-block-drain-washer",
+      "category": "hardware",
+      "display_name": "Engine coolant block-drain sealing washer",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "replacement_required",
+      "timing": "before_start"
+    }
+  ],
+  "actions": [
+    {
+      "action_key": "cool-engine-open-access",
+      "title": "Cool the engine and open service access",
+      "instruction": "Allow the engine and cooling system to cool completely, remove the lower access covers needed for the drains, and only then remove the radiator cap after confirming the system is not pressurized.",
+      "warning_text": "Never remove the radiator cap while the engine or cooling system is hot.",
+      "position": 0,
+      "skippable": false,
+      "prerequisite_action_keys": [],
+      "requirement_use_keys": [
+        "safe-underbody-access"
+      ]
+    },
+    {
+      "action_key": "drain-radiator-engine-block",
+      "title": "Drain the radiator and engine block",
+      "instruction": "Position the drain container, open the radiator drain and engine-block drain as specified, and capture the old coolant for proper disposal.",
+      "position": 1,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "cool-engine-open-access"
+      ],
+      "requirement_use_keys": [
+        "coolant-drain-container"
+      ]
+    },
+    {
+      "action_key": "close-drains-set-reserve",
+      "title": "Close the drains and prepare the reserve tank",
+      "instruction": "Close the radiator drain, reinstall the engine-block drain with a new sealing washer as specified, and establish the correct reserve-tank starting level.",
+      "position": 2,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "drain-radiator-engine-block"
+      ],
+      "requirement_use_keys": [
+        "block-drain-washer"
+      ]
+    },
+    {
+      "action_key": "refill-honda-type2",
+      "title": "Refill with Honda Type 2 coolant",
+      "instruction": "Fill the cooling system with premixed Honda Long Life Antifreeze/Coolant Type 2. The reference coolant-change quantity is approximately 4.75 L; final level is established by the service fill and bleed procedure.",
+      "position": 3,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "close-drains-set-reserve"
+      ],
+      "requirement_use_keys": [
+        "honda-coolant-type-2"
+      ]
+    },
+    {
+      "action_key": "bleed-warm-verify",
+      "title": "Bleed trapped air and warm the engine",
+      "instruction": "Use the specified bleed path with the heater valve open, warm the engine according to the service procedure, monitor the coolant level and leaks, and keep clear of automatically controlled cooling fans.",
+      "warning_text": "Cooling fans may start automatically.",
+      "position": 4,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "refill-honda-type2"
+      ],
+      "requirement_use_keys": [
+        "honda-coolant-type-2"
+      ]
+    },
+    {
+      "action_key": "cool-recheck-final-level",
+      "title": "Cool and recheck the final coolant level",
+      "instruction": "After the engine cools, recheck the radiator and reserve-tank levels, top up as required, secure the radiator cap, and inspect the drained and disturbed areas for leakage.",
+      "position": 5,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "bleed-warm-verify"
+      ],
+      "requirement_use_keys": [
+        "honda-coolant-type-2"
+      ]
+    }
+  ]
+}

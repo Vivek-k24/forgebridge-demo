@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2020-subaru-forester-repairs-v1",
+  "repair_key": "fuse-replacement",
+  "title": "Fuse inspection and replacement",
+  "capability_policy_key": "diy_supported",
+  "source_pages": [
+    472,
+    473
+  ],
+  "operations": [],
+  "requirements": [
+    {
+      "use_key": "same-rating-fuse-use",
+      "requirement_key": "part.automotive_fuse.same_rating",
+      "category": "part",
+      "display_name": "Replacement automotive fuse of the specified amperage",
+      "necessity": "required",
+      "fulfillment_mode": "replacement_required",
+      "timing": "before_start",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each"
+    },
+    {
+      "use_key": "fuse-puller-use",
+      "requirement_key": "tool.fuse_puller",
+      "category": "tool",
+      "display_name": "Fuse puller",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each"
+    }
+  ],
+  "actions": [
+    {
+      "action_key": "power-off",
+      "title": "Switch the ignition and accessories off",
+      "position": 0,
+      "skippable": false,
+      "instruction": "Turn the ignition switch to LOCK/OFF and switch off all electrical accessories.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": []
+    },
+    {
+      "action_key": "locate-fuse",
+      "title": "Locate the correct fuse and rating",
+      "position": 1,
+      "skippable": false,
+      "instruction": "Use the fuse-box cover and the owner-manual fuse/circuit information to identify the suspected fuse and its specified rating.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "power-off"
+      ]
+    },
+    {
+      "action_key": "remove-fuse",
+      "title": "Remove the fuse with the fuse puller",
+      "position": 2,
+      "skippable": false,
+      "instruction": "Use the fuse puller stored in the engine-compartment fuse box to remove the suspected fuse.",
+      "requirement_use_keys": [
+        "fuse-puller-use"
+      ],
+      "prerequisite_action_keys": [
+        "locate-fuse"
+      ]
+    },
+    {
+      "action_key": "inspect-and-replace",
+      "title": "Inspect the fuse and install the same rating if blown",
+      "position": 3,
+      "skippable": false,
+      "instruction": "Inspect the fuse element. If it is blown, install a new fuse of the same rating.",
+      "warning_text": "Do not install a fuse with a higher amperage rating.",
+      "requirement_use_keys": [
+        "same-rating-fuse-use"
+      ],
+      "prerequisite_action_keys": [
+        "remove-fuse"
+      ]
+    },
+    {
+      "action_key": "verify-circuit",
+      "title": "Verify operation and stop if the fuse blows again",
+      "position": 4,
+      "skippable": false,
+      "instruction": "Restore power and verify the circuit. If the same fuse blows again, stop and have the electrical system inspected by a Subaru retailer or qualified technician.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "inspect-and-replace"
+      ]
+    }
+  ]
+}

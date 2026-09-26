@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2022-hyundai-tucson-repairs-v1",
+  "repair_key": "fuse-replacement",
+  "title": "Accessible blade-fuse inspection and replacement",
+  "capability_policy_key": "diy_supported",
+  "source_pages": [
+    595,
+    596,
+    597
+  ],
+  "operations": [],
+  "requirements": [
+    {
+      "use_key": "same-rating-fuse-use",
+      "requirement_key": "part.automotive_fuse.same_rating",
+      "category": "part",
+      "display_name": "Replacement automotive fuse of the specified amperage",
+      "necessity": "required",
+      "fulfillment_mode": "replacement_required",
+      "timing": "before_start",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each"
+    },
+    {
+      "use_key": "fuse-puller-use",
+      "requirement_key": "tool.fuse_puller",
+      "category": "tool",
+      "display_name": "Fuse puller",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each"
+    }
+  ],
+  "actions": [
+    {
+      "action_key": "power-off",
+      "title": "Switch the vehicle and electrical switches off",
+      "position": 0,
+      "skippable": false,
+      "instruction": "Switch the vehicle off and turn all electrical switches off before working on the fuse panel.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": []
+    },
+    {
+      "action_key": "open-fuse-panel",
+      "title": "Open the applicable fuse-panel cover",
+      "position": 1,
+      "skippable": false,
+      "instruction": "Open the instrument-panel or engine-compartment fuse-panel cover for the affected circuit.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "power-off"
+      ]
+    },
+    {
+      "action_key": "locate-fuse",
+      "title": "Identify the correct fuse and amperage",
+      "position": 2,
+      "skippable": false,
+      "instruction": "Use the fuse/relay panel label and owner-manual tables to identify the suspected fuse and its specified amperage.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "open-fuse-panel"
+      ]
+    },
+    {
+      "action_key": "remove-and-inspect",
+      "title": "Remove and inspect the fuse",
+      "position": 3,
+      "skippable": false,
+      "instruction": "Use the provided fuse puller to remove the suspected blade fuse and inspect whether the element is open.",
+      "requirement_use_keys": [
+        "fuse-puller-use"
+      ],
+      "prerequisite_action_keys": [
+        "locate-fuse"
+      ]
+    },
+    {
+      "action_key": "replace-same-rating",
+      "title": "Install a fuse with the same rating",
+      "position": 4,
+      "skippable": false,
+      "instruction": "If the fuse is blown, install a new fuse of the same specified amperage and make sure it fits securely.",
+      "warning_text": "Never replace a fuse with a higher-rated fuse or substitute wire or foil.",
+      "requirement_use_keys": [
+        "same-rating-fuse-use"
+      ],
+      "prerequisite_action_keys": [
+        "remove-and-inspect"
+      ]
+    },
+    {
+      "action_key": "verify-circuit",
+      "title": "Verify the circuit and stop if the fuse opens again",
+      "position": 5,
+      "skippable": false,
+      "instruction": "Restore power as appropriate and verify operation. If the replacement fuse blows again, stop and have the electrical system inspected.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "replace-same-rating"
+      ]
+    }
+  ]
+}

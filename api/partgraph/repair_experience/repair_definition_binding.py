@@ -7,11 +7,11 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..auth.dependencies import AuthSessionDep, CurrentUserDep, require_csrf
 from ..errors import ErrorCode, ErrorEnvelope, PartGraphError
-from ..repair_definition.models import RepairDefinition
-from ..repair_definition.service import verified_requirement_manifest
-from ..user_vehicle.models import UserVehicle
+from ..identity.actors import AuthSessionDep, CurrentUserDep, require_csrf
+from ..identity.user_vehicle.models import UserVehicle
+from ..knowledge.models import RepairDefinition
+from ..knowledge.repair_service import verified_requirement_manifest
 from .models import RepairSession, RepairSessionProjection
 from .service import lease_view, rebuild_projection
 

@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "dataset_key": "selected-asian-1996-2000-v1",
+  "historical_migration": "0020_catalog_coverage.py",
+  "source_artifact": {
+    "path": "api/data/Selected_Asian_Brands_1996_2000.xlsx",
+    "repository_commit": "ab954125d89f8ae4cfc42d35af177ec1fe3938a8"
+  },
+  "coverage": {
+    "label": "Selected Asian brands 1996-2000",
+    "target_rows": 363,
+    "verification_rule": "three_independent_sources",
+    "status": "verifying",
+    "scope": {
+      "market": "US",
+      "year_start": 1996,
+      "year_end": 2000,
+      "expected_make_counts": {
+        "Acura": 62,
+        "Honda": 114,
+        "Lexus": 18,
+        "Subaru": 63,
+        "Toyota": 106
+      }
+    },
+    "initial_item_state": {
+      "verification_status": "unverified",
+      "source_match_count": 0,
+      "source_matrix": {
+        "rule": "three_independent_sources",
+        "sources": [],
+        "status": "pending_verification"
+      }
+    }
+  },
+  "note": "Legacy migration 0020 remains unchanged for production upgrade compatibility. A future clean-baseline install must create the coverage schema without inserting this reference dataset; dataset loading belongs to an explicit fixture or ingestion step."
+}

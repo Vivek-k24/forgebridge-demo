@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2015-toyota-camry-repairs-v1",
+  "vehicle": {
+    "market": "US",
+    "year": 2015,
+    "make": "Toyota",
+    "model": "CAMRY",
+    "trim": "LE",
+    "body_style": "Sedan",
+    "engine": "2.5-Liter 4-Cylinder DOHC 16-Valve Dual VVT-i",
+    "transmission": "6-speed automatic",
+    "drivetrain": "FWD"
+  },
+  "review": {
+    "status": "source_reviewed_reference_fixture",
+    "reviewed_through": "2026-09-26",
+    "reviewed_by": "partgraph_reference_manual_review",
+    "note": "The MVP reference vehicle is now pinned to a concrete U.S. 2015 Camry LE sedan with the 2.5L four-cylinder, six-speed automatic, and front-wheel drive. Repair procedures remain limited to facts supported by the owner's manual and are not generalized to other Camry powertrains."
+  },
+  "sources": [
+    {
+      "source_key": "toyota-2015-camry-owner-manual-om33a86u",
+      "source_class": "oem_service",
+      "license_status": "approved",
+      "automation_allowed": false,
+      "document": "2015 Toyota Camry Owner's Manual",
+      "document_part_number": "OM33A86U",
+      "url": "https://assets.sia.toyota.com/publications/en/om-s/OM33A86U/pdf/OM33A86U.pdf",
+      "supports": [
+        "license_plate_light_bulb_replacement",
+        "cabin_air_filter_replacement",
+        "accessible_blade_fuse_replacement",
+        "flat_tire_compact_spare_installation"
+      ]
+    },
+    {
+      "source_key": "toyota-2015-camry-le-pricing-specifications",
+      "source_class": "oem_service",
+      "license_status": "approved",
+      "automation_allowed": false,
+      "document": "Toyota 2015 Camry pricing and powertrain specifications",
+      "url": "https://pressroom.toyota.com/2015-toyota-camry-pricing/",
+      "supports": [
+        "vehicle_identity"
+      ]
+    }
+  ],
+  "repairs": [
+    {
+      "repair_key": "license-plate-light-bulb-replacement",
+      "path": "license_plate_light_bulb_replacement.json",
+      "source_key": "toyota-2015-camry-owner-manual-om33a86u",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 3,
+      "action_count": 4
+    },
+    {
+      "repair_key": "cabin-air-filter-replacement",
+      "path": "cabin_air_filter_replacement.json",
+      "source_key": "toyota-2015-camry-owner-manual-om33a86u",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 1,
+      "action_count": 5
+    },
+    {
+      "repair_key": "fuse-replacement",
+      "path": "fuse_replacement.json",
+      "source_key": "toyota-2015-camry-owner-manual-om33a86u",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 2,
+      "action_count": 5
+    },
+    {
+      "repair_key": "flat-tire-spare-installation",
+      "path": "flat_tire_spare_installation.json",
+      "source_key": "toyota-2015-camry-owner-manual-om33a86u",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 7,
+      "action_count": 9
+    }
+  ],
+  "vehicle_identity_source_key": "toyota-2015-camry-le-pricing-specifications"
+}

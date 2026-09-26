@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2018-ford-f150-repairs-v1",
+  "repair_key": "license-plate-light-bulb-replacement",
+  "title": "License plate light bulb replacement",
+  "capability_policy_key": "diy_supported",
+  "source_pages": [362, 366, 367],
+  "operations": [],
+  "requirements": [
+    {
+      "use_key": "license-plate-bulb-use",
+      "requirement_key": "part.license_plate_light_bulb.168_5w",
+      "category": "part",
+      "display_name": "168 5 W license plate lamp bulb",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "replacement_required",
+      "timing": "before_start",
+      "source_pages": [367]
+    }
+  ],
+  "actions": [
+    {
+      "action_key": "locate-license-plate-bulb",
+      "title": "Locate the license plate bulb",
+      "position": 0,
+      "skippable": false,
+      "instruction": "Allow the bulb to cool before removal, then reach behind the rear bumper and locate the license plate bulb.",
+      "warning_text": "Make sure the bulb has cooled before removing it.",
+      "requirement_use_keys": ["license-plate-bulb-use"],
+      "prerequisite_action_keys": [],
+      "source_pages": [362, 366]
+    },
+    {
+      "action_key": "remove-bulb-socket",
+      "title": "Remove the bulb socket",
+      "position": 1,
+      "skippable": false,
+      "instruction": "Twist the bulb socket counterclockwise and carefully pull it out of the lamp assembly.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": ["locate-license-plate-bulb"],
+      "source_pages": [366]
+    },
+    {
+      "action_key": "remove-old-bulb",
+      "title": "Remove the old bulb",
+      "position": 2,
+      "skippable": false,
+      "instruction": "Pull the old bulb straight out of the socket.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": ["remove-bulb-socket"],
+      "source_pages": [366]
+    },
+    {
+      "action_key": "install-new-bulb",
+      "title": "Install the new bulb",
+      "position": 3,
+      "skippable": false,
+      "instruction": "Install the new 168 5 W bulb and reinstall the socket in reverse order of removal.",
+      "requirement_use_keys": ["license-plate-bulb-use"],
+      "prerequisite_action_keys": ["remove-old-bulb"],
+      "source_pages": [366, 367]
+    }
+  ]
+}

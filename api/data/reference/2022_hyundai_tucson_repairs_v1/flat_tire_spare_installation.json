@@ -1,0 +1,218 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2022-hyundai-tucson-repairs-v1",
+  "repair_key": "flat-tire-spare-installation",
+  "title": "Flat tire removal and spare-wheel installation",
+  "capability_policy_key": "diy_supported",
+  "source_pages": [
+    643,
+    644,
+    645,
+    646,
+    647,
+    648,
+    649
+  ],
+  "operations": [],
+  "requirements": [
+    {
+      "use_key": "hard-level-surface",
+      "requirement_key": "safety_prerequisite.hard_level_surface",
+      "category": "safety_prerequisite",
+      "display_name": "Hard, level and stable work surface",
+      "necessity": "required",
+      "fulfillment_mode": "reuse_existing",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "parking-brake-use",
+      "requirement_key": "safety_prerequisite.parking_brake",
+      "category": "safety_prerequisite",
+      "display_name": "Parking brake applied",
+      "necessity": "required",
+      "fulfillment_mode": "reuse_existing",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "wheel-chock-use",
+      "requirement_key": "equipment.wheel_chock",
+      "category": "equipment",
+      "display_name": "Wheel chock",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each"
+    },
+    {
+      "use_key": "vehicle-jack-use",
+      "requirement_key": "equipment.vehicle_jack",
+      "category": "equipment",
+      "display_name": "Vehicle jack",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each"
+    },
+    {
+      "use_key": "lug-wrench-use",
+      "requirement_key": "tool.lug_wrench",
+      "category": "tool",
+      "display_name": "Lug wrench",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each"
+    },
+    {
+      "use_key": "torque-wrench-use",
+      "requirement_key": "tool.torque_wrench",
+      "category": "tool",
+      "display_name": "Torque wrench",
+      "necessity": "recommended",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each"
+    },
+    {
+      "use_key": "spare-wheel-use",
+      "requirement_key": "part.tucson_spare_wheel",
+      "category": "part",
+      "display_name": "Tucson spare wheel / tire assembly",
+      "necessity": "required",
+      "fulfillment_mode": "reuse_existing",
+      "timing": "before_start",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each"
+    }
+  ],
+  "actions": [
+    {
+      "action_key": "secure-vehicle",
+      "title": "Secure the vehicle before lifting",
+      "position": 0,
+      "skippable": false,
+      "instruction": "Park on a firm, level surface away from traffic, apply the parking brake, select P, switch the vehicle off, and turn on the hazard flashers.",
+      "warning_text": "Never change a tire where the vehicle or jack can sink, slide, or be struck by traffic.",
+      "requirement_use_keys": [
+        "hard-level-surface",
+        "parking-brake-use"
+      ],
+      "prerequisite_action_keys": []
+    },
+    {
+      "action_key": "chock-wheel",
+      "title": "Chock the wheel diagonally opposite the flat tire",
+      "position": 1,
+      "skippable": false,
+      "instruction": "Place a wheel chock at the wheel diagonally opposite the flat tire so the vehicle cannot roll.",
+      "requirement_use_keys": [
+        "wheel-chock-use"
+      ],
+      "prerequisite_action_keys": [
+        "secure-vehicle"
+      ]
+    },
+    {
+      "action_key": "retrieve-spare-tools",
+      "title": "Retrieve the spare tire, jack, and wheel-nut wrench",
+      "position": 2,
+      "skippable": false,
+      "instruction": "Remove the spare wheel, jack, and wheel-nut wrench from their storage locations.",
+      "requirement_use_keys": [
+        "spare-wheel-use",
+        "vehicle-jack-use",
+        "lug-wrench-use"
+      ],
+      "prerequisite_action_keys": [
+        "chock-wheel"
+      ]
+    },
+    {
+      "action_key": "loosen-wheel-nuts",
+      "title": "Loosen the wheel nuts before lifting",
+      "position": 3,
+      "skippable": false,
+      "instruction": "Loosen each wheel nut counterclockwise about one turn before raising the vehicle. Do not remove the nuts yet.",
+      "requirement_use_keys": [
+        "lug-wrench-use"
+      ],
+      "prerequisite_action_keys": [
+        "retrieve-spare-tools"
+      ]
+    },
+    {
+      "action_key": "position-jack-and-lift",
+      "title": "Position the jack at the designated point and lift",
+      "position": 4,
+      "skippable": false,
+      "instruction": "Position the jack at the designated front or rear jacking point nearest the flat tire and raise the vehicle only enough to remove the wheel.",
+      "warning_text": "Never place any part of your body under a vehicle supported only by the vehicle jack.",
+      "requirement_use_keys": [
+        "vehicle-jack-use"
+      ],
+      "prerequisite_action_keys": [
+        "loosen-wheel-nuts"
+      ]
+    },
+    {
+      "action_key": "remove-flat-wheel",
+      "title": "Remove the flat wheel",
+      "position": 5,
+      "skippable": false,
+      "instruction": "Remove the wheel nuts, then remove the flat wheel from the hub.",
+      "requirement_use_keys": [
+        "lug-wrench-use"
+      ],
+      "prerequisite_action_keys": [
+        "position-jack-and-lift"
+      ]
+    },
+    {
+      "action_key": "install-spare",
+      "title": "Install the spare wheel and hand-start the nuts",
+      "position": 6,
+      "skippable": false,
+      "instruction": "Place the spare wheel on the hub and hand-start every wheel nut, using the tapered end of the nuts toward the wheel.",
+      "requirement_use_keys": [
+        "spare-wheel-use"
+      ],
+      "prerequisite_action_keys": [
+        "remove-flat-wheel"
+      ]
+    },
+    {
+      "action_key": "lower-and-torque",
+      "title": "Lower the vehicle and torque the wheel nuts",
+      "position": 7,
+      "skippable": false,
+      "instruction": "Lower the vehicle and tighten the wheel nuts in the specified sequence. Final wheel-nut torque is 79–94 lbf·ft (107–127 N·m).",
+      "requirement_use_keys": [
+        "lug-wrench-use",
+        "torque-wrench-use"
+      ],
+      "prerequisite_action_keys": [
+        "install-spare"
+      ]
+    },
+    {
+      "action_key": "check-and-stow",
+      "title": "Check the spare and stow the removed wheel and tools",
+      "position": 8,
+      "skippable": false,
+      "instruction": "Check the installed spare tire pressure, secure the removed wheel, and stow the jack and tools before driving.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "lower-and-torque"
+      ]
+    }
+  ]
+}

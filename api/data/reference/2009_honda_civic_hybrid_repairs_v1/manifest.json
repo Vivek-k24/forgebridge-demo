@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2009-honda-civic-hybrid-repairs-v1",
+  "vehicle_configuration_id": "7feb13e9-bca0-5d8b-b701-f0260cce5da1",
+  "vehicle": {
+    "market": "US",
+    "year": 2009,
+    "make": "Honda",
+    "model": "CIVIC",
+    "trim": "HYBRID",
+    "body_style": "Sedan",
+    "engine": "1.3L I4 HYBRID",
+    "transmission": "CVT",
+    "drivetrain": "FWD"
+  },
+  "review": {
+    "status": "approved_for_mvp_reference",
+    "reviewed_through": "2026-09-26",
+    "reviewed_by": "project_owner",
+    "note": "Project owner expanded the five-vehicle MVP repair scope on 2026-09-26. The Civic reference now includes the previously reviewed repair-lab workflows for wheels/tires, front brakes, rear disc brakes, radiator/cooling module, coolant replacement, CVT fluid service, A/C condenser professional-service boundary, and spark plugs in addition to the oil, water-pump, and coolant-refill workflows."
+  },
+  "source": {
+    "source_key": "honda-2009-civic-hybrid-owner-manual",
+    "source_class": "oem_service",
+    "document": "2009 Civic Hybrid Online Reference Owner's Manual",
+    "document_part_number": "00X31-SNC-6300",
+    "url": "https://techinfo.honda.com/rjanisis/pubs/OM/NC0909/NC0909OM.PDF"
+  },
+  "sources": [
+    {
+      "source_key": "honda-2009-civic-hybrid-owner-manual",
+      "source_class": "oem_service",
+      "license_status": "approved",
+      "automation_allowed": false,
+      "document": "2009 Civic Hybrid Online Reference Owner's Manual",
+      "document_part_number": "00X31-SNC-6300",
+      "url": "https://techinfo.honda.com/rjanisis/pubs/OM/NC0909/NC0909OM.PDF"
+    },
+    {
+      "source_key": "charmli-2009-civic-hybrid-service-manual-mirror",
+      "source_class": "licensed_oem_derived",
+      "license_status": "approved",
+      "automation_allowed": false,
+      "reviewed_on": "2026-09-26",
+      "reviewed_by": "project_owner",
+      "note": "Approved for manually reviewed exact-vehicle repair evidence only; automated acquisition remains disabled. Expanded by project-owner direction on 2026-09-26.",
+      "document": "2009 Honda Civic Hybrid service-manual mirror and manually reviewed repair procedures",
+      "url": "https://charm.li/Honda/2009/Civic%20L4-1.3L%20Hybrid/Repair%20and%20Diagnosis/"
+    }
+  ],
+  "repairs": [
+    {
+      "repair_key": "engine-oil-filter-change",
+      "path": "engine_oil_filter_change.json",
+      "source_key": "honda-2009-civic-hybrid-owner-manual",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 8,
+      "action_count": 6
+    },
+    {
+      "repair_key": "engine-water-pump-replacement",
+      "path": "engine_water_pump_replacement.json",
+      "source_key": "charmli-2009-civic-hybrid-service-manual-mirror",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 4,
+      "action_count": 4
+    },
+    {
+      "repair_key": "cooling-system-refill-air-bleed",
+      "path": "cooling_system_refill_air_bleed.json",
+      "source_key": "charmli-2009-civic-hybrid-service-manual-mirror",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 1,
+      "action_count": 4
+    },
+    {
+      "repair_key": "wheel-tire-service",
+      "path": "wheel_tire_service.json",
+      "source_key": "charmli-2009-civic-hybrid-service-manual-mirror",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 6,
+      "action_count": 6
+    },
+    {
+      "repair_key": "front-brake-service",
+      "path": "front_brake_service.json",
+      "source_key": "charmli-2009-civic-hybrid-service-manual-mirror",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 8,
+      "action_count": 8
+    },
+    {
+      "repair_key": "rear-brake-disc-replacement",
+      "path": "rear_brake_disc_replacement.json",
+      "source_key": "charmli-2009-civic-hybrid-service-manual-mirror",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 5,
+      "action_count": 6
+    },
+    {
+      "repair_key": "radiator-cooling-module-replacement",
+      "path": "radiator_cooling_module_replacement.json",
+      "source_key": "charmli-2009-civic-hybrid-service-manual-mirror",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 11,
+      "action_count": 6
+    },
+    {
+      "repair_key": "coolant-replacement",
+      "path": "coolant_replacement.json",
+      "source_key": "charmli-2009-civic-hybrid-service-manual-mirror",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 4,
+      "action_count": 6
+    },
+    {
+      "repair_key": "cvt-fluid-drain-refill",
+      "path": "cvt_fluid_drain_refill.json",
+      "source_key": "charmli-2009-civic-hybrid-service-manual-mirror",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 4,
+      "action_count": 6
+    },
+    {
+      "repair_key": "ac-condenser-replacement",
+      "path": "ac_condenser_replacement.json",
+      "source_key": "charmli-2009-civic-hybrid-service-manual-mirror",
+      "capability_policy_key": "professional_required",
+      "requirement_count": 5,
+      "action_count": 0
+    },
+    {
+      "repair_key": "spark-plug-replacement",
+      "path": "spark_plug_replacement.json",
+      "source_key": "charmli-2009-civic-hybrid-service-manual-mirror",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 5,
+      "action_count": 7
+    }
+  ]
+}

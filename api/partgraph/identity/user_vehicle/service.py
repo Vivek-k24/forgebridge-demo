@@ -11,8 +11,8 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..config import settings
-from ..errors import ErrorCode, PartGraphError
+from ...config import settings
+from ...errors import ErrorCode, PartGraphError
 from ..vehicle.models import VehicleConfiguration
 from ..vehicle.policy import validate_supported_year
 from ..vehicle.schemas import VehicleConfigurationRead

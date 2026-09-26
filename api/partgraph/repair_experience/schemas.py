@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
 
-from ..user_vehicle.schemas import UserVehicleRead
+from ..identity.user_vehicle.schemas import UserVehicleRead
 
 SessionStatus = Literal["active", "paused", "archived"]
 SessionEventType = Literal[
@@ -111,8 +111,8 @@ class ResumeCountsRead(BaseModel):
     hardware_not_installed: int
     hardware_stored: int
     hardware_loose: int
-    inventory_total: int
-    procurement_blockers: int
+    supplemental_inventory_total: int
+    verified_readiness_blockers: int
     observations_total: int
     photos_total: int
 

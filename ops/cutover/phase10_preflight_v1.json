@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "status": "no_go",
+  "evaluation_kind": "checked_in_snapshot_and_fail_closed_contract",
+  "must_refresh_before_cutover": true,
+  "candidate_resolution": {
+    "source_branch": "partgraph-mvp-consolidation",
+    "strategy": "exact_git_head_at_final_preflight",
+    "require_zero_commits_behind_main": true,
+    "require_pr_84_mergeable": true,
+    "require_pr_84_draft_until_explicit_cutover_authorization": true,
+    "require_exact_head_ci_green": true,
+    "require_exact_head_preview_ready": true
+  },
+  "observed_snapshot": {
+    "observed_on": "2026-09-20",
+    "candidate_head": "df2bcd0509bdde6c44c64bdf6562ea0ba8f4c9dc",
+    "candidate_zero_behind_main": true,
+    "pr_84_mergeable": true,
+    "pr_84_draft": true,
+    "exact_head_validation": {
+      "mvp_final_validation_run": 293,
+      "mvp_final_validation_jobs_passed": 18,
+      "api_run": 1124,
+      "web_run": 987,
+      "extraction_run": 472,
+      "canonical_publication_run": 401,
+      "reference_runtime_run": 418,
+      "database_reliability_run": 257,
+      "observability_run": 209,
+      "dependency_advisory_run": 251
+    },
+    "preview": {
+      "deployment_id": "dpl_8Gj5g8SJFbHjtVB7xbGjkYtXTSuC",
+      "deployment_state": "READY",
+      "last_confirmed_application_readiness_http_status": 200,
+      "last_confirmed_application_readiness_at_utc": "2026-09-20T14:03:55Z",
+      "current_unauthenticated_probe_at_utc": "2026-09-20T14:47:47Z",
+      "current_unauthenticated_probe_http_status": 302,
+      "current_probe_interpretation": "Vercel Preview SSO protection redirect; final preflight must use an authorized Preview health probe rather than treating the redirect as application readiness."
+    },
+    "production": {
+      "git_commit": "d68606162c725348779e2d4f93e8819eb8469f21",
+      "vercel_deployment_id": "dpl_CgyKourTBDycuEaBFiTu6UFqwaqR",
+      "deployment_state": "READY",
+      "readiness_http_status": 200,
+      "readiness_observed_at_utc": "2026-09-20T14:47:51Z",
+      "database_revision": "0020_catalog_coverage",
+      "neon_branch_id": "br-shiny-silence-aexgk2zm",
+      "neon_branch_primary": true,
+      "neon_branch_default": true,
+      "neon_branch_protected": false,
+      "automatic_snapshot_schedule_entries": 0,
+      "history_retention_seconds": 21600
+    },
+    "deployment_governance_observation": {
+      "production_commit": "d68606162c725348779e2d4f93e8819eb8469f21",
+      "commit_files_changed": [
+        "docs/ROADMAP_LIVE.md"
+      ],
+      "meaning": "A documentation-only main commit received a Production Vercel deployment. Production deployment ordering must therefore be explicitly controlled or an equivalent maintenance strategy approved before merge/schema cutover."
+    },
+    "repository_governance": {
+      "observed_on": "2026-09-20",
+      "main_protected": true,
+      "repository_rulesets": 0,
+      "protection_surface": "classic_branch_protection",
+      "owner_reported_prepared_policy_applied": true,
+      "detailed_rule_readback": "unavailable_to_connected_github_app_403"
+    }
+  },
+  "proven_controls": {
+    "phase9_validation": "satisfied",
+    "real_production_copy_migration_preservation": "satisfied",
+    "isolated_snapshot_restore": "satisfied",
+    "coordinated_rollback_contract": "satisfied",
+    "application_build_schema_read_only": "satisfied",
+    "backup_capability_probe": "satisfied_current_plan_insufficient",
+    "alert_signal_instrumentation": "satisfied_delivery_backend_unresolved",
+    "branch_governance_design": "satisfied_active",
+    "traffic_barrier_selection": "satisfied_activation_unresolved"
+  },
+  "hard_cutover_gates": [
+    {
+      "finding_id": "PG-AUD-REL-001",
+      "state": "blocked",
+      "requirement": "Current Neon project capability is insufficient: automatic backup scheduling and branch protection were both rejected in non-production probes. Resolve through an approved provider-plan/capability change or an explicitly approved equivalent durable backup/protection design, then verify Production controls."
+    },
+    {
+      "finding_id": "PG-AUD-DEP-005",
+      "state": "blocked",
+      "requirement": "Vercel Authentication with deploymentType=all is selected and supported on the current plan. At the authorized cutover, capture the current protection settings, activate All Deployments, prove anonymous Production blocking plus authenticated health access, and preserve the ability to restore the exact prior protection state."
+    },
+    {
+      "finding_id": "PG-AUD-DEP-001",
+      "state": "blocked",
+      "requirement": "Project owner must explicitly authorize the exact Production migration/cutover after all required evidence is refreshed."
+    }
+  ],
+  "decision_required_findings": [
+    {
+      "finding_id": "PG-AUD-REL-007",
+      "state": "blocked",
+      "requirement": "Application telemetry is complete, but alert delivery is inactive. Select/connect an eligible native Vercel alert capability or external observability backend, activate every required PG-OBS rule, and record notification/test evidence before final Production approval."
+    }
+  ],
+  "production_mutation_authorized": false,
+  "rollback_contract": {
+    "path": "ops/cutover/phase10_rollback_v1.json",
+    "code_only_rollback_after_0063_safe": false,
+    "required_strategy": "forward correction or coordinated pre-migration database restore plus prior application deployment"
+  },
+  "final_operator_evidence_required": [
+    "exact candidate commit and zero-behind-main proof",
+    "exact-head CI run IDs and conclusions",
+    "authorized Preview health/readiness result",
+    "Production health/readiness result",
+    "Production database before revision",
+    "approved backup/protection status and recovery proof",
+    "Vercel Authentication All Deployments activation/block/bypass/restore proof plus staged candidate deployment from phase10_cutover_choreography_v1",
+    "migration range and intended after revision",
+    "owner-state preservation reference",
+    "rollback/forward-fix plan",
+    "operator identity and explicit project-owner authorization"
+  ],
+  "go_rule": "GO is permitted only after a freshly generated exact-head preflight proves every hard cutover gate resolved, all decision-required findings are explicitly dispositioned, and production_mutation_authorized is true.",
+  "backup_capability_contract": "ops/cutover/phase10_backup_capability_v1.json",
+  "alert_delivery_capability_contract": "ops/observability/alert_delivery_capability_v1.json",
+  "branch_governance_contract": "ops/cutover/phase10_branch_governance_v1.json",
+  "owner_decision_packet": "ops/cutover/phase10_owner_decisions_v1.json"
+}

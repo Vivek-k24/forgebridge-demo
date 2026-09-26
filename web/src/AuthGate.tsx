@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { ApiFailure, CSRF_HEADERS, apiRequest } from './api'
+import { SiteFooter } from './SiteFooter'
 import './auth.css'
 
 const USERNAME_PATTERN = /^[A-Za-z0-9_]{3,32}$/
+const PASSWORD_MIN_LENGTH = 12
+const PASSWORD_MAX_LENGTH = 128
 const SESSION_FAILURE_CODES = ['AUTH_REQUIRED', 'AUTH_SESSION_EXPIRED', 'AUTH_SESSION_REVOKED']
 
 type User = {
@@ -46,6 +49,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   const [email, setEmail] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [passwordVisible, setPasswordVisible] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [failure, setFailure] = useState<ApiFailure | null>(null)
   const [units, setUnits] = useState<UnitPreference | null>(null)
@@ -116,6 +120,15 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     }
   }, [auth.status])
 
+  useEffect(() => {
+    const onPreferencesChanged = (event: Event) => {
+      const detail = (event as CustomEvent<PreferenceRead>).detail
+      if (detail?.units) setUnits(detail.units)
+    }
+    window.addEventListener('partgraph:preferences-changed', onPreferencesChanged)
+    return () => window.removeEventListener('partgraph:preferences-changed', onPreferencesChanged)
+  }, [])
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setFailure(null)
@@ -124,6 +137,17 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       setFailure(new ApiFailure(
         'Username must be 3–32 characters and contain only letters, numbers, or underscore.',
         { code: 'CLIENT_USERNAME_INVALID' },
+      ))
+      return
+    }
+
+    if (
+      mode === 'register'
+      && (password.length < PASSWORD_MIN_LENGTH || password.length > PASSWORD_MAX_LENGTH)
+    ) {
+      setFailure(new ApiFailure(
+        `Password must be ${PASSWORD_MIN_LENGTH}–${PASSWORD_MAX_LENGTH} characters.`,
+        { code: 'CLIENT_PASSWORD_LENGTH_INVALID' },
       ))
       return
     }
@@ -147,6 +171,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
           })
 
       setPassword('')
+      setPasswordVisible(false)
       setFailure(null)
       setAuth({ status: 'signed-in', user: result.user })
     } catch (error) {
@@ -199,6 +224,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       setPreferenceFailure(null)
       setAuth({ status: 'signed-out' })
       setPassword('')
+      setPasswordVisible(false)
     } catch (error) {
       setFailure(asApiFailure(
         error,
@@ -219,6 +245,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
           <h1>Restoring your workspace…</h1>
           <p>Private data stays locked until the server confirms your session.</p>
         </section>
+        <SiteFooter variant="dark" />
       </main>
     )
   }
@@ -233,6 +260,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
           <button type="button" onClick={() => void loadSession()}>Try again</button>
           <p className="auth-note">PartGraph does not guess that you are signed out when the network or API is unavailable.</p>
         </section>
+        <SiteFooter variant="dark" />
       </main>
     )
   }
@@ -248,8 +276,8 @@ export default function AuthGate({ children }: { children: ReactNode }) {
           </div>
 
           <div className="auth-tabs" role="tablist" aria-label="Authentication mode">
-            <button type="button" className={mode === 'login' ? 'auth-tab auth-tab--active' : 'auth-tab'} onClick={() => { setMode('login'); setFailure(null) }}>Sign in</button>
-            <button type="button" className={mode === 'register' ? 'auth-tab auth-tab--active' : 'auth-tab'} onClick={() => { setMode('register'); setFailure(null) }}>Create account</button>
+            <button type="button" className={mode === 'login' ? 'auth-tab auth-tab--active' : 'auth-tab'} onClick={() => { setMode('login'); setPasswordVisible(false); setFailure(null) }}>Sign in</button>
+            <button type="button" className={mode === 'register' ? 'auth-tab auth-tab--active' : 'auth-tab'} onClick={() => { setMode('register'); setPasswordVisible(false); setFailure(null) }}>Create account</button>
           </div>
 
           <form className="auth-form" onSubmit={(event) => void submit(event)}>
@@ -294,19 +322,48 @@ export default function AuthGate({ children }: { children: ReactNode }) {
               </>
             )}
 
-            <label>
-              <span>Password</span>
-              <input
-                required
-                type="password"
-                value={password}
-                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                minLength={12}
-                maxLength={128}
-                onChange={(event) => setPassword(event.target.value)}
-              />
-              {mode === 'register' && <small>Minimum 12 characters.</small>}
-            </label>
+            <div className="auth-field">
+              <label htmlFor="auth-password">Password</label>
+              <div className="auth-password-input">
+                <input
+                  id="auth-password"
+                  required
+                  type={passwordVisible ? 'text' : 'password'}
+                  value={password}
+                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                  minLength={PASSWORD_MIN_LENGTH}
+                  maxLength={PASSWORD_MAX_LENGTH}
+                  aria-describedby={mode === 'register' ? 'password-requirements' : undefined}
+                  onChange={(event) => setPassword(event.target.value)}
+                />
+                <button
+                  type="button"
+                  className="auth-password-toggle"
+                  aria-label={passwordVisible ? 'Hide password' : 'Show password'}
+                  aria-pressed={passwordVisible}
+                  title={passwordVisible ? 'Hide password' : 'Show password'}
+                  onClick={() => setPasswordVisible((visible) => !visible)}
+                >
+                  {passwordVisible ? (
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M3 3l18 18M10.6 10.6a2 2 0 002.8 2.8M9.9 4.2A10.7 10.7 0 0112 4c5.2 0 9 4.4 10 8a13.2 13.2 0 01-2.4 4.4M6.2 6.2C4 7.7 2.6 9.8 2 12c1 3.6 4.8 8 10 8 1.5 0 2.8-.3 4-.8" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M2 12s3.5-8 10-8 10 8 10 8-3.5 8-10 8S2 12 2 12z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+              {mode === 'register' && (
+                <div id="password-requirements" className="auth-password-rules">
+                  <strong>Password requirements</strong>
+                  <span>12–128 characters. A long, unique passphrase is recommended.</span>
+                  <span>No uppercase, number, or symbol pattern is required.</span>
+                </div>
+              )}
+            </div>
 
             {failure && <FailureNotice failure={failure} />}
             <button className="auth-submit" type="submit" disabled={submitting}>
@@ -320,6 +377,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
             <span>POSTGRESQL RLS</span>
           </div>
         </section>
+        <SiteFooter variant="dark" />
       </main>
     )
   }

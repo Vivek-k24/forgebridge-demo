@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "alembic_head": "0046_pipeline_actor_roles",
+  "schema_sha256": "3d3c00b782098c5aaaad7cf7a99d9cf865e07a3a271f3955991fdc0b26e0e6d9",
+  "schema_only": true,
+  "reference_data_included": false,
+  "role_bootstrap": "api/migrations/baseline/roles.sql",
+  "revision_stamp": "api/migrations/baseline/stamp.sql",
+  "source_commit": "865951d3013eb1a568085be22e16e17b5eed4997",
+  "adoption_state": "adopted"
+}

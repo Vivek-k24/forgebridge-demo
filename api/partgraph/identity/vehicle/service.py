@@ -1,7 +1,7 @@
 from hashlib import sha256
 from uuid import UUID
 
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .model_catalog import models_for_make_year
@@ -228,7 +228,7 @@ async def _selection_base_candidates(
         select(VehicleConfiguration).where(
             VehicleConfiguration.year == year,
             VehicleConfiguration.market == normalized_market,
-            VehicleConfiguration.make == normalized_make,
+            func.lower(VehicleConfiguration.make) == normalized_make.casefold(),
         )
     )
     return list(rows)
@@ -245,6 +245,21 @@ def _filter_query(values: set[str], query: str | None, limit: int) -> list[str]:
     return _filter_values(values, query)[:limit]
 
 
+async def list_make_options(
+    session: AsyncSession,
+    *,
+    query: str | None = None,
+    limit: int = 200,
+) -> list[str]:
+    """Return stored make labels as suggestions; this is not a make allowlist."""
+    rows = await session.scalars(
+        select(VehicleConfiguration.make)
+        .distinct()
+        .order_by(VehicleConfiguration.make)
+    )
+    return _filter_query({value for value in rows if value}, query, limit)
+
+
 async def list_model_options(
     session: AsyncSession,
     *,
@@ -253,14 +268,10 @@ async def list_model_options(
     make: str,
     query: str | None,
 ) -> list[str]:
-    # Validate the PartGraph market/make boundary first. vPIC is used only as a
-    # complete model discovery source; these values do not become canonical rows.
     canonical_market(market)
     normalized_make = canonical_make(make)
     models = set(await models_for_make_year(year=year, make=normalized_make))
 
-    # Keep already-reviewed/private-test canonical model labels discoverable too,
-    # while never writing provider discovery values into VehicleConfiguration.
     candidates = await _selection_base_candidates(
         session,
         year=year,
@@ -335,7 +346,7 @@ async def resolve_selection(
     session: AsyncSession,
     payload: VehicleSelectionInput,
 ) -> tuple[str, dict[str, int | str | None], list[VehicleConfiguration]]:
-    """Resolve user/source text against canonical rows without mutating shared truth."""
+    """Resolve user/source text against verified canonical rows without mutating shared truth."""
     normalized = {
         "year": payload.year,
         "market": canonical_market(payload.market),
@@ -358,7 +369,8 @@ async def resolve_selection(
     matches = [
         candidate
         for candidate in candidates
-        if comparison_key("model", candidate.model) == model_key
+        if candidate.verification_status == "verified"
+        and comparison_key("model", candidate.model) == model_key
     ]
 
     if isinstance(normalized["trim"], str):
@@ -368,6 +380,15 @@ async def resolve_selection(
             for candidate in matches
             if candidate.trim is not None
             and comparison_key("trim", candidate.trim) == trim_key
+        ]
+
+    if isinstance(normalized["generation"], str):
+        generation_key = comparison_key("generation", normalized["generation"])
+        matches = [
+            candidate
+            for candidate in matches
+            if candidate.generation is not None
+            and comparison_key("generation", candidate.generation) == generation_key
         ]
 
     for field in SELECTION_DETAIL_FIELDS:

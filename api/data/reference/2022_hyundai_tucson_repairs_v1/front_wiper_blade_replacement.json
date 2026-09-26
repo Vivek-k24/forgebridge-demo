@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2022-hyundai-tucson-repairs-v1",
+  "repair_key": "front-wiper-blade-replacement",
+  "title": "Front windshield wiper blade replacement",
+  "capability_policy_key": "diy_supported",
+  "source_pages": [
+    578,
+    579,
+    580
+  ],
+  "operations": [],
+  "requirements": [
+    {
+      "use_key": "front-wiper-blade-use",
+      "requirement_key": "part.front_wiper_blade.vehicle_specific",
+      "category": "part",
+      "display_name": "Vehicle-specific front windshield wiper blade",
+      "necessity": "required",
+      "fulfillment_mode": "replacement_required",
+      "timing": "before_start",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each"
+    }
+  ],
+  "actions": [
+    {
+      "action_key": "enter-service-position",
+      "title": "Move the front wipers to the service position",
+      "position": 0,
+      "skippable": false,
+      "instruction": "Within 20 seconds after switching the engine off, hold the wiper control in the MIST position for about 2 seconds until the wiper arms move to the top service position.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": []
+    },
+    {
+      "action_key": "lift-arm",
+      "title": "Lift the wiper arm from the windshield",
+      "position": 1,
+      "skippable": false,
+      "instruction": "Lift the wiper arm only after the blades are in the top service position.",
+      "warning_text": "Do not lift the wiper arms when they are parked normally; the arms can contact and damage the hood.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "enter-service-position"
+      ]
+    },
+    {
+      "action_key": "release-blade",
+      "title": "Release the blade locking clip",
+      "position": 2,
+      "skippable": false,
+      "instruction": "Open or press the blade connector locking clip as shown in the owner manual to release the blade from the arm.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "lift-arm"
+      ]
+    },
+    {
+      "action_key": "remove-blade",
+      "title": "Remove the old wiper blade",
+      "position": 3,
+      "skippable": false,
+      "instruction": "Slide the released wiper blade off the arm while supporting the arm.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "release-blade"
+      ]
+    },
+    {
+      "action_key": "install-blade",
+      "title": "Install and lock the replacement blade",
+      "position": 4,
+      "skippable": false,
+      "instruction": "Slide the correct replacement blade into the arm connector and lock it securely.",
+      "requirement_use_keys": [
+        "front-wiper-blade-use"
+      ],
+      "prerequisite_action_keys": [
+        "remove-blade"
+      ]
+    },
+    {
+      "action_key": "lower-and-park",
+      "title": "Lower the arm and return the wipers to the park position",
+      "position": 5,
+      "skippable": false,
+      "instruction": "Lower the wiper arm carefully onto the windshield, then operate the wipers so they return to their normal parked position.",
+      "warning_text": "Do not let the bare wiper arm snap against the windshield.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "install-blade"
+      ]
+    }
+  ]
+}

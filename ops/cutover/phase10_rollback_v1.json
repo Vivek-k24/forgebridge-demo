@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-09-20",
+  "production": {
+    "git_commit": "d68606162c725348779e2d4f93e8819eb8469f21",
+    "vercel_deployment": "dpl_CgyKourTBDycuEaBFiTu6UFqwaqR",
+    "database_revision": "0020_catalog_coverage",
+    "neon_branch_id": "br-shiny-silence-aexgk2zm"
+  },
+  "migrated_copy": {
+    "database_revision": "0063_photo_storage_outbox",
+    "neon_branch_id": "br-shiny-sunset-aebi1qvo"
+  },
+  "baseline_schema_comparison": {
+    "tables": 36,
+    "columns": 320,
+    "missing_baseline_columns": 0,
+    "changed_baseline_columns": 0
+  },
+  "code_only_rollback_safe_after_schema_promotion": false,
+  "blocking_changes": [
+    {
+      "table": "repair_photo_evidence",
+      "column": "storage_state",
+      "target_revision": "0063_photo_storage_outbox",
+      "property": "NOT NULL without a database server default",
+      "prior_application_behavior": "The deployed 0020-era photo-create path inserts repair_photo_evidence without storage_state.",
+      "reason": "The 0063 durable photo outbox requires an explicit pending_upload/ready/delete_pending/deleted state and payload-state consistency. A blanket database default would hide the application/schema mismatch and bypass the durable outbox contract."
+    }
+  ],
+  "reviewed_non_blocking_changes": [
+    {
+      "object": "users",
+      "change": "partgraph_app blanket UPDATE is narrowed; password_hash remains column-updatable.",
+      "finding": "The deployed authentication path only requires password_hash update for Argon2 rehash and does not rely on update access to id, email, username, is_active, or created_at."
+    },
+    {
+      "object": "repair_fasteners.hardware_definition_id",
+      "change": "nullable foreign-key column added",
+      "finding": "Old inserts can omit the nullable column."
+    },
+    {
+      "object": "users.role",
+      "change": "required role column/check added by the migration chain",
+      "finding": "Existing users are migrated and ordinary registration is supported by the target schema's role/default path; this was not the rollback blocker."
+    }
+  ],
+  "rollback_policy": {
+    "application_only_rollback": "prohibited_after_schema_reaches_0063_or_later_until_compatibility_is_explicitly_reproven",
+    "preferred_recovery": [
+      "pause cutover and use a forward corrective application/schema change when safe",
+      "otherwise restore the approved pre-migration database snapshot/branch together with the prior application deployment"
+    ],
+    "automatic_alembic_downgrade": false
+  }
+}

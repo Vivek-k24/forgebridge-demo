@@ -108,9 +108,13 @@ For the detailed system design, data model, module boundaries, security model, r
 
 - [`docs/BLUEPRINT.md`](docs/BLUEPRINT.md)
 
-For implementation sequencing and project planning, see:
+For implementation sequencing and current phase status, see:
 
 - [`docs/ROADMAP.md`](docs/ROADMAP.md)
+
+For deferred audit/governance work, see:
+
+- [`docs/AUDIT_STATUS.md`](docs/AUDIT_STATUS.md)
 
 ## License
 

@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2020-subaru-forester-repairs-v1",
+  "vehicle": {
+    "market": "US",
+    "year": 2020,
+    "make": "Subaru",
+    "model": "FORESTER",
+    "trim": "Premium",
+    "body_style": "SUV",
+    "engine": "2.5L BOXER I4",
+    "transmission": "Lineartronic CVT",
+    "drivetrain": "AWD"
+  },
+  "review": {
+    "status": "source_reviewed_reference_fixture",
+    "reviewed_through": "2026-09-26",
+    "reviewed_by": "partgraph_reference_manual_review",
+    "note": "The MVP reference vehicle is now pinned to a concrete U.S. 2020 Forester Premium SUV with the 2.5L SUBARU BOXER engine, Lineartronic CVT, and Subaru Symmetrical AWD. Repair procedures remain limited to the reviewed owner's-manual coverage."
+  },
+  "sources": [
+    {
+      "source_key": "subaru-2020-forester-owner-manual-msa5m2002a",
+      "source_class": "oem_service",
+      "license_status": "approved",
+      "automation_allowed": false,
+      "document": "2020MY Forester Owner's Manual",
+      "document_part_number": "MSA5M2002A",
+      "url": "https://techinfo.subaru.com/stis/doc/ownerManual/MSA5M2002A_STIS-opt.pdf",
+      "supports": [
+        "backup_light_bulb_replacement",
+        "cabin_air_filter_replacement",
+        "fuse_replacement",
+        "flat_tire_temporary_spare_installation"
+      ]
+    },
+    {
+      "source_key": "subaru-2020-forester-pricing-specifications",
+      "source_class": "oem_service",
+      "license_status": "approved",
+      "automation_allowed": false,
+      "document": "Subaru 2020 Forester pricing and specifications",
+      "url": "https://s3.amazonaws.com/subarumedia.iconicweb.com/mediasite/specs/2020_Forester_Pricing_111819.pdf",
+      "supports": [
+        "vehicle_identity"
+      ]
+    }
+  ],
+  "repairs": [
+    {
+      "repair_key": "backup-light-bulb-replacement",
+      "path": "backup_light_bulb_replacement.json",
+      "source_key": "subaru-2020-forester-owner-manual-msa5m2002a",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 2,
+      "action_count": 6
+    },
+    {
+      "repair_key": "cabin-air-filter-replacement",
+      "path": "cabin_air_filter_replacement.json",
+      "source_key": "subaru-2020-forester-owner-manual-msa5m2002a",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 1,
+      "action_count": 6
+    },
+    {
+      "repair_key": "fuse-replacement",
+      "path": "fuse_replacement.json",
+      "source_key": "subaru-2020-forester-owner-manual-msa5m2002a",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 2,
+      "action_count": 5
+    },
+    {
+      "repair_key": "flat-tire-spare-installation",
+      "path": "flat_tire_spare_installation.json",
+      "source_key": "subaru-2020-forester-owner-manual-msa5m2002a",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 7,
+      "action_count": 9
+    }
+  ],
+  "vehicle_identity_source_key": "subaru-2020-forester-pricing-specifications"
+}

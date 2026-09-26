@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2009-honda-civic-hybrid-oem-parts-v1",
+  "system": "air_intake",
+  "components": [
+    {"system":"air_intake","subsystem":"air_cleaner_and_resonator","name":"Air-cleaner case","oem_part_number":"17201-RMX-000","source_ref":"oemparts_air_intake","fitment_status":"verified"},
+    {"system":"air_intake","subsystem":"air_cleaner_and_resonator","name":"Air-cleaner cover","oem_part_number":"17210-RMX-000","source_ref":"oemparts_air_intake","fitment_status":"verified"},
+    {"system":"air_intake","subsystem":"air_cleaner_and_resonator","name":"Air-cleaner stay A","oem_part_number":"17211-RMX-000","source_ref":"oemparts_air_intake","fitment_status":"verified"},
+    {"system":"air_intake","subsystem":"air_cleaner_and_resonator","name":"Air-cleaner mounting rubber","oem_part_number":"17212-PN3-000","source_ref":"oemparts_air_intake","fitment_status":"verified"},
+    {"system":"air_intake","subsystem":"air_cleaner_and_resonator","name":"Additional mounting rubber","oem_part_number":"17212-P2J-000","source_ref":"oemparts_air_intake","fitment_status":"verified"},
+    {"system":"air_intake","subsystem":"air_cleaner_and_resonator","name":"Air-cleaner mounting collar","oem_part_number":"17216-PN3-000","source_ref":"oemparts_air_intake","fitment_status":"verified"},
+    {"system":"air_intake","subsystem":"air_cleaner_and_resonator","name":"Air-cleaner clip","oem_part_number":"17217-P2J-300","source_ref":"oemparts_air_intake","fitment_status":"verified"},
+    {"system":"air_intake","subsystem":"air_cleaner_and_resonator","name":"Engine air-filter element","oem_part_number":"17220-RMX-000","source_ref":"oemparts_air_intake","fitment_status":"verified"},
+    {"system":"air_intake","subsystem":"air_cleaner_and_resonator","name":"Air-flow tube","oem_part_number":"17228-RMX-000","source_ref":"oemparts_air_intake","fitment_status":"verified"},
+    {"system":"air_intake","subsystem":"air_cleaner_and_resonator","name":"Air-flow tube clamp","oem_part_number":"17316-P1E-000","source_ref":"oemparts_air_intake","fitment_status":"verified"},
+    {"system":"air_intake","subsystem":"air_cleaner_and_resonator","name":"Mass-air-flow meter","oem_part_number":"37980-RNA-A01","source_ref":"oemparts_air_intake","fitment_status":"verified"},
+    {"system":"air_intake","subsystem":"air_cleaner_and_resonator","name":"MAF gasket","oem_part_number":"37985-RAD-L11","source_ref":"oemparts_air_intake","fitment_status":"verified"},
+    {"system":"air_intake","subsystem":"air_cleaner_and_resonator","name":"Resonator mounting rubber","oem_part_number":"17212-PE2-000","source_ref":"oemparts_air_intake","fitment_status":"verified"},
+    {"system":"air_intake","subsystem":"air_cleaner_and_resonator","name":"Resonator collar","oem_part_number":"17216-PE2-003","source_ref":"oemparts_air_intake","fitment_status":"verified"},
+    {"system":"air_intake","subsystem":"air_cleaner_and_resonator","name":"Resonator stay","oem_part_number":"17232-RMX-000","source_ref":"oemparts_air_intake","fitment_status":"verified"},
+    {"system":"air_intake","subsystem":"air_cleaner_and_resonator","name":"Air-intake/resonator tube assembly","oem_part_number":"17235-RMX-000","source_ref":"oemparts_air_intake","fitment_status":"verified"},
+    {"system":"air_intake","subsystem":"air_cleaner_and_resonator","name":"Air-intake pipe A","oem_part_number":"17243-RMX-000","source_ref":"oemparts_air_intake","fitment_status":"verified"},
+    {"system":"air_intake","subsystem":"air_cleaner_and_resonator","name":"Air-inlet joint A","oem_part_number":"17246-RMX-000","source_ref":"oemparts_air_intake","fitment_status":"verified"}
+  ]
+}

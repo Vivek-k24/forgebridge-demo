@@ -1,0 +1,160 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2009-honda-civic-hybrid-repairs-v1",
+  "vehicle_configuration_id": "7feb13e9-bca0-5d8b-b701-f0260cce5da1",
+  "repair_key": "wheel-tire-service",
+  "title": "Wheel removal, reinstallation, and tire service",
+  "capability_policy_key": "diy_supported",
+  "source_key": "charmli-2009-civic-hybrid-service-manual-mirror",
+  "operations": [],
+  "requirements": [
+    {
+      "use_key": "hard-level-surface",
+      "requirement_key": "safety_prerequisite.hard_level_surface",
+      "category": "safety_prerequisite",
+      "display_name": "Hard, level and stable work surface",
+      "necessity": "required",
+      "fulfillment_mode": "reuse_existing",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "wheel-chock",
+      "requirement_key": "equipment.wheel_chock",
+      "category": "equipment",
+      "display_name": "Wheel chock",
+      "default_unit": "each",
+      "quantity": 2,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "vehicle-jack",
+      "requirement_key": "equipment.vehicle_jack",
+      "category": "equipment",
+      "display_name": "Vehicle jack",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "lug-wrench",
+      "requirement_key": "tool.lug_wrench",
+      "category": "tool",
+      "display_name": "Lug wrench",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "torque-wrench",
+      "requirement_key": "tool.torque_wrench",
+      "category": "tool",
+      "display_name": "Torque wrench",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "tire-pressure-gauge",
+      "requirement_key": "tool.tire_pressure_gauge",
+      "category": "tool",
+      "display_name": "Tire pressure gauge",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each",
+      "necessity": "recommended",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair"
+    }
+  ],
+  "actions": [
+    {
+      "action_key": "confirm-wheel-tire-specification",
+      "title": "Confirm the wheel and tire specification",
+      "instruction": "Confirm the installed tire and wheel match the exact 2009 Civic Hybrid configuration. The reference tire size is 195/65R15; use the vehicle placard for the final cold-pressure specification.",
+      "position": 0,
+      "skippable": false,
+      "prerequisite_action_keys": [],
+      "requirement_use_keys": []
+    },
+    {
+      "action_key": "secure-vehicle",
+      "title": "Secure the vehicle",
+      "instruction": "Park on the hard, level surface, apply the parking brake, chock the wheels that remain on the ground, and loosen the wheel nuts slightly before lifting.",
+      "warning_text": "Never work under a vehicle supported only by a jack.",
+      "position": 1,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "confirm-wheel-tire-specification"
+      ],
+      "requirement_use_keys": [
+        "hard-level-surface",
+        "wheel-chock",
+        "lug-wrench"
+      ]
+    },
+    {
+      "action_key": "lift-and-remove-wheel",
+      "title": "Lift the vehicle and remove the wheel",
+      "instruction": "Use the correct lift point, raise the vehicle, support it safely as required for the work, then remove the wheel nuts and wheel.",
+      "position": 2,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "secure-vehicle"
+      ],
+      "requirement_use_keys": [
+        "vehicle-jack",
+        "lug-wrench"
+      ]
+    },
+    {
+      "action_key": "inspect-tire-wheel",
+      "title": "Inspect the tire and wheel",
+      "instruction": "Inspect tread, sidewalls, bead area, wheel condition, and visible wear patterns before reinstallation.",
+      "position": 3,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "lift-and-remove-wheel"
+      ],
+      "requirement_use_keys": []
+    },
+    {
+      "action_key": "reinstall-wheel",
+      "title": "Reinstall and torque the wheel",
+      "instruction": "Seat the wheel squarely, hand-start every wheel nut, lower the vehicle enough to prevent wheel rotation, then tighten the nuts evenly in a crisscross pattern to 108 N·m (80 lbf·ft).",
+      "position": 4,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "inspect-tire-wheel"
+      ],
+      "requirement_use_keys": [
+        "lug-wrench",
+        "torque-wrench"
+      ]
+    },
+    {
+      "action_key": "verify-pressure",
+      "title": "Verify tire pressure",
+      "instruction": "With the tires cold, set pressure to the vehicle placard and perform a final visual check that the wheel is seated and all wheel nuts are present.",
+      "position": 5,
+      "skippable": false,
+      "prerequisite_action_keys": [
+        "reinstall-wheel"
+      ],
+      "requirement_use_keys": [
+        "tire-pressure-gauge"
+      ]
+    }
+  ]
+}

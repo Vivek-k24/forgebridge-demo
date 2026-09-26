@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-09-20",
+  "status": "blocked_by_current_neon_project_capability",
+  "production_mutation_authorized": false,
+  "project": {
+    "id": "empty-mouse-99596302",
+    "subscription_type": "free_v3",
+    "history_retention_seconds": 21600,
+    "production_branch_id": "br-shiny-silence-aexgk2zm",
+    "production_snapshot_schedule_entries": 0,
+    "production_branch_protected": false
+  },
+  "non_production_capability_probes": [
+    {
+      "capability": "automatic_snapshot_schedule",
+      "branch_id": "br-muddy-butterfly-aebaici0",
+      "branch_kind": "temporary production child",
+      "requested": "daily schedule with seven-day retention",
+      "result": "rejected",
+      "provider_message": "backup schedule creation is not enabled for this project",
+      "production_changed": false
+    },
+    {
+      "capability": "branch_protection",
+      "branch_id": "br-shiny-sunset-aebi1qvo",
+      "branch_kind": "non-production production-copy branch",
+      "requested": "protected=true",
+      "result": "rejected",
+      "provider_message": "You have reached the maximum number of protected branches for your current plan.",
+      "account_protected_branches_observed": 0,
+      "production_changed": false
+    }
+  ],
+  "proven_capabilities": {
+    "manual_snapshot_creation": true,
+    "isolated_snapshot_restore": true,
+    "representative_owner_state_restore_verified": true
+  },
+  "unresolved_requirements": [
+    "automatic durable backup freshness that meets the approved Production RPO",
+    "destructive-operation protection for the Production database branch or an approved equivalent control",
+    "retention policy beyond the current six-hour project history window, unless covered by an approved equivalent durable backup design"
+  ],
+  "acceptable_resolution_paths": [
+    {
+      "id": "provider_plan_or_capability_upgrade",
+      "description": "Move the Neon project to a plan/capability set that supports the approved Production backup/protection policy, then configure and verify it under separate Production authorization."
+    },
+    {
+      "id": "approved_equivalent_backup_design",
+      "description": "Approve and implement an independent durable backup/protection design that meets the same RPO/recovery/destructive-operation objectives without relying on unavailable Neon controls."
+    }
+  ],
+  "engineering_status": "No decision-free repository implementation can close PG-AUD-REL-001 under the currently observed project capabilities."
+}

@@ -1,17 +1,35 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, Header, UploadFile, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    Header,
+    Request,
+    UploadFile,
+    status,
+)
 from starlette.responses import FileResponse
 
-from ..auth.dependencies import AuthSessionDep, CurrentUserDep, require_csrf
-from ..config import settings
-from ..errors import ErrorEnvelope
-from ..repair_session.router import (
+from ...config import settings
+from ...errors import ErrorCode, ErrorEnvelope, PartGraphError
+from ...identity.actors import AuthSessionDep, CurrentUserDep, require_csrf
+from ..router import (
     DEVICE_HEADER,
     IDEMPOTENCY_HEADER,
     _parse_device_id,
     _parse_idempotency_key,
+)
+from .photo_lifecycle import (
+    create_photo,
+    cron_request_authorized,
+    delete_photo,
+    photo_content,
+    reconcile_photo_storage_batch,
+    reconcile_photo_storage_item,
 )
 from .schemas import (
     FastenerCreate,
@@ -32,18 +50,16 @@ from .service import (
     create_fastener,
     create_inventory_item,
     create_observation,
-    create_photo,
     create_storage_location,
-    delete_photo,
     list_fasteners,
     list_inventory,
     list_observations,
     list_photos,
     list_storage_locations,
-    photo_content,
     update_fastener_state,
     update_inventory_state,
 )
+from .storage import PhotoFormatError, PhotoResourceLimitError, prepare_photo
 
 ERROR_RESPONSES = {
     401: {"model": ErrorEnvelope},
@@ -54,6 +70,7 @@ ERROR_RESPONSES = {
     415: {"model": ErrorEnvelope},
     422: {"model": ErrorEnvelope},
     500: {"model": ErrorEnvelope},
+    503: {"model": ErrorEnvelope},
 }
 router = APIRouter(
     prefix="/api/v1/repair-sessions",
@@ -278,6 +295,7 @@ async def add_photo(
     session_id: UUID,
     user: CurrentUserDep,
     db: AuthSessionDep,
+    background_tasks: BackgroundTasks,
     photo: Annotated[UploadFile, File()],
     purpose: Annotated[PhotoPurpose, Form()] = "general",
     observation_id: Annotated[UUID | None, Form()] = None,
@@ -290,7 +308,27 @@ async def add_photo(
         data = await photo.read(settings.photo_max_bytes + 1)
     finally:
         await photo.close()
-    return await create_photo(
+    if not data or len(data) > settings.photo_max_bytes:
+        raise PartGraphError(
+            code=ErrorCode.PHOTO_TOO_LARGE,
+            message=f"Photo must be between 1 byte and {settings.photo_max_bytes} bytes.",
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+        )
+    try:
+        prepared = await prepare_photo(data, maximum_bytes=settings.photo_max_bytes)
+    except PhotoResourceLimitError as exc:
+        raise PartGraphError(
+            code=ErrorCode.PHOTO_TOO_LARGE,
+            message="Photo dimensions, decoded pixel count, or sanitized size exceed the allowed limit.",
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+        ) from exc
+    except PhotoFormatError as exc:
+        raise PartGraphError(
+            code=ErrorCode.PHOTO_MEDIA_TYPE_UNSUPPORTED,
+            message="Photo content must be a valid JPEG, PNG, WebP, or HEIC image.",
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+        ) from exc
+    result = await create_photo(
         db,
         user_id=user.id,
         session_id=session_id,
@@ -300,9 +338,11 @@ async def add_photo(
         observation_id=observation_id,
         fastener_id=fastener_id,
         filename=photo.filename,
-        data=data,
+        data=prepared.data,
         maximum_bytes=settings.photo_max_bytes,
     )
+    background_tasks.add_task(reconcile_photo_storage_item, result.id)
+    return result
 
 
 @router.get("/{session_id}/photos/{photo_id}/content", response_class=FileResponse)
@@ -331,11 +371,12 @@ async def remove_photo(
     photo_id: UUID,
     user: CurrentUserDep,
     db: AuthSessionDep,
+    background_tasks: BackgroundTasks,
     device_header: DeviceHeader = None,
     idempotency_header: IdempotencyHeader = None,
 ) -> PhotoDeleteRead:
     device_id, idempotency_key = _mutation_headers(device_header, idempotency_header)
-    return await delete_photo(
+    result = await delete_photo(
         db,
         user_id=user.id,
         session_id=session_id,
@@ -343,3 +384,16 @@ async def remove_photo(
         device_id=device_id,
         idempotency_key=idempotency_key,
     )
+    background_tasks.add_task(reconcile_photo_storage_item, result.id)
+    return result
+
+
+@router.get("/maintenance/photo-storage/reconcile", include_in_schema=False)
+async def reconcile_photo_storage(request: Request) -> dict[str, int]:
+    if not cron_request_authorized(request.headers.get("authorization")):
+        raise PartGraphError(
+            code=ErrorCode.AUTH_REQUIRED,
+            message="Photo storage reconciliation authorization required.",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+        )
+    return await reconcile_photo_storage_batch()
