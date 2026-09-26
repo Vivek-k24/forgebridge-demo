@@ -135,13 +135,14 @@ class PersistentPublicationPlanTests(unittest.TestCase):
         self.assertEqual(snapshot["mechanical_claims"], expected_snapshot_claims)
         self.assertEqual(snapshot["verified_evidence"], expected_snapshot_claims)
 
-    def test_generic_publisher_is_explicitly_deferred_without_special_casing(self) -> None:
+    def test_generic_preview_publisher_is_explicit_without_production_authorization(self) -> None:
         deferred = self.plan["deferred"]
         self.assertEqual(
             deferred["generic_reusable_persistent_bundle_publisher"],
-            "Phase 6 broad repair-knowledge population",
+            "Implemented for the protected MVP Preview reference fleet",
         )
-        self.assertIn("generic operator", deferred["reason"])
+        self.assertIn("generic Preview reference-fleet publisher", deferred["reason"])
+        self.assertIn("Production publication remains separately authorized", deferred["reason"])
         self.assertNotIn("hardcode", deferred["reason"].lower())
 
 
