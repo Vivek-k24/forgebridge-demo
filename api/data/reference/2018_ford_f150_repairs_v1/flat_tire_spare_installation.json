@@ -1,0 +1,221 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2018-ford-f150-repairs-v1",
+  "repair_key": "flat-tire-spare-installation",
+  "title": "Flat tire removal and spare-wheel installation",
+  "capability_policy_key": "diy_supported",
+  "source_pages": [
+    403,
+    404,
+    405,
+    406,
+    407,
+    408,
+    409,
+    410,
+    411
+  ],
+  "operations": [],
+  "requirements": [
+    {
+      "use_key": "hard-level-surface",
+      "requirement_key": "safety_prerequisite.hard_level_surface",
+      "category": "safety_prerequisite",
+      "display_name": "Hard, level and stable work surface",
+      "necessity": "required",
+      "fulfillment_mode": "reuse_existing",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "parking-brake-use",
+      "requirement_key": "safety_prerequisite.parking_brake",
+      "category": "safety_prerequisite",
+      "display_name": "Parking brake applied",
+      "necessity": "required",
+      "fulfillment_mode": "reuse_existing",
+      "timing": "whole_repair"
+    },
+    {
+      "use_key": "wheel-chock-use",
+      "requirement_key": "equipment.wheel_chock",
+      "category": "equipment",
+      "display_name": "Wheel chock",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each"
+    },
+    {
+      "use_key": "vehicle-jack-use",
+      "requirement_key": "equipment.vehicle_jack",
+      "category": "equipment",
+      "display_name": "Vehicle jack",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each"
+    },
+    {
+      "use_key": "lug-wrench-use",
+      "requirement_key": "tool.lug_wrench",
+      "category": "tool",
+      "display_name": "Lug wrench",
+      "necessity": "required",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each"
+    },
+    {
+      "use_key": "torque-wrench-use",
+      "requirement_key": "tool.torque_wrench",
+      "category": "tool",
+      "display_name": "Torque wrench",
+      "necessity": "recommended",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each"
+    },
+    {
+      "use_key": "spare-wheel-use",
+      "requirement_key": "part.f150_spare_wheel",
+      "category": "part",
+      "display_name": "F-150 spare wheel / tire assembly",
+      "necessity": "required",
+      "fulfillment_mode": "reuse_existing",
+      "timing": "before_start",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each"
+    }
+  ],
+  "actions": [
+    {
+      "action_key": "secure-truck",
+      "title": "Secure the truck before lifting",
+      "position": 0,
+      "skippable": false,
+      "instruction": "Move the truck to a hard, level location away from traffic, apply the parking brake, place the transmission in P, switch the ignition off, and turn on the hazard flashers.",
+      "warning_text": "Do not work under a vehicle supported only by the vehicle jack.",
+      "requirement_use_keys": [
+        "hard-level-surface",
+        "parking-brake-use"
+      ],
+      "prerequisite_action_keys": []
+    },
+    {
+      "action_key": "chock-wheel",
+      "title": "Chock the wheel diagonally opposite the flat tire",
+      "position": 1,
+      "skippable": false,
+      "instruction": "Chock the wheel diagonally opposite the flat tire so the truck cannot roll while it is raised.",
+      "requirement_use_keys": [
+        "wheel-chock-use"
+      ],
+      "prerequisite_action_keys": [
+        "secure-truck"
+      ]
+    },
+    {
+      "action_key": "retrieve-jack-tools-spare",
+      "title": "Retrieve the jack, tools, and spare wheel",
+      "position": 2,
+      "skippable": false,
+      "instruction": "Remove the jack and tool bag from their storage location and use the spare-tire winch tools to lower and remove the spare wheel from the carrier.",
+      "requirement_use_keys": [
+        "vehicle-jack-use",
+        "lug-wrench-use",
+        "spare-wheel-use"
+      ],
+      "prerequisite_action_keys": [
+        "chock-wheel"
+      ]
+    },
+    {
+      "action_key": "loosen-wheel-nuts",
+      "title": "Loosen the wheel nuts before lifting",
+      "position": 3,
+      "skippable": false,
+      "instruction": "Loosen the flat wheel's lug nuts before raising the truck, but do not remove them yet.",
+      "requirement_use_keys": [
+        "lug-wrench-use"
+      ],
+      "prerequisite_action_keys": [
+        "retrieve-jack-tools-spare"
+      ]
+    },
+    {
+      "action_key": "position-jack",
+      "title": "Position the jack at the correct lifting point",
+      "position": 4,
+      "skippable": false,
+      "instruction": "Use the owner-manual diagram for the truck's front or rear jacking point, place the jack squarely at that point, and confirm it is stable.",
+      "warning_text": "Use only the specified jacking point for the wheel being changed.",
+      "requirement_use_keys": [
+        "vehicle-jack-use"
+      ],
+      "prerequisite_action_keys": [
+        "loosen-wheel-nuts"
+      ]
+    },
+    {
+      "action_key": "lift-and-remove-wheel",
+      "title": "Raise the truck and remove the flat wheel",
+      "position": 5,
+      "skippable": false,
+      "instruction": "Raise the truck only enough to remove the wheel, remove the lug nuts, and take off the flat wheel.",
+      "requirement_use_keys": [
+        "vehicle-jack-use",
+        "lug-wrench-use"
+      ],
+      "prerequisite_action_keys": [
+        "position-jack"
+      ]
+    },
+    {
+      "action_key": "install-spare-wheel",
+      "title": "Install the spare wheel and hand-start the nuts",
+      "position": 6,
+      "skippable": false,
+      "instruction": "Place the spare wheel on the hub and hand-start all lug nuts to avoid cross-threading.",
+      "requirement_use_keys": [
+        "spare-wheel-use"
+      ],
+      "prerequisite_action_keys": [
+        "lift-and-remove-wheel"
+      ]
+    },
+    {
+      "action_key": "lower-and-tighten",
+      "title": "Lower the truck and tighten the lug nuts in the specified sequence",
+      "position": 7,
+      "skippable": false,
+      "instruction": "Lower the truck until the tire supports the vehicle, then tighten the lug nuts in the star/cross sequence shown in the owner manual. Use the exact wheel-nut torque specification applicable to this truck's wheel equipment.",
+      "requirement_use_keys": [
+        "lug-wrench-use",
+        "torque-wrench-use"
+      ],
+      "prerequisite_action_keys": [
+        "install-spare-wheel"
+      ]
+    },
+    {
+      "action_key": "stow-equipment",
+      "title": "Stow the flat wheel, jack, and tools securely",
+      "position": 8,
+      "skippable": false,
+      "instruction": "Secure the removed wheel and return the jack and tools to their proper storage positions. Recheck the spare-tire installation before driving.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "lower-and-tighten"
+      ]
+    }
+  ]
+}
