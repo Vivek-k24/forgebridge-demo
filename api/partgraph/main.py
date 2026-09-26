@@ -30,11 +30,11 @@ from .knowledge.conflict_resolution import router as conflict_resolution_router
 from .knowledge.contribution import router as knowledge_contribution_router
 from .knowledge.coverage_router import router as catalog_coverage_router
 from .knowledge.curation import router as knowledge_curation_router
-from .knowledge.repair_materialization import router as repair_materialization_router
 from .knowledge.reference_fleet_bootstrap import (
     preview_reference_bootstrap_enabled,
     publish_reference_fleet,
 )
+from .knowledge.repair_materialization import router as repair_materialization_router
 from .knowledge.router import router as repair_definition_router
 from .observability import bind_request_context, emit_event, is_mutation_method
 from .operator.router import router as operator_router
