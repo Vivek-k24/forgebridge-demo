@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2015-toyota-camry-repairs-v1",
+  "repair_key": "cabin-air-filter-replacement",
+  "title": "Cabin air filter replacement",
+  "capability_policy_key": "diy_supported",
+  "source_pages": [
+    418,
+    419
+  ],
+  "operations": [],
+  "requirements": [
+    {
+      "use_key": "cabin-filter-use",
+      "requirement_key": "part.cabin_air_filter.vehicle_specific",
+      "category": "part",
+      "display_name": "Vehicle-specific replacement cabin air filter",
+      "necessity": "required",
+      "fulfillment_mode": "replacement_required",
+      "timing": "before_start",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each"
+    }
+  ],
+  "actions": [
+    {
+      "action_key": "switch-off-vehicle",
+      "title": "Switch the vehicle off",
+      "position": 0,
+      "skippable": false,
+      "instruction": "Stop the engine and switch the vehicle off before opening the glove-box filter housing.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": []
+    },
+    {
+      "action_key": "open-glove-box-remove-inner-cover",
+      "title": "Open the glove box and remove the inner cover",
+      "position": 1,
+      "skippable": false,
+      "instruction": "Open the glove box, then remove the small inner cover that gives access to the cabin-filter housing.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "switch-off-vehicle"
+      ]
+    },
+    {
+      "action_key": "remove-filter-cover",
+      "title": "Remove the cabin-filter cover",
+      "position": 2,
+      "skippable": false,
+      "instruction": "Release and remove the cabin-air-filter cover from the housing behind the glove box.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "open-glove-box-remove-inner-cover"
+      ]
+    },
+    {
+      "action_key": "replace-filter",
+      "title": "Replace the cabin air filter",
+      "position": 3,
+      "skippable": false,
+      "instruction": "Remove the old filter and install the replacement with its UP marks facing upward.",
+      "requirement_use_keys": [
+        "cabin-filter-use"
+      ],
+      "prerequisite_action_keys": [
+        "remove-filter-cover"
+      ]
+    },
+    {
+      "action_key": "restore-housing",
+      "title": "Restore the filter housing and glove box",
+      "position": 4,
+      "skippable": false,
+      "instruction": "Reinstall the cabin-filter cover and the glove-box inner cover, then close the glove box.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "replace-filter"
+      ]
+    }
+  ]
+}
