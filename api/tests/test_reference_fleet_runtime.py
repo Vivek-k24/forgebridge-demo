@@ -80,7 +80,7 @@ class ReferenceFleetRuntimeTests(unittest.IsolatedAsyncioTestCase):
             raise unittest.SkipTest(f"{DATABASE_URL_ENV} is not configured")
 
         self.fleet_index = json.loads(FLEET_INDEX_PATH.read_text(encoding="utf-8"))
-        self.assertEqual(self.fleet_index["schema_version"], 1)
+        self.assertEqual(self.fleet_index["schema_version"], 2)
         datasets = self.fleet_index["datasets"]
         self.assertGreaterEqual(len(datasets), 1)
         self.assertEqual(len({item["path"] for item in datasets}), len(datasets))
