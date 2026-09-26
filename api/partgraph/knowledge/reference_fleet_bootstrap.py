@@ -124,13 +124,15 @@ def _load_dataset(manifest_path: Path) -> ReferenceDataset:
 
 def load_reference_fleet() -> tuple[ReferenceDataset, ...]:
     index = _load_json(FLEET_INDEX_PATH)
-    if index.get("schema_version") != 2:
-        raise ValueError("Reference fleet index must use schema version 2.")
+    if index.get("schema_version") != 1:
+        raise ValueError("Reference fleet index must use schema version 1.")
 
-    datasets = [_load_dataset(PRIMARY_REPAIR_MANIFEST)]
-    seen = {str(datasets[0].manifest["dataset_key"])}
+    datasets: list[ReferenceDataset] = []
+    seen: set[str] = set()
     for item in index["datasets"]:
-        dataset = _load_dataset(REFERENCE_ROOT / str(item["path"]) / str(item["manifest"]))
+        dataset = _load_dataset(
+            REFERENCE_ROOT / str(item["path"]) / str(item["manifest"])
+        )
         expected = tuple(str(path) for path in item["repairs"])
         actual = tuple(str(entry["path"]) for entry in dataset.manifest["repairs"])
         if actual != expected:
