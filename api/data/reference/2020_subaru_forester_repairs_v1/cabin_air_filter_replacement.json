@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2020-subaru-forester-repairs-v1",
+  "repair_key": "cabin-air-filter-replacement",
+  "title": "Cabin air filter replacement",
+  "capability_policy_key": "diy_supported",
+  "source_pages": [
+    271,
+    272,
+    273
+  ],
+  "operations": [],
+  "requirements": [
+    {
+      "use_key": "cabin-filter-use",
+      "requirement_key": "part.cabin_air_filter.vehicle_specific",
+      "category": "part",
+      "display_name": "Vehicle-specific replacement cabin air filter",
+      "necessity": "required",
+      "fulfillment_mode": "replacement_required",
+      "timing": "before_start",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each"
+    }
+  ],
+  "actions": [
+    {
+      "action_key": "open-glove-box",
+      "title": "Open the glove box",
+      "position": 0,
+      "skippable": false,
+      "instruction": "Open the glove box and prepare to release it from the dashboard.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": []
+    },
+    {
+      "action_key": "disconnect-damper",
+      "title": "Disconnect the glove-box damper",
+      "position": 1,
+      "skippable": false,
+      "instruction": "Disconnect the damper from the glove box as shown in the owner manual.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "open-glove-box"
+      ]
+    },
+    {
+      "action_key": "release-glove-box",
+      "title": "Release and remove the glove box",
+      "position": 2,
+      "skippable": false,
+      "instruction": "Push in the glove-box sides to release the stopper pins, then disengage the lower hinge points and remove the glove box.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "disconnect-damper"
+      ]
+    },
+    {
+      "action_key": "remove-filter",
+      "title": "Release the filter retainers and remove the old filter",
+      "position": 3,
+      "skippable": false,
+      "instruction": "Release the cabin-filter retainers and carefully pull the old filter from the housing so debris is not spilled into the HVAC case.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "release-glove-box"
+      ]
+    },
+    {
+      "action_key": "install-filter",
+      "title": "Install the replacement filter with the arrow facing up",
+      "position": 4,
+      "skippable": false,
+      "instruction": "Insert the replacement cabin air filter with its airflow/orientation arrow facing upward as specified by Subaru.",
+      "requirement_use_keys": [
+        "cabin-filter-use"
+      ],
+      "prerequisite_action_keys": [
+        "remove-filter"
+      ]
+    },
+    {
+      "action_key": "reinstall-glove-box",
+      "title": "Reinstall the glove box and damper",
+      "position": 5,
+      "skippable": false,
+      "instruction": "Re-engage the glove-box hinge points, stopper pins, and damper in reverse order, then confirm the glove box opens and closes normally.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "install-filter"
+      ]
+    }
+  ]
+}
