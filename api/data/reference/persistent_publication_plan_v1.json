@@ -34,15 +34,55 @@
         "repair_key": "cooling-system-refill-air-bleed",
         "requirement_claims": 1,
         "procedure_claims": 4
+      },
+      {
+        "repair_key": "wheel-tire-service",
+        "requirement_claims": 6,
+        "procedure_claims": 6
+      },
+      {
+        "repair_key": "front-brake-service",
+        "requirement_claims": 8,
+        "procedure_claims": 8
+      },
+      {
+        "repair_key": "rear-brake-disc-replacement",
+        "requirement_claims": 5,
+        "procedure_claims": 6
+      },
+      {
+        "repair_key": "radiator-cooling-module-replacement",
+        "requirement_claims": 11,
+        "procedure_claims": 6
+      },
+      {
+        "repair_key": "coolant-replacement",
+        "requirement_claims": 4,
+        "procedure_claims": 6
+      },
+      {
+        "repair_key": "cvt-fluid-drain-refill",
+        "requirement_claims": 4,
+        "procedure_claims": 6
+      },
+      {
+        "repair_key": "ac-condenser-replacement",
+        "requirement_claims": 5,
+        "procedure_claims": 0
+      },
+      {
+        "repair_key": "spark-plug-replacement",
+        "requirement_claims": 5,
+        "procedure_claims": 7
       }
     ],
     "vehicle_structure_claims": 3,
     "vehicle_specification_claims": 2,
     "expected_scoped_target": {
-      "verified_evidence": 300,
-      "mechanical_claims": 300,
+      "verified_evidence": 393,
+      "mechanical_claims": 393,
       "part_fitments": 267,
-      "repair_definitions": 3,
+      "repair_definitions": 11,
       "vehicle_structure_nodes": 3,
       "vehicle_specification_values": 2
     }
@@ -67,15 +107,23 @@
       "approved_fixture_only_pending_environment_publication": [
         "engine-water-pump-replacement repair definition and supporting claims",
         "cooling-system-refill-air-bleed repair definition and supporting claims",
+        "wheel-tire-service repair definition and supporting claims",
+        "front-brake-service repair definition and supporting claims",
+        "rear-brake-disc-replacement repair definition and supporting claims",
+        "radiator-cooling-module-replacement repair definition and supporting claims",
+        "coolant-replacement repair definition and supporting claims",
+        "cvt-fluid-drain-refill repair definition and supporting claims",
+        "ac-condenser-replacement professional-service definition and supporting claims",
+        "spark-plug-replacement repair definition and supporting claims",
         "three primary vehicle-structure claims",
         "two primary vehicle-specification claims"
       ]
     }
   },
   "expected_increment_from_observed_preview": {
-    "verified_evidence": 18,
-    "mechanical_claims": 18,
-    "repair_definitions": 2,
+    "verified_evidence": 111,
+    "mechanical_claims": 111,
+    "repair_definitions": 10,
     "vehicle_structure_nodes": 3,
     "vehicle_specification_values": 2
   },
@@ -102,7 +150,7 @@
     "direct_delete": false
   },
   "deferred": {
-    "generic_reusable_persistent_bundle_publisher": "Phase 6 broad repair-knowledge population",
-    "reason": "The current Phase 7 fixtures prove the same evidence/claim/materializer path, but a generic operator ingestion orchestrator belongs with broad canonical knowledge population rather than a reference-vehicle-only remediation utility."
+    "generic_reusable_persistent_bundle_publisher": "Implemented for the protected MVP Preview reference fleet",
+    "reason": "The generic Preview reference-fleet publisher now exercises the immutable-evidence, verified-claim, restricted-materializer path. Production publication remains separately authorized and is not implied by deployment."
   }
 }
