@@ -6,6 +6,7 @@ on:
       - 'api/data/reference/**'
       - 'api/partgraph/repair_experience/**'
       - 'api/partgraph/knowledge/repair_materialization*.py'
+      - 'api/partgraph/knowledge/reference_fleet_bootstrap.py'
       - 'api/partgraph/knowledge/downstream_materialization.py'
       - 'api/partgraph/knowledge/vehicle_domain_materialization.py'
       - 'api/partgraph/knowledge/repair_service.py'
@@ -26,6 +27,7 @@ on:
       - 'api/data/reference/**'
       - 'api/partgraph/repair_experience/**'
       - 'api/partgraph/knowledge/repair_materialization*.py'
+      - 'api/partgraph/knowledge/reference_fleet_bootstrap.py'
       - 'api/partgraph/knowledge/downstream_materialization.py'
       - 'api/partgraph/knowledge/vehicle_domain_materialization.py'
       - 'api/partgraph/knowledge/repair_service.py'
@@ -87,6 +89,7 @@ jobs:
           api/partgraph/knowledge/repair_materialization.py
           api/partgraph/knowledge/repair_materialization_contract.py
           api/partgraph/knowledge/repair_materialization_service.py
+          api/partgraph/knowledge/reference_fleet_bootstrap.py
           api/partgraph/knowledge/downstream_materialization.py
           api/partgraph/knowledge/vehicle_domain_materialization.py
           api/partgraph/knowledge/repair_service.py
@@ -96,6 +99,7 @@ jobs:
           api/tests/test_reference_downstream_runtime.py
           api/tests/test_reference_primary_vehicle_runtime.py
           api/tests/test_reference_fleet_runtime.py
+          api/tests/test_reference_zbootstrap_runtime.py
 
       - name: Apply database migrations
         env:
