@@ -83,7 +83,7 @@ class ReferenceFleetRuntimeTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.fleet_index["schema_version"], 2)
         datasets = self.fleet_index["datasets"]
         self.assertGreaterEqual(len(datasets), 1)
-        self.assertEqual(len({item["path"] for item in datasets}), len(datasets))
+        self.assertEqual(len({item["path"] for item in datasets}), len(datasets))\n        for item in datasets:\n            self.assertGreaterEqual(len(item["repairs"]), 1)\n            self.assertEqual(len(set(item["repairs"])), len(item["repairs"]))
 
     async def _run_reference_case(self, case: dict[str, object]) -> None:
         case_path = str(case["path"])
