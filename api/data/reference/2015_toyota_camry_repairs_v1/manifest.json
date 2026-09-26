@@ -9,9 +9,9 @@
   },
   "review": {
     "status": "source_reviewed_reference_fixture",
-    "reviewed_through": "2026-09-16",
-    "reviewed_by": "partgraph_phase8_manual_review",
-    "note": "The Phase 8 reference fixture uses only facts explicitly supported by Toyota's U.S. 2015 Camry owner manual. Optional trim, engine, transmission, drivetrain, and generation fields remain unset rather than inferred."
+    "reviewed_through": "2026-09-26",
+    "reviewed_by": "partgraph_reference_manual_review",
+    "note": "The reference pack uses only facts explicitly supported by Toyota's U.S. 2015 Camry owner's manual. Optional trim, engine, transmission, drivetrain, and generation fields remain unset rather than inferred."
   },
   "sources": [
     {
@@ -24,9 +24,10 @@
       "url": "https://assets.sia.toyota.com/publications/en/om-s/OM33A86U/pdf/OM33A86U.pdf",
       "supports": [
         "vehicle_identity",
-        "license_plate_light_bulb_specification",
-        "license_plate_light_bulb_replacement_procedure",
-        "light_bulb_safety"
+        "license_plate_light_bulb_replacement",
+        "cabin_air_filter_replacement",
+        "accessible_blade_fuse_replacement",
+        "flat_tire_compact_spare_installation"
       ]
     }
   ],
@@ -38,6 +39,30 @@
       "capability_policy_key": "diy_supported",
       "requirement_count": 3,
       "action_count": 4
+    },
+    {
+      "repair_key": "cabin-air-filter-replacement",
+      "path": "cabin_air_filter_replacement.json",
+      "source_key": "toyota-2015-camry-owner-manual-om33a86u",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 1,
+      "action_count": 5
+    },
+    {
+      "repair_key": "fuse-replacement",
+      "path": "fuse_replacement.json",
+      "source_key": "toyota-2015-camry-owner-manual-om33a86u",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 2,
+      "action_count": 5
+    },
+    {
+      "repair_key": "flat-tire-spare-installation",
+      "path": "flat_tire_spare_installation.json",
+      "source_key": "toyota-2015-camry-owner-manual-om33a86u",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 7,
+      "action_count": 9
     }
   ]
 }
