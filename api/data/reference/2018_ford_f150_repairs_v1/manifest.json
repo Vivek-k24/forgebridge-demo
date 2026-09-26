@@ -9,9 +9,9 @@
   },
   "review": {
     "status": "source_reviewed_reference_fixture",
-    "reviewed_through": "2026-09-16",
-    "reviewed_by": "partgraph_phase8_manual_review",
-    "note": "The Phase 8 reference fixture uses only facts explicitly supported by Ford's U.S./Canada 2018 F-150 owner manual. Optional trim, engine, transmission, drivetrain, and generation fields remain unset rather than inferred."
+    "reviewed_through": "2026-09-26",
+    "reviewed_by": "partgraph_reference_manual_review",
+    "note": "The reference pack uses only facts explicitly supported by Ford's U.S./Canada 2018 F-150 owner's manual. Optional trim, engine, transmission, drivetrain, and generation fields remain unset rather than inferred; engine-specific procedures are therefore excluded."
   },
   "sources": [
     {
@@ -23,9 +23,10 @@
       "url": "https://www.fordservicecontent.com/Ford_Content/Catalog/owner_information/2018-Ford-F-150-Owners-Manual-version-2_om-EN-US_10_2017_V3.pdf",
       "supports": [
         "vehicle_identity",
-        "license_plate_light_bulb_specification",
-        "license_plate_light_bulb_replacement_procedure",
-        "light_bulb_safety"
+        "license_plate_light_bulb_replacement",
+        "fuse_replacement",
+        "front_wiper_blade_replacement",
+        "flat_tire_spare_installation"
       ]
     }
   ],
@@ -37,6 +38,30 @@
       "capability_policy_key": "diy_supported",
       "requirement_count": 1,
       "action_count": 4
+    },
+    {
+      "repair_key": "fuse-replacement",
+      "path": "fuse_replacement.json",
+      "source_key": "ford-2018-f150-owner-manual-second-printing",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 2,
+      "action_count": 5
+    },
+    {
+      "repair_key": "front-wiper-blade-replacement",
+      "path": "front_wiper_blade_replacement.json",
+      "source_key": "ford-2018-f150-owner-manual-second-printing",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 1,
+      "action_count": 6
+    },
+    {
+      "repair_key": "flat-tire-spare-installation",
+      "path": "flat_tire_spare_installation.json",
+      "source_key": "ford-2018-f150-owner-manual-second-printing",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 7,
+      "action_count": 9
     }
   ]
 }
