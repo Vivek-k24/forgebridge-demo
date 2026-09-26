@@ -95,6 +95,12 @@ def _load_dataset(manifest_path: Path) -> ReferenceDataset:
     if manifest.get("schema_version") != 1:
         raise ValueError(f"Unsupported reference manifest: {manifest_path}")
     source_keys = {str(item["source_key"]) for item in manifest["sources"]}
+    identity_source_key = manifest.get("vehicle_identity_source_key")
+    if identity_source_key is not None and str(identity_source_key) not in source_keys:
+        raise ValueError(
+            f"Vehicle identity source is not registered in {manifest_path}: "
+            f"{identity_source_key}"
+        )
     repairs: list[dict[str, Any]] = []
     for repair_entry in manifest["repairs"]:
         if str(repair_entry["source_key"]) not in source_keys:
@@ -295,14 +301,23 @@ async def _materialize_identity(
     configuration: VehicleConfiguration,
     sources: dict[str, CatalogSource],
 ) -> None:
-    if configuration.verification_status == "verified":
+    identity_source_key = dataset.manifest.get("vehicle_identity_source_key")
+    if configuration.verification_status == "verified" and identity_source_key is None:
         return
-    if configuration.verification_status != "unverified":
+    if configuration.verification_status not in {"unverified", "verified"}:
         raise ValueError(
             f"Unsupported reference identity state: {configuration.verification_status}"
         )
 
-    source_definition = dataset.manifest["sources"][0]
+    source_definition = (
+        next(
+            item
+            for item in dataset.manifest["sources"]
+            if item["source_key"] == identity_source_key
+        )
+        if identity_source_key is not None
+        else dataset.manifest["sources"][0]
+    )
     source = sources[str(source_definition["source_key"])]
     payload = dict(dataset.manifest["vehicle"])
     claim = await _ensure_claim(
@@ -312,7 +327,7 @@ async def _materialize_identity(
         source_url=str(source_definition["url"]),
         vehicle_configuration_id=configuration.id,
         claim_domain="vehicle_identity",
-        item_key="vehicle-identity",
+        item_key=f"vehicle-identity-{_digest(payload)[:12]}",
         payload=payload,
         repair_key=None,
         source_pages=None,

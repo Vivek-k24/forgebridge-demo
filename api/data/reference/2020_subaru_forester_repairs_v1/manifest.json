@@ -5,13 +5,18 @@
     "market": "US",
     "year": 2020,
     "make": "Subaru",
-    "model": "FORESTER"
+    "model": "FORESTER",
+    "trim": "Premium",
+    "body_style": "SUV",
+    "engine": "2.5L BOXER I4",
+    "transmission": "Lineartronic CVT",
+    "drivetrain": "AWD"
   },
   "review": {
     "status": "source_reviewed_reference_fixture",
     "reviewed_through": "2026-09-26",
     "reviewed_by": "partgraph_reference_manual_review",
-    "note": "The reference pack uses only facts explicitly supported by Subaru's U.S. 2020 Forester owner's manual. Optional trim, engine, transmission, drivetrain, body style, and generation fields remain unset rather than inferred."
+    "note": "The MVP reference vehicle is now pinned to a concrete U.S. 2020 Forester Premium SUV with the 2.5L SUBARU BOXER engine, Lineartronic CVT, and Subaru Symmetrical AWD. Repair procedures remain limited to the reviewed owner's-manual coverage."
   },
   "sources": [
     {
@@ -23,11 +28,21 @@
       "document_part_number": "MSA5M2002A",
       "url": "https://techinfo.subaru.com/stis/doc/ownerManual/MSA5M2002A_STIS-opt.pdf",
       "supports": [
-        "vehicle_identity",
         "backup_light_bulb_replacement",
         "cabin_air_filter_replacement",
         "fuse_replacement",
         "flat_tire_temporary_spare_installation"
+      ]
+    },
+    {
+      "source_key": "subaru-2020-forester-pricing-specifications",
+      "source_class": "oem_service",
+      "license_status": "approved",
+      "automation_allowed": false,
+      "document": "Subaru 2020 Forester pricing and specifications",
+      "url": "https://s3.amazonaws.com/subarumedia.iconicweb.com/mediasite/specs/2020_Forester_Pricing_111819.pdf",
+      "supports": [
+        "vehicle_identity"
       ]
     }
   ],
@@ -64,5 +79,6 @@
       "requirement_count": 7,
       "action_count": 9
     }
-  ]
+  ],
+  "vehicle_identity_source_key": "subaru-2020-forester-pricing-specifications"
 }

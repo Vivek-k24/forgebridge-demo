@@ -6,13 +6,17 @@
     "year": 2022,
     "make": "Hyundai",
     "model": "TUCSON",
-    "engine": "Smartstream G 2.5 GDI"
+    "trim": "SEL",
+    "body_style": "SUV",
+    "engine": "Smartstream G 2.5 GDI",
+    "transmission": "8-speed automatic",
+    "drivetrain": "FWD"
   },
   "review": {
     "status": "source_reviewed_reference_fixture",
     "reviewed_through": "2026-09-26",
     "reviewed_by": "partgraph_reference_manual_review",
-    "note": "The reference pack uses only facts explicitly supported by Hyundai Motor America's U.S. 2022 Tucson owner's manual. The gasoline manual identifies the Smartstream G 2.5 GDI engine, so this fixture does not claim hybrid or plug-in-hybrid coverage."
+    "note": "The MVP reference vehicle is now pinned to a concrete U.S. 2022 Tucson SEL SUV with the Smartstream G 2.5 GDI gasoline engine, eight-speed automatic, and front-wheel drive. Hybrid and plug-in-hybrid coverage remains explicitly excluded."
   },
   "sources": [
     {
@@ -23,12 +27,22 @@
       "document": "2022 Tucson Owner's Manual",
       "url": "https://owners.hyundaiusa.com/content/dam/hyundai/us/myhyundai/manuals/glovebox-manual/2022/tucson/2022-Tucson-Owners-Manual1.pdf",
       "supports": [
-        "vehicle_identity",
         "cabin_air_filter_replacement",
         "engine_air_filter_replacement",
         "fuse_replacement",
         "front_wiper_blade_replacement",
         "flat_tire_spare_installation"
+      ]
+    },
+    {
+      "source_key": "hyundai-2022-tucson-sel-pricing-specifications",
+      "source_class": "licensed_oem_derived",
+      "license_status": "approved",
+      "automation_allowed": false,
+      "document": "Hyundai Motor America 2022 Tucson pricing release",
+      "url": "https://www.prnewswire.com/news-releases/hyundai-releases-all-new-2022-tucson-pricing-301242151.html",
+      "supports": [
+        "vehicle_identity"
       ]
     }
   ],
@@ -73,5 +87,6 @@
       "requirement_count": 7,
       "action_count": 9
     }
-  ]
+  ],
+  "vehicle_identity_source_key": "hyundai-2022-tucson-sel-pricing-specifications"
 }

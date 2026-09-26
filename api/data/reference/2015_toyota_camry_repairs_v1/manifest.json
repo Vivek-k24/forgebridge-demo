@@ -5,13 +5,18 @@
     "market": "US",
     "year": 2015,
     "make": "Toyota",
-    "model": "CAMRY"
+    "model": "CAMRY",
+    "trim": "LE",
+    "body_style": "Sedan",
+    "engine": "2.5L I4",
+    "transmission": "6-speed automatic",
+    "drivetrain": "FWD"
   },
   "review": {
     "status": "source_reviewed_reference_fixture",
     "reviewed_through": "2026-09-26",
     "reviewed_by": "partgraph_reference_manual_review",
-    "note": "The reference pack uses only facts explicitly supported by Toyota's U.S. 2015 Camry owner's manual. Optional trim, engine, transmission, drivetrain, and generation fields remain unset rather than inferred."
+    "note": "The MVP reference vehicle is now pinned to a concrete U.S. 2015 Camry LE sedan with the 2.5L four-cylinder, six-speed automatic, and front-wheel drive. Repair procedures remain limited to facts supported by the owner's manual and are not generalized to other Camry powertrains."
   },
   "sources": [
     {
@@ -23,11 +28,21 @@
       "document_part_number": "OM33A86U",
       "url": "https://assets.sia.toyota.com/publications/en/om-s/OM33A86U/pdf/OM33A86U.pdf",
       "supports": [
-        "vehicle_identity",
         "license_plate_light_bulb_replacement",
         "cabin_air_filter_replacement",
         "accessible_blade_fuse_replacement",
         "flat_tire_compact_spare_installation"
+      ]
+    },
+    {
+      "source_key": "toyota-2015-camry-le-pricing-specifications",
+      "source_class": "oem_service",
+      "license_status": "approved",
+      "automation_allowed": false,
+      "document": "Toyota 2015 Camry pricing and powertrain specifications",
+      "url": "https://pressroom.toyota.com/2015-toyota-camry-pricing/",
+      "supports": [
+        "vehicle_identity"
       ]
     }
   ],
@@ -64,5 +79,6 @@
       "requirement_count": 7,
       "action_count": 9
     }
-  ]
+  ],
+  "vehicle_identity_source_key": "toyota-2015-camry-le-pricing-specifications"
 }

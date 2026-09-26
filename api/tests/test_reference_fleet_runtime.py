@@ -105,7 +105,7 @@ class ReferenceFleetRuntimeTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(manifest["schema_version"], 1)
         self.assertEqual(reference["schema_version"], 1)
         self.assertEqual(manifest["dataset_key"], reference["dataset_key"])
-        self.assertEqual(len(manifest["sources"]), 1)
+        self.assertGreaterEqual(len(manifest["sources"]), 1)
         repair_manifest = next(
             item for item in manifest["repairs"] if item["path"] == repair_path
         )
@@ -117,7 +117,11 @@ class ReferenceFleetRuntimeTests(unittest.IsolatedAsyncioTestCase):
         self.assertGreater(len(reference["requirements"]), 0)
         self.assertGreater(len(reference["actions"]), 0)
 
-        source_definition = manifest["sources"][0]
+        source_definition = next(
+            item
+            for item in manifest["sources"]
+            if item["source_key"] == repair_manifest["source_key"]
+        )
         self.assertEqual(repair_manifest["source_key"], source_definition["source_key"])
         self.assertEqual(source_definition["source_class"], "oem_service")
         self.assertEqual(source_definition["license_status"], "approved")
