@@ -43,7 +43,9 @@
       "automation_allowed": false,
       "reviewed_on": "2026-09-15",
       "reviewed_by": "project_owner",
-      "note": "Approved for manually reviewed MVP evidence only; automated acquisition remains disabled."
+      "note": "Approved for manually reviewed MVP evidence only; automated acquisition remains disabled.",
+      "document": "2009 Honda Civic Hybrid service-manual mirror: water pump and cooling-system procedures",
+      "url": "https://charm.li/Honda/2009/Civic%20L4-1.3L%20Hybrid/Repair%20and%20Diagnosis/Engine%2C%20Cooling%20and%20Exhaust/Engine/Water%20Pump/Service%20and%20Repair/"
     }
   ],
   "repairs": [
