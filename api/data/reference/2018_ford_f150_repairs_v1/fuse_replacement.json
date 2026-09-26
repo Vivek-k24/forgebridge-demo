@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "dataset_key": "reference-2018-ford-f150-repairs-v1",
+  "repair_key": "fuse-replacement",
+  "title": "Fuse inspection and replacement",
+  "capability_policy_key": "diy_supported",
+  "source_pages": [
+    341
+  ],
+  "operations": [],
+  "requirements": [
+    {
+      "use_key": "same-rating-fuse-use",
+      "requirement_key": "part.automotive_fuse.same_rating",
+      "category": "part",
+      "display_name": "Replacement automotive fuse of the specified amperage",
+      "necessity": "required",
+      "fulfillment_mode": "replacement_required",
+      "timing": "before_start",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each"
+    },
+    {
+      "use_key": "fuse-puller-use",
+      "requirement_key": "tool.fuse_puller",
+      "category": "tool",
+      "display_name": "Fuse puller",
+      "necessity": "recommended",
+      "fulfillment_mode": "reusable",
+      "timing": "whole_repair",
+      "default_unit": "each",
+      "quantity": 1,
+      "unit": "each"
+    }
+  ],
+  "actions": [
+    {
+      "action_key": "power-off",
+      "title": "Switch the ignition and electrical equipment off",
+      "position": 0,
+      "skippable": false,
+      "instruction": "Switch the ignition off and turn off electrical equipment before inspecting or replacing a fuse.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": []
+    },
+    {
+      "action_key": "locate-fuse",
+      "title": "Locate the fuse for the affected circuit",
+      "position": 1,
+      "skippable": false,
+      "instruction": "Use the owner-manual fuse tables and fuse-box information to identify the correct fuse and its specified amperage rating.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "power-off"
+      ]
+    },
+    {
+      "action_key": "remove-and-inspect-fuse",
+      "title": "Remove and inspect the suspected fuse",
+      "position": 2,
+      "skippable": false,
+      "instruction": "Remove the suspected fuse using the available fuse-puller or an appropriate safe method, then inspect the fuse element.",
+      "requirement_use_keys": [
+        "fuse-puller-use"
+      ],
+      "prerequisite_action_keys": [
+        "locate-fuse"
+      ]
+    },
+    {
+      "action_key": "install-same-rating-fuse",
+      "title": "Install the specified replacement fuse",
+      "position": 3,
+      "skippable": false,
+      "instruction": "If the fuse is open, install a replacement fuse with the same specified amperage rating.",
+      "warning_text": "Using a higher amperage fuse can cause severe wire damage and may start a fire.",
+      "requirement_use_keys": [
+        "same-rating-fuse-use"
+      ],
+      "prerequisite_action_keys": [
+        "remove-and-inspect-fuse"
+      ]
+    },
+    {
+      "action_key": "verify-operation",
+      "title": "Verify the repaired circuit",
+      "position": 4,
+      "skippable": false,
+      "instruction": "Restore power as appropriate and verify that the affected circuit operates. If the replacement fuse opens again, stop and diagnose the underlying electrical fault.",
+      "requirement_use_keys": [],
+      "prerequisite_action_keys": [
+        "install-same-rating-fuse"
+      ]
+    }
+  ]
+}
