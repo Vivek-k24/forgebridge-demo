@@ -518,7 +518,7 @@ async def _publish_downstream(
                         None if target_definition is None else target_definition.id
                     ),
                     milestone_type=action.get("milestone_type"),
-                    position=position,
+                    position=0,
                     supporting_claim_ids=[claim_id],
                 )
                 await db.execute(text("SET LOCAL ROLE partgraph_materializer"))
