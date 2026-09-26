@@ -33,10 +33,7 @@ from .repair_materialization_contract import RepairDefinitionMaterializationCrea
 from .repair_materialization_service import materialize_repair_definition_service
 
 REFERENCE_ROOT = Path(__file__).resolve().parents[2] / "data" / "reference"
-FLEET_INDEX_PATH = REFERENCE_ROOT / "phase8_reference_fleet_v1.json"
-PRIMARY_REPAIR_MANIFEST = (
-    REFERENCE_ROOT / "2009_honda_civic_hybrid_repairs_v1" / "manifest.json"
-)
+FLEET_INDEX_PATH = REFERENCE_ROOT / "reference_repair_fleet_v1.json"
 BOOTSTRAP_NAMESPACE = uuid5(NAMESPACE_URL, "https://partgraph.local/reference-fleet-bootstrap/v1")
 BOOTSTRAP_LOCK_KEY = "partgraph-preview-reference-fleet-v2"
 PREVIEW_BRANCH = "partgraph-mvp-consolidation"
