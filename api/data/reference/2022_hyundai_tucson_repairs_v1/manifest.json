@@ -10,9 +10,9 @@
   },
   "review": {
     "status": "source_reviewed_reference_fixture",
-    "reviewed_through": "2026-09-16",
-    "reviewed_by": "partgraph_phase8_manual_review",
-    "note": "The Phase 8 reference fixture uses only facts explicitly supported by Hyundai Motor America's U.S. 2022 Tucson Owner's Manual. The gasoline manual identifies the Smartstream G 2.5 GDI engine, so this fixture keeps that engine applicability explicit rather than claiming hybrid or plug-in-hybrid coverage. Optional trim, transmission, drivetrain, body-style, and generation fields remain unset rather than inferred."
+    "reviewed_through": "2026-09-26",
+    "reviewed_by": "partgraph_reference_manual_review",
+    "note": "The reference pack uses only facts explicitly supported by Hyundai Motor America's U.S. 2022 Tucson owner's manual. The gasoline manual identifies the Smartstream G 2.5 GDI engine, so this fixture does not claim hybrid or plug-in-hybrid coverage."
   },
   "sources": [
     {
@@ -24,8 +24,11 @@
       "url": "https://owners.hyundaiusa.com/content/dam/hyundai/us/myhyundai/manuals/glovebox-manual/2022/tucson/2022-Tucson-Owners-Manual1.pdf",
       "supports": [
         "vehicle_identity",
-        "cabin_air_filter_replacement_requirement",
-        "cabin_air_filter_replacement_procedure"
+        "cabin_air_filter_replacement",
+        "engine_air_filter_replacement",
+        "fuse_replacement",
+        "front_wiper_blade_replacement",
+        "flat_tire_spare_installation"
       ]
     }
   ],
@@ -37,6 +40,38 @@
       "capability_policy_key": "diy_supported",
       "requirement_count": 1,
       "action_count": 6
+    },
+    {
+      "repair_key": "engine-air-filter-replacement",
+      "path": "engine_air_filter_replacement.json",
+      "source_key": "hyundai-usa-2022-tucson-owner-manual",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 1,
+      "action_count": 6
+    },
+    {
+      "repair_key": "fuse-replacement",
+      "path": "fuse_replacement.json",
+      "source_key": "hyundai-usa-2022-tucson-owner-manual",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 2,
+      "action_count": 6
+    },
+    {
+      "repair_key": "front-wiper-blade-replacement",
+      "path": "front_wiper_blade_replacement.json",
+      "source_key": "hyundai-usa-2022-tucson-owner-manual",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 1,
+      "action_count": 6
+    },
+    {
+      "repair_key": "flat-tire-spare-installation",
+      "path": "flat_tire_spare_installation.json",
+      "source_key": "hyundai-usa-2022-tucson-owner-manual",
+      "capability_policy_key": "diy_supported",
+      "requirement_count": 7,
+      "action_count": 9
     }
   ]
 }
