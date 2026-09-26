@@ -112,3 +112,21 @@ jobs:
         run: >-
           python -m unittest discover -s api/tests
           -p 'test_reference_*_runtime.py'
+
+      - name: Warm MVP Preview reference fleet
+        if: github.event_name == 'push' && github.ref == 'refs/heads/partgraph-mvp-consolidation'
+        env:
+          PARTGRAPH_MVP_PREVIEW_URL: https://partgraph-main-git-partgraph-mvp-con-106274-vivekkallakuri-8617.vercel.app
+        run: |
+          for attempt in $(seq 1 36); do
+            status="$(curl --silent --show-error --output /tmp/partgraph-ready.json --write-out '%{http_code}' "$PARTGRAPH_MVP_PREVIEW_URL/api/v1/health/ready" || true)"
+            if [ "$status" = "200" ]; then
+              cat /tmp/partgraph-ready.json
+              exit 0
+            fi
+            echo "Preview not ready yet (attempt $attempt, HTTP $status)."
+            sleep 10
+          done
+          echo "MVP Preview did not become ready in time."
+          cat /tmp/partgraph-ready.json 2>/dev/null || true
+          exit 1
